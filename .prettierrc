@@ -1,0 +1,11 @@
+{
+  "singleQuote": false,
+  "printWidth": 80,
+  "tabWidth": 2,
+  "semi": true,
+  "trailingComma": "es5",
+  "vueAttributeWrap": "always",
+  "vueAttributesLineLimit": 30,
+  "operatorLinebreak": "before",
+  "chainOperator": "before"
+}
