@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { onMounted, Ref, ref, watch } from "vue";
+import { onBeforeUnmount, onMounted, onUnmounted, Ref, ref, watch } from "vue";
 import { useStore, useDisplayStore } from "./store";
 import { Icon } from "@iconify/vue";
 import { storeToRefs } from "pinia";
 import { useRoute } from "vue-router";
+import buildTray from "./utils/tray";
 import ImportSubscribeDialog from "@/windows/components/dialogs/ImportSubscribe.vue";
 import ManageSubscribeDialog from "@/windows/components/dialogs/ManageSubscribe.vue";
 import AboutDialog from "./components/dialogs/About.vue";
+import { TrayIcon } from "@tauri-apps/api/tray";
 
 interface PageItem {
   name: string;
@@ -17,8 +19,6 @@ interface PageItem {
 
 const store = useStore();
 const displayStore = useDisplayStore();
-const { toggleDark } = displayStore;
-const { isDark } = storeToRefs(displayStore);
 
 const homePath = ref("/home");
 const photoPath = ref("/photo");
@@ -64,6 +64,15 @@ const settingActions = [
     },
   },
   {
+    text: "关于",
+    onClick: () => {
+      displayStore.showAboutDialog = true;
+    },
+  },
+];
+const showSourcePopover = ref(false);
+const sourceActions = [
+  {
     text: "导入订阅源",
     onClick: () => {
       displayStore.showAddSubscribeDialog = true;
@@ -81,14 +90,8 @@ const settingActions = [
       displayStore.showManageSubscribeDialog = true;
     },
   },
-  {
-    text: "关于",
-    onClick: () => {
-      displayStore.showAboutDialog = true;
-    },
-  },
 ];
-const onClickSettingAction = (action: { text: string; onClick: Function }) =>
+const onClickAction = (action: { text: string; onClick: Function }) =>
   action.onClick();
 
 // 记录上一次的页面路径
@@ -116,6 +119,18 @@ onMounted(() => {
     activeKey.value = currentPageKey !== -1 ? currentPageKey.toString() : "0";
   }, 500);
 });
+
+onMounted(async () => {
+  if (displayStore.trayId && (await TrayIcon.getById(displayStore.trayId))) {
+    await TrayIcon.removeById(displayStore.trayId);
+  }
+  displayStore.trayId = (await buildTray()).id;
+});
+onBeforeUnmount(async () => {
+  if (displayStore.trayId && (await TrayIcon.getById(displayStore.trayId))) {
+    await TrayIcon.removeById(displayStore.trayId);
+  }
+});
 </script>
 
 <template>
@@ -137,7 +152,7 @@ onMounted(() => {
             </template>
           </van-sidebar-item>
         </van-sidebar>
-        <div class="flex flex-col gap-2 justify-center items-center pb-4">
+        <div class="flex flex-col gap-2 justify-center items-center pb-2">
           <!-- <div class="cursor-pointer hover:scale-105" @click="toggleDark()">
             <Icon
               icon="pepicons-pop:moon-circle"
@@ -154,14 +169,29 @@ onMounted(() => {
             />
           </div> -->
           <van-popover
-            v-model:show="showSettingPopover"
+            v-model:show="showSourcePopover"
             placement="right-end"
-            :actions="settingActions"
-            @select="onClickSettingAction"
+            :actions="sourceActions"
+            @select="onClickAction"
           >
             <template #reference>
               <Icon
                 icon="lets-icons:setting-line"
+                width="26px"
+                height="26px"
+                class="text-[var(--van-text-color)] cursor-pointer hover:scale-105"
+              />
+            </template>
+          </van-popover>
+          <van-popover
+            v-model:show="showSettingPopover"
+            placement="right-end"
+            :actions="settingActions"
+            @select="onClickAction"
+          >
+            <template #reference>
+              <Icon
+                icon="si:info-line"
                 width="26px"
                 height="26px"
                 class="text-[var(--van-text-color)] cursor-pointer hover:scale-105"

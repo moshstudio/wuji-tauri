@@ -1,4 +1,4 @@
-import { fetch } from "@tauri-apps/plugin-http";
+import { fetch } from "@/utils/fetch";
 
 export interface HotItem {
   code: number;

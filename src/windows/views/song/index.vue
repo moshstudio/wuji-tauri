@@ -15,7 +15,6 @@ import SongBar from "@/windows/components/SongBar.vue";
 import HorizonList from "@/components/HorizonList.vue";
 import ResponsiveGrid from "@/components/ResponsiveGrid.vue";
 import SimplePagination from "@/components/SimplePagination.vue";
-import { showLoadingToast } from "vant";
 import { SongSource } from "@/types";
 import { SongInfo } from "@/extensions/song";
 import { createCancellableFunction } from "@/utils/cancelableFunction";
@@ -94,7 +93,7 @@ async function playSong(source: SongSource, song: SongInfo) {
 const openBaseUrl = async (source: SongSource) => {
   const sc = await store.sourceClass(source.item);
   if (sc && sc.baseUrl) {
-    open(sc.baseUrl);
+    // open(sc.baseUrl);
   }
 };
 

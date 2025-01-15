@@ -1,6 +1,6 @@
 import { SongExtension } from ".";
 
-declare class MiGuSongExtension extends SongExtension {
+declare class TestSongExtension extends SongExtension {
   id: string;
   name: string;
   version: string;
@@ -10,4 +10,4 @@ declare class MiGuSongExtension extends SongExtension {
   constructor();
 }
 
-export default MiGuSongExtension;
+export default TestSongExtension;

@@ -19,10 +19,12 @@ import "vant/es/image-preview/style";
 import { router } from "./router";
 import { createPinia } from "pinia";
 import "@vant/touch-emulator";
-import TooltipDirective from "./utils/tooltip";
 import Vue3Toastify, { type ToastContainerOptions } from "vue3-toastify";
 import "vue3-toastify/dist/index.css";
 import "@/styles/index.css";
+import TooltipDirective from "./utils/directives/tooltip";
+import RememberScrollDirective from "./utils/directives/rememberScroll";
+import HorizontalScrollDirective from "./utils/directives/horizontalScroll";
 
 createApp(App)
   .use(Lazyload)
@@ -33,6 +35,8 @@ createApp(App)
   .use(router)
   .use(createPinia())
   .directive("tooltip", TooltipDirective)
+  .directive("remember-scroll", RememberScrollDirective)
+  .directive("horizontal-scroll", HorizontalScrollDirective)
   .use(Vue3Toastify, {
     autoClose: 3000,
     position: "bottom-right",

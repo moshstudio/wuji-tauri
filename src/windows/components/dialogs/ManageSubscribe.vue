@@ -84,7 +84,13 @@ function clearSources() {
           <template #value>
             <van-row justify="end" align="center" @click.stop>
               <van-popover>
-                <van-button size="small" type="danger"> 确认删除? </van-button>
+                <van-button
+                  size="small"
+                  type="danger"
+                  @click="() => sourceStore.removeSubscribeSource(item)"
+                >
+                  确认删除?
+                </van-button>
                 <template #reference>
                   <span class="text-button-2 mr-[12px] text-xs"> 删除 </span>
                 </template>

@@ -82,7 +82,7 @@ export function tryCatchProxy<T extends Object>(target: T): T {
           try {
             return originalMethod.apply(this, args);
           } catch (e) {
-            console.error(`Error in ${name}:`, e);
+            console.warn(`Error in ${originalMethod}:`, e);
             showNotify({
               message: `${proto.name} 请求失败`,
               position: "bottom",
@@ -102,13 +102,13 @@ export function tryCatchProxy<T extends Object>(target: T): T {
           const result = originalMethod.apply(target, args);
           if (result instanceof Promise) {
             return result.catch((e) => {
-              console.error(`Error in ${originalMethod}:`, e);
+              console.warn(`Error in ${originalMethod}:`, e);
             });
           } else {
             try {
               return result;
             } catch (e) {
-              console.error(`Error in ${originalMethod}:`, e);
+              console.warn(`Error in ${originalMethod}:`, e);
             }
           }
         };

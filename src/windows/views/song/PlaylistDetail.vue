@@ -160,17 +160,21 @@ onActivated(async () => {
         v-if="playlist?.list?.list"
         class="w-[80%] bg-[--van-background-2] gap-2"
       >
-        <van-button
-          size="small"
-          type="primary"
-          @click="() => (showShelf = true)"
-          v-if="shelfStore.playlistInShelf(playlist)"
-        >
-          已收藏
-        </van-button>
-        <van-button size="small" type="primary" @click="addToShelf" v-else>
-          收藏
-        </van-button>
+        <template v-if="shelfStore.playlistInShelf(playlist)">
+          <van-button
+            size="small"
+            type="primary"
+            @click="() => (showShelf = !showShelf)"
+          >
+            已收藏
+          </van-button>
+        </template>
+        <template v-else>
+          <van-button size="small" type="primary" @click="addToShelf">
+            收藏
+          </van-button>
+        </template>
+
         <van-button size="small" @click="playAll"> 播放全部 </van-button>
 
         <SimplePagination
@@ -190,7 +194,7 @@ onActivated(async () => {
       </template>
     </div>
     <SongBar></SongBar>
-    <SongShelf v-bind:show="showShelf"></SongShelf>
+    <SongShelf v-model:show="showShelf"></SongShelf>
   </div>
 </template>
 

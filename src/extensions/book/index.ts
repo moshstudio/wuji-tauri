@@ -78,7 +78,7 @@ function loadBookExtensionString(
     const extensionclass = func(BookExtension);
     return new extensionclass();
   } catch (error) {
-    console.error("Error executing code:", error);
+    console.error("Error executing code:\n", error);
   }
 }
 

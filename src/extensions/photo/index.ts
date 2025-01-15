@@ -67,7 +67,7 @@ function loadPhotoExtensionString(
     const extensionclass = func(PhotoExtension);
     return new extensionclass();
   } catch (error) {
-    console.error("Error executing code:", error);
+    console.error("Error executing code:\n", error);
   }
 }
 

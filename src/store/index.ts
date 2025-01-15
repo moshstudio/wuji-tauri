@@ -17,7 +17,6 @@ import {
   BookSource,
 } from "@/types";
 import {
-  StorageLike,
   StorageLikeAsync,
   useDark,
   useStorage,
@@ -29,16 +28,14 @@ import { showConfirmDialog, showNotify, showToast } from "vant";
 import {
   computed,
   onBeforeMount,
-  onBeforeUnmount,
   onMounted,
   reactive,
   ref,
-  toRaw,
   triggerRef,
 } from "vue";
 import { Store } from "@tauri-apps/plugin-store";
-import { fetch } from "@tauri-apps/plugin-http";
-import { Toast, toast } from "vue3-toastify";
+import { fetch } from "@/utils/fetch";
+import { toast } from "vue3-toastify";
 import {
   loadSongExtensionString,
   SongShelf,
@@ -124,7 +121,7 @@ export const useStore = defineStore("store", () => {
     }
     if (!extensionClass) {
       toast(`添加 ${item.name} 订阅源失败`);
-      sourceClasses.set(item.id, null);
+      sourceClasses.delete(item.id);
       return null;
     }
     // 防止报错
@@ -153,7 +150,7 @@ export const useStore = defineStore("store", () => {
     [],
     kvStorage.storage
   );
-  const keepTest = ref(true);
+  const keepTest = ref(false);
 
   // const bookSources = ref<BookSource[]>([]);
 
@@ -166,7 +163,6 @@ export const useStore = defineStore("store", () => {
   ) => {
     const sc = (await sourceClass(source.item)) as PhotoExtension;
     const res = await sc?.getRecommendList(pageNo);
-    console.log(res);
 
     if (res) {
       res.list.forEach((item) => {
@@ -548,21 +544,25 @@ export const useStore = defineStore("store", () => {
         disable: oldSource?.disable || false,
       };
       for (let item of res.urls) {
-        const sc = await sourceClass(item);
-        if (!sc) {
-          showToast(`添加 ${item.name} 订阅源失败`);
-          continue;
+        try {
+          const sc = await sourceClass(item);
+          if (!sc) {
+            toast(`添加 ${item.name} 订阅源失败`);
+            continue;
+          }
+          item.id ||= sc.id || sc.hash;
+          item.name ||= sc.name;
+          item.code ||= sc.codeString;
+          addToSource(
+            {
+              item,
+            },
+            true
+          );
+          source.detail.urls.push(item);
+        } catch (error) {
+          toast(`添加 ${item.name} 订阅源失败`);
         }
-        item.id ||= sc.id || sc.hash;
-        item.name ||= sc.name;
-        item.code ||= sc.codeString;
-        addToSource(
-          {
-            item,
-          },
-          true
-        );
-        source.detail.urls.push(item);
       }
       // 同步disable状态
       if (source.detail.urls.every((item) => item.disable)) {
@@ -609,6 +609,7 @@ export const useStore = defineStore("store", () => {
     }
     toast.remove(t);
     await subscribeSourceStore.saveSubscribeSources();
+    loadSubscribeSources(true);
   };
   /**
    * 将当前source添加到对应的列表中
@@ -685,7 +686,6 @@ export const useStore = defineStore("store", () => {
   };
   const loadSubscribeSources = (load?: boolean) => {
     load ??= false;
-
     const added: string[] = [];
 
     for (const source of subscribeSourceStore.subscribeSources) {
@@ -714,18 +714,20 @@ export const useStore = defineStore("store", () => {
       }
     }
     // 移除多余的source
-    for (const sources of [
-      photoSources.value,
-      songSources.value,
-      bookSources.value,
+    for (const source of [
+      ...photoSources.value,
+      ...songSources.value,
+      ...bookSources.value,
     ]) {
-      for (const source of sources) {
-        if (!added.includes(source.item.id)) {
-          if (source.item.id.includes("test") && keepTest.value) {
-            continue;
-          }
-          removeFromSource(source.item.id, source.item.type);
+      if (!added.includes(source.item.id)) {
+        if (source.item.id.includes("test") && keepTest.value) {
+          console.log("keep test source", source.item.id);
+
+          continue;
         }
+        console.log("remove source", source.item.id);
+
+        removeFromSource(source.item.id, source.item.type);
       }
     }
   };
@@ -752,17 +754,12 @@ export const useStore = defineStore("store", () => {
         break;
     }
     if (!item.type) return;
-    const found = getSource(item as SubscribeItem);
-    if (found) {
-      found.item = item as SubscribeItem;
-    } else {
-      addToSource(
-        {
-          item: item as SubscribeItem,
-        },
-        true
-      );
-    }
+    addToSource(
+      {
+        item: item as SubscribeItem,
+      },
+      true
+    );
   };
 
   onBeforeMount(async () => {
@@ -780,19 +777,20 @@ export const useStore = defineStore("store", () => {
     } else {
       try {
         const dialog = await showConfirmDialog({
-          message: "您需要添加订阅源才能正常使用，\n是否立即导入默认源？",
+          message: "您需要添加订阅源才能正常使用，\n是否立即导入默认订阅源？",
         });
         if (dialog === "confirm") {
           await addSubscribeSource(
-            "https://raw.githubusercontent.com/moshstudio/test/refs/heads/main/default_source.json"
+            "https://raw.githubusercontent.com/moshstudio/wuji-sources/refs/heads/main/default_source.json"
           );
           showToast("默认源已导入");
         }
       } catch (error) {}
     }
+    // keepTest.value = true;
+    // addTestSource(new TestSongExtension(), SourceType.Song);
     // addTestSource(new TestBookExtension(), SourceType.Book);
-    addTestSource(new TestPhotoExtension(), SourceType.Photo);
-    // keepTest.value = false;
+    // addTestSource(new TestPhotoExtension(), SourceType.Photo);
     loadSubscribeSources(true);
   });
   return {
@@ -855,6 +853,8 @@ export const useDisplayStore = defineStore("display", () => {
   const readBgColor = useStorageAsync("readbgColor", "");
   const readFontSize = useStorageAsync("readFontSize", "20");
 
+  const trayId = ref("");
+
   return {
     taichiAnimateRandomized,
     isDark,
@@ -875,6 +875,8 @@ export const useDisplayStore = defineStore("display", () => {
 
     readBgColor,
     readFontSize,
+
+    trayId,
   };
 });
 

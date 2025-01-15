@@ -19,17 +19,25 @@ const panelBackgroundStyle = ref<CSSProperties>({
 watch(
   playingSong,
   async (newSong) => {
+    if (!newSong) {
+      return;
+    }
     if (newSong.picUrl || newSong.bigPicUrl) {
+      panelBackgroundStyle.value.backgroundColor = "";
       panelBackgroundStyle.value.backgroundImage = `url(${newSong.bigPicUrl || newSong.picUrl})`;
     } else {
+      //background-color: #4158D0;
+      //background-image: linear-gradient(43deg, #4158D0 0%, #C850C0 46%, #FFCC70 100%);
+
       // 定义渐变方向
-      const direction = "to bottom right";
+      const direction = "43deg";
       // 定义颜色停止点
       const colorStops = [
-        { color: "#6a11cb", position: 0 }, // 深紫色
-        { color: "#2575fc", position: 50 }, // 蓝色
-        { color: "#48b1bf", position: 100 }, // 青蓝色
+        { color: "#4158D0", position: 0 },
+        { color: "#C850C0", position: 46 },
+        { color: "#FFCC70", position: 100 },
       ];
+      panelBackgroundStyle.value.backgroundColor = "#4158D0";
       panelBackgroundStyle.value.backgroundImage = `linear-gradient(${direction}, ${colorStops
         .map((colorStop) => `${colorStop.color} ${colorStop.position}%`)
         .join(", ")})`;
@@ -48,7 +56,7 @@ watch(
 );
 
 watch(audioCurrent, (newVal) => {
-  newVal = newVal * 1000 - 1000;
+  newVal = newVal * 1000 + 500;
   if (lyric.value) {
     for (let i = 0; i < lyric.value.length; i++) {
       if (

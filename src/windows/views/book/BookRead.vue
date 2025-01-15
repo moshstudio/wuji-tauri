@@ -20,6 +20,7 @@ import { toast } from "vue3-toastify";
 import PositionBackTop from "@/components/PositionBackTop.vue";
 import BookShelfButton from "@/components/BookShelfButton.vue";
 import BookShelf from "./BookShelf.vue";
+import NavBar from "@/components/NavBar.vue";
 import { useScroll } from "@vueuse/core";
 
 const { chapterId, bookId, sourceId } = defineProps({
@@ -42,6 +43,7 @@ const shouldLoad = ref(true);
 const showChapters = ref(false);
 const showSettingDialog = ref(false);
 const showBookShelf = ref(false);
+const showNavBar = ref(true);
 
 let savedScrollPosition = 0;
 
@@ -99,6 +101,7 @@ async function loadChapter(chapter?: BookChapter) {
     showToast("章节不存在");
     return;
   }
+  showNavBar.value = true;
   const t = toast.loading("内容加载中", {
     onClick: () => {
       toast.remove(t);
@@ -133,7 +136,7 @@ async function loadChapter(chapter?: BookChapter) {
       });
       document
         .querySelector(".scroll-container")
-        ?.scroll({ top: 0, behavior: "instant" });
+        ?.scrollTo({ top: 0, behavior: "instant" });
       if (book.value && readingChapter.value) {
         shelfStore.updateBookReadInfo(book.value, readingChapter.value);
       }
@@ -226,14 +229,15 @@ onMounted(() => {
 
 <template>
   <div
-    class="scroll-container flex flex-col w-full h-full overflow-x-hidden items-center"
+    class="relative flex flex-col w-full h-full overflow-hidden items-center"
     :style="{ backgroundColor: displayStore.readBgColor }"
   >
-    <van-nav-bar
+    <NavBar
+      v-model:show="showNavBar"
       left-arrow
       @click-left="() => back(true)"
-      :title="`${readingChapter?.title}(${book?.title})`"
-      class="w-full bg-transparent"
+      class="absolute w-full h-[70px]"
+      target="#content"
     >
       <template #title>
         <div class="flex flex-col gap-1 items-center truncate">
@@ -247,21 +251,23 @@ onMounted(() => {
               <van-icon name="user-o" />
               {{ book?.author }}
             </span>
-            <span class="text-xs text-[--van-text-color-2]">
+            <span
+              class="text-xs text-[--van-text-color-2]"
+              v-if="readingContent?.length"
+            >
               <van-icon name="points" />
               {{ readingContent?.length }} 字
             </span>
           </div>
         </div>
       </template>
-    </van-nav-bar>
-
+    </NavBar>
     <div
-      class="flex min-w-[400px] max-w-[95%] sm:max-w-[90%] md:max-w-[75%] lg:max-w-[60%] bg-gray-50/50 dark:bg-gray-950/50"
+      class="scroll-container flex h-full overflow-y-auto min-w-[400px] w-[95%] sm:w-[90%] md:w-[75%] lg:w-[60%] bg-gray-50/50 dark:bg-gray-950/50"
     >
       <div
         id="content"
-        class="relative overflow-y-auto p-4 text-justify leading-[1.8] text-[--van-text-color]"
+        class="pt-[70px] relative overflow-y-auto p-4 text-justify leading-[1.8] text-[--van-text-color]"
         :style="{ fontSize: displayStore.readFontSize + 'px' }"
         v-if="readingContent"
       ></div>
@@ -311,7 +317,7 @@ onMounted(() => {
         >
           <span>设置</span>
         </van-button>
-        <PositionBackTop
+        <!-- <PositionBackTop
           target=".scroll-container"
           placeholder
           class="w-[46px] h-[46px] flex items-center justify-center"
@@ -325,10 +331,9 @@ onMounted(() => {
               <van-icon name="back-top" size="20" />
             </template>
           </van-button>
-        </PositionBackTop>
+        </PositionBackTop> -->
       </div>
     </div>
-
     <van-popup
       v-model:show="showChapters"
       position="right"

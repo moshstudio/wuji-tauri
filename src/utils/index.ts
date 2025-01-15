@@ -1,6 +1,6 @@
 import { ArtistInfo } from "@/extensions/song";
 import { showNotify } from "vant";
-import { fetch } from "@tauri-apps/plugin-http";
+import { fetch } from "@/utils/fetch";
 export * from "./extensionUtils";
 
 export function sleep(ms: number) {

@@ -5,10 +5,71 @@
     <link rel="icon" type="image/svg+xml" href="/wuji.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>无极</title>
+    <style>
+      .loading {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100vw;
+        height: 100vh;
+        font-size: 18px;
+      }
+
+      .loading.dark {
+        color: #ffffff;
+        background-color: #141414;
+      }
+
+      .loading .loading-hint {
+        position: absolute;
+        bottom: 10%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .loading .loading-hint .txt::after {
+        content: "...";
+        animation: dots 1.5s steps(4, end) infinite;
+      }
+      .loading .loading-hint p {
+        margin-top: 10px;
+        margin-bottom: 10px;
+      }
+
+      @keyframes dots {
+        0% {
+          content: " ";
+        }
+        25% {
+          content: ".";
+        }
+        50% {
+          content: "..";
+        }
+        75% {
+          content: "...";
+        }
+      }
+    </style>
   </head>
 
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div class="loading">
+        <img src="./src/assets/wuji.svg" alt="logo" />
+        <div class="loading-hint">
+          <strong>无极</strong>
+          <p class="txt">欢迎使用</p>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

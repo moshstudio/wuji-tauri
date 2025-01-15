@@ -8,11 +8,11 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     About: typeof import('./src/components/dialogs/About.vue')['default']
-    BackTop: typeof import('./src/components/BackTop.vue')['default']
     BookCard: typeof import('./src/components/card/BookCard.vue')['default']
     BookShelfButton: typeof import('./src/components/BookShelfButton.vue')['default']
     HorizonList: typeof import('./src/components/HorizonList.vue')['default']
     LoadImage: typeof import('./src/components/LoadImage.vue')['default']
+    NavBar: typeof import('./src/components/NavBar.vue')['default']
     PhotoCard: typeof import('./src/components/card/PhotoCard.vue')['default']
     PlaylistCard: typeof import('./src/components/card/PlaylistCard.vue')['default']
     PositionBackTop: typeof import('./src/components/PositionBackTop.vue')['default']
@@ -21,9 +21,6 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     SimplePagination: typeof import('./src/components/SimplePagination.vue')['default']
     SongCard: typeof import('./src/components/card/SongCard.vue')['default']
-    TextButton: typeof import('./src/components/TextButton.vue')['default']
-    VanActionSheet: typeof import('vant/es')['ActionSheet']
-    VanBackTop: typeof import('vant/es')['BackTop']
     VanBadge: typeof import('vant/es')['Badge']
     VanButton: typeof import('vant/es')['Button']
     VanCard: typeof import('vant/es')['Card']
@@ -37,8 +34,6 @@ declare module 'vue' {
     VanDivider: typeof import('vant/es')['Divider']
     VanField: typeof import('vant/es')['Field']
     VanFloatingPanel: typeof import('vant/es')['FloatingPanel']
-    VanGrid: typeof import('vant/es')['Grid']
-    VanGridItem: typeof import('vant/es')['GridItem']
     VanIcon: typeof import('vant/es')['Icon']
     VanImage: typeof import('vant/es')['Image']
     VanList: typeof import('vant/es')['List']
@@ -58,8 +53,6 @@ declare module 'vue' {
     VanSwitch: typeof import('vant/es')['Switch']
     VanTab: typeof import('vant/es')['Tab']
     VanTabs: typeof import('vant/es')['Tabs']
-    VanTag: typeof import('vant/es')['Tag']
     VanTextEllipsis: typeof import('vant/es')['TextEllipsis']
-    VanVell: typeof import('vant/es')['Vell']
   }
 }

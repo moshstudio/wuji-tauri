@@ -1,15 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, triggerRef } from "vue";
+import { ref, triggerRef } from "vue";
 import { useStore } from "@/store";
 import { storeToRefs } from "pinia";
 import { open } from "@tauri-apps/plugin-shell";
-import BookCard from "@/components/card/BookCard.vue";
-import HorizonList from "@/components/HorizonList.vue";
 import BooksTab from "@/windows/components/BooksTab.vue";
-import SimplePagination from "@/components/SimplePagination.vue";
 import BookShelf from "./BookShelf.vue";
 import { BookSource } from "@/types";
-import { showLoadingToast } from "vant";
 import { debounce } from "lodash";
 import { createCancellableFunction } from "@/utils/cancelableFunction";
 import { router } from "@/router";
@@ -64,7 +60,11 @@ const loadType = async (source: BookSource, type?: string) => {
 const loadPage = debounce(
   createCancellableFunction(
     async (source: BookSource, pageNo?: number, type?: string) => {
-      await store.bookRecommendList(source, pageNo, type);
+      if (!searchValue.value) {
+        await store.bookRecommendList(source, pageNo, type);
+      } else {
+        await store.bookSearch(source, searchValue.value, pageNo);
+      }
     }
   ),
   500
@@ -82,7 +82,7 @@ const toDetail = (source: BookSource, item: BookItem) => {
 const openBaseUrl = async (source: BookSource) => {
   const sc = await store.sourceClass(source.item);
   if (sc && sc.baseUrl) {
-    open(sc.baseUrl);
+    // open(sc.baseUrl);
   }
 };
 
@@ -114,7 +114,7 @@ const openBaseUrl = async (source: BookSource) => {
       </van-search>
     </van-row>
     <div v-for="source in bookSources" :key="source.item.id" class="px-4">
-      <template v-if="source.list">
+      <template v-if="!!source.list">
         <van-row justify="space-between">
           <van-button
             :plain="true"

@@ -69,9 +69,14 @@ const unreadCount = (book: BookItemInShelf): number | undefined => {
   const index = book.book.chapters.findIndex(
     (chapter) => chapter.id === book.lastReadChapter!.id
   );
-  const num = book.book.chapters.length - index;
+  const num = book.book.chapters.length - index - 1;
   if (num <= 0) return undefined;
   return num;
+};
+
+const sourceName = (book: BookItemInShelf) => {
+  const source = store.getBookSource(book.book.sourceId);
+  return source?.item.name;
 };
 
 // 书架展示相关
@@ -169,12 +174,12 @@ onUnmounted(() => {
             lazy-load
             v-for="item in _.orderBy(
               shelf.books,
-              ['lastReadTime', 'createTime'],
+              [(book) => book.lastReadTime || 0, (book) => book.createTime],
               ['desc', 'desc']
             )"
             :key="item.book.id"
           >
-            <template #thumb v-if="item.book.cover">
+            <template #thumb>
               <van-image width="80px" height="100px" :src="item.book.cover">
                 <template #loading>
                   <Icon icon="codicon:book" width="48" height="48" />
@@ -185,12 +190,15 @@ onUnmounted(() => {
               </van-image>
             </template>
             <template #title>
-              <h1
-                class="text-button-2 text-base font-bold"
-                @click="() => toBook(item)"
-              >
-                {{ item.book.title }}
-              </h1>
+              <van-row align="center" class="gap-4">
+                <h1
+                  class="text-button-2 text-base font-bold"
+                  @click="() => toBook(item)"
+                >
+                  {{ item.book.title }}
+                </h1>
+                <span class="text-gray-400">{{ sourceName(item) }}</span>
+              </van-row>
             </template>
             <template #tags>
               <p

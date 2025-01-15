@@ -33,7 +33,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, CSSProperties, PropType } from "vue";
 import { useIntersectionObserver } from "@vueuse/core"; // 用于懒加载
-import { fetch } from "@tauri-apps/plugin-http";
+import { fetch } from "@/utils/fetch";
 import { cachedFetch } from "@/utils";
 
 const props = defineProps({
