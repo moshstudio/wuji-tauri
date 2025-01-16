@@ -37,9 +37,10 @@ export async function getLyric(
         };
       });
       if (!songs) return "";
-      const sSong = _.minBy(songs, (song) =>
-        levenshteinDistance(key, `${song.name}-${song.artists}`)
-      );
+      const sSong = songs[0];
+      // const sSong = _.minBy(songs, (song) =>
+      //   levenshteinDistance(key, `${song.name}-${song.artists}`)
+      // );
 
       if (!sSong) return "";
       const l = await neteaseLyric(String(sSong.id));

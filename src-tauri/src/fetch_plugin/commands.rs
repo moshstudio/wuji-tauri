@@ -274,21 +274,22 @@ pub async fn fetch<R: Runtime>(
             Ok(rid)
         }
         "data" => {
-            let data_url =
-                data_url::DataUrl::process(url.as_str()).map_err(|_| Error::DataUrlError)?;
-            let (body, _) = data_url
-                .decode_to_vec()
-                .map_err(|_| Error::DataUrlDecodeError)?;
+            // let data_url =
+            //     data_url::DataUrl::process(url.as_str()).map_err(|_| Error::DataUrlError)?;
+            // let (body, _) = data_url
+            //     .decode_to_vec()
+            //     .map_err(|_| Error::DataUrlDecodeError)?;
 
-            let response = http::Response::builder()
-                .status(StatusCode::OK)
-                .header(header::CONTENT_TYPE, data_url.mime_type().to_string())
-                .body(reqwest::Body::from(body))?;
+            // let response = http::Response::builder()
+            //     .status(StatusCode::OK)
+            //     .header(header::CONTENT_TYPE, data_url.mime_type().to_string())
+            //     .body(reqwest::Body::from(body))?;
 
-            let fut = async move { Ok(reqwest::Response::from(response)) };
-            let mut resources_table = webview.resources_table();
-            let rid = resources_table.add_request(Box::pin(fut));
-            Ok(rid)
+            // let fut = async move { Ok(reqwest::Response::from(response)) };
+            // let mut resources_table = webview.resources_table();
+            // let rid = resources_table.add_request(Box::pin(fut));
+            // Ok(rid)
+            Ok(1)
         }
         _ => Err(Error::SchemeNotSupport(scheme.to_string())),
     }
