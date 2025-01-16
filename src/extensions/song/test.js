@@ -11,6 +11,8 @@ class TestSongExtension extends SongExtension {
     const body = await this.fetchDom(this.baseUrl, {
       verify: false,
     });
+    console.log(body);
+
     const elements = body.querySelectorAll(".cate-list a");
 
     const list = [];
@@ -73,7 +75,9 @@ class TestSongExtension extends SongExtension {
   }
   async searchSongs(keyword, pageNo) {
     const url = `https://zz123.com/search/?key=${keyword}&page=${pageNo}`;
-    const response = await this.fetch(url);
+    const response = await this.fetch(url, {
+      verify: false,
+    });
     const text = await response.text();
 
     const regex = /var pageSongArr=\[(.*?)\];/;
@@ -103,7 +107,9 @@ class TestSongExtension extends SongExtension {
   }
   async getPlaylistDetail(item, pageNo) {
     const url = this.urlJoin(this.baseUrl, item.id);
-    const response = await this.fetch(url);
+    const response = await this.fetch(url, {
+      verify: false,
+    });
     const text = await response.text();
 
     const regex = /var pageSongArr=\[(.*?)\];/;

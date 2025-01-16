@@ -1,4 +1,7 @@
+import _ from "lodash";
 import { fetch } from "@/utils/fetch";
+import { search as neteaseSearch, lyric as neteaseLyric } from "./neteaseMusic";
+import { levenshteinDistance } from ".";
 
 const cache = new Map<string, Lyric>();
 
@@ -15,16 +18,40 @@ export async function getLyric(
   if (cache.has(key)) {
     return cache.get(key);
   } else {
-    let key = `${songName}`;
-    // if (singerName) {
-    //   key += `-${singerName}`;
-    // }
-    const url = `https://www.hhlqilongzhu.cn/api/dg_geci.php?msg=${key}&n=1&type=2`;
-    const response = await fetch(url);
-    const text = await response.text();
+    const lyricFromLongZhu = async (): Promise<string> => {
+      const url = `https://www.hhlqilongzhu.cn/api/dg_geci.php?msg=${songName}&n=1&type=2`;
+      const response = await fetch(url);
+      const text = await response.text();
+      return text;
+    };
+    const lyricFromNetease = async (): Promise<string> => {
+      const res = await neteaseSearch(songName);
+      const t = await res.text();
+      const songs: { id: number; name: string; artists: string }[] = JSON.parse(
+        t
+      ).result.songs.map((song: any) => {
+        return {
+          id: song.id,
+          name: song.name,
+          artists: song.artists.map((artist: any) => artist.name).join(","),
+        };
+      });
+      if (!songs) return "";
+      const sSong = _.minBy(songs, (song) =>
+        levenshteinDistance(key, `${song.name}-${song.artists}`)
+      );
 
-    if (!text) return;
-    const lyric = parseLyric(text);
+      if (!sSong) return "";
+      const l = await neteaseLyric(String(sSong.id));
+      const lyricResponseText = await l.text();
+      if (!lyricResponseText) return "";
+      return JSON.parse(lyricResponseText).lrc.lyric;
+    };
+    const lyricText = (await lyricFromLongZhu()) || (await lyricFromNetease());
+
+    if (!lyricText) return;
+    const lyric = parseLyric(lyricText);
+    if (!lyric.length) return;
     cache.set(key, lyric);
     return lyric;
   }

@@ -107,7 +107,7 @@ const ERROR_REQUEST_CANCELLED = "Request canceled";
  *
  * @since 2.0.0
  */
-export async function fetch(
+export async function _fetch(
   input: URL | Request | string,
   init?: RequestInit & ClientOptions
 ): Promise<Response> {
@@ -169,7 +169,7 @@ export async function fetch(
     throw new Error(ERROR_REQUEST_CANCELLED);
   }
 
-  const rid = await invoke<number>("plugin:http|fetch", {
+  const rid = await invoke<number>("plugin:fetch-plugin|fetch", {
     clientConfig: {
       method: req.method,
       url: req.url,
@@ -182,7 +182,7 @@ export async function fetch(
     },
   });
 
-  const abort = () => invoke("plugin:http|fetch_cancel", { rid });
+  const abort = () => invoke("plugin:fetch-plugin|fetch_cancel", { rid });
 
   // abort early here if needed
   if (signal?.aborted) {
@@ -208,12 +208,12 @@ export async function fetch(
     url,
     headers: responseHeaders,
     rid: responseRid,
-  } = await invoke<FetchSendResponse>("plugin:http|fetch_send", {
+  } = await invoke<FetchSendResponse>("plugin:fetch-plugin|fetch_send", {
     rid,
   });
 
   const body = await invoke<ArrayBuffer | number[]>(
-    "plugin:http|fetch_read_body",
+    "plugin:fetch-plugin|fetch_read_body",
     {
       rid: responseRid,
     }
@@ -245,4 +245,15 @@ export async function fetch(
   return res;
 }
 
+export async function fetch(
+  input: URL | Request | string,
+  init?: RequestInit & ClientOptions
+): Promise<Response> {
+  try {
+    return await _fetch(input, init);
+  } catch (error) {
+    console.error("fetch error:", error);
+    return Response.error();
+  }
+}
 export default fetch;

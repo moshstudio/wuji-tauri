@@ -1,5 +1,4 @@
 import { ArtistInfo } from "@/extensions/song";
-import { showNotify } from "vant";
 import { fetch } from "@/utils/fetch";
 export * from "./extensionUtils";
 
@@ -171,4 +170,29 @@ export async function cachedFetch(
     cache.put(cacheKey, response.clone());
   }
   return response.clone();
+}
+
+export function levenshteinDistance(a: string, b: string): number {
+  // Levenshtein 距离越小，说明两个字符串越相似；距离越大，说明差异越大。
+  const matrix = Array.from({ length: a.length + 1 }, () =>
+    Array(b.length + 1).fill(0)
+  );
+
+  // 初始化第一行和第一列
+  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+
+  // 填充矩阵
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1, // 删除
+        matrix[i][j - 1] + 1, // 插入
+        matrix[i - 1][j - 1] + cost // 替换
+      );
+    }
+  }
+
+  return matrix[a.length][b.length];
 }

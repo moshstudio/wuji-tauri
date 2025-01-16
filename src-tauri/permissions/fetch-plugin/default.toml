@@ -1,0 +1,7 @@
+[default]
+description = "Default permissions for the plugin"
+permissions = ["allow-fetch", "allow-fetch-send", "allow-fetch-cancel", "allow-fetch-read-body"]
+
+[allow]
+http = ['http://*']
+https = ['https://*']

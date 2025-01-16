@@ -102,7 +102,7 @@ export function tryCatchProxy<T extends Object>(target: T): T {
           const result = originalMethod.apply(target, args);
           if (result instanceof Promise) {
             return result.catch((e) => {
-              console.warn(`Error in ${originalMethod}:`, e);
+              // console.warn(`Error in ${originalMethod}:`, e);
             });
           } else {
             try {

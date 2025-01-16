@@ -9,13 +9,12 @@ use reqwest::{redirect::Policy, NoProxy};
 use serde::{Deserialize, Serialize};
 use tauri::{
     async_runtime::Mutex,
-    command,
     ipc::{CommandScope, GlobalScope},
     Manager, ResourceId, ResourceTable, Runtime, State, Webview,
 };
 use tokio::sync::oneshot::{channel, Receiver, Sender};
 
-use crate::fetch::{
+use crate::fetch_plugin::{
     scope::{Entry, Scope},
     Error, Http, Result,
 };
@@ -145,7 +144,7 @@ fn proxy_creator(
 fn attach_proxy(
     proxy: Proxy,
     mut builder: reqwest::ClientBuilder,
-) -> crate::fetch::Result<reqwest::ClientBuilder> {
+) -> crate::fetch_plugin::Result<reqwest::ClientBuilder> {
     let Proxy { all, http, https } = proxy;
 
     if let Some(all) = all {
@@ -166,14 +165,14 @@ fn attach_proxy(
     Ok(builder)
 }
 
-#[command]
+#[tauri::command]
 pub async fn fetch<R: Runtime>(
     webview: Webview<R>,
     state: State<'_, Http>,
     client_config: ClientConfig,
-    command_scope: CommandScope<Entry>,
-    global_scope: GlobalScope<Entry>,
-) -> crate::fetch::Result<ResourceId> {
+    _command_scope: CommandScope<Entry>,
+    _global_scope: GlobalScope<Entry>,
+) -> crate::fetch_plugin::Result<ResourceId> {
     let ClientConfig {
         method,
         url,
@@ -184,6 +183,8 @@ pub async fn fetch<R: Runtime>(
         proxy,
         verify,
     } = client_config;
+    // 克隆 url 以避免移动问题
+    let url_clone = url.clone();
 
     let scheme = url.scheme();
     let method = Method::from_bytes(method.as_bytes())?;
@@ -196,97 +197,81 @@ pub async fn fetch<R: Runtime>(
 
     match scheme {
         "http" | "https" => {
-            if Scope::new(
-                command_scope
-                    .allows()
-                    .iter()
-                    .chain(global_scope.allows())
-                    .collect(),
-                command_scope
-                    .denies()
-                    .iter()
-                    .chain(global_scope.denies())
-                    .collect(),
-            )
-            .is_allowed(&url)
-            {
-                let mut builder = reqwest::ClientBuilder::new();
+            let mut builder = reqwest::ClientBuilder::new();
 
-                if !verify.unwrap_or(true) {
-                    builder = builder.danger_accept_invalid_certs(true);
-                    builder = builder.danger_accept_invalid_hostnames(true);
-                }
-
-                if let Some(timeout) = connect_timeout {
-                    builder = builder.connect_timeout(Duration::from_millis(timeout));
-                }
-
-                if let Some(max_redirections) = max_redirections {
-                    builder = builder.redirect(if max_redirections == 0 {
-                        Policy::none()
-                    } else {
-                        Policy::limited(max_redirections)
-                    });
-                }
-
-                if let Some(proxy_config) = proxy {
-                    builder = attach_proxy(proxy_config, builder)?;
-                }
-
-                // #[cfg(feature = "cookies")]
-                // {
-                //     builder = builder.cookie_provider(state.cookies_jar.clone());
-                // }
-                builder = builder.cookie_provider(state.cookies_jar.clone());
-
-                let mut request = builder.build()?.request(method.clone(), url);
-
-                // POST and PUT requests should always have a 0 length content-length,
-                // if there is no body. https://fetch.spec.whatwg.org/#http-network-or-cache-fetch
-                if data.is_none() && matches!(method, Method::POST | Method::PUT) {
-                    headers.append(header::CONTENT_LENGTH, HeaderValue::from_str("0")?);
-                }
-
-                if headers.contains_key(header::RANGE) {
-                    // https://fetch.spec.whatwg.org/#http-network-or-cache-fetch step 18
-                    // If httpRequest’s header list contains `Range`, then append (`Accept-Encoding`, `identity`)
-                    headers.append(header::ACCEPT_ENCODING, HeaderValue::from_str("identity")?);
-                }
-
-                if !headers.contains_key(header::USER_AGENT) {
-                    headers.append(header::USER_AGENT, HeaderValue::from_str(HTTP_USER_AGENT)?);
-                }
-
-                // ensure we have an Origin header set
-                if !headers.contains_key(header::ORIGIN) {
-                    if let Ok(url) = webview.url() {
-                        headers.append(
-                            header::ORIGIN,
-                            HeaderValue::from_str(&url.origin().ascii_serialization())?,
-                        );
-                    }
-                }
-
-                // In case empty origin is passed, remove it. Some services do not like Origin header
-                // so this way we can remove it in explicit way. The default behaviour is still to set it
-                if headers.get(header::ORIGIN) == Some(&HeaderValue::from_static("")) {
-                    headers.remove(header::ORIGIN);
-                };
-
-                if let Some(data) = data {
-                    request = request.body(data);
-                }
-
-                request = request.headers(headers);
-
-                let fut = async move { request.send().await.map_err(Into::into) };
-                let mut resources_table = webview.resources_table();
-                let rid = resources_table.add_request(Box::pin(fut));
-
-                Ok(rid)
-            } else {
-                Err(Error::UrlNotAllowed(url))
+            if !verify.unwrap_or(true) {
+                println!("builder {:?}", verify);
+                builder = builder.danger_accept_invalid_certs(true);
+                builder = builder.danger_accept_invalid_hostnames(true);
             }
+
+            if let Some(timeout) = connect_timeout {
+                builder = builder.connect_timeout(Duration::from_millis(timeout));
+            }
+
+            if let Some(max_redirections) = max_redirections {
+                builder = builder.redirect(if max_redirections == 0 {
+                    Policy::none()
+                } else {
+                    Policy::limited(max_redirections)
+                });
+            }
+
+            if let Some(proxy_config) = proxy {
+                builder = attach_proxy(proxy_config, builder)?;
+            }
+
+            // #[cfg(feature = "cookies")]
+            // {
+            //     builder = builder.cookie_provider(state.cookies_jar.clone());
+            // }
+            builder = builder.cookie_provider(state.cookies_jar.clone());
+
+            let mut request = builder.build()?.request(method.clone(), url);
+
+            // POST and PUT requests should always have a 0 length content-length,
+            // if there is no body. https://fetch.spec.whatwg.org/#http-network-or-cache-fetch
+            if data.is_none() && matches!(method, Method::POST | Method::PUT) {
+                headers.append(header::CONTENT_LENGTH, HeaderValue::from_str("0")?);
+            }
+
+            if headers.contains_key(header::RANGE) {
+                // https://fetch.spec.whatwg.org/#http-network-or-cache-fetch step 18
+                // If httpRequest’s header list contains `Range`, then append (`Accept-Encoding`, `identity`)
+                headers.append(header::ACCEPT_ENCODING, HeaderValue::from_str("identity")?);
+            }
+
+            if !headers.contains_key(header::USER_AGENT) {
+                headers.append(header::USER_AGENT, HeaderValue::from_str(HTTP_USER_AGENT)?);
+            }
+
+            // ensure we have an Origin header set
+            if !headers.contains_key(header::ORIGIN) {
+                if let Ok(url) = webview.url() {
+                    headers.append(
+                        header::ORIGIN,
+                        HeaderValue::from_str(&url.origin().ascii_serialization())?,
+                    );
+                }
+            }
+
+            // In case empty origin is passed, remove it. Some services do not like Origin header
+            // so this way we can remove it in explicit way. The default behaviour is still to set it
+            if headers.get(header::ORIGIN) == Some(&HeaderValue::from_static("")) {
+                headers.remove(header::ORIGIN);
+            };
+
+            if let Some(data) = data {
+                request = request.body(data);
+            }
+
+            request = request.headers(headers);
+
+            let fut = async move { request.send().await.map_err(Into::into) };
+            let mut resources_table = webview.resources_table();
+            let rid = resources_table.add_request(Box::pin(fut));
+
+            Ok(rid)
         }
         "data" => {
             let data_url =
@@ -309,8 +294,11 @@ pub async fn fetch<R: Runtime>(
     }
 }
 
-#[command]
-pub fn fetch_cancel<R: Runtime>(webview: Webview<R>, rid: ResourceId) -> crate::fetch::Result<()> {
+#[tauri::command]
+pub fn fetch_cancel<R: Runtime>(
+    webview: Webview<R>,
+    rid: ResourceId,
+) -> crate::fetch_plugin::Result<()> {
     let mut resources_table = webview.resources_table();
     let req = resources_table.get::<FetchRequest>(rid)?;
     let abort_tx = resources_table.take::<AbortSender>(req.abort_tx_rid)?;
@@ -324,7 +312,7 @@ pub fn fetch_cancel<R: Runtime>(webview: Webview<R>, rid: ResourceId) -> crate::
 pub async fn fetch_send<R: Runtime>(
     webview: Webview<R>,
     rid: ResourceId,
-) -> crate::fetch::Result<FetchResponse> {
+) -> crate::fetch_plugin::Result<FetchResponse> {
     let (req, abort_rx) = {
         let mut resources_table = webview.resources_table();
         let req = resources_table.get::<FetchRequest>(rid)?;
@@ -373,7 +361,7 @@ pub async fn fetch_send<R: Runtime>(
 pub(crate) async fn fetch_read_body<R: Runtime>(
     webview: Webview<R>,
     rid: ResourceId,
-) -> crate::fetch::Result<tauri::ipc::Response> {
+) -> crate::fetch_plugin::Result<tauri::ipc::Response> {
     let res = {
         let mut resources_table = webview.resources_table();
         resources_table.take::<ReqwestResponse>(rid)?

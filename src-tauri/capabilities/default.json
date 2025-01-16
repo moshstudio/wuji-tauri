@@ -32,6 +32,7 @@
     "store:allow-entries",
     "store:allow-has",
     "store:allow-length",
-    "store:allow-reset"
+    "store:allow-reset",
+    "fetch-plugin:default"
   ]
 }
