@@ -1,5 +1,13 @@
 # 无极
 
+<p align="center">
+  <a href="#下载">
+    <img src="https://img.shields.io/github/downloads/moshstudio/wuji-tauri/total?style=flat-square" alt="forks">
+  </a>
+  <img src="https://img.shields.io/github/stars/moshstudio/wuji-tauri?style=flat-square" alt="stars">
+  <img src="https://img.shields.io/github/forks/moshstudio/wuji-tauri?style=flat-square" alt="forks">
+</p>
+
 一款界面简洁的资源聚合浏览软件，支持在一个软件中浏览图片、音乐、书籍等资源。
 
 安装软件后，导入默认源进行使用。
