@@ -30,10 +30,10 @@ import {
   computed,
   nextTick,
   HTMLAttributes,
-} from "vue";
-import { type NavBarProps } from "vant";
+} from 'vue';
+import { type NavBarProps } from 'vant';
 
-const show = defineModel("show", { type: Boolean, default: true });
+const show = defineModel('show', { type: Boolean, default: true });
 
 const props: NavBarProps & {
   target?: string;
@@ -44,7 +44,7 @@ const delegatedProps = computed(() => {
 
   return delegated;
 });
-const emit = defineEmits(["clickLeft", "clickRight"]);
+const emit = defineEmits(['clickLeft', 'clickRight']);
 
 const element = ref<HTMLElement | null>();
 
@@ -65,10 +65,10 @@ onMounted(() => {
     element.value = props.target
       ? (document.querySelector(props.target) as HTMLElement)
       : document.documentElement;
-    element.value?.addEventListener("wheel", handleScroll);
+    element.value?.addEventListener('wheel', handleScroll);
     // element.value?.addEventListener("touchmove", handleScroll);
     onUnmounted(() => {
-      element.value?.removeEventListener("wheel", handleScroll);
+      element.value?.removeEventListener('wheel', handleScroll);
       // element.value?.removeEventListener("touchmove", handleScroll);
     });
   });

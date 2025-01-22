@@ -18,8 +18,8 @@
 }
 
 @font-face {
-  font-family: "alipuhui";
-  src: url("../assets/font/alipuhui.otf");
+  font-family: 'alipuhui';
+  src: url('../assets/font/alipuhui.otf');
 }
 
 * {
@@ -35,8 +35,8 @@ body,
   font-family:
     PingFang SC,
     BlinkMacSystemFont,
-    "alipuhui",
-    "微软雅黑",
+    'alipuhui',
+    '微软雅黑',
     Roboto,
     Helvetica Neue,
     sans-serif !important;
@@ -58,26 +58,14 @@ body,
 ::-webkit-scrollbar-thumb:hover {
   background-color: rgba(110, 110, 110, 0.6);
 }
-/* Tooltip 样式 */
-.tooltip {
-  display: none;
-  position: absolute;
-  background-color: #333;
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 3px;
-  font-size: 10px;
-  line-height: 1rem;
-  z-index: 9999;
-  opacity: 0;
-  max-width: 200px;
-  transition: opacity 0.3s ease;
-}
-
-.tooltip[aria-hidden="false"] {
-  opacity: 1;
-}
-
 :root:root {
   --van-search-padding: 6px 10px;
+}
+.van-button__text,
+.van-button__content,
+.van-cell__title {
+  color: var(--van-text-color);
+}
+.van-button--danger .van-button__content {
+  color: white;
 }

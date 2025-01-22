@@ -1,9 +1,9 @@
-import { Directive, DirectiveBinding, onUnmounted } from "vue";
+import { Directive, DirectiveBinding, onUnmounted } from 'vue';
 
 export default <Directive<HTMLElement, string>>{
   mounted(el: HTMLElement, binding: DirectiveBinding) {
     let timer: NodeJS.Timeout;
-    el.style.scrollBehavior = "smooth";
+    el.style.scrollBehavior = 'smooth';
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
       clearTimeout(timer);
@@ -16,10 +16,10 @@ export default <Directive<HTMLElement, string>>{
         });
       }, 0);
     };
-    el.addEventListener("wheel", handleWheel);
+    el.addEventListener('wheel', handleWheel);
     // 移除事件监听器
     onUnmounted(() => {
-      el.removeEventListener("wheel", handleWheel);
+      el.removeEventListener('wheel', handleWheel);
     }, binding.instance?.$);
   },
 };

@@ -1,11 +1,11 @@
 {
-  "singleQuote": false,
   "printWidth": 80,
   "tabWidth": 2,
+  "useTabs": false,
   "semi": true,
+  "singleQuote": true,
   "trailingComma": "es5",
-  "vueAttributeWrap": "always",
-  "vueAttributesLineLimit": 30,
-  "operatorLinebreak": "before",
-  "chainOperator": "before"
+  "bracketSpacing": true,
+  "arrowParens": "always",
+  "endOfLine": "lf"
 }

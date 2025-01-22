@@ -39,7 +39,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
     //     ]),
     // ))
     // 3. 定义permissions并在capabilities中添加权限
-     
+
     Builder::<R>::new("fetch-plugin")
         .setup(|app, _| {
             let state = Http {

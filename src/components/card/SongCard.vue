@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { SongInfo } from "@/extensions/song";
-import { ref, toRaw } from "vue";
-import { useSongStore, useSongShelfStore } from "@/store";
-import { Icon } from "@iconify/vue";
-import { joinSongArtists } from "@/utils";
+import { SongInfo } from '@/extensions/song';
+import { ref, toRaw } from 'vue';
+import { useSongStore, useSongShelfStore, useDisplayStore } from '@/store';
+import { Icon } from '@iconify/vue';
+import { joinSongArtists } from '@/utils';
 
 const props = defineProps({
   song: {
@@ -12,12 +12,13 @@ const props = defineProps({
   },
   class: {
     type: [String, Array, Object],
-    default: "",
+    default: '',
   },
 });
 const song = props.song;
-const emit = defineEmits(["play"]);
+const emit = defineEmits(['play']);
 
+const displayStore = useDisplayStore();
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
 
@@ -26,19 +27,37 @@ const showHint = ref(false);
 const showAddDialog = ref(false);
 
 function onMouseEnter() {
-  playButtonVisible.value = true;
-  showHint.value = true;
+  if (!displayStore.isMobile) {
+    playButtonVisible.value = true;
+    showHint.value = true;
+  }
 }
 function onMouseLeave() {
-  playButtonVisible.value = false;
-  showHint.value = false;
+  if (!displayStore.isMobile) {
+    playButtonVisible.value = false;
+    showHint.value = false;
+  }
 }
 
 const onPlay = () => {
-  emit("play");
+  emit('play');
 };
 const onPause = () => {
   songStore.onPause();
+};
+const onClick = () => {
+  if (displayStore.isMobile) {
+    onPlay();
+  }
+};
+const onDbClick = () => {
+  if (!displayStore.isMobile) {
+    if (songStore.playingSong?.id === song.id && songStore.isPlaying) {
+      onPause();
+    } else {
+      onPlay();
+    }
+  }
 };
 
 const addSongToShelf = (shelfId: string) => {
@@ -55,15 +74,8 @@ const addSongToShelf = (shelfId: string) => {
     :class="props.class"
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
-    @dblclick="
-      () => {
-        if (songStore.playingSong?.id === song.id && songStore.isPlaying) {
-          onPause();
-        } else {
-          onPlay();
-        }
-      }
-    "
+    @click="onClick"
+    @dblclick="onDbClick"
   >
     <div class="relative flex items-center justify-center">
       <van-image
@@ -92,26 +104,26 @@ const addSongToShelf = (shelfId: string) => {
           name="pause"
           class="text-white"
           size="16"
-          @click="onPause"
+          @click.stop="onPause"
           v-if="songStore.playingSong?.id === song.id && songStore.isPlaying"
         />
         <van-icon
           name="play"
           class="text-white"
           size="16"
-          @click="onPlay"
+          @click.stop="onPlay"
           v-else
         />
       </div>
     </div>
 
-    <div class="flex flex-col grow justify-around w-full">
-      <span
-        class="pl-2 text-xs text-[--van-text-color] font-bold w-[calc(100%-40px)] min-w-[100px] truncate"
-      >
+    <div
+      class="grow flex flex-col w-full pl-2 text-xs min-w-[10px] justify-around truncate"
+    >
+      <span class="text-[--van-text-color] font-bold truncate">
         {{ song.name }}
       </span>
-      <span class="pl-2 text-xs text-[gray] w-[calc(100%-40px)] truncate">
+      <span class="text-[gray] truncate">
         {{ joinSongArtists(song.artists) }}
       </span>
     </div>
@@ -157,7 +169,7 @@ const addSongToShelf = (shelfId: string) => {
           ]"
           :key="item.playlist.id"
           :title="item.playlist.name"
-          :label="`${item.playlist.list?.list.length}首音乐`"
+          :label="`${item.playlist.list?.list.length || 0}首音乐`"
           center
           clickable
           @click="addSongToShelf(item.playlist.id)"

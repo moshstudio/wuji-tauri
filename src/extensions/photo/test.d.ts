@@ -1,4 +1,4 @@
-import { PhotoExtension } from ".";
+import { PhotoExtension } from '.';
 
 declare class TestPhotoExtension extends PhotoExtension {
   id: string;

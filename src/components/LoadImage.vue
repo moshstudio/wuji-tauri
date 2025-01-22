@@ -9,6 +9,7 @@
       v-if="imageSrc"
       :src="imageSrc"
       class="w-full h-full"
+      :class="props.class"
       :style="imageStyle"
       @load="handleLoad"
       @error="handleError"
@@ -31,10 +32,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, CSSProperties, PropType } from "vue";
-import { useIntersectionObserver } from "@vueuse/core"; // 用于懒加载
-import { fetch } from "@/utils/fetch";
-import { cachedFetch } from "@/utils";
+import { ref, computed, onMounted, CSSProperties, PropType } from 'vue';
+import { useIntersectionObserver } from '@vueuse/core'; // 用于懒加载
+import { cachedFetch } from '@/utils';
 
 const props = defineProps({
   src: {
@@ -48,22 +48,17 @@ const props = defineProps({
   },
   width: {
     type: [String, Number],
-    default: "100%",
+    default: '100%',
     required: false,
   },
   height: {
     type: [String, Number],
-    default: "100%",
+    default: '100%',
     required: false,
   },
   fit: {
-    type: String as PropType<CSSProperties["objectFit"]>,
-    default: "cover",
-    required: false,
-  },
-  radius: {
-    type: [String, Number],
-    default: 0,
+    type: String as PropType<CSSProperties['objectFit']>,
+    default: 'cover',
     required: false,
   },
   lazyLoad: {
@@ -71,11 +66,16 @@ const props = defineProps({
     default: false,
     required: false,
   },
+  class: {
+    type: String,
+    default: '',
+    required: false,
+  },
 });
 
-const emit = defineEmits(["load", "error", "beforeLoad"]);
+const emit = defineEmits(['load', 'error', 'beforeLoad']);
 
-const imageSrc = ref(""); // 图片地址
+const imageSrc = ref(''); // 图片地址
 const isLoading = ref(false); // 是否正在加载
 const isError = ref(false); // 是否加载失败
 
@@ -83,16 +83,14 @@ const isError = ref(false); // 是否加载失败
 const imageStyle = computed(() => {
   return {
     width:
-      typeof props.width === "number"
+      typeof props.width === 'number'
         ? `${props.width}px`
-        : props.width || "100%",
+        : props.width || '100%',
     height:
-      typeof props.height === "number"
+      typeof props.height === 'number'
         ? `${props.height}px`
-        : props.height || "100%",
-    "border-radius":
-      typeof props.radius === "number" ? `${props.radius}px` : props.radius,
-    "object-fit": props.fit,
+        : props.height || '100%',
+    'object-fit': props.fit,
   };
 });
 
@@ -101,7 +99,7 @@ const loadImage = async () => {
   if (!props.src) return;
 
   // 触发 beforeLoad 事件
-  emit("beforeLoad");
+  emit('beforeLoad');
 
   try {
     isLoading.value = true;
@@ -111,18 +109,19 @@ const loadImage = async () => {
     if (props.headers) {
       const response = await cachedFetch(props.src, {
         headers: props.headers,
+        verify: false,
       });
       const blob = await response.blob();
       imageSrc.value = URL.createObjectURL(
-        new Blob([blob], { type: blob.type || "image/png" })
+        new Blob([blob], { type: blob.type || 'image/png' })
       ); // 将二进制数据转换为 URL
     } else {
       imageSrc.value = props.src; // 直接使用 src
     }
   } catch (error) {
-    console.error("图片加载失败:", error);
+    console.error('图片加载失败:', error);
     isError.value = true;
-    emit("error", error);
+    emit('error', error);
   } finally {
     isLoading.value = false;
   }
@@ -130,13 +129,13 @@ const loadImage = async () => {
 
 // 图片加载成功
 const handleLoad = () => {
-  emit("load");
+  emit('load');
 };
 
 // 图片加载失败
 const handleError = () => {
   isError.value = true;
-  emit("error");
+  emit('error');
 };
 
 // 懒加载逻辑

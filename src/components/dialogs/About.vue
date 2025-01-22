@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { useDisplayStore } from "@/store";
-import wujisvg from "@/assets/wuji.svg";
-import { open } from "@tauri-apps/plugin-shell";
-import { getVersion } from "@tauri-apps/api/app";
-import { onMounted, ref } from "vue";
+import { useDisplayStore } from '@/store';
+import wujisvg from '@/assets/wuji.svg';
+import { open } from '@tauri-apps/plugin-shell';
+import { getVersion } from '@tauri-apps/api/app';
+import { onMounted, ref } from 'vue';
 
 const displayStore = useDisplayStore();
-const version = ref("");
+const version = ref('');
 
 const openGithub = () => {
-  open("https://github.com/moshstudio/wuji-tauri");
+  open('https://github.com/moshstudio/wuji-tauri');
 };
 onMounted(async () => {
   version.value = await getVersion();

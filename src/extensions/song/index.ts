@@ -1,5 +1,5 @@
-import { SongShelfType } from "@/types/song";
-import { Extension } from "../baseExtension";
+import { SongShelfType } from '@/types/song';
+import { Extension } from '../baseExtension';
 
 // 歌曲 信息
 export interface SongInfo {
@@ -82,14 +82,14 @@ export interface PlaylistList {
 }
 
 // 歌曲尺寸
-export type SongSize = "128k" | "320k" | "flac" | "";
+export type SongSize = '128k' | '320k' | 'flac' | '';
 
 // 歌曲 url，pic 和 bigPic 表示图片和大图
 export type SongUrlMap = {
-  "128k"?: string;
-  "120"?: string;
-  "320k"?: string;
-  "320"?: string;
+  '128k'?: string;
+  '120'?: string;
+  '320k'?: string;
+  '320'?: string;
   flac?: string;
   pic?: string;
   bgPic?: string;
@@ -136,11 +136,11 @@ function loadSongExtensionString(
   codeString: string
 ): SongExtension | undefined {
   try {
-    const func = new Function("SongExtension", codeString);
+    const func = new Function('SongExtension', codeString);
     const extensionclass = func(SongExtension);
     return new extensionclass();
   } catch (error) {
-    console.error("Error executing code:\n", error);
+    console.error('Error executing code:\n', error);
   }
 }
 

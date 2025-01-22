@@ -1,7 +1,7 @@
-import { showNotify } from "vant";
+import { showNotify } from 'vant';
 
 export function toProxyUrl(url?: string | undefined | null): string {
-  if (!url) return "";
+  if (!url) return '';
   return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
 }
 export function maxPageNoFromElements(
@@ -27,8 +27,8 @@ export function parseAndExecuteHtml(
     );
   }
   return new Promise((resolve, reject) => {
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
     document.body.appendChild(iframe);
 
     const iframeDocument =
@@ -40,13 +40,13 @@ export function parseAndExecuteHtml(
 
       resolve(iframe);
     } else {
-      console.log("Failed to load iframe document");
+      console.log('Failed to load iframe document');
 
-      reject(new Error("Failed to load iframe document"));
+      reject(new Error('Failed to load iframe document'));
     }
 
     iframe.onerror = () => {
-      reject(new Error("Failed to load iframe"));
+      reject(new Error('Failed to load iframe'));
       // 清理 iframe
       document.body.removeChild(iframe);
     };
@@ -69,9 +69,9 @@ export function tryCatchProxy<T extends Object>(target: T): T {
       let condition = false;
       try {
         if (
-          name !== "constructor" &&
+          name !== 'constructor' &&
           proto[name] &&
-          typeof proto[name] === "function"
+          typeof proto[name] === 'function'
         ) {
           condition = true;
         }
@@ -85,7 +85,7 @@ export function tryCatchProxy<T extends Object>(target: T): T {
             console.warn(`Error in ${originalMethod}:`, e);
             showNotify({
               message: `${proto.name} 请求失败`,
-              position: "bottom",
+              position: 'bottom',
             });
           }
         };
@@ -97,7 +97,7 @@ export function tryCatchProxy<T extends Object>(target: T): T {
   return new Proxy(target, {
     get(target, prop, receiver) {
       const originalMethod = Reflect.get(target, prop, receiver);
-      if (typeof originalMethod === "function") {
+      if (typeof originalMethod === 'function') {
         return function (...args: any[]) {
           const result = originalMethod.apply(target, args);
           if (result instanceof Promise) {

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import _ from "lodash";
-import { BookItem } from "@/extensions/book";
-import { Icon } from "@iconify/vue";
+import _ from 'lodash';
+import { BookItem } from '@/extensions/book';
+import { Icon } from '@iconify/vue';
 const { bookItem } = defineProps<{
   bookItem: BookItem;
 }>();
 const emit = defineEmits<{
-  (e: "click", item: BookItem): void;
+  (e: 'click', item: BookItem): void;
 }>();
 </script>
 
@@ -32,7 +32,6 @@ const emit = defineEmits<{
       class="flex flex-col gap-1 justify-start text-sm text-[--van-text-color] min-w-[180px] max-w-[200px]"
     >
       <p
-        v-tooltip="bookItem.title"
         class="text-base font-bold h-6 line-clamp-1"
       >
         {{ bookItem.title }}
@@ -40,11 +39,11 @@ const emit = defineEmits<{
       <p class="text-xs line-clamp-1 flex gap-2">
         <span v-if="bookItem.author">{{ bookItem.author }}</span>
         <span v-if="_.castArray(bookItem.tags).length">
-          {{ _.castArray(bookItem.tags)?.join(",") }}
+          {{ _.castArray(bookItem.tags)?.join(',') }}
         </span>
         <span v-if="bookItem.status">{{ bookItem.status }}</span>
       </p>
-      <p v-tooltip="bookItem.intro" class="text-xs line-clamp-3">
+      <p class="text-xs line-clamp-3">
         {{ bookItem.intro }}
       </p>
       <!-- <p>

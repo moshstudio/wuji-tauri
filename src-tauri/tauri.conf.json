@@ -14,9 +14,7 @@
       {
         "title": "无极",
         "width": 1100,
-        "height": 700,
-        "minWidth": 600,
-        "minHeight": 300
+        "height": 700
       }
     ],
     "security": {
@@ -31,8 +29,8 @@
         "language": "zh-CN"
       },
       "nsis": {
-        "languages": ["SimpChinese", "English"],
-        "displayLanguageSelector": true
+        "languages": ["SimpChinese"],
+        "displayLanguageSelector": false
       }
     },
     "icon": [

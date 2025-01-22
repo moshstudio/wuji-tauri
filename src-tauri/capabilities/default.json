@@ -33,6 +33,11 @@
     "store:allow-has",
     "store:allow-length",
     "store:allow-reset",
-    "fetch-plugin:default"
+    "fetch-plugin:default",
+    "os:default",
+    "core:window:allow-set-min-size",
+    "core:window:allow-destroy",
+    "core:window:allow-hide",
+    "core:window:allow-get-all-windows"
   ]
 }

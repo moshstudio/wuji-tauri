@@ -1,11 +1,11 @@
-import { SongExtension } from ".";
+import { SongExtension } from '.';
 
 class TestSongExtension extends SongExtension {
-  id = "testSong";
-  name = "ZZ123";
-  version = "0.0.1";
-  baseUrl = "https://zz123.com/";
-  ajaxUrl = "https://zz123.com/ajax/";
+  id = 'testSong';
+  name = 'ZZ123';
+  version = '0.0.1';
+  baseUrl = 'https://zz123.com/';
+  ajaxUrl = 'https://zz123.com/ajax/';
   async getRecommendPlaylists(pageNo) {
     pageNo ||= 1;
     const body = await this.fetchDom(this.baseUrl, {
@@ -13,18 +13,18 @@ class TestSongExtension extends SongExtension {
     });
     console.log(body);
 
-    const elements = body.querySelectorAll(".cate-list a");
+    const elements = body.querySelectorAll('.cate-list a');
 
     const list = [];
     elements?.forEach((item) => {
-      const href = item.getAttribute("href");
+      const href = item.getAttribute('href');
       if (href) {
-        const name = item.textContent?.trim() || "";
+        const name = item.textContent?.trim() || '';
         list.push({
           id: href,
           name,
-          picUrl: "",
-          sourceId: "",
+          picUrl: '',
+          sourceId: '',
         });
       }
     });
@@ -38,13 +38,13 @@ class TestSongExtension extends SongExtension {
     pageNo ||= 1;
     const url = this.ajaxUrl;
     const form = new FormData();
-    form.append("act", "tag_music");
-    form.append("type", "tuijian");
-    form.append("tid", "vszs");
-    form.append("lang", "");
-    form.append("page", String(pageNo));
+    form.append('act', 'tag_music');
+    form.append('type', 'tuijian');
+    form.append('tid', 'vszs');
+    form.append('lang', '');
+    form.append('page', String(pageNo));
     const response = await this.fetch(url, {
-      method: "POST",
+      method: 'POST',
       body: form,
     });
     const json = await response.json();
@@ -58,10 +58,10 @@ class TestSongExtension extends SongExtension {
         picUrl: this.toProxyUrl(item.pic),
         cid: item.sid,
         url: {
-          "128k": item.mp3,
+          '128k': item.mp3,
           headers: {},
         },
-        sourceId: "",
+        sourceId: '',
       });
     });
     return {
@@ -93,7 +93,7 @@ class TestSongExtension extends SongExtension {
           artists: [song.sname],
           picUrl: this.toProxyUrl(song.pic),
           cid: song.sid,
-          sourceId: "",
+          sourceId: '',
         };
       });
       return {
@@ -125,7 +125,7 @@ class TestSongExtension extends SongExtension {
           artists: [song.sname],
           picUrl: this.toProxyUrl(song.pic),
           cid: song.sid,
-          sourceId: "",
+          sourceId: '',
         };
       });
       item.list = {
@@ -141,16 +141,16 @@ class TestSongExtension extends SongExtension {
   async getSongUrl(item, size) {
     const url = this.ajaxUrl;
     const form = new FormData();
-    form.append("act", "songinfo");
-    form.append("id", item.id);
+    form.append('act', 'songinfo');
+    form.append('id', item.id);
     const response = await this.fetch(url, {
-      method: "POST",
+      method: 'POST',
       body: form,
     });
     const json = await response.json();
 
     return {
-      "128k": json.data.mp3,
+      '128k': json.data.mp3,
       lyric: json.data.lrc,
       headers: {},
     };

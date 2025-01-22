@@ -1,4 +1,4 @@
-import { BookExtension } from ".";
+import { BookExtension } from '.';
 
 declare class TestBookExtension extends BookExtension {
   id: string;

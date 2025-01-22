@@ -1,11 +1,11 @@
-import _ from "lodash";
-import { HotItem } from "@/apis/hot/apiHot";
+import _ from 'lodash';
+import { HotItem } from '@/apis/hot/apiHot';
 import {
   loadPhotoExtensionString,
   PhotoExtension,
   PhotoItem,
   PhotoShelf,
-} from "@/extensions/photo";
+} from '@/extensions/photo';
 import {
   SongSource,
   PhotoSource,
@@ -15,16 +15,21 @@ import {
   SubscribeSource,
   SubscribeItem,
   BookSource,
-} from "@/types";
+} from '@/types';
 import {
   StorageLikeAsync,
   useDark,
   useStorage,
   useStorageAsync,
   useToggle,
-} from "@vueuse/core";
-import { defineStore } from "pinia";
-import { showConfirmDialog, showNotify, showToast } from "vant";
+} from '@vueuse/core';
+import { defineStore } from 'pinia';
+import {
+  showConfirmDialog,
+  showLoadingToast,
+  showNotify,
+  showToast,
+} from 'vant';
 import {
   computed,
   onBeforeMount,
@@ -32,36 +37,36 @@ import {
   reactive,
   ref,
   triggerRef,
-} from "vue";
-import { Store } from "@tauri-apps/plugin-store";
-import { fetch } from "@/utils/fetch";
-import { toast } from "vue3-toastify";
+} from 'vue';
+import { Store } from '@tauri-apps/plugin-store';
+import { type as osType } from '@tauri-apps/plugin-os';
+import { fetch } from '@/utils/fetch';
 import {
   loadSongExtensionString,
   SongShelf,
   PlaylistInfo,
   SongExtension,
   SongInfo,
-} from "@/extensions/song";
-import { SongPlayMode, SongShelfType } from "@/types/song";
-import { watch } from "vue";
-import { sleep, tryCatchProxy } from "@/utils";
+} from '@/extensions/song';
+import { SongPlayMode, SongShelfType } from '@/types/song';
+import { watch } from 'vue';
+import { sleep, tryCatchProxy } from '@/utils';
 import {
   BookChapter,
   BookExtension,
   BookItem,
   BookShelf,
   loadBookExtensionString,
-} from "@/extensions/book";
-import { Extension } from "@/extensions/baseExtension";
+} from '@/extensions/book';
+import { Extension } from '@/extensions/baseExtension';
 
-import TestPhotoExtension from "@/extensions/photo/test";
-import TestSongExtension from "@/extensions/song/test";
-import TestBookExtension from "@/extensions/book/test";
-import { nanoid } from "nanoid";
-import { createCancellableFunction } from "@/utils/cancelableFunction";
+import TestPhotoExtension from '@/extensions/photo/test';
+import TestSongExtension from '@/extensions/song/test';
+import TestBookExtension from '@/extensions/book/test';
+import { nanoid } from 'nanoid';
+import { createCancellableFunction } from '@/utils/cancelableFunction';
 
-export const useStore = defineStore("store", () => {
+export const useStore = defineStore('store', () => {
   const hotItems = ref<HotItem[]>([]); // 热搜榜
 
   const subscribeSourceStore = useSubscribeSourceStore();
@@ -75,7 +80,7 @@ export const useStore = defineStore("store", () => {
       return sourceClasses.get(item.id);
     }
     // for test
-    if (item.code === "test") {
+    if (item.code === 'test') {
       switch (item.type) {
         case SourceType.Photo:
           sourceClasses.set(item.id, new TestPhotoExtension());
@@ -95,7 +100,7 @@ export const useStore = defineStore("store", () => {
       try {
         item.code = await (await fetch(item.url)).text();
       } catch (error) {
-        console.log("加载扩展失败:", item);
+        console.log('加载扩展失败:', item);
         sourceClasses.set(item.id, null);
         return null;
       }
@@ -120,7 +125,7 @@ export const useStore = defineStore("store", () => {
         break;
     }
     if (!extensionClass) {
-      toast(`添加 ${item.name} 订阅源失败`);
+      showToast(`添加 ${item.name} 订阅源失败`);
       sourceClasses.delete(item.id);
       return null;
     }
@@ -134,19 +139,19 @@ export const useStore = defineStore("store", () => {
   };
 
   const photoSources = useStorageAsync<PhotoSource[]>(
-    "photoSources",
+    'photoSources',
     [],
     kvStorage.storage
   );
   // const photoSources = ref<PhotoSource[]>([]);
   const songSources = useStorageAsync<SongSource[]>(
-    "songSources",
+    'songSources',
     [],
     kvStorage.storage
   );
   // const songSources = ref<SongSource[]>([]);
   const bookSources = useStorageAsync<BookSource[]>(
-    "bookSources",
+    'bookSources',
     [],
     kvStorage.storage
   );
@@ -170,7 +175,7 @@ export const useStore = defineStore("store", () => {
       });
       source.list = res;
     } else {
-      toast(`${source.item.name} 推荐结果为空`);
+      showToast(`${source.item.name} 推荐结果为空`);
       source.list = undefined;
     }
     triggerRef(photoSources);
@@ -192,7 +197,7 @@ export const useStore = defineStore("store", () => {
       });
       source.list = res;
     } else {
-      toast(`${source.item.name} 搜索结果为空`);
+      showToast(`${source.item.name} 搜索结果为空`);
       source.list = undefined;
     }
     triggerRef(photoSources);
@@ -304,8 +309,15 @@ export const useStore = defineStore("store", () => {
     item: PlaylistInfo,
     pageNo: number = 1
   ) => {
+    const toast = showLoadingToast({
+      message: '加载中',
+      duration: 0,
+      closeOnClick: true,
+      closeOnClickOverlay: false,
+    });
     const sc = (await sourceClass(source.item)) as SongExtension;
     const res = await sc?.getPlaylistDetail(item, pageNo);
+    toast.close();
     if (res) {
       res.list?.list.forEach((item) => {
         item.sourceId = source.item.id;
@@ -525,6 +537,8 @@ export const useStore = defineStore("store", () => {
    * 添加订阅源
    */
   const addSubscribeSource = async (url: string, raise: boolean = false) => {
+    const displayStore = useDisplayStore();
+    const t = displayStore.showToast();
     try {
       // 1. 从网址获取内容
       const subscribeResponse = await fetch(url);
@@ -547,7 +561,7 @@ export const useStore = defineStore("store", () => {
         try {
           const sc = await sourceClass(item);
           if (!sc) {
-            toast(`添加 ${item.name} 订阅源失败`);
+            showToast(`添加 ${item.name} 订阅源失败`);
             continue;
           }
           item.id ||= sc.id || sc.hash;
@@ -561,7 +575,7 @@ export const useStore = defineStore("store", () => {
           );
           source.detail.urls.push(item);
         } catch (error) {
-          toast(`添加 ${item.name} 订阅源失败`);
+          showToast(`添加 ${item.name} 订阅源失败`);
         }
       }
       // 同步disable状态
@@ -575,18 +589,29 @@ export const useStore = defineStore("store", () => {
       });
       subscribeSourceStore.addSubscribeSource(source); //保存
     } catch (error) {
-      showToast("添加订阅源失败");
+      showToast('添加订阅源失败');
       if (raise) {
         throw error;
       }
+    } finally {
+      displayStore.closeToast(t);
     }
   };
   const updateSubscribeSources = async () => {
-    const t = toast.loading("更新订阅源中", {
-      onClick: () => {
-        toast.remove(t);
-      },
-    });
+    if (!subscribeSourceStore.subscribeSources.length) {
+      const dialog = await showConfirmDialog({
+        message: '您需要添加订阅源才能正常使用，\n是否立即导入默认订阅源？',
+      });
+      if (dialog === 'confirm') {
+        await addSubscribeSource(
+          'https://raw.githubusercontent.com/moshstudio/wuji-sources/refs/heads/main/default_source.json'
+        );
+        showToast('默认源已导入');
+      }
+      return;
+    }
+    const displayStore = useDisplayStore();
+    const t = displayStore.showToast();
     const failed: string[] = [];
     for (const source of subscribeSourceStore.subscribeSources) {
       const url = source.url;
@@ -599,15 +624,15 @@ export const useStore = defineStore("store", () => {
     }
 
     if (failed.length > 0) {
-      showNotify(`${failed.join(",")} 订阅源更新失败`);
+      showNotify(`${failed.join(',')} 订阅源更新失败`);
     } else {
       showNotify({
-        type: "success",
-        message: "更新订阅源成功",
+        type: 'success',
+        message: '更新订阅源成功',
         duration: 2000,
       });
     }
-    toast.remove(t);
+    displayStore.closeToast(t);
     await subscribeSourceStore.saveSubscribeSources();
     loadSubscribeSources(true);
   };
@@ -662,7 +687,7 @@ export const useStore = defineStore("store", () => {
         }
         break;
       default:
-        console.log("暂未实现", source);
+        console.log('暂未实现', source);
         break;
     }
   };
@@ -681,7 +706,7 @@ export const useStore = defineStore("store", () => {
         _.remove(bookSources.value, (source) => source.item.id === itemId);
         break;
       default:
-        console.log("暂未实现 removeFromSource", sourceType);
+        console.log('暂未实现 removeFromSource', sourceType);
     }
   };
   const loadSubscribeSources = (load?: boolean) => {
@@ -720,13 +745,9 @@ export const useStore = defineStore("store", () => {
       ...bookSources.value,
     ]) {
       if (!added.includes(source.item.id)) {
-        if (source.item.id.includes("test") && keepTest.value) {
-          console.log("keep test source", source.item.id);
-
+        if (source.item.id.includes('test') && keepTest.value) {
           continue;
         }
-        console.log("remove source", source.item.id);
-
         removeFromSource(source.item.id, source.item.type);
       }
     }
@@ -736,9 +757,9 @@ export const useStore = defineStore("store", () => {
     const item = {
       id: extension.id,
       name: extension.name,
-      type: "",
-      url: "",
-      code: "test",
+      type: '',
+      url: '',
+      code: 'test',
     };
     switch (type) {
       case SourceType.Photo:
@@ -762,6 +783,25 @@ export const useStore = defineStore("store", () => {
     );
   };
 
+  const clearData = async () => {
+    const loading = showLoadingToast({
+      message: '清空中',
+      duration: 0,
+      closeOnClick: true,
+      closeOnClickOverlay: false,
+    });
+    await subscribeSourceStore.clearSubscribeSources();
+    loadSubscribeSources(true);
+    const photoShelfStore = usePhotoShelfStore();
+    photoShelfStore.clear();
+    const songShelfStore = useSongShelfStore();
+    songShelfStore.clear();
+    const bookShelfStore = useBookShelfStore();
+    bookShelfStore.clear();
+    localStorage.clear();
+    loading.close();
+  };
+
   onBeforeMount(async () => {
     await subscribeSourceStore.init();
     if (!subscribeSourceStore.isEmpty) {
@@ -777,13 +817,13 @@ export const useStore = defineStore("store", () => {
     } else {
       try {
         const dialog = await showConfirmDialog({
-          message: "您需要添加订阅源才能正常使用，\n是否立即导入默认订阅源？",
+          message: '您需要添加订阅源才能正常使用，\n是否立即导入默认订阅源？',
         });
-        if (dialog === "confirm") {
+        if (dialog === 'confirm') {
           await addSubscribeSource(
-            "https://raw.githubusercontent.com/moshstudio/wuji-sources/refs/heads/main/default_source.json"
+            'https://raw.githubusercontent.com/moshstudio/wuji-sources/refs/heads/main/default_source.json'
           );
-          showToast("默认源已导入");
+          showToast('默认源已导入');
         }
       } catch (error) {}
     }
@@ -828,11 +868,31 @@ export const useStore = defineStore("store", () => {
     loadSubscribeSources,
     updateSubscribeSources,
     removeFromSource,
+
+    clearData,
   };
 });
 
-export const useDisplayStore = defineStore("display", () => {
+export const useDisplayStore = defineStore('display', () => {
+  // 检测是否为手机尺寸
+  const mobileMediaQuery = window.matchMedia('(max-width: 361px)');
+  // 检测是否为横屏
+  const landscapeMediaQuery = window.matchMedia('(orientation: landscape)');
+
+  const isMobile = ref(osType() == 'android' || mobileMediaQuery.matches);
+  const isLandscape = ref(landscapeMediaQuery.matches);
+
+  // 监听变化
+  mobileMediaQuery.addEventListener('change', (event) => {
+    isMobile.value = osType() == 'android' || event.matches;
+  });
+
+  landscapeMediaQuery.addEventListener('change', (event) => {
+    isLandscape.value = event.matches;
+  });
+
   const taichiAnimateRandomized = ref(false);
+
   const isDark = useDark();
   const toggleDark = useToggle(isDark);
 
@@ -850,12 +910,38 @@ export const useDisplayStore = defineStore("display", () => {
 
   const showAboutDialog = ref(false);
 
-  const readBgColor = useStorageAsync("readbgColor", "");
-  const readFontSize = useStorageAsync("readFontSize", "20");
+  const showSettingDialog = ref(false);
+  const showLeftPopup = ref(false);
 
-  const trayId = ref("");
+  const readBgColor = useStorageAsync('readbgColor', '');
+  const readFontSize = useStorageAsync('readFontSize', '20');
+
+  const trayId = ref('');
+
+  const toastActive = ref(false);
+  const toastId = ref('');
+
+  const showToast = () => {
+    toastActive.value = true;
+    toastId.value = nanoid();
+    return toastId.value;
+  };
+  const closeToast = (id?: string) => {
+    if (!id) {
+      toastActive.value = false;
+      toastId.value = '';
+      return;
+    }
+    if (id && id == toastId.value) {
+      toastActive.value = false;
+      toastId.value = '';
+      return;
+    }
+  };
 
   return {
+    isMobile,
+
     taichiAnimateRandomized,
     isDark,
     toggleDark,
@@ -873,19 +959,25 @@ export const useDisplayStore = defineStore("display", () => {
 
     showAboutDialog,
 
+    showSettingDialog,
+    showLeftPopup,
+
     readBgColor,
     readFontSize,
 
     trayId,
+    toastActive,
+    showToast,
+    closeToast,
   };
 });
 
-export const useSubscribeSourceStore = defineStore("subscribeSource", () => {
+export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
   let store: Store | undefined = undefined;
   const subscribeSources = reactive<SubscribeSource[]>([]);
   const init = async () => {
-    store = await Store.load("subscribeSourceStore.json");
-    const stored = await store?.get<SubscribeSource[]>("subscribeSources");
+    store = await Store.load('subscribeSourceStore.json');
+    const stored = await store?.get<SubscribeSource[]>('subscribeSources');
     if (stored) {
       subscribeSources.push(...stored);
     }
@@ -911,7 +1003,7 @@ export const useSubscribeSourceStore = defineStore("subscribeSource", () => {
     return subscribeSources.find((item) => item.detail.id === sourceId);
   };
   const saveSubscribeSources = async () => {
-    await store?.set("subscribeSources", subscribeSources);
+    await store?.set('subscribeSources', subscribeSources);
   };
   const clearSubscribeSources = async () => {
     subscribeSources.length = 0;
@@ -932,13 +1024,15 @@ export const useSubscribeSourceStore = defineStore("subscribeSource", () => {
   };
 });
 
-export const useSongStore = defineStore("song", () => {
+export const useSongStore = defineStore('song', () => {
+  const displayStore = useDisplayStore();
+
   const volumeVisible = ref<boolean>(false); // 设置音量弹窗
   const audioRef = ref<HTMLAudioElement>(); // 音频标签对象
 
-  const playlist = useStorage<SongInfo[]>("songPlaylist", []);
-  const playingPlaylist = useStorage<SongInfo[]>("songPlayingPlaylist", []); // 当前播放列表
-  const playingSong = useStorage<SongInfo>("songPlayingSong", null, undefined, {
+  const playlist = useStorage<SongInfo[]>('songPlaylist', []);
+  const playingPlaylist = useStorage<SongInfo[]>('songPlayingPlaylist', []); // 当前播放列表
+  const playingSong = useStorage<SongInfo>('songPlayingSong', null, undefined, {
     serializer: {
       read: (raw: string) => {
         return JSON.parse(raw);
@@ -951,18 +1045,18 @@ export const useSongStore = defineStore("song", () => {
 
   const audioDuration = ref(0); // 音频总时长
   const audioCurrent = ref(0); // 音频当前播放时间
-  const audioVolume = useStorageAsync<number>("songVolume", 1); // 音频声音，范围 0-1
+  const audioVolume = useStorageAsync<number>('songVolume', 1); // 音频声音，范围 0-1
   const isPlaying = ref<boolean>(false); // 音频播放状态：true 播放，false 暂停
   const playMode = useStorageAsync<SongPlayMode>(
-    "songPlayMode",
+    'songPlayMode',
     SongPlayMode.list
   );
   const playProgress = ref(0); // 音频播放进度
 
   onMounted(() => {
-    audioRef.value = document.createElement("audio");
-    audioRef.value.style.width = "0px";
-    audioRef.value.style.height = "0px";
+    audioRef.value = document.createElement('audio');
+    audioRef.value.style.width = '0px';
+    audioRef.value.style.height = '0px';
     document.body.appendChild(audioRef.value);
     audioRef.value.volume = audioVolume.value;
 
@@ -994,104 +1088,6 @@ export const useSongStore = defineStore("song", () => {
   });
 
   watch(
-    playlist,
-    (newValue) => {
-      // 播放列表变化时，重置播放列表索引
-      if (playMode.value === SongPlayMode.random) {
-        playingPlaylist.value = _.shuffle(newValue);
-        return;
-      } else {
-        playingPlaylist.value = [...newValue];
-      }
-    },
-    {
-      deep: true,
-      immediate: true,
-    }
-  );
-  // watch(
-  //   playingSong,
-  //   async (newValue) => {
-  //     console.log("watch playingsong");
-  //     console.log(newValue);
-
-  //     if (!audioRef.value || !newValue) return;
-
-  //     // 暂停并重置音频
-  //     audioRef.value.pause();
-  //     audioRef.value.src = "";
-  //     audioRef.value.srcObject = null;
-  //     audioRef.value.currentTime = 0;
-
-  //     let src = null;
-  //     let headers = null;
-  //     let t: number | string | null = null;
-
-  //     // 获取歌曲URL和headers
-  //     if (!newValue.url) {
-  //       t = toast.loading("歌曲加载中", {
-  //         onClick: () => {
-  //           if (t) toast.remove(t);
-  //         },
-  //       });
-  //       const store = useStore();
-  //       const source = store.getSongSource(newValue.sourceId);
-  //       if (!source) {
-  //         toast(`${newValue.name} 所属源丢失`);
-  //         return;
-  //       }
-  //       const sc = (await store.sourceClass(source?.item)) as SongExtension;
-  //       const newUrl = await sc?.getSongUrl(newValue);
-
-  //       if (typeof newUrl === "string") {
-  //         src = newUrl;
-  //       } else if (newUrl instanceof Object) {
-  //         src = newUrl["128k"] || newUrl["320k"] || newUrl.flac || "";
-  //         headers = newUrl.headers || null;
-  //       }
-  //     } else {
-  //       if (typeof newValue.url === "string") {
-  //         src = newValue.url;
-  //       } else if (newValue.url instanceof Object) {
-  //         src =
-  //           newValue.url["128k"] ||
-  //           newValue.url["320k"] ||
-  //           newValue.url.flac ||
-  //           "";
-  //         headers = newValue.url.headers || null;
-  //       }
-  //     }
-
-  //     if (!src) {
-  //       showNotify(`歌曲 ${newValue.name} 无法播放`);
-  //       onPause();
-  //       if (t) toast.remove(t);
-  //       return;
-  //     }
-  //     console.log("src is ", src);
-
-  //     try {
-  //       if (headers) {
-  //         const response = await fetch(src, { headers });
-  //         const blob = await response.blob();
-  //         const blobUrl = URL.createObjectURL(blob);
-  //         audioRef.value.src = blobUrl;
-  //       } else {
-  //         audioRef.value.src = src;
-  //       }
-  //       playProgress.value = 0;
-  //     } catch (error) {
-  //       console.error("加载歌曲失败:", error);
-  //       showNotify(`歌曲 ${newValue.name} 加载失败`);
-  //       onPause();
-  //     }
-  //     if (t) toast.remove(t);
-  //   },
-  //   {
-  //     immediate: true,
-  //   }
-  // );
-  watch(
     playMode,
     (__) => {
       // 播放模式变化时，重置播放列表索引
@@ -1121,7 +1117,7 @@ export const useSongStore = defineStore("song", () => {
 
     // 暂停并重置音频
     // audioRef.value.pause();
-    audioRef.value.removeAttribute("src");
+    audioRef.value.removeAttribute('src');
     audioRef.value.srcObject = null;
     audioRef.value.currentTime = 0;
     audioCurrent.value = 0;
@@ -1130,7 +1126,7 @@ export const useSongStore = defineStore("song", () => {
 
     let src = null;
     let headers = null;
-    let t: number | string | null = null;
+    let t: string | null = null;
 
     // 获取歌曲URL和headers
     if (!song.url) {
@@ -1140,28 +1136,24 @@ export const useSongStore = defineStore("song", () => {
         showToast(`${song.name} 所属源不存在或未启用`);
         return;
       }
-      t = toast.loading("歌曲加载中", {
-        onClick: () => {
-          if (t) toast.remove(t);
-        },
-      });
+      t = displayStore.showToast();
       const sc = (await store.sourceClass(source?.item)) as SongExtension;
       const newUrl = await sc?.getSongUrl(song);
 
-      if (typeof newUrl === "string") {
+      if (typeof newUrl === 'string') {
         src = newUrl;
       } else if (newUrl instanceof Object) {
-        src = newUrl["128k"] || newUrl["320k"] || newUrl.flac || "";
+        src = newUrl['128k'] || newUrl['320k'] || newUrl.flac || '';
         headers = newUrl.headers || null;
         if (newUrl.lyric) {
           song.lyric = newUrl.lyric;
         }
       }
     } else {
-      if (typeof song.url === "string") {
+      if (typeof song.url === 'string') {
         src = song.url;
       } else if (song.url instanceof Object) {
-        src = song.url["128k"] || song.url["320k"] || song.url.flac || "";
+        src = song.url['128k'] || song.url['320k'] || song.url.flac || '';
         headers = song.url.headers || null;
       }
     }
@@ -1169,7 +1161,7 @@ export const useSongStore = defineStore("song", () => {
     if (!src) {
       showNotify(`歌曲 ${song.name} 无法播放`);
       onPause();
-      if (t) toast.remove(t);
+      if (t) displayStore.closeToast(t);
       return;
     }
 
@@ -1184,11 +1176,11 @@ export const useSongStore = defineStore("song", () => {
       }
       playProgress.value = 0;
     } catch (error) {
-      console.error("加载歌曲失败:", error);
+      console.error('加载歌曲失败:', error);
       showNotify(`歌曲 ${song.name} 加载失败`);
       onPause();
     }
-    if (t) toast.remove(t);
+    if (t) displayStore.closeToast(t);
     if (!song.lyric) {
       const store = useStore();
       const source = store.getSongSource(song.sourceId);
@@ -1201,13 +1193,18 @@ export const useSongStore = defineStore("song", () => {
   const setPlayingList = async (list: SongInfo[], firstSong: SongInfo) => {
     if (list != playlist.value) {
       playlist.value = list;
+      if (playMode.value === SongPlayMode.random) {
+        playingPlaylist.value = _.shuffle(list);
+        return;
+      } else {
+        playingPlaylist.value = [...list];
+      }
     }
-    console.log(1);
 
     if (firstSong.id !== playingSong.value?.id) {
       if (audioRef.value) {
         audioRef.value.pause();
-        audioRef.value.removeAttribute("src");
+        audioRef.value.removeAttribute('src');
         audioRef.value.srcObject = null;
         audioRef.value.currentTime = 0;
       }
@@ -1227,7 +1224,7 @@ export const useSongStore = defineStore("song", () => {
 
     if (!audioRef.value.src && !audioRef.value.srcObject) {
       // 经过上步的playingSongSetSrc，还是没有，就说明这首歌无法播放
-      toast("歌曲无法播放");
+      showToast('歌曲无法播放');
       return;
     }
 
@@ -1313,7 +1310,7 @@ const createKVStore = (name?: string) => {
         this.load();
       }
       async load() {
-        const data = await Store.load(`${name ? name : "KVStore"}.json`);
+        const data = await Store.load(`${name ? name : 'KVStore'}.json`);
         store = data;
         const entries = await data.entries<string>();
         for (const [key, value] of entries) {
@@ -1346,16 +1343,16 @@ const createKVStore = (name?: string) => {
   })();
 };
 
-export const useBookShelfStore = defineStore("bookShelfStore", () => {
-  const kvStorage = createKVStore("bookShelfStore");
+export const useBookShelfStore = defineStore('bookShelfStore', () => {
+  const kvStorage = createKVStore('bookShelfStore');
 
   // 书籍书架⬇️
   const bookShelf = useStorageAsync<BookShelf[]>(
-    "bookShelf",
+    'bookShelf',
     [
       {
         id: nanoid(),
-        name: "默认书架",
+        name: '默认书架',
         books: [],
         createTime: Date.now(),
       },
@@ -1385,7 +1382,7 @@ export const useBookShelfStore = defineStore("bookShelfStore", () => {
     shelfId?: string
   ): boolean => {
     let id: string;
-    if (typeof book === "string") {
+    if (typeof book === 'string') {
       id = book;
     } else {
       id = book.id;
@@ -1406,17 +1403,17 @@ export const useBookShelfStore = defineStore("bookShelfStore", () => {
   };
   const addToBookSelf = (bookItem: BookItem, shelfId?: string) => {
     if (!bookShelf.value.length) {
-      showToast("书架为空，请先创建书架");
+      showToast('书架为空，请先创建书架');
       return;
     }
     if (!shelfId) shelfId = bookShelf.value[0].id;
     const shelf = bookShelf.value.find((item) => item.id === shelfId);
     if (!shelf) {
-      showToast("书架不存在");
+      showToast('书架不存在');
       return;
     }
     if (shelf.books.find((item) => item.book.id === bookItem.id)) {
-      showToast("书架中已存在此书");
+      showToast('书架中已存在此书');
       return;
     }
     shelf.books.push({
@@ -1426,13 +1423,13 @@ export const useBookShelfStore = defineStore("bookShelfStore", () => {
   };
   const removeBookFromShelf = (bookItem: BookItem, shelfId?: string) => {
     if (!bookShelf.value.length) {
-      showToast("书架为空");
+      showToast('书架为空');
       return;
     }
     if (!shelfId) shelfId = bookShelf.value[0].id;
     const shelf = bookShelf.value.find((item) => item.id === shelfId);
     if (!shelf) {
-      showToast("书架不存在");
+      showToast('书架不存在');
       return;
     }
     _.remove(shelf.books, (item) => item.book.id === bookItem.id);
@@ -1471,7 +1468,17 @@ export const useBookShelfStore = defineStore("bookShelfStore", () => {
       })
     );
     bookChapterRefreshing.value = false;
-    showToast("刷新章节完成");
+    showToast('刷新章节完成');
+  };
+  const clear = () => {
+    bookShelf.value = [
+      {
+        id: nanoid(),
+        name: '默认书架',
+        books: [],
+        createTime: Date.now(),
+      },
+    ];
   };
 
   return {
@@ -1485,29 +1492,30 @@ export const useBookShelfStore = defineStore("bookShelfStore", () => {
     updateBookReadInfo,
     deleteBookFromShelf,
     bookRefreshChapters,
+    clear,
   };
 });
 
-export const useSongShelfStore = defineStore("songShelfStore", () => {
-  const kvStorage = createKVStore("songShelfStore");
+export const useSongShelfStore = defineStore('songShelfStore', () => {
+  const kvStorage = createKVStore('songShelfStore');
 
   const songCreateShelf = useStorageAsync<SongShelf[]>(
-    "songShelf",
+    'songShelf',
     [],
     kvStorage.storage
   );
   const songPlaylistShelf = useStorageAsync<SongShelf[]>(
-    "songPlaylistShelf",
+    'songPlaylistShelf',
     [],
     kvStorage.storage
   );
-  const songLikeShelf = useStorageAsync<SongShelf>("songLikeShelf", {
+  const songLikeShelf = useStorageAsync<SongShelf>('songLikeShelf', {
     type: SongShelfType.like,
     playlist: {
       id: nanoid(),
-      name: "我喜欢的音乐",
-      picUrl: "",
-      sourceId: "",
+      name: '我喜欢的音乐',
+      picUrl: '',
+      sourceId: '',
       list: {
         list: [],
         page: 1,
@@ -1533,7 +1541,7 @@ export const useSongShelfStore = defineStore("songShelfStore", () => {
   const createShelf = (name: string): boolean => {
     // 创建收藏
     if (songCreateShelf.value.some((item) => item.playlist.name === name)) {
-      showToast("收藏夹已存在");
+      showToast('收藏夹已存在');
       return false;
     }
     songCreateShelf.value.push({
@@ -1541,8 +1549,8 @@ export const useSongShelfStore = defineStore("songShelfStore", () => {
       playlist: {
         id: nanoid(),
         name,
-        picUrl: "",
-        sourceId: "",
+        picUrl: '',
+        sourceId: '',
       },
       createTime: Date.now(),
     });
@@ -1558,7 +1566,7 @@ export const useSongShelfStore = defineStore("songShelfStore", () => {
       );
     }
     if (!shelf) {
-      showToast("收藏夹不存在");
+      showToast('收藏夹不存在');
       return false;
     }
     shelf.playlist.list ||= {
@@ -1567,7 +1575,7 @@ export const useSongShelfStore = defineStore("songShelfStore", () => {
       totalPage: 1,
     };
     if (shelf.playlist.list.list.find((item) => item.id === song.id)) {
-      showToast("已存在");
+      showToast('已存在');
       return false;
     } else {
       shelf.playlist.list.list.push(song);
@@ -1585,7 +1593,7 @@ export const useSongShelfStore = defineStore("songShelfStore", () => {
       );
     }
     if (!shelf) {
-      showToast("收藏夹不存在");
+      showToast('收藏夹不存在');
       return false;
     }
     _.remove(shelf?.playlist.list?.list || [], (item) => item.id === song.id);
@@ -1597,7 +1605,7 @@ export const useSongShelfStore = defineStore("songShelfStore", () => {
       (item) => item.playlist.id === playlist.id
     );
     if (find) {
-      showToast("已存在");
+      showToast('已存在');
       return false;
     }
     songPlaylistShelf.value.push({
@@ -1613,7 +1621,7 @@ export const useSongShelfStore = defineStore("songShelfStore", () => {
       (item) => item.playlist.id === songShelfId
     );
     if (removed.length) {
-      showToast("删除成功");
+      showToast('删除成功');
       return true;
     }
     const removed2 = _.remove(
@@ -1621,10 +1629,29 @@ export const useSongShelfStore = defineStore("songShelfStore", () => {
       (item) => item.playlist.id === songShelfId
     );
     if (removed2.length) {
-      showToast("删除成功");
+      showToast('删除成功');
       return true;
     }
     return false;
+  };
+  const clear = () => {
+    songCreateShelf.value = [];
+    songPlaylistShelf.value = [];
+    songLikeShelf.value = {
+      type: SongShelfType.like,
+      playlist: {
+        id: nanoid(),
+        name: '我喜欢的音乐',
+        picUrl: '',
+        sourceId: '',
+        list: {
+          list: [],
+          page: 1,
+          totalPage: 1,
+        },
+      },
+      createTime: Date.now(),
+    };
   };
   return {
     songCreateShelf,
@@ -1637,18 +1664,19 @@ export const useSongShelfStore = defineStore("songShelfStore", () => {
     removeSongFromShelf,
     addPlaylistToShelf,
     removeSongShelf,
+    clear,
   };
 });
 
-export const usePhotoShelfStore = defineStore("photoShelfStore", () => {
-  const kvStorage = createKVStore("photoShelfStore");
+export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
+  const kvStorage = createKVStore('photoShelfStore');
 
   const photoShelf = useStorageAsync<PhotoShelf[]>(
-    "photoShelf",
+    'photoShelf',
     [
       {
         id: nanoid(),
-        name: "默认收藏",
+        name: '默认收藏',
         photos: [],
         createTime: Date.now(),
       },
@@ -1676,15 +1704,15 @@ export const usePhotoShelfStore = defineStore("photoShelfStore", () => {
       ? photoShelf.value.find((item) => item.id === shelfId)
       : photoShelf.value[0];
     if (!shelf) {
-      showToast("收藏夹不存在");
+      showToast('收藏夹不存在');
       return false;
     }
 
     if (shelf.photos.find((i) => i.id === item.id)) {
-      showToast("已存在");
+      showToast('已存在');
       return false;
     } else {
-      shelf.photos.push(item);
+      shelf.photos.push(_.cloneDeep(item));
       showToast(`已添加到 ${shelf.name}`);
       return true;
     }
@@ -1692,7 +1720,7 @@ export const usePhotoShelfStore = defineStore("photoShelfStore", () => {
   const createShelf = (name: string): boolean => {
     // 创建收藏
     if (photoShelf.value.some((item) => item.name === name)) {
-      showToast("收藏夹已存在");
+      showToast('收藏夹已存在');
       return false;
     }
     photoShelf.value.push({
@@ -1708,7 +1736,7 @@ export const usePhotoShelfStore = defineStore("photoShelfStore", () => {
       ? photoShelf.value.find((item) => item.id === shelfId)
       : photoShelf.value[0];
     if (!shelf) {
-      showToast("收藏夹不存在");
+      showToast('收藏夹不存在');
       return false;
     }
     _.remove(shelf.photos, (i) => i.id === item.id);
@@ -1716,11 +1744,21 @@ export const usePhotoShelfStore = defineStore("photoShelfStore", () => {
   };
   const removeShelf = (shelfId: string) => {
     if (photoShelf.value.length === 1) {
-      showToast("至少需要保留一个收藏夹");
+      showToast('至少需要保留一个收藏夹');
       return false;
     }
     _.remove(photoShelf.value, (item) => item.id === shelfId);
     return true;
+  };
+  const clear = () => {
+    photoShelf.value = [
+      {
+        id: nanoid(),
+        name: '默认收藏',
+        photos: [],
+        createTime: Date.now(),
+      },
+    ];
   };
   return {
     photoShelf,
@@ -1729,5 +1767,6 @@ export const usePhotoShelfStore = defineStore("photoShelfStore", () => {
     createShelf,
     removePhotoFromShelf,
     removeShelf,
+    clear,
   };
 });

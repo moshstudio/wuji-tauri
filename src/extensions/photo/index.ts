@@ -1,4 +1,4 @@
-import { Extension } from "../baseExtension";
+import { Extension } from '../baseExtension';
 
 export interface PhotoItem {
   id: string;
@@ -63,11 +63,11 @@ function loadPhotoExtensionString(
   codeString: string
 ): PhotoExtension | undefined {
   try {
-    const func = new Function("PhotoExtension", codeString);
+    const func = new Function('PhotoExtension', codeString);
     const extensionclass = func(PhotoExtension);
     return new extensionclass();
   } catch (error) {
-    console.error("Error executing code:\n", error);
+    console.error('Error executing code:\n', error);
   }
 }
 

@@ -1,7 +1,7 @@
-import _ from "lodash";
-import { fetch } from "@/utils/fetch";
-import { search as neteaseSearch, lyric as neteaseLyric } from "./neteaseMusic";
-import { levenshteinDistance } from ".";
+import _ from 'lodash';
+import { fetch } from '@/utils/fetch';
+import { search as neteaseSearch, lyric as neteaseLyric } from './neteaseMusic';
+import { levenshteinDistance } from '.';
 
 const cache = new Map<string, Lyric>();
 
@@ -33,19 +33,19 @@ export async function getLyric(
         return {
           id: song.id,
           name: song.name,
-          artists: song.artists.map((artist: any) => artist.name).join(","),
+          artists: song.artists.map((artist: any) => artist.name).join(','),
         };
       });
-      if (!songs) return "";
+      if (!songs) return '';
       const sSong = songs[0];
       // const sSong = _.minBy(songs, (song) =>
       //   levenshteinDistance(key, `${song.name}-${song.artists}`)
       // );
 
-      if (!sSong) return "";
+      if (!sSong) return '';
       const l = await neteaseLyric(String(sSong.id));
       const lyricResponseText = await l.text();
-      if (!lyricResponseText) return "";
+      if (!lyricResponseText) return '';
       return JSON.parse(lyricResponseText).lrc.lyric;
     };
     const lyricText = (await lyricFromLongZhu()) || (await lyricFromNetease());
@@ -61,7 +61,7 @@ export async function getLyric(
 export function parseLyric(lyric: string): Lyric {
   const parseTime = (t: string): number | null => {
     try {
-      const timeParts = t.split(":");
+      const timeParts = t.split(':');
       const minutes = parseInt(timeParts[0], 10);
       const seconds = parseFloat(timeParts[1]);
       return Math.floor((minutes * 60 + seconds) * 1000); // 转换为毫秒
@@ -71,15 +71,15 @@ export function parseLyric(lyric: string): Lyric {
   };
 
   const mySplit1 = (_lyric: string): string[] => {
-    _lyric = _lyric.replace(/\]\[/g, "@@@");
-    _lyric = _lyric.replace(/\[/g, "\n[");
-    _lyric = _lyric.replace(/@@@/g, "][");
-    return _lyric.split("\n").map((line) => line.trim());
+    _lyric = _lyric.replace(/\]\[/g, '@@@');
+    _lyric = _lyric.replace(/\[/g, '\n[');
+    _lyric = _lyric.replace(/@@@/g, '][');
+    return _lyric.split('\n').map((line) => line.trim());
   };
 
-  const remove = (x: string): string => x.replace(/[\[\]]/g, "");
+  const remove = (x: string): string => x.replace(/[\[\]]/g, '');
 
-  let lyricList = lyric.split("\n").map((line) => line.trim());
+  let lyricList = lyric.split('\n').map((line) => line.trim());
   if (lyricList.length === 1) {
     lyricList = mySplit1(lyric);
   }
@@ -89,11 +89,11 @@ export function parseLyric(lyric: string): Lyric {
     if (timeStamps) {
       let lyricText = line;
       for (const tplus of timeStamps) {
-        lyricText = lyricText.replace(tplus, "");
+        lyricText = lyricText.replace(tplus, '');
       }
       for (const tplus of timeStamps) {
         const t = remove(tplus);
-        const tagFlag = t.split(":")[0];
+        const tagFlag = t.split(':')[0];
         if (!/^\d+$/.test(tagFlag)) {
           continue;
         }

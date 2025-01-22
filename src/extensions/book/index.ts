@@ -1,4 +1,4 @@
-import { Extension } from "../baseExtension";
+import { Extension } from '../baseExtension';
 export interface BookChapter {
   id: string;
   title: string;
@@ -74,11 +74,11 @@ function loadBookExtensionString(
   codeString: string
 ): BookExtension | undefined {
   try {
-    const func = new Function("BookExtension", codeString);
+    const func = new Function('BookExtension', codeString);
     const extensionclass = func(BookExtension);
     return new extensionclass();
   } catch (error) {
-    console.error("Error executing code:\n", error);
+    console.error('Error executing code:\n', error);
   }
 }
 

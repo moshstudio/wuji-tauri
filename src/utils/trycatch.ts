@@ -15,7 +15,7 @@ export function tryCatch<T>(
         try {
           return await options.onCatch(e);
         } catch (catchError) {
-          console.error("Error in onCatch handler:", catchError);
+          console.error('Error in onCatch handler:', catchError);
         }
       }
       // Ensure the returned value is of type T or null

@@ -1,0 +1,125 @@
+<script setup lang="ts">
+import WinSong from '../windowsView/song/index.vue';
+import MobileSong from '../mobileView/song/index.vue';
+import PlatformSwitch from '@/components/PlatformSwitch.vue';
+import { ref } from 'vue';
+import { useStore, useSongStore } from '@/store';
+import { storeToRefs } from 'pinia';
+import _ from 'lodash';
+import { SongSource } from '@/types';
+import { SongInfo } from '@/extensions/song';
+import { createCancellableFunction } from '@/utils/cancelableFunction';
+
+const store = useStore();
+const songStore = useSongStore();
+const { songSources } = storeToRefs(store);
+
+const showSongShelf = ref(false);
+const showPlayView = ref(false);
+
+const searchValue = ref('');
+let playlistTimer: NodeJS.Timeout;
+let songTimer: NodeJS.Timeout;
+const activeTabIndex = ref(0);
+
+const search = createCancellableFunction(async () => {
+  const keyword = searchValue.value;
+  if (!keyword) {
+    return recommend(true);
+  } else {
+    await Promise.all([
+      ...songSources.value.map(async (source) => {
+        await store.songSearchPlaylist(source, keyword, 1);
+      }),
+      ...songSources.value.map(async (source) => {
+        await store.songSearchSong(source, keyword, 1);
+      }),
+    ]);
+  }
+});
+
+async function recommend(force: boolean = false) {
+  clearTimeout(playlistTimer);
+  playlistTimer = setTimeout(async () => {
+    await Promise.all(
+      songSources.value.map(async (source) => {
+        if (!source.playlist || force) {
+          await store.songRecommendPlayist(source);
+        }
+      })
+    );
+  }, 0);
+  clearTimeout(songTimer);
+  songTimer = setTimeout(async () => {
+    await Promise.all(
+      songSources.value.map(async (source) => {
+        if (!source.songList || force) {
+          await store.songRecommendSong(source);
+        }
+      })
+    );
+  }, 0);
+}
+
+async function playlistToPage(source: SongSource, pageNo: number) {
+  if (!searchValue.value) {
+    await store.songRecommendPlayist(source, pageNo);
+  } else {
+    await store.songSearchPlaylist(source, searchValue.value, pageNo);
+  }
+}
+async function songToPage(source: SongSource, pageNo: number) {
+  if (!searchValue.value) {
+    await store.songRecommendSong(source, pageNo);
+  } else {
+    await store.songSearchSong(source, searchValue.value, pageNo);
+  }
+}
+
+async function playSong(source: SongSource, song: SongInfo) {
+  const songs = source.songList!.list;
+  songStore.setPlayingList(songs, song);
+}
+
+const openBaseUrl = async (source: SongSource) => {
+  const sc = await store.sourceClass(source.item);
+  if (sc && sc.baseUrl) {
+    // open(sc.baseUrl);
+  }
+};
+</script>
+
+<template>
+  <PlatformSwitch>
+    <template #mobile>
+      <MobileSong
+        v-model:show-song-shelf="showSongShelf"
+        v-model:show-play-view="showPlayView"
+        v-model:search-value="searchValue"
+        v-model:active-tab-index="activeTabIndex"
+        @search="search"
+        @recommend="recommend"
+        @playlist-to-page="playlistToPage"
+        @song-to-page="songToPage"
+        @open-base-url="openBaseUrl"
+        @play-song="playSong"
+      ></MobileSong>
+    </template>
+    <template #windows>
+      <WinSong
+        v-model:show-song-shelf="showSongShelf"
+        v-model:show-play-view="showPlayView"
+        v-model:search-value="searchValue"
+        v-model:active-tab-index="activeTabIndex"
+        @search="search"
+        @recommend="recommend"
+        @playlist-to-page="playlistToPage"
+        @song-to-page="songToPage"
+        @open-base-url="openBaseUrl"
+        @play-song="playSong"
+      ></WinSong>
+    </template>
+  </PlatformSwitch>
+</template>
+
+<style scoped lang="less"></style>

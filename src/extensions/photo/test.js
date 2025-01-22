@@ -1,10 +1,10 @@
-import { PhotoExtension } from ".";
+import { PhotoExtension } from '.';
 
 class TestPhotoExtension extends PhotoExtension {
-  id = "testPhoto";
-  name = "testPhoto";
-  version = "0.0.1";
-  baseUrl = "https://meirentu.cc/";
+  id = 'testPhoto';
+  name = 'testPhoto';
+  version = '0.0.1';
+  baseUrl = 'https://meirentu.cc/';
 
   async getRecommendList(pageNo = 1) {
     const url = `${this.baseUrl}index/${pageNo}.html`;
@@ -20,12 +20,12 @@ class TestPhotoExtension extends PhotoExtension {
     const body = await this.fetchDom(url);
 
     const list = await this.queryPhotoElements(body, {
-      element: ".update_area_content li",
-      cover: "img",
-      title: ".meta-title",
-      datetime: "meta-post span",
-      hot: ".cx_like span",
-      url: "a",
+      element: '.update_area_content li',
+      cover: 'img',
+      title: '.meta-title',
+      datetime: 'meta-post span',
+      hot: '.cx_like span',
+      url: 'a',
     });
     list.forEach((item) => {
       item.coverHeaders = {
@@ -33,7 +33,7 @@ class TestPhotoExtension extends PhotoExtension {
       };
     });
 
-    const pageElements = body.querySelectorAll(".page a");
+    const pageElements = body.querySelectorAll('.page a');
     return {
       list,
       page: pageNo,
@@ -45,15 +45,15 @@ class TestPhotoExtension extends PhotoExtension {
     if (!item.url || item.url.length < 5) return null;
     const url = item.url.substring(0, item.url.length - 5) + `-${pageNo}.html`;
     const body = await this.fetchDom(url);
-    const elements = body.querySelectorAll(".content img");
+    const elements = body.querySelectorAll('.content img');
     const photos = [];
     for (const element of elements) {
-      const src = element.getAttribute("src");
+      const src = element.getAttribute('src');
       if (src) {
         photos.push(src);
       }
     }
-    const pageElements = body.querySelectorAll(".page a");
+    const pageElements = body.querySelectorAll('.page a');
     return {
       item,
       photos,
@@ -62,7 +62,7 @@ class TestPhotoExtension extends PhotoExtension {
       },
       page: pageNo,
       totalPage: this.maxPageNoFromElements(pageElements),
-      sourceId: "",
+      sourceId: '',
     };
   }
 }

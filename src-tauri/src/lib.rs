@@ -11,6 +11,7 @@ fn greet(name: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default()
+        .plugin(tauri_plugin_os::init())
         .setup(move |app| {
             let handle = app.handle();
             handle.plugin(fetch_plugin::init())?;
@@ -23,6 +24,7 @@ pub fn run() {
     // 仅在桌面端添加
     #[cfg(desktop)]
     {
+        println!("Only Desktop");
         fn show_window(app: &AppHandle) {
             let windows = app.webview_windows();
             windows
@@ -32,9 +34,20 @@ pub fn run() {
                 .set_focus()
                 .expect("Can't Bring Window to Focus");
         }
+        fn constraint_window_size(app: &AppHandle) {
+            // 未生效？
+            let windows = app.webview_windows();
+            windows
+                .values()
+                .next()
+                .expect("Sorry, no window found")
+                .set_min_size(Some(tauri::PhysicalSize::new(600, 300)))
+                .expect("Can't Set Min Size");
+        }
         builder = builder
             .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
                 let _ = show_window(app);
+                let _ = constraint_window_size(app);
             }))
             .plugin(tauri_plugin_window_state::Builder::new().build());
     }

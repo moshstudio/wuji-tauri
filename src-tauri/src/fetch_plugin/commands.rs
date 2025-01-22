@@ -200,7 +200,7 @@ pub async fn fetch<R: Runtime>(
             let mut builder = reqwest::ClientBuilder::new();
 
             if !verify.unwrap_or(true) {
-                println!("builder {:?}", verify);
+                println!("unverify request {:?}", url.clone());
                 builder = builder.danger_accept_invalid_certs(true);
                 builder = builder.danger_accept_invalid_hostnames(true);
             }

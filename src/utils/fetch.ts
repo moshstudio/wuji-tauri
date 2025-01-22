@@ -26,7 +26,7 @@
  * @module
  */
 
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from '@tauri-apps/api/core';
 
 /**
  * Configuration of a proxy that a Client should pass requests to.
@@ -91,7 +91,7 @@ export interface ClientOptions {
   verify?: boolean;
 }
 
-const ERROR_REQUEST_CANCELLED = "Request canceled";
+const ERROR_REQUEST_CANCELLED = 'Request canceled';
 
 /**
  * Fetch a resource from the network. It returns a `Promise` that resolves to the
@@ -160,7 +160,7 @@ export async function _fetch(
       name,
       // we need to ensure we have all header values as strings
       // eslint-disable-next-line
-      typeof val === "string" ? val : (val as any).toString(),
+      typeof val === 'string' ? val : (val as any).toString(),
     ]
   );
 
@@ -169,7 +169,7 @@ export async function _fetch(
     throw new Error(ERROR_REQUEST_CANCELLED);
   }
 
-  const rid = await invoke<number>("plugin:fetch-plugin|fetch", {
+  const rid = await invoke<number>('plugin:fetch-plugin|fetch', {
     clientConfig: {
       method: req.method,
       url: req.url,
@@ -182,7 +182,7 @@ export async function _fetch(
     },
   });
 
-  const abort = () => invoke("plugin:fetch-plugin|fetch_cancel", { rid });
+  const abort = () => invoke('plugin:fetch-plugin|fetch_cancel', { rid });
 
   // abort early here if needed
   if (signal?.aborted) {
@@ -192,7 +192,7 @@ export async function _fetch(
     throw new Error(ERROR_REQUEST_CANCELLED);
   }
 
-  signal?.addEventListener("abort", () => void abort());
+  signal?.addEventListener('abort', () => void abort());
 
   interface FetchSendResponse {
     status: number;
@@ -208,12 +208,12 @@ export async function _fetch(
     url,
     headers: responseHeaders,
     rid: responseRid,
-  } = await invoke<FetchSendResponse>("plugin:fetch-plugin|fetch_send", {
+  } = await invoke<FetchSendResponse>('plugin:fetch-plugin|fetch_send', {
     rid,
   });
 
   const body = await invoke<ArrayBuffer | number[]>(
-    "plugin:fetch-plugin|fetch_read_body",
+    'plugin:fetch-plugin|fetch_read_body',
     {
       rid: responseRid,
     }
@@ -237,8 +237,8 @@ export async function _fetch(
   // we define theme like this, because using `Response`
   // constructor, it removes url and some headers
   // like `set-cookie` headers
-  Object.defineProperty(res, "url", { value: url });
-  Object.defineProperty(res, "headers", {
+  Object.defineProperty(res, 'url', { value: url });
+  Object.defineProperty(res, 'headers', {
     value: new Headers(responseHeaders),
   });
 
@@ -252,7 +252,7 @@ export async function fetch(
   try {
     return await _fetch(input, init);
   } catch (error) {
-    console.error("fetch error:", error);
+    console.error('fetch error:', error);
     return Response.error();
   }
 }

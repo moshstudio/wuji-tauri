@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, reactive, watch, PropType } from "vue";
-import { BookItem } from "@/extensions/book";
-import { useBookShelfStore } from "@/store";
-import { storeToRefs } from "pinia";
+import { ref, reactive, watch, PropType } from 'vue';
+import { BookItem } from '@/extensions/book';
+import { useBookShelfStore } from '@/store';
+import { storeToRefs } from 'pinia';
 
 const { book } = defineProps({
   book: {
@@ -10,12 +10,12 @@ const { book } = defineProps({
     required: false,
   },
   mode: {
-    type: String as PropType<"square" | "rectangle">,
-    default: "rectangle",
+    type: String as PropType<'square' | 'rectangle'>,
+    default: 'rectangle',
   },
 });
 
-const emit = defineEmits(["showShelf"]);
+const emit = defineEmits(['showShelf']);
 
 const shelfStore = useBookShelfStore();
 const { bookShelf } = storeToRefs(shelfStore);
@@ -63,23 +63,16 @@ watch(
   <template v-if="!book"></template>
   <template v-else>
     <template v-if="mode === 'rectangle'">
-      <template v-if="numInShelf === 0">
+      <van-badge>
+        <template #content>
+          <p v-if="numInShelf > 0" @click="() => emit('showShelf')">
+            {{ numInShelf }}
+          </p>
+        </template>
         <van-button plain type="primary" size="small" @click="addToShelf">
           加入书架
         </van-button>
-      </template>
-      <template v-else>
-        <van-badge :content="numInShelf">
-          <van-button
-            plain
-            type="primary"
-            size="small"
-            @click="() => emit('showShelf')"
-          >
-            已在书架
-          </van-button>
-        </van-badge>
-      </template>
+      </van-badge>
     </template>
     <template v-else>
       <template v-if="numInShelf === 0">

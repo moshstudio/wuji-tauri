@@ -1,19 +1,19 @@
-import { Extension } from "@/extensions/baseExtension";
-import { SongExtension, SongList, PlaylistList } from "@/extensions/song";
-import { PhotoExtension, PhotoList } from "@/extensions/photo";
-import { BookExtension, BooksList } from "@/extensions/book";
+import { Extension } from '@/extensions/baseExtension';
+import { SongExtension, SongList, PlaylistList } from '@/extensions/song';
+import { PhotoExtension, PhotoList } from '@/extensions/photo';
+import { BookExtension, BooksList } from '@/extensions/book';
 
 export interface Source {
   item: SubscribeItem;
 }
 
 export enum SourceType {
-  Photo = "photo",
-  Song = "song",
-  Video = "video",
-  Book = "book",
-  Resource = "resource",
-  Comic = "comic",
+  Photo = 'photo',
+  Song = 'song',
+  Video = 'video',
+  Book = 'book',
+  Resource = 'resource',
+  Comic = 'comic',
 }
 
 export interface PhotoSource extends Source {

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { PlaylistInfo } from "@/extensions/song";
-import { router } from "@/router";
-import { ref } from "vue";
-import { Icon } from "@iconify/vue";
-import tinycolor from "tinycolor2";
-import { useStore } from "@/store";
+import { PlaylistInfo } from '@/extensions/song';
+import { router } from '@/router';
+import { ref } from 'vue';
+import { Icon } from '@iconify/vue';
+import tinycolor from 'tinycolor2';
+import { useDisplayStore, useStore } from '@/store';
 
 const { playlist } = defineProps({
   playlist: {
@@ -14,6 +14,7 @@ const { playlist } = defineProps({
 });
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const playButtonVisible = ref(false);
 const color = tinycolor.random().toRgbString();
 function onMouseEnter() {
@@ -25,7 +26,7 @@ function onMouseLeave() {
 
 const onClick = () => {
   router.push({
-    name: "SongPlaylist",
+    name: 'SongPlaylist',
     params: { playlistId: playlist.id, sourceId: playlist.sourceId },
   });
 };
@@ -33,14 +34,15 @@ const onClick = () => {
 
 <template>
   <div
-    class="m-2 w-[160px] bg-[--van-background] rounded-lg shadow transform transition-all duration-100 hover:-translate-y-1 hover:shadow-md cursor-pointer select-none active:bg-[--van-background-2]"
+    class="m-2 bg-[--van-background] rounded-lg shadow transform transition-all duration-100 hover:-translate-y-1 hover:shadow-md cursor-pointer select-none active:bg-[--van-background-2]"
+    :class="displayStore.isMobile ? 'w-[100px]' : 'w-[160px]'"
     @click="onClick"
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
   >
     <van-image
-      width="160"
-      height="200"
+      :width="displayStore.isMobile ? 100 : 160"
+      :height="displayStore.isMobile ? 120 : 200"
       fit="cover"
       lazy-load
       :src="playlist.picUrl"
@@ -56,7 +58,6 @@ const onClick = () => {
       </template>
     </van-image>
     <div
-      v-tooltip="playlist.name"
       :rows="1"
       class="text-xs p-2 text-[--van-text-color] h-[32px] truncate"
       v-if="playlist.name"

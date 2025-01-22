@@ -23,8 +23,8 @@ function createCancellableFunction<T, Args extends any[]>(
         const originalPromise = fn(...args);
 
         // 监听中断信号
-        signal.addEventListener("abort", () => {
-          reject(new DOMException("操作中断", "AbortError"));
+        signal.addEventListener('abort', () => {
+          reject(new DOMException('操作中断', 'AbortError'));
         });
         // 等待原函数完成
         originalPromise.then(resolve).catch(reject);
@@ -32,7 +32,7 @@ function createCancellableFunction<T, Args extends any[]>(
 
       return result;
     } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
+      if (error instanceof Error && error.name === 'AbortError') {
       } else {
       }
       throw error;

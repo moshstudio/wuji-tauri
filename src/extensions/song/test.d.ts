@@ -1,4 +1,4 @@
-import { SongExtension } from ".";
+import { SongExtension } from '.';
 
 declare class TestSongExtension extends SongExtension {
   id: string;
