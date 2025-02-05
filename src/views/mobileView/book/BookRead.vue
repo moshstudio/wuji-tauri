@@ -1,175 +1,209 @@
-<script setup lang="ts">
-import { BookChapter, BookItem } from '@/extensions/book';
-
-import { useDisplayStore } from '@/store';
-import { BookSource } from '@/types';
-import BookShelfButton from '@/components/BookShelfButton.vue';
-import BookShelf from './BookShelf.vue';
-import NavBar from '@/components/NavBar.vue';
-import { PropType } from 'vue';
-
-const book = defineModel('book', { type: Object as PropType<BookItem> });
-const bookSource = defineModel('bookSource', {
-  type: Object as PropType<BookSource>,
-});
-const chapterList = defineModel('chapterList', {
-  type: Array as PropType<BookChapter[]>,
-});
-const readingChapter = defineModel('readingChapter', {
-  type: Object as PropType<BookChapter>,
-});
-const readingContent = defineModel('readingContent', {
-  type: Object as PropType<string>,
-});
-const showBookShelf = defineModel('showBookShelf', {
-  type: Boolean,
-  required: true
-});
-const showChapters = defineModel('showChapters', {
-  type: Boolean,
-  required: true
-});
-const showSettingDialog = defineModel('showSettingDialog', {
-  type: Boolean,
-  required: true
-});
-const showNavBar = defineModel('showNavBar', {
-  type: Boolean,
-  required: true
-});
-
-const emit = defineEmits<{
-  (e: 'back', checkShelf?: boolean): void;
-  (e: 'loadData'): void;
-  (e: 'loadChapter', chapter: BookChapter): void;
-  (e: 'prevChapter'): void;
-  (e: 'nextChapter'): void;
-  (e: 'openChapterPopup'): void;
-}>();
-
-const displayStore = useDisplayStore();
-</script>
-
 <template>
   <div
-    class="relative flex flex-col w-full h-full overflow-hidden items-center"
-    :style="{ backgroundColor: displayStore.readBgColor }"
+    id="read-content"
+    class="select-none w-full h-screen fixed top-0 left-0 overflow-hidden box-border"
+    :class="[showMenu ? '' : 'hide_menu']"
   >
-    <NavBar
-      v-model:show="showNavBar"
-      left-arrow
-      @click-left="() => emit('back', true)"
-      class="absolute w-full h-[70px]"
-      target="#content"
+    <!-- 顶部菜单 -->
+    <div
+      class="top_menu fixed left-0 top-0 z-[5] p-2 w-full flex flex-nowrap items-center justify-between transition bg-black"
     >
-      <template #title>
-        <div class="flex flex-col gap-1 items-center truncate">
-          <span class="text-xl">{{ readingChapter?.title }}</span>
-          <div class="flex gap-1">
-            <span class="text-xs text-[--van-text-color-2]">
-              <van-icon name="orders-o" />
-              {{ book?.title }}
-            </span>
-            <span class="text-xs text-[--van-text-color-2]">
-              <van-icon name="user-o" />
-              {{ book?.author }}
-            </span>
-            <span
-              class="text-xs text-[--van-text-color-2]"
-              v-if="readingContent?.length"
+      <div class="flex flex-nowrap items-center">
+        <van-icon name="arrow-left" color="white" size="22" @click="goBack()" />
+        <span class="ml-2 text-sm text-white line-clamp-1">{{
+          book?.title
+        }}</span>
+      </div>
+      <div class="option pr-2">
+        <BookShelfButton :book="book"></BookShelfButton>
+      </div>
+    </div>
+
+    <!-- 阅读内容页 -->
+    <div
+      class="content w-full h-full relative"
+      :style="{
+        backgroundColor: bookStore.currTheme.bgColor,
+        color: bookStore.currTheme.color,
+      }"
+      @touchstart="onTouchStart"
+      @touchmove="onTouchMove"
+      @touchend="onTouchEnd"
+    >
+      <div
+        v-for="({ style, content, pageNo }, index) in [
+          {
+            style: prevPageStyle,
+            content: prevPageContent,
+            pageNo: chapterPage + 1 > 1 ? chapterPage : '',
+          },
+          {
+            style: currPageStyle,
+            content: currPageContent,
+            pageNo: readingPagedContent ? chapterPage + 1 : '1',
+          },
+          {
+            style: nextPageStyle,
+            content: nextPageContent,
+            pageNo:
+              readingPagedContent &&
+              chapterPage + 1 < readingPagedContent.content.length
+                ? chapterPage + 2
+                : '',
+          },
+        ]"
+        class="page w-full h-full box-border shadow absolute left-0 top-0 overflow-hidden flex flex-col"
+        :key="'pageStyle' + index"
+        :style="{
+          transition: style.transition,
+          transform: 'translate3d(' + style.transform + ',0px,0px)',
+          'z-index': style.zIndex,
+          paddingLeft: `${bookStore.paddingX}px`,
+          paddingRight: `${bookStore.paddingX}px`,
+          backgroundColor: bookStore.currTheme.bgColor,
+          color: bookStore.currTheme.color,
+          textDecoration: bookStore.underline
+            ? 'underline solid 0.5px'
+            : 'none',
+          textUnderlineOffset: bookStore.underline ? '6px' : 'none',
+        }"
+      >
+        <!-- 顶部状态占位 -->
+        <div
+          class="status_bar w-full"
+          :style="{ height: `${bookStore.paddingTop}px` }"
+        ></div>
+        <!-- 小说段落 -->
+        <div class="grow">
+          <template v-for="line in content" :key="JSON.stringify(line)">
+            <p
+              v-if="line.isTitle"
+              :style="{
+                'font-size': bookStore.fontSize * 1.3 + 'px',
+                'line-height': bookStore.lineHeight * 1.3,
+                'text-indent': line.pFirst
+                  ? bookStore.fontSize * 1.3 * 2 + 'px'
+                  : '0px',
+                'text-align': 'justify',
+                'padding-top': line.pFirst
+                  ? bookStore.readPGap * 1.3 + 'px'
+                  : '0px',
+              }"
             >
-              <van-icon name="points" />
-              {{ readingContent?.length }} 字
+              {{ line.text }}
+            </p>
+            <p
+              v-else
+              :style="{
+                'font-size': bookStore.fontSize + 'px',
+                'line-height': bookStore.lineHeight,
+                'text-indent': line.pFirst
+                  ? bookStore.fontSize * 2 + 'px'
+                  : '0px',
+                'text-align': 'justify',
+                'padding-top': line.pFirst ? bookStore.readPGap + 'px' : '0px',
+              }"
+            >
+              {{ line.text }}
+            </p>
+          </template>
+        </div>
+
+        <!-- 顶底部状态占位 -->
+        <div
+          class="bottom_bar flex items-center justify-between text-xs"
+          :style="{ height: `${bookStore.paddingBottom}px` }"
+        >
+          <p class="truncate">{{ readingChapter?.title }}</p>
+          <div class="flex flex-nowrap gap-1">
+            <span>
+              {{ pageNo }}/{{
+                typeof readingPagedContent === 'string'
+                  ? '1'
+                  : readingPagedContent?.content.length || 1
+              }}
+            </span>
+            <span v-if="chapterLists">
+              {{
+                (
+                  ((chapterLists.findIndex(
+                    (chapter) => chapter.id === readingChapter?.id
+                  ) || 0) /
+                    chapterLists.length) *
+                  100
+                ).toFixed(1)
+              }}%
             </span>
           </div>
         </div>
-      </template>
-    </NavBar>
+      </div>
+    </div>
+
+    <!-- 底部菜单 -->
     <div
-      class="scroll-container flex h-full overflow-y-auto min-w-[400px] w-[95%] sm:w-[90%] md:w-[75%] lg:w-[60%] bg-gray-50/50 dark:bg-gray-950/50"
+      class="bottom fixed bottom-0 left-0 z-[6] w-full flex flex-col p-2 pb-[50px] bg-black transition"
     >
-      <div
-        id="content"
-        class="pt-[70px] relative overflow-y-auto p-4 text-justify leading-[1.8] text-[--van-text-color]"
-        :style="{ fontSize: displayStore.readFontSize + 'px' }"
-        v-if="readingContent"
-      ></div>
-      <div
-        class="read-sidebar absolute right-[8px] bottom-[8px] flex flex-col gap-1 opacity-0 sm:opacity-100 hover:opacity-100"
-      >
-        <BookShelfButton
-          :book="book"
-          mode="square"
-          @show-shelf="showBookShelf = true"
-        ></BookShelfButton>
-        <van-button
-          icon="bars"
-          square
-          size="small"
-          class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
+      <div class="flex items-center gap-[10px]">
+        <div class="text-sm w-[50px] van-haptics-feedback" @click="chapterPrev">
+          上一章
+        </div>
+        <van-slider
+          class="w-[calc(100%-120px)]"
+          v-model="chapterPage"
+          :button-size="16"
+          :max="
+            readingPagedContent ? readingPagedContent.content.length - 1 : 0
+          "
+          @change="(val) => (chapterPage = val)"
+        ></van-slider>
+        <div class="text-sm w-[50px] van-haptics-feedback" @click="chapterNext">
+          下一章
+        </div>
+      </div>
+      <div class="w-full flex gap-1 items-center justify-between text-sm">
+        <div
+          class="flex flex-col gap-1 items-center van-haptics-feedback p-2"
           @click="() => emit('openChapterPopup')"
         >
-          <span>章节</span>
-        </van-button>
-        <van-button
-          icon="arrow-up"
-          square
-          size="small"
-          class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
-          @click="() => emit('prevChapter')"
+          <Icon icon="tabler:list" width="20" height="20" />
+          章节
+        </div>
+        <div
+          class="flex flex-col gap-1 items-center van-haptics-feedback p-2"
+          @click="() => (showSettingDialog = true)"
         >
-          <span>上章</span>
-        </van-button>
-        <van-button
-          icon="arrow-down"
-          square
-          plain
-          type="primary"
-          size="small"
-          class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
-          @click="() => emit('nextChapter')"
-        >
-          <span class="font-bold">下章</span>
-        </van-button>
-        <van-button
-          icon="setting"
-          square
-          size="small"
-          class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
-          @click="showSettingDialog = true"
-        >
-          <span>设置</span>
-        </van-button>
-        <!-- <PositionBackTop
-          target=".scroll-container"
-          placeholder
-          class="w-[46px] h-[46px] flex items-center justify-center"
-        >
-          <van-button
-            square
-            size="small"
-            class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
-          >
-            <template #icon>
-              <van-icon name="back-top" size="20" />
-            </template>
-          </van-button>
-        </PositionBackTop> -->
+          <Icon icon="ci:font" width="20" height="20" />
+          界面
+        </div>
+        <div class="flex flex-col gap-1 items-center van-haptics-feedback p-2">
+          <Icon icon="tabler:settings" width="20" height="20" />
+          设置
+        </div>
       </div>
     </div>
     <van-popup
       v-model:show="showChapters"
-      position="right"
-      :style="{ width: '300px', height: '100%' }"
+      position="left"
+      :style="{
+        width: '70%',
+        height: '100%',
+        backgroundColor: 'black',
+      }"
     >
       <van-list>
         <van-cell
           v-for="item in book?.chapters"
           :key="item.id"
           :title="item.title"
+          :title-style="{
+            color:
+              readingChapter?.id === item.id
+                ? 'var(--van-primary-color)'
+                : 'white',
+          }"
           :class="{
-            'bg-[--van-background] reading-chapter':
-              readingChapter?.id === item.id,
+            'bg-black': true,
+            'reading-chapter': readingChapter?.id === item.id,
           }"
           :icon="readingChapter?.id === item.id ? 'eye-o' : ''"
           clickable
@@ -185,82 +219,603 @@ const displayStore = useDisplayStore();
     <van-dialog
       v-model:show="showSettingDialog"
       title="阅读设置"
-      width="350px"
       closeOnClickOverlay
-      class="setting-dialog"
+      :show-confirm-button="false"
+      class="setting-dialog bg-black"
     >
-      <van-cell-group>
-        <van-cell>
+      <div class="flex flex-col gap-2 p-2 text-sm">
+        <div>字体和样式</div>
+        <van-cell class="bg-black">
           <template #title>
-            <p class="w-[60px]">背景色</p>
+            <span class="text-white">字体大小</span>
           </template>
           <template #value>
-            <div class="grow flex gap-2">
-              <div
-                class="h-[30px] w-[30px] rounded-full cursor-pointer border flex justify-center items-center"
-                :style="{ backgroundColor: color }"
-                v-for="color in [
-                  '',
-                  '#ebe5d8',
-                  '#cfe1cf',
-                  '#e3d0a1',
-                  '#040a17',
-                  '#200e20',
-                  '#0c1f4e',
-                ]"
-                :key="color"
-                @click="displayStore.readBgColor = color"
-              >
-                <van-icon
-                  name="success"
-                  class="text-[--van-text-color]"
-                  v-if="displayStore.readBgColor === color"
-                />
-              </div>
-            </div>
+            <van-stepper v-model="bookStore.fontSize" min="10" max="40" />
           </template>
         </van-cell>
-        <van-cell>
+        <van-cell class="bg-black">
           <template #title>
-            <p class="w-[60px]">文本大小</p>
+            <span class="text-white">下划线</span>
           </template>
           <template #value>
-            <van-stepper
-              v-model="displayStore.readFontSize"
-              step="1"
-              min="10"
-              max="50"
-            />
+            <van-switch v-model="bookStore.underline" />
           </template>
         </van-cell>
-      </van-cell-group>
+        <div>文字颜色和背景</div>
+        <div class="flex gap-2 overflow-x-auto">
+          <div
+            v-for="theme in bookStore.themes"
+            :key="JSON.stringify(theme)"
+            class="rounded-full text-center p-2 border-2 w-[40px] h-[40px] cursor-pointer"
+            :class="[
+              theme === bookStore.currTheme
+                ? 'border-[var(--van-primary-color)]'
+                : 'border-white',
+            ]"
+            :style="{
+              backgroundColor: theme.bgColor,
+              color: theme.color,
+              textDecoration: bookStore.underline
+                ? 'underline solid 0.5px'
+                : 'none',
+              textUnderlineOffset: bookStore.underline ? '6px' : 'none',
+            }"
+            @click="bookStore.currTheme = theme"
+          >
+            文
+          </div>
+        </div>
+      </div>
     </van-dialog>
-    <BookShelf v-model:show="showBookShelf"></BookShelf>
   </div>
 </template>
+<script lang="ts" setup>
+import { computed, ref, reactive, onBeforeUnmount, watch } from 'vue';
+import { showToast } from 'vant';
+import { Icon } from '@iconify/vue';
+import { BookChapter, BookItem } from '@/extensions/book';
 
-<style scoped lang="less">
-.read-sidebar {
-  :deep(.van-button__content) {
-    flex-direction: column;
+import { useBookStore, useDisplayStore } from '@/store';
+import { BookSource } from '@/types';
+import { PropType } from 'vue';
+import { ReaderResult, type LineData } from '@/utils/reader/types';
+import BookShelfButton from '@/components/BookShelfButton.vue';
+
+const book = defineModel('book', { type: Object as PropType<BookItem> });
+const bookSource = defineModel('bookSource', {
+  type: Object as PropType<BookSource>,
+});
+const chapterLists = defineModel('chapterList', {
+  type: Array as PropType<BookChapter[]>,
+});
+const readingChapter = defineModel('readingChapter', {
+  type: Object as PropType<BookChapter>,
+});
+const readingContent = defineModel('readingContent', {
+  type: String,
+});
+const readingPagedContent = defineModel('readingPagedContent', {
+  type: Object as PropType<{ isPrev: boolean; content: ReaderResult }>,
+});
+const showBookShelf = defineModel('showBookShelf', {
+  type: Boolean,
+  required: true,
+});
+const showChapters = defineModel('showChapters', {
+  type: Boolean,
+  required: true,
+});
+const showSettingDialog = defineModel('showSettingDialog', {
+  type: Boolean,
+  required: true,
+});
+const showNavBar = defineModel('showNavBar', {
+  type: Boolean,
+  required: true,
+});
+
+const emit = defineEmits<{
+  (e: 'back', checkShelf?: boolean): void;
+  (e: 'loadData'): void;
+  (e: 'loadChapter', chapter: BookChapter): void;
+  (e: 'prevChapter', toLast?: boolean): void;
+  (e: 'nextChapter'): void;
+  (e: 'openChapterPopup'): void;
+}>();
+
+const displayStore = useDisplayStore();
+const bookStore = useBookStore();
+
+/** 显示菜单 */
+const showMenu = ref(false);
+
+watch(
+  showMenu,
+  (val) => {
+    displayStore.showTabBar = val;
+  },
+  {
+    immediate: true,
+  }
+);
+
+/** 页面过渡时间（毫秒） */
+const slideTime = 260;
+/** 有效拖拽时间（毫秒） */
+const dragTime = 300;
+
+/**touch 参数 */
+const touchParams = reactive({
+  /** 页面负偏移量（负数） */
+  pageSlideValue: '-102%',
+  /** 触摸位置 */
+  touchPosition: 0,
+  /** 触摸的位置Y */
+  touchPositionY: 0,
+  /** 触摸的时间 */
+  touchTime: 0,
+  /** 首次打开提示 */
+  firstTip: false,
+  /** 是否开始触摸 */
+  startTouch: false,
+  moveDistance: 0,
+  moveTime: 0,
+});
+
+/** 首次打开提示 */
+const firstTip = ref(false);
+/** 滑动计时器 */
+let slideTimer: NodeJS.Timeout | null;
+
+const prevPageStyle = reactive({
+  transform: '-102%',
+  transition: '0s all',
+  zIndex: 3,
+});
+const currPageStyle = reactive({
+  transform: '0px',
+  transition: '0s all',
+  zIndex: 2,
+});
+const nextPageStyle = reactive({
+  transform: '0px',
+  transition: '0s all',
+  zIndex: 1,
+});
+
+/** 阅读器样式主题 */
+const themes = ref([
+  {
+    className: 'theme1',
+    text: '#383838',
+    slide: '#eeeeee',
+  },
+  {
+    className: 'theme2',
+    text: '#362302',
+    slide: '#d7d2bf',
+  },
+  {
+    className: 'theme3',
+    text: '#252a24',
+    slide: '#d0dac2',
+  },
+  {
+    className: 'theme4',
+    text: '#353a3d',
+    slide: '#c4d1da',
+  },
+  {
+    className: 'theme5',
+    text: '#6f6f6f',
+    slide: '#252525',
+  },
+]);
+/** 最大章节数 */
+const chapterMax = computed(() => chapterLists.value?.length || 0);
+/** 章节位置（0开始） */
+const chapterIndex = computed(
+  () =>
+    chapterLists.value?.findIndex(
+      (item) => item.id === readingChapter.value?.id
+    ) || 0
+);
+/** 章节的页数位置 */
+const chapterPage = ref(0);
+
+/** 页面内容列表 */
+const prevPageContent = computed<LineData[]>(() => {
+  if (!readingPagedContent.value) {
+    return [
+      {
+        isTitle: false,
+        center: true,
+        pFirst: false,
+        pIndex: 0,
+        lineIndex: 0,
+        textIndex: 0,
+        text: '',
+      },
+    ];
+  }
+  if (chapterPage.value == 0) {
+    return [
+      {
+        isTitle: false,
+        center: true,
+        pFirst: false,
+        pIndex: 0,
+        lineIndex: 0,
+        textIndex: 0,
+        text: '',
+      },
+    ];
+  } else {
+    if (typeof readingPagedContent.value === 'string') {
+      return [
+        {
+          isTitle: false,
+          center: true,
+          pFirst: false,
+          pIndex: 0,
+          lineIndex: 0,
+          textIndex: 0,
+          text: readingPagedContent.value,
+        },
+      ];
+    } else {
+      return (
+        (readingPagedContent.value?.content[
+          chapterPage.value - 1
+        ] as LineData[]) || []
+      );
+    }
+  }
+});
+const currPageContent = computed<LineData[]>(() => {
+  if (typeof readingPagedContent.value === 'string') {
+    return [
+      {
+        isTitle: false,
+        center: true,
+        pFirst: false,
+        pIndex: 0,
+        lineIndex: 0,
+        textIndex: 0,
+        text: readingPagedContent.value,
+      },
+    ];
+  } else {
+    return (
+      (readingPagedContent.value?.content[chapterPage.value] as LineData[]) ||
+      []
+    );
+  }
+});
+const nextPageContent = computed<LineData[]>(() => {
+  if (!readingPagedContent.value) {
+    return [
+      {
+        isTitle: false,
+        center: true,
+        pFirst: false,
+        pIndex: 0,
+        lineIndex: 0,
+        textIndex: 0,
+        text: '',
+      },
+    ];
+  }
+  if (chapterPage.value == readingPagedContent.value?.content.length - 1) {
+    return [
+      {
+        isTitle: false,
+        center: true,
+        pFirst: false,
+        pIndex: 0,
+        lineIndex: 0,
+        textIndex: 0,
+        text: '',
+      },
+    ];
+  }
+  return (
+    (readingPagedContent.value?.content[chapterPage.value + 1] as LineData[]) ||
+    []
+  );
+});
+
+/** 是否为第一页 */
+const isFirstPage = computed(
+  () => chapterIndex.value === 0 && chapterPage.value === 0
+);
+/** 否最后一页 */
+const isLastPage = computed(
+  () =>
+    (chapterIndex.value === chapterMax.value - 1 &&
+      chapterPage.value === readingPagedContent.length - 1) ||
+    false
+);
+
+/** 关闭新手提示 */
+function closeBookTip() {
+  touchParams.firstTip = firstTip.value = false;
+  // store.saveBookOption();
+}
+
+function goBack() {
+  // uni.navigateBack();
+  emit('back', true);
+}
+
+/**
+ * 切换主题
+ * @param index
+ */
+function switchTheme(index: number) {
+  // bookOption.theme = index;
+  // store.saveBookOption();
+}
+/**
+ * 检查点击的位置
+ * @returns 'left'|'middle'|'right'
+ */
+function checkTouchPosition(x: number, y: number) {
+  const element = document.querySelector('#read-content');
+  if (!element) {
+    return 'middle';
+  }
+  const rect = element.getBoundingClientRect();
+  const width = Math.floor(rect.width * 0.3);
+  const height = Math.floor(rect.height * 0.3);
+  if (x < width) return 'left';
+  if (x >= rect.width - width) return 'right';
+  if (y < height) return 'left';
+  if (y >= rect.height - height) return 'right';
+  return 'middle';
+}
+
+/** 重置页面（位置偏移） */
+function resetPage() {
+  console.log('reset page');
+
+  prevPageStyle.transition = '0s all';
+  prevPageStyle.transform = touchParams.pageSlideValue;
+
+  currPageStyle.transition = '0s all';
+  currPageStyle.transform = '0px';
+
+  nextPageStyle.transition = '0s all';
+  nextPageStyle.transform = '0px';
+}
+
+/** 切换到上一页 */
+function pagePrev() {
+  console.log('prevpage');
+
+  prevPageStyle.transition = `${slideTime}ms all`;
+  prevPageStyle.transform = `0px`;
+
+  currPageStyle.transition = `0s all`;
+  currPageStyle.transform = `0px`;
+
+  nextPageStyle.transition = `0s all`;
+  nextPageStyle.transform = `0px`;
+
+  slideTimer = setTimeout(() => {
+    if (chapterPage.value > 0) {
+      chapterPage.value--;
+    } else {
+      emit('prevChapter', true);
+    }
+    resetPage();
+    clearTimeout(slideTimer!);
+    slideTimer = null;
+  }, slideTime);
+}
+
+/** 切换到下一页 */
+function pageNext() {
+  console.log('next page');
+
+  prevPageStyle.transition = '0s all';
+  prevPageStyle.transform = touchParams.pageSlideValue;
+
+  currPageStyle.transition = `${slideTime}ms all`;
+  currPageStyle.transform = touchParams.pageSlideValue;
+
+  nextPageStyle.transition = '0s all';
+  nextPageStyle.transform = `0px`;
+
+  slideTimer = setTimeout(() => {
+    if (
+      chapterPage.value ==
+      (readingPagedContent.value?.content.length || 1) - 1
+    ) {
+      emit('nextChapter');
+    } else {
+      chapterPage.value++;
+    }
+    resetPage();
+    clearTimeout(slideTimer!);
+    slideTimer = null;
+  }, slideTime);
+}
+
+function onTouchStart(e: TouchEvent) {
+  // console.log('onTouchStart >>', e);
+  if (slideTimer) return;
+  touchParams.startTouch = true;
+  const pageX = e.touches[0].pageX;
+  touchParams.touchPosition = pageX;
+  touchParams.touchPositionY = e.touches[0].pageY;
+  touchParams.touchTime = Date.now();
+}
+
+function onTouchMove(e: TouchEvent) {
+  if (!touchParams.startTouch) return;
+  if (showMenu.value) return;
+  const pageX = e.touches[0].pageX;
+  const slide = pageX - touchParams.touchPosition;
+
+  if (slide < 0) {
+    currPageStyle.transition = '0s all';
+    currPageStyle.transform = `${slide}px`;
+  } else {
+    prevPageStyle.transition = '0s all';
+    prevPageStyle.transform = `calc(${touchParams.pageSlideValue} + ${slide}px)`;
+  }
+  // console.log("onTouchMove", slide);
+}
+
+function onTouchEnd(e: TouchEvent) {
+  if (!touchParams.startTouch) return;
+  touchParams.startTouch = false;
+  if (showMenu.value) {
+    showMenu.value = false;
+    return;
+  }
+  const pageX = e.changedTouches[0].pageX;
+  const pageY = e.changedTouches[0].pageY;
+  const now = Date.now();
+  const slideX = pageX - touchParams.touchPosition;
+
+  /** 返回原来位置 */
+  const backPosition = () => {
+    prevPageStyle.transition = `${slideTime}ms all`;
+    prevPageStyle.transform = touchParams.pageSlideValue;
+
+    currPageStyle.transition = `${slideTime}ms all`;
+    currPageStyle.transform = '0px';
+  };
+  // console.log("onTouchEnd", slideX);
+  if (Math.abs(slideX) <= 0) {
+    // 处理点击事件
+    switch (checkTouchPosition(pageX, pageY)) {
+      case 'left':
+        if (isFirstPage.value) {
+          showToast('没有上一页了');
+        } else {
+          pagePrev();
+        }
+        break;
+      case 'right':
+        if (isLastPage.value) {
+          showToast('当前小说已完结');
+        } else {
+          pageNext();
+        }
+        break;
+      case 'middle':
+        showMenu.value = true;
+        break;
+    }
+  } else {
+    // console.log(now - touchTime, slideX, value);
+    const threshold = 100;
+    if (
+      now - touchParams.touchTime < dragTime ||
+      (now - touchParams.touchTime > dragTime && Math.abs(slideX) >= threshold)
+    ) {
+      if (slideX > 0) {
+        // console.log("向右边滑动");
+        if (isFirstPage.value) {
+          showToast('没有上一页了');
+          backPosition();
+        } else {
+          pagePrev();
+        }
+      } else {
+        // console.log("向左边滑动");
+        if (isLastPage.value) {
+          showToast('当前小说已完结');
+          backPosition();
+        } else {
+          pageNext();
+        }
+      }
+    } else {
+      // console.log("执行");
+      // 重置当前页和上一页的回弹
+      backPosition();
+    }
   }
 }
-#content > :is(p) {
-  margin-top: 0.8em;
+
+/** 上一章 */
+function chapterPrev() {
+  emit('prevChapter');
 }
-:deep(.setting-dialog .van-cell__value) {
-  flex: auto;
+
+/** 下一章 */
+function chapterNext() {
+  if (chapterIndex.value === chapterMax.value)
+    return showToast('当前小说已完结');
+  emit('nextChapter');
 }
-:deep(.van-nav-bar__content) {
-  height: 68px;
+
+/** 滑动切换章节 */
+function sliderChapter(e: any) {
+  // chapterIndex.value = Number(e.detail.value);
+  // // console.log(chapterIndex.value);
+  // getChapterData(chapterIndex.value, (res) => {
+  //   chapterPage.value = 0; // 重置章节到第一页
+  //   updateChapterList(chapterIndex.value, res);
+  //   updateContent();
+  // });
 }
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.3s ease;
+
+/** 加大字体 */
+function addFontSize() {
+  // if (bookOption.sizeInfo.p >= 22) return showToast('已经是最大字体了');
+  // bookOption.sizeInfo.title++;
+  // bookOption.sizeInfo.p++;
+  // bookOption.sizeInfo.tLineHeight = bookOption.sizeInfo.title * 1.5;
+  // bookOption.sizeInfo.pLineHeight = bookOption.sizeInfo.p * 1.5;
+  // // store.saveBookOption();
+  // getChapterData(chapterIndex.value, (res) => {
+  //   updateChapterList(chapterIndex.value, res);
+  //   updateContent();
+  // });
 }
-.list-enter-from,
-.list-leave-to {
-  opacity: 0;
-  transform: translateY(30px);
+
+/** 缩小字体 */
+function reduceFontSize() {
+  // if (bookOption.sizeInfo.p <= 15) return showToast('已经是最小字体了');
+  // bookOption.sizeInfo.title--;
+  // bookOption.sizeInfo.p--;
+  // bookOption.sizeInfo.tLineHeight = bookOption.sizeInfo.title * 1.5;
+  // bookOption.sizeInfo.pLineHeight = bookOption.sizeInfo.p * 1.5;
+  // // store.saveBookOption();
+  // getChapterData(chapterIndex.value, (res) => {
+  //   updateChapterList(chapterIndex.value, res);
+  //   updateContent();
+  // });
+}
+
+watch(readingPagedContent, (val) => {
+  if (val) {
+    if (val.isPrev) {
+      //上一章
+      chapterPage.value = (readingPagedContent.value?.content.length || 1) - 1;
+    } else {
+      //下一章
+      chapterPage.value = 0;
+    }
+  }
+});
+onBeforeUnmount(function () {
+  slideTimer && clearTimeout(slideTimer);
+});
+</script>
+<style lang="scss" scoped>
+/* 菜单显示隐藏 */
+.hide_menu {
+  .top_menu {
+    transform: translateY(-100%);
+  }
+  .bottom {
+    transform: translateY(100%);
+  }
 }
 </style>

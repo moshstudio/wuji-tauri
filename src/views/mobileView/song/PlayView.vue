@@ -57,10 +57,19 @@ const addSongToShelf = (shelfId: string) => {
         }
       }
     "
-    class="absolute left-[0px] right-[0px] w-auto rounded-none up-shadow bottom-[100px] overflow-hidden playing-bg"
+    class="absolute z-[1000] left-[0px] right-[0px] w-auto rounded-none up-shadow bottom-[110px] overflow-hidden playing-bg"
     :style="show ? { height: `${shelfHeight}px` } : {}"
   >
-    <div class="flip-card" :class="{ flipped: isFlipped }">
+    <template #header>
+      <van-row class="p-4">
+        <van-icon
+          name="arrow-left"
+          class="text-white van-haptics-feedback"
+          @click="() => (show = false)"
+        />
+      </van-row>
+    </template>
+    <div class="flip-card" :class="{ flipped: isFlipped }" v-if="playingSong">
       <div class="front flex flex-col gap-2" @click="flipCard">
         <div
           class="relative animate-spin-slow w-[200px] h-[200px] sm:w-[250px] sm:h-[250px] md:w-[300px] md:h-[300px] lg:w-[350px] lg:h-[350px]"

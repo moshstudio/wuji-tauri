@@ -34,6 +34,7 @@ import {
   computed,
   onBeforeMount,
   onMounted,
+  onUnmounted,
   reactive,
   ref,
   triggerRef,
@@ -49,6 +50,7 @@ import {
   SongInfo,
 } from '@/extensions/song';
 import { SongPlayMode, SongShelfType } from '@/types/song';
+import { ReadTheme } from '@/types/book';
 import { watch } from 'vue';
 import { sleep, tryCatchProxy } from '@/utils';
 import {
@@ -882,19 +884,30 @@ export const useDisplayStore = defineStore('display', () => {
   const isMobile = ref(osType() == 'android' || mobileMediaQuery.matches);
   const isLandscape = ref(landscapeMediaQuery.matches);
 
-  // 监听变化
-  mobileMediaQuery.addEventListener('change', (event) => {
+  const checkMobile = (event: MediaQueryListEvent) => {
     isMobile.value = osType() == 'android' || event.matches;
-  });
-
-  landscapeMediaQuery.addEventListener('change', (event) => {
+  };
+  const checklanscape = (event: MediaQueryListEvent) => {
     isLandscape.value = event.matches;
+  };
+
+  onMounted(() => {
+    // 监听变化
+    mobileMediaQuery.addEventListener('change', checkMobile);
+
+    landscapeMediaQuery.addEventListener('change', checklanscape);
+  });
+  onUnmounted(() => {
+    mobileMediaQuery.removeEventListener('change', checkMobile);
+
+    landscapeMediaQuery.removeEventListener('change', checklanscape);
   });
 
   const taichiAnimateRandomized = ref(false);
 
   const isDark = useDark();
   const toggleDark = useToggle(isDark);
+  const showTabBar = ref(true);
 
   const showAddSubscribeDialog = ref(false);
   const showManageSubscribeDialog = ref(false);
@@ -913,13 +926,14 @@ export const useDisplayStore = defineStore('display', () => {
   const showSettingDialog = ref(false);
   const showLeftPopup = ref(false);
 
-  const readBgColor = useStorageAsync('readbgColor', '');
-  const readFontSize = useStorageAsync('readFontSize', '20');
-
   const trayId = ref('');
 
   const toastActive = ref(false);
   const toastId = ref('');
+
+  const photoCollapse = useStorage('photoCollapse', []);
+  const songCollapse = useStorage('songCollapse', []);
+  const bookCollapse = useStorage('bookCollapse', []);
 
   const showToast = () => {
     toastActive.value = true;
@@ -945,6 +959,7 @@ export const useDisplayStore = defineStore('display', () => {
     taichiAnimateRandomized,
     isDark,
     toggleDark,
+    showTabBar,
     showAddSubscribeDialog,
     showManageSubscribeDialog,
 
@@ -962,13 +977,14 @@ export const useDisplayStore = defineStore('display', () => {
     showSettingDialog,
     showLeftPopup,
 
-    readBgColor,
-    readFontSize,
-
     trayId,
     toastActive,
     showToast,
     closeToast,
+
+    photoCollapse,
+    songCollapse,
+    bookCollapse,
   };
 });
 
@@ -1296,6 +1312,81 @@ export const useSongStore = defineStore('song', () => {
     onSetVolume,
     setPlayingList,
     seek,
+  };
+});
+
+export const useBookStore = defineStore('book', () => {
+  const displayStore = useDisplayStore();
+  const readMode = ref<'slide' | 'scroll'>(
+    displayStore.isMobile ? 'slide' : 'scroll'
+  );
+  watch(
+    () => displayStore.isMobile,
+    () => {
+      readMode.value = displayStore.isMobile ? 'slide' : 'scroll';
+    }
+  );
+  const fontSize = useStorageAsync('fontSize', 20);
+  const lineHeight = useStorageAsync('lineHeight', 1.5);
+  const readPGap = useStorageAsync('readPGap', 8);
+  const underline = useStorageAsync('underline', false);
+  const paddingX = useStorageAsync('paddingX', 16);
+  const paddingTop = useStorageAsync('paddingTop', 10);
+  const paddingBottom = useStorageAsync('paddingBottom', 20);
+
+  const defaultThemes: ReadTheme[] = [
+    {
+      name: '默认',
+      color: 'var(--van-text-color)',
+      bgColor: 'var(--van-background)',
+    },
+    {
+      name: '预设1',
+      color: '#adadad',
+      bgColor: '#000',
+    },
+    {
+      name: '预设2',
+      color: '#fff',
+      bgColor: '#000',
+    },
+    {
+      name: '预设3',
+      color: '#dcdfe1',
+      bgColor: '#3c3f43',
+    },
+    {
+      name: '预设4',
+      color: '#90bff5',
+      bgColor: '#3c3f43',
+    },
+    {
+      name: '预设5',
+      color: '#83775c',
+      bgColor: '#fff',
+    },
+  ];
+  const themes = useStorageAsync<ReadTheme[]>('readThemes', defaultThemes);
+  const currTheme = useStorageAsync<ReadTheme>('readTheme', defaultThemes[0]);
+
+  const readingBook = ref<BookItem>();
+  const readingChapter = ref<BookChapter>();
+
+  return {
+    readMode,
+    fontSize,
+    lineHeight,
+    readPGap,
+    underline,
+    paddingX,
+    paddingTop,
+    paddingBottom,
+
+    themes,
+    currTheme,
+
+    readingBook,
+    readingChapter,
   };
 });
 

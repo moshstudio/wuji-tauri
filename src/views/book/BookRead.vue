@@ -4,35 +4,33 @@ import MobileBookRead from '../mobileView/book/BookRead.vue';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
 import { BookChapter, BookItem } from '@/extensions/book';
 import { router } from '@/router';
-import { useStore, useDisplayStore, useBookShelfStore } from '@/store';
-import { BookSource } from '@/types';
-import { purifyText, retryOnFalse, sleep } from '@/utils';
-import { storeToRefs } from 'pinia';
-import { showConfirmDialog, showToast } from 'vant';
 import {
-  ref,
-  reactive,
-  watch,
-  onActivated,
-  nextTick,
-  toRaw,
-  onMounted,
-  onDeactivated,
-} from 'vue';
-import PositionBackTop from '@/components/PositionBackTop.vue';
-import BookShelfButton from '@/components/BookShelfButton.vue';
-import BookShelf from './BookShelf.vue';
-import NavBar from '@/components/NavBar.vue';
-import { useScroll } from '@vueuse/core';
+  useStore,
+  useDisplayStore,
+  useBookShelfStore,
+  useBookStore,
+} from '@/store';
+import { BookSource } from '@/types';
+import { purifyText, retryOnFalse, sleep, useElementResize } from '@/utils';
+import Reader from '@/utils/reader/reader-layout';
+import { ReaderResult } from '@/utils/reader/types';
+import { showConfirmDialog, showToast } from 'vant';
+import { ref, watch, onActivated, nextTick } from 'vue';
+import _ from 'lodash';
 
-const { chapterId, bookId, sourceId } = defineProps({
+const { chapterId, bookId, sourceId, isPrev } = defineProps({
   chapterId: String,
   bookId: String,
   sourceId: String,
+  isPrev: {
+    type: String,
+    default: 'false',
+  },
 });
 
 const store = useStore();
 const displayStore = useDisplayStore();
+const bookStore = useBookStore();
 const shelfStore = useBookShelfStore();
 
 const bookSource = ref<BookSource>();
@@ -40,14 +38,14 @@ const book = ref<BookItem>();
 const chapterList = ref<BookChapter[]>([]);
 const readingChapter = ref<BookChapter>();
 const readingContent = ref<string>();
+const readingPagedContent = ref<{ isPrev: boolean; content: ReaderResult }>();
+const readingChapterPage = ref(0);
 const shouldLoad = ref(true);
 
 const showChapters = ref(false);
 const showSettingDialog = ref(false);
 const showBookShelf = ref(false);
 const showNavBar = ref(true);
-
-let savedScrollPosition = 0;
 
 async function back(checkShelf: boolean = false) {
   if (checkShelf && book.value) {
@@ -75,6 +73,7 @@ const loadData = retryOnFalse({ onFailed: back })(async () => {
   chapterList.value = [];
   readingChapter.value = undefined;
   readingContent.value = undefined;
+  readingPagedContent.value = undefined;
 
   if (!bookId || !sourceId || !chapterId) {
     return false;
@@ -101,6 +100,7 @@ async function loadChapter(chapter?: BookChapter) {
   }
   if (!chapter) {
     showToast('章节不存在');
+    back();
     return;
   }
   showNavBar.value = true;
@@ -116,31 +116,68 @@ async function loadChapter(chapter?: BookChapter) {
   if (!readingContent.value) {
     showToast('本章内容为空');
   }
-
   nextTick(() => {
-    const content = document.querySelector('#content');
-    if (content) {
-      content.innerHTML = '';
-      readingContent.value?.split('\n').forEach((line) => {
-        // 创建 <p> 元素
-        const p = document.createElement('p');
-        // p.style.marginTop = "0.8em";
-        // 设置 <p> 的内容
-        p.textContent = line;
-        // 将 <p> 插入到目标 div 中
-        content.appendChild(p);
-      });
-      document
-        .querySelector('.scroll-container')
-        ?.scrollTo({ top: 0, behavior: 'instant' });
-      if (book.value && readingChapter.value) {
-        shelfStore.updateBookReadInfo(book.value, readingChapter.value);
-      }
-    }
+    updateReadingElements();
   });
 }
 
-function prevChapter() {
+function updateReadingElements() {
+  const content = document.querySelector('#read-content');
+  if (content) {
+    switch (bookStore.readMode) {
+      case 'scroll':
+        content.innerHTML = '';
+        readingContent.value?.split('\n').forEach((line) => {
+          // 创建 <p> 元素
+          const p = document.createElement('p');
+          // p.style.marginTop = "0.8em";
+          // 设置 <p> 的内容
+          p.textContent = line;
+          // 将 <p> 插入到目标 div 中
+          content.appendChild(p);
+        });
+        document
+          .querySelector('.scroll-container')
+          ?.scrollTo({ top: 0, behavior: 'instant' });
+        if (book.value && readingChapter.value) {
+          shelfStore.updateBookReadInfo(book.value, readingChapter.value);
+        }
+        readingPagedContent.value = undefined;
+        break;
+      case 'slide':
+        updateReadingPagedContent();
+        break;
+    }
+  }
+}
+
+const updateReadingPagedContent = () => {
+  const content = document.querySelector('#read-content');
+  if (content) {
+    const list = Reader(readingContent.value || '', {
+      platform: 'browser', // 平台
+      id: '', // canvas 对象
+      splitCode: '\r\n', // 段落分割符
+      width: content.clientWidth - bookStore.paddingX * 2, // 容器宽度
+      height:
+        content.clientHeight - bookStore.paddingTop - bookStore.paddingBottom, // 容器高度
+      fontSize: bookStore.fontSize, // 段落字体大小
+      lineHeight: bookStore.lineHeight, // 段落文字行高
+      pGap: bookStore.readPGap, // 段落间距
+      title: readingChapter.value?.title, // 标题
+      titleSize: bookStore.fontSize * 1.3, // 标题字体大小
+      titleHeight: bookStore.lineHeight * 1.3, // 标题文字行高
+      titleWeight: 'normal', // 标题文字字重
+      titleGap: bookStore.readPGap * 1.3, // 标题距离段落的间距
+    });
+    readingPagedContent.value = {
+      isPrev: isPrev === 'true',
+      content: list,
+    };
+  }
+};
+
+function prevChapter(toLast: boolean = false) {
   const index = chapterList.value.findIndex(
     (chapter) => chapter.id === readingChapter.value?.id
   );
@@ -154,6 +191,7 @@ function prevChapter() {
         chapterId: chapterList.value[index - 1].id,
         bookId: book.value?.id,
         sourceId: book.value?.sourceId,
+        isPrev: toLast ? 'true' : '',
       },
     });
   } else {
@@ -203,24 +241,18 @@ onActivated(async () => {
     await loadChapter();
   }
 });
-onMounted(() => {
-  const el: HTMLElement | null = document.querySelector(`.scroll-container`);
-  if (el) {
-    const { y } = useScroll(el);
-    // 组件停用时保存滚动位置
-    onDeactivated(() => {
-      savedScrollPosition = y.value;
-    });
 
-    // 组件激活时恢复滚动位置
-    onActivated(() => {
-      el.scrollTo({
-        top: savedScrollPosition,
-        behavior: 'instant',
-      });
-    });
-  }
+watch(book, (b) => (bookStore.readingBook = b), { immediate: true });
+watch(readingChapter, (c) => (bookStore.readingChapter = c), {
+  immediate: true,
 });
+
+useElementResize(
+  '#read-content',
+  _.throttle((width, height) => {
+    updateReadingPagedContent();
+  }, 500)
+);
 </script>
 
 <template>
@@ -232,6 +264,7 @@ onMounted(() => {
         v-model:chapter-list="chapterList"
         v-model:reading-chapter="readingChapter"
         v-model:reading-content="readingContent"
+        v-model:reading-paged-content="readingPagedContent"
         v-model:show-chapters="showChapters"
         v-model:show-setting-dialog="showSettingDialog"
         v-model:show-book-shelf="showBookShelf"
@@ -251,6 +284,7 @@ onMounted(() => {
         v-model:chapter-list="chapterList"
         v-model:reading-chapter="readingChapter"
         v-model:reading-content="readingContent"
+        v-model:reading-paged-content="readingPagedContent"
         v-model:show-chapters="showChapters"
         v-model:show-setting-dialog="showSettingDialog"
         v-model:show-book-shelf="showBookShelf"

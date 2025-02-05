@@ -68,8 +68,11 @@ watch(selecteMode, (mode) => {
             <p class="text-[--van-text-color]">图片收藏</p>
           </slot>
         </h2>
-        <div
-          class="text-button"
+        <van-button
+          icon="cross"
+          size="small"
+          plain
+          round
           @click="
             () => {
               selecteMode = false;
@@ -77,8 +80,7 @@ watch(selecteMode, (mode) => {
             }
           "
         >
-          关闭收藏
-        </div>
+        </van-button>
       </div>
     </template>
     <div class="flex gap-2 m-2 p-1 shrink">
@@ -130,7 +132,7 @@ watch(selecteMode, (mode) => {
         :key="shelf.id"
         v-if="!selecteMode"
       >
-        <div class="grid grid-cols-2 gap-1">
+        <div class="p-4 grid grid-cols-2 gap-1">
           <PhotoCard
             :item="photo"
             v-for="photo in shelf.photos"
@@ -144,7 +146,7 @@ watch(selecteMode, (mode) => {
         v-for="shelf in selectedItems"
         :key="shelf.id"
       >
-        <div class="grid grid-cols-2 gap-2">
+        <div class="p-4 grid grid-cols-2 gap-2">
           <PhotoCard
             v-model:selected="photo.extra.selected"
             :item="photo"

@@ -97,7 +97,7 @@ onUnmounted(() => {
         }
       }
     "
-    class="absolute left-[0px] right-[0px] w-auto rounded-none up-shadow bottom-[80px]"
+    class="absolute left-[0px] right-[0px] bottom-[80px] w-auto rounded-none up-shadow"
     :style="show ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
@@ -107,7 +107,18 @@ onUnmounted(() => {
             <p class="text-[--van-text-color]">音乐收藏</p>
           </slot>
         </h2>
-        <div class="text-button" @click="() => emit('hidePanel')">关闭收藏</div>
+        <van-button
+          icon="cross"
+          size="small"
+          plain
+          round
+          @click="
+            () => {
+              emit('hidePanel');
+            }
+          "
+        >
+        </van-button>
       </div>
     </template>
     <div class="flex flex-col w-full h-full">

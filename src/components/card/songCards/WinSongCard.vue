@@ -55,7 +55,7 @@ const onDbClick = () => {
 
 <template>
   <div
-    class="relative flex items-center max-w-[400px] p-1 hover:bg-[--van-background] hover:shadow-md rounded-lg select-none"
+    class="relative flex items-center max-w-[400px] p-1 hover:bg-[--van-background] rounded-lg select-none"
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
     @dblclick="onDbClick"

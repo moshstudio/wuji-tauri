@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { SongInfo } from '@/extensions/song';
 import { useSongStore, useSongShelfStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import { ref, watch } from 'vue';
 import { Icon } from '@iconify/vue';
-import { SongPlayMode } from '@/types/song';
-import { joinSongArtists, transTime } from '@/utils';
-import SongCard from '@/components/card/SongCard.vue';
+import { joinSongArtists } from '@/utils';
 import PlayView from '@/views/song/PlayView.vue';
 import PlayingPlaylistSheet from '../actionSheets/PlayingPlaylist.vue';
 
@@ -15,22 +12,31 @@ const showPlayView = defineModel('showPlayView', {
   default: false,
 });
 const songStore = useSongStore();
-const shelfStore = useSongShelfStore();
-const { audioRef, playingSong } = storeToRefs(songStore);
+const { playingSong } = storeToRefs(songStore);
 
 const showPlayingPlaylist = ref(false);
+watch(showPlayView, (value) => {
+  if (value) {
+    showPlayingPlaylist.value = false;
+  } else {
+    if (!value && showPlayingPlaylist.value) {
+      showPlayingPlaylist.value = false;
+      showPlayView.value = true;
+    }
+  }
+});
 </script>
 
 <template>
   <PlayView v-model:show="showPlayView"></PlayView>
   <transition name="fade">
     <div
-      class="flex flex-col border-t-[1px] select-none h-[60px] z-[1000] bg-[--van-background]"
+      class="flex flex-col border-t-[1px] select-none h-[60px] z-[1002] bg-[--van-background]"
       v-if="playingSong"
       @click="() => (showPlayView = !showPlayView)"
     >
       <div
-        class="flex-grow flex flex-nowrap h-[60px] items-center justify-between px-2"
+        class="flex-grow flex flex-nowrap h-[60px] items-center justify-between px-2 z-[1002]"
       >
         <div class="flex gap-4 max-w-[calc(100%-50px)]">
           <div class="w-[30px] h-[30px]">
@@ -103,7 +109,7 @@ const showPlayingPlaylist = ref(false);
           :min="0"
           :max="songStore.audioDuration"
           button-size="8px"
-          class="z-[999999999]"
+          class="z-[1000] translate-y-[3px]"
           @change="(value) => songStore.seek(value)"
         />
       </div>

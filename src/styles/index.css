@@ -58,6 +58,7 @@ body,
 ::-webkit-scrollbar-thumb:hover {
   background-color: rgba(110, 110, 110, 0.6);
 }
+
 :root:root {
   --van-search-padding: 6px 10px;
 }

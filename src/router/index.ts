@@ -7,11 +7,12 @@ import PlaylistDetail from '@/views/song/PlaylistDetail.vue';
 import Book from '@/views/book/index.vue';
 import BookDetail from '@/views/book/BookDetail.vue';
 import BookRead from '@/views/book/BookRead.vue';
+import { type as osType } from '@tauri-apps/plugin-os';
 
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/home',
+    redirect: osType() == 'android' ? '/photo' : '/home',
   },
   {
     path: '/home',
@@ -54,7 +55,7 @@ export const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
-    path: '/book/read/:sourceId/:bookId/:chapterId',
+    path: '/book/read/:sourceId/:bookId/:chapterId/:isPrev?',
     name: 'BookRead',
     component: BookRead,
     props: true,

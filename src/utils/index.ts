@@ -1,5 +1,6 @@
 import { ArtistInfo } from '@/extensions/song';
 import { ClientOptions, fetch } from '@/utils/fetch';
+import { onBeforeUnmount, onMounted } from 'vue';
 export * from './extensionUtils';
 
 export function sleep(ms: number) {
@@ -195,4 +196,32 @@ export function levenshteinDistance(a: string, b: string): number {
   }
 
   return matrix[a.length][b.length];
+}
+
+export function useElementResize(
+  elementSelector: string,
+  callback: (width: number, height: number) => void
+) {
+  let resizeObserver: ResizeObserver | null = null;
+
+  onMounted(() => {
+    const element = document.querySelector(elementSelector);
+    if (element) {
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          callback(width, height); // 触发回调，传递尺寸变化
+        }
+      });
+      resizeObserver.observe(element); // 开始观察
+    } else {
+      console.error(`Element with selector "${elementSelector}" not found!`);
+    }
+  });
+
+  onBeforeUnmount(() => {
+    if (resizeObserver) {
+      resizeObserver.disconnect(); // 清理观察器
+    }
+  });
 }

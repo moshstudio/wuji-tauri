@@ -72,20 +72,19 @@ watch(
         v-for="(item, index) in source.list"
         :key="index"
       >
-        <div class="absolute transform -translate-y-9 right-0">
+        <van-row v-if="item.page && item.totalPage && item.totalPage > 1">
           <SimplePagination
             v-model="item.page"
             :page-count="item.totalPage"
             @change="(page: number) => changePage(index, page)"
-            v-if="item.page && item.totalPage && item.totalPage > 1"
           ></SimplePagination>
-        </div>
+        </van-row>
         <van-loading class="p-2" v-if="!item.list.length" />
-        <HorizonList>
+        <div class="flex flex-col">
           <template v-for="book in item.list" :key="book.id">
             <BookCard :book-item="book" @click="toDetail"> </BookCard>
           </template>
-        </HorizonList>
+        </div>
       </van-tab>
     </van-tabs>
   </template>

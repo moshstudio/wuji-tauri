@@ -9,5 +9,5 @@ declare global {
   const showConfirmDialog: (typeof import('vant/es'))['showConfirmDialog']
   const showLoadingToast: (typeof import('vant/es'))['showLoadingToast']
   const showNotify: (typeof import('vant/es'))['showNotify']
-  const showToast: (typeof import('vant/es'))['showToast']
+  const showToast: typeof import('vant/es')['showToast']
 }

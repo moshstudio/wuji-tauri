@@ -44,12 +44,10 @@ pub fn run() {
                 .set_min_size(Some(tauri::PhysicalSize::new(600, 300)))
                 .expect("Can't Set Min Size");
         }
-        builder = builder
-            .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-                let _ = show_window(app);
-                let _ = constraint_window_size(app);
-            }))
-            .plugin(tauri_plugin_window_state::Builder::new().build());
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            let _ = show_window(app);
+            let _ = constraint_window_size(app);
+        }));
     }
 
     builder

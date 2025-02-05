@@ -34,7 +34,7 @@ const onClick = () => {
 
 <template>
   <div
-    class="m-2 bg-[--van-background] rounded-lg shadow transform transition-all duration-100 hover:-translate-y-1 hover:shadow-md cursor-pointer select-none active:bg-[--van-background-2]"
+    class="bg-[--van-background] rounded-lg shadow transform transition-all duration-100 hover:-translate-y-1 hover:shadow-md cursor-pointer select-none active:bg-[--van-background-2]"
     :class="displayStore.isMobile ? 'w-[100px]' : 'w-[160px]'"
     @click="onClick"
     @mouseenter="onMouseEnter"

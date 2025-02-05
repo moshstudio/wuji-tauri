@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { BookChapter, BookItem } from '@/extensions/book';
 
-import { useDisplayStore } from '@/store';
+import { useBookStore, useDisplayStore } from '@/store';
 import { BookSource } from '@/types';
 import BookShelfButton from '@/components/BookShelfButton.vue';
 import BookShelf from '@/views/book/BookShelf.vue';
 import NavBar from '@/components/NavBar.vue';
-import { PropType } from 'vue';
+import { onActivated, onDeactivated, onMounted, PropType } from 'vue';
+import { useScroll } from '@vueuse/core';
+import { ReaderResult } from '@/utils/reader/types';
 
 const book = defineModel('book', { type: Object as PropType<BookItem> });
 const bookSource = defineModel('bookSource', {
@@ -17,6 +19,9 @@ const chapterList = defineModel('chapterList', {
 });
 const readingChapter = defineModel('readingChapter', {
   type: Object as PropType<BookChapter>,
+});
+const readingPagedContent = defineModel('readingPagedContent', {
+  type: Object as PropType<{ isPrev: boolean; content: ReaderResult }>,
 });
 const readingContent = defineModel('readingContent', {
   type: String,
@@ -48,19 +53,44 @@ const emit = defineEmits<{
 }>();
 
 const displayStore = useDisplayStore();
+const bookStore = useBookStore();
+
+let savedScrollPosition = 0;
+
+onMounted(() => {
+  const el: HTMLElement | null = document.querySelector(`.scroll-container`);
+  if (el) {
+    const { y } = useScroll(el);
+    // 组件停用时保存滚动位置
+    onDeactivated(() => {
+      savedScrollPosition = y.value;
+    });
+
+    // 组件激活时恢复滚动位置
+    onActivated(() => {
+      el.scrollTo({
+        top: savedScrollPosition,
+        behavior: 'instant',
+      });
+    });
+  }
+});
 </script>
 
 <template>
   <div
     class="relative flex flex-col w-full h-full overflow-hidden items-center"
-    :style="{ backgroundColor: displayStore.readBgColor }"
+    :style="{
+      backgroundColor: bookStore.currTheme.bgColor,
+      color: bookStore.currTheme.color,
+    }"
   >
     <NavBar
       v-model:show="showNavBar"
       left-arrow
       @click-left="() => emit('back', true)"
       class="absolute w-full h-[70px]"
-      target="#content"
+      target="#read-content"
     >
       <template #title>
         <div class="flex flex-col gap-1 items-center truncate">
@@ -89,9 +119,9 @@ const displayStore = useDisplayStore();
       class="scroll-container flex h-full overflow-y-auto min-w-[400px] w-[95%] sm:w-[90%] md:w-[75%] lg:w-[60%] bg-gray-50/50 dark:bg-gray-950/50"
     >
       <div
-        id="content"
+        id="read-content"
         class="pt-[80px] relative overflow-y-auto p-4 text-justify leading-[1.8] text-[--van-text-color]"
-        :style="{ fontSize: displayStore.readFontSize + 'px' }"
+        :style="{ fontSize: bookStore.fontSize + 'px' }"
         v-if="readingContent"
       ></div>
       <div
@@ -185,55 +215,33 @@ const displayStore = useDisplayStore();
     <van-dialog
       v-model:show="showSettingDialog"
       title="阅读设置"
-      width="350px"
       closeOnClickOverlay
-      class="setting-dialog"
+      :show-confirm-button="false"
+      class="setting-dialog bg-black"
     >
-      <van-cell-group>
-        <van-cell>
-          <template #title>
-            <p class="w-[60px]">背景色</p>
-          </template>
-          <template #value>
-            <div class="grow flex gap-2">
-              <div
-                class="h-[30px] w-[30px] rounded-full cursor-pointer border flex justify-center items-center"
-                :style="{ backgroundColor: color }"
-                v-for="color in [
-                  '',
-                  '#ebe5d8',
-                  '#cfe1cf',
-                  '#e3d0a1',
-                  '#040a17',
-                  '#200e20',
-                  '#0c1f4e',
-                ]"
-                :key="color"
-                @click="displayStore.readBgColor = color"
-              >
-                <van-icon
-                  name="success"
-                  class="text-[--van-text-color]"
-                  v-if="displayStore.readBgColor === color"
-                />
-              </div>
-            </div>
-          </template>
-        </van-cell>
-        <van-cell>
-          <template #title>
-            <p class="w-[60px]">文本大小</p>
-          </template>
-          <template #value>
-            <van-stepper
-              v-model="displayStore.readFontSize"
-              step="1"
-              min="10"
-              max="50"
-            />
-          </template>
-        </van-cell>
-      </van-cell-group>
+      <div class="flex flex-col gap-2 p-2 text-sm">
+        <div>文字颜色和背景</div>
+        <div class="flex gap-2 overflow-x-auto">
+          <div
+            v-for="theme in bookStore.themes"
+            :key="JSON.stringify(theme)"
+            class="rounded-full text-center p-2 border-2 w-[40px] h-[40px] cursor-pointer"
+            :class="[
+              theme === bookStore.currTheme
+                ? 'border-[var(--van-primary-color)]'
+                : 'border-white',
+            ]"
+            :style="{
+              backgroundColor: theme.bgColor,
+              color: theme.color,
+              textDecorationLine: theme.underLine ? 'underline' : 'none',
+            }"
+            @click="bookStore.currTheme = theme"
+          >
+            文
+          </div>
+        </div>
+      </div>
     </van-dialog>
     <BookShelf v-model:show="showBookShelf"></BookShelf>
   </div>
@@ -245,7 +253,7 @@ const displayStore = useDisplayStore();
     flex-direction: column;
   }
 }
-#content > :is(p) {
+#read-content > :is(p) {
   margin-top: 0.8em;
 }
 :deep(.setting-dialog .van-cell__value) {

@@ -13,6 +13,8 @@ import SongShelf from '@/views/song/SongShelf.vue';
 import MobileSongBar from '@/components/mobile/MobileSongBar.vue';
 import SearchButton from '@/components/mobile/Search.vue';
 import LeftPopup from '@/components/mobile/LeftPopup.vue';
+import { ref } from 'vue';
+import { sleep } from '@/utils';
 
 const store = useStore();
 const { songSources } = storeToRefs(store);
@@ -46,87 +48,111 @@ const emit = defineEmits<{
   (e: 'playSong', source: SongSource, song: SongInfo): void;
   (e: 'openBaseUrl', source: SongSource): void;
 }>();
+
+const isRefreshing = ref(false);
+const onRefresh = async () => {
+  isRefreshing.value = true;
+  emit('search');
+  await sleep(1000);
+  isRefreshing.value = false;
+};
 </script>
 
 <template>
   <div class="w-full h-full flex flex-col">
-    <div class="grow overflow-x-hidden overflow-y-auto">
-      <div class="px-2 h-[50px] flex justify-between items-center">
-        <LeftPopup></LeftPopup>
-        <div class="flex gap-2 items-center h-[50px]">
-          <SearchButton
-            v-model="searchValue"
-            @search="() => emit('search')"
-          ></SearchButton>
-          <van-icon
-            name="star-o"
-            class="text-button-2"
-            @click="() => (showSongShelf = !showSongShelf)"
-          />
-        </div>
+    <header class="px-4 h-[50px] flex justify-between items-center">
+      <LeftPopup></LeftPopup>
+      <div class="flex gap-2 items-center h-[50px]">
+        <SearchButton
+          v-model="searchValue"
+          @search="() => emit('search')"
+        ></SearchButton>
+        <van-icon
+          name="star-o"
+          class="text-button-2"
+          @click="() => (showSongShelf = !showSongShelf)"
+        />
       </div>
-      <van-tabs v-model:active="activeTabIndex" shrink>
+    </header>
+    <van-pull-refresh
+      v-remember-scroll
+      v-model="isRefreshing"
+      @refresh="onRefresh"
+      class="main grow overflow-x-hidden overflow-y-auto"
+    >
+      <van-tabs v-model:active="activeTabIndex" shrink sticky offset-top="50px">
         <van-tab
           v-for="item in songSources.filter((s) => s.playlist || s.songList)"
           :key="item.item.id"
           :title="item.item.name"
           class="p-2"
         >
-          <van-loading v-if="!item.playlist && !item.songList" />
-          <van-row
-            justify="space-between"
-            v-if="item.playlist && item.playlist.totalPage"
-          >
-            <van-button
-              :plain="true"
-              size="small"
-              @click="() => emit('openBaseUrl', item)"
+          <div class="">
+            <van-loading v-if="!item.playlist && !item.songList" />
+            <van-row
+              justify="space-between"
+              v-if="item.playlist && item.playlist.totalPage"
             >
-              歌单
-            </van-button>
-            <SimplePagination
-              v-model="item.playlist.page"
-              :page-count="item.playlist.totalPage"
-              @change="(page) => emit('playlistToPage', item, page)"
-            />
-          </van-row>
-          <HorizonList>
-            <div v-for="p in item.playlist?.list" :key="p.id" class="relative">
-              <PlaylistCard :playlist="p"></PlaylistCard>
+              <van-button
+                :plain="true"
+                size="small"
+                @click="() => emit('openBaseUrl', item)"
+              >
+                歌单
+              </van-button>
+              <SimplePagination
+                v-model="item.playlist.page"
+                :page-count="item.playlist.totalPage"
+                @change="(page) => emit('playlistToPage', item, page)"
+              />
+            </van-row>
+            <HorizonList>
+              <div
+                v-for="p in item.playlist?.list"
+                :key="p.id"
+                class="relative"
+              >
+                <PlaylistCard :playlist="p"></PlaylistCard>
+              </div>
+            </HorizonList>
+            <div class="h-4"></div>
+            <van-row
+              justify="space-between"
+              v-if="item.songList && item.songList.totalPage"
+            >
+              <van-button
+                :plain="true"
+                size="small"
+                @click="() => emit('openBaseUrl', item)"
+              >
+                歌曲
+              </van-button>
+              <SimplePagination
+                v-model="item.songList.page"
+                :page-count="item.songList.totalPage"
+                @change="(page) => emit('songToPage', item, page)"
+              />
+            </van-row>
+            <div class="grid grid-cols-2 gap-2 pt-2">
+              <template v-for="p in item.songList?.list" :key="p.id">
+                <MobileSongCard
+                  :song="p"
+                  @play="() => playSong(item, p)"
+                  class="max-w-[250px]"
+                ></MobileSongCard>
+              </template>
             </div>
-          </HorizonList>
-          <div class="h-4"></div>
-          <van-row
-            justify="space-between"
-            v-if="item.songList && item.songList.totalPage"
-          >
-            <van-button
-              :plain="true"
-              size="small"
-              @click="() => emit('openBaseUrl', item)"
-            >
-              歌曲
-            </van-button>
-            <SimplePagination
-              v-model="item.songList.page"
-              :page-count="item.songList.totalPage"
-              @change="(page) => emit('songToPage', item, page)"
-            />
-          </van-row>
-          <div class="grid grid-cols-2 gap-2 pt-2">
-            <template v-for="p in item.songList?.list" :key="p.id">
-              <MobileSongCard
-                :song="p"
-                @play="() => playSong(item, p)"
-                class="max-w-[250px]"
-              ></MobileSongCard>
-            </template>
           </div>
         </van-tab>
       </van-tabs>
-      <SongShelf v-model:show="showSongShelf"></SongShelf>
-    </div>
-    <MobileSongBar v-model:show-play-view="showPlayView"></MobileSongBar>
+    </van-pull-refresh>
+    <!-- <main class="flex-1 min-h-0">
+      
+    </main> -->
+    <footer>
+      <MobileSongBar v-model:show-play-view="showPlayView"></MobileSongBar>
+    </footer>
+    <SongShelf v-model:show="showSongShelf"></SongShelf>
   </div>
 </template>
 

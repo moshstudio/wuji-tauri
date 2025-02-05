@@ -47,7 +47,7 @@ onMounted(() => {
 
 <template>
   <div
-    class="relative flex flex-col m-2 max-w-[160px] bg-[--van-background] rounded-lg shadow transform transition-all duration-100 hover:-translate-y-1 hover:shadow-md cursor-pointer select-none active:bg-[--van-background-2]"
+    class="relative flex flex-col max-w-[160px] bg-[--van-background] rounded-lg shadow transform transition-all duration-100 hover:-translate-y-1 hover:shadow-md cursor-pointer select-none active:bg-[--van-background-2]"
     :class="selecteMode ? (selected ? '' : 'opacity-50') : ''"
     @click="onClick"
     @mouseenter="onMouseEnter"
@@ -74,13 +74,13 @@ onMounted(() => {
         class="rounded-t-lg"
       />
     </template>
-    <div
+    <van-text-ellipsis
       rows="2"
-      class="text-xs p-2 text-[--van-text-color] h-[48px] line-clamp-2"
+      :content="item.title"
+      class="text-xs p-2 text-[--van-text-color]"
       v-if="item.title"
     >
-      {{ item.title }}
-    </div>
+    </van-text-ellipsis>
     <p
       v-if="source && selecteMode"
       class="absolute top-2 left-2 text-white text-xs"

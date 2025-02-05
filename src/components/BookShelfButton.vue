@@ -63,16 +63,19 @@ watch(
   <template v-if="!book"></template>
   <template v-else>
     <template v-if="mode === 'rectangle'">
-      <van-badge>
+      <van-badge v-if="numInShelf > 0">
         <template #content>
-          <p v-if="numInShelf > 0" @click="() => emit('showShelf')">
+          <p @click="() => emit('showShelf')">
             {{ numInShelf }}
           </p>
         </template>
         <van-button plain type="primary" size="small" @click="addToShelf">
-          加入书架
+          <span class="truncate"> 加入书架 </span>
         </van-button>
       </van-badge>
+      <van-button plain type="primary" size="small" @click="addToShelf" v-else>
+        <span class="truncate"> 加入书架 </span>
+      </van-button>
     </template>
     <template v-else>
       <template v-if="numInShelf === 0">

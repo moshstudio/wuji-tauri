@@ -203,6 +203,8 @@ pub async fn fetch<R: Runtime>(
                 println!("unverify request {:?}", url.clone());
                 builder = builder.danger_accept_invalid_certs(true);
                 builder = builder.danger_accept_invalid_hostnames(true);
+            } else {
+                println!("verify request {:?}", url.clone());
             }
 
             if let Some(timeout) = connect_timeout {

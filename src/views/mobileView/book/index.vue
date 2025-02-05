@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import _ from 'lodash';
-import { useStore } from '@/store';
+import { useDisplayStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import BooksTab from '@/components/windows/BooksTab.vue';
 import BookShelf from '@/views/book/BookShelf.vue';
 import SearchButton from '@/components/mobile/Search.vue';
+import MobileBooksTab from '@/components/tabs/MobileBooksTab.vue';
 import { BookSource } from '@/types';
 import { BookItem } from '@/extensions/book';
 import { ref } from 'vue';
@@ -23,6 +24,7 @@ const emit = defineEmits<{
 }>();
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const { bookSources } = storeToRefs(store);
 
 const isRefreshing = ref(false);
@@ -39,11 +41,8 @@ const search = (value: string) => {
 </script>
 
 <template>
-  <div
-    v-remember-scroll
-    class="w-full h-full overflow-x-hidden overflow-y-auto"
-  >
-    <div class="px-2 h-[50px] flex justify-between items-center">
+  <div class="w-full h-full flex flex-col overflow-hidden">
+    <header class="px-4 h-[50px] flex justify-between items-center">
       <LeftPopup></LeftPopup>
       <div class="flex gap-2 items-center h-[50px]">
         <SearchButton v-model="searchValue" @search="search"></SearchButton>
@@ -53,69 +52,30 @@ const search = (value: string) => {
           @click="() => (showShelf = true)"
         />
       </div>
-    </div>
-    <van-pull-refresh v-model="isRefreshing" @refresh="onRefresh">
-      <div v-for="item in bookSources" :key="item.item.id">
-        <template v-if="item.list">
-          <template v-if="_.isArray(item.list)">
-            <van-tab> </van-tab>
-          </template>
-          <template v-else>
-
-          </template>
-
-          <van-row justify="space-between" class="flex-nowrap px-2">
-            <van-button
-              :plain="true"
-              size="small"
-              @click="() => emit('openBaseUrl', item)"
+    </header>
+    <main v-remember-scroll class="main grow overflow-x-hidden overflow-y-auto">
+      <van-pull-refresh v-model="isRefreshing" @refresh="onRefresh">
+        <van-collapse v-model="displayStore.bookCollapse">
+          <template v-for="item in bookSources" :key="item.item.id">
+            <van-collapse-item
+              :title="item.item.name"
+              :name="item.item.name"
+              v-if="item.list"
             >
-              <div class="truncate max-w-[100px] text-[--van-text-color]">
-                {{ item.item.name }}
-              </div>
-            </van-button>
-            <SimplePagination
-              v-model="item.list.page"
-              :page-count="item.list.totalPage"
-              @change="(page) => emit('pageChange', item, page)"
-              v-if="item.list && item.list.totalPage"
-            />
-          </van-row>
-          <div class="grid grid-cols-2 gap-1">
-            <p v-if="!item.list?.list.length" class="m-2 text-xs text-gray-600">
-              内容为空
-            </p>
-            <template v-for="photo in item.list?.list" :key="photo" v-else>
-              <PhotoCard :item="photo"></PhotoCard>
-            </template>
-          </div>
-          <van-divider :style="{ margin: '8px 0px' }" />
-        </template>
-      </div>
-    </van-pull-refresh>
-    <div v-for="source in bookSources" :key="source.item.id" class="px-4">
-      <template v-if="!!source.list">
-        <van-row justify="space-between">
-          <van-button
-            :plain="true"
-            size="small"
-            @click="() => emit('openBaseUrl', source)"
-          >
-            {{ source.item.name }}
-          </van-button>
-        </van-row>
-        <BooksTab
-          :source="source"
-          @on-load="(source, type) => emit('loadType', source, type)"
-          @load-page="
-            (source, pageNo, type) => emit('loadPage', source, pageNo, type)
-          "
-          @on-detail="(source, item) => emit('toDetail', source, item)"
-        >
-        </BooksTab>
-        <van-divider :style="{ margin: '8px 0px' }" />
-      </template>
-    </div>
+              <MobileBooksTab
+                :source="item"
+                @on-load="(source, type) => emit('loadType', source, type)"
+                @load-page="
+                  (source, pageNo, type) =>
+                    emit('loadPage', source, pageNo, type)
+                "
+                @on-detail="(source, item) => emit('toDetail', source, item)"
+              ></MobileBooksTab>
+            </van-collapse-item>
+          </template>
+        </van-collapse>
+      </van-pull-refresh>
+    </main>
     <BookShelf v-model:show="showShelf"></BookShelf>
   </div>
 </template>

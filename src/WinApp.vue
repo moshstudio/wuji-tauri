@@ -97,12 +97,17 @@ const onClickAction = (action: { text: string; onClick: Function }) =>
 watch(
   () => route.path,
   (newPath) => {
-    if (newPath.startsWith('/photo')) {
+    if (newPath.startsWith('/home')) {
+      activeKey.value = '0';
+    } else if (newPath.startsWith('/photo')) {
       photoPath.value = newPath;
+      activeKey.value = '1';
     } else if (newPath.startsWith('/song')) {
       songPath.value = newPath;
+      activeKey.value = '2';
     } else if (newPath.startsWith('/book')) {
       bookPath.value = newPath;
+      activeKey.value = '3';
     } else {
     }
   }

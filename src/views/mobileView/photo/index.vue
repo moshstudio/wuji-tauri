@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useStore } from '@/store';
+import { useDisplayStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import PhotoCard from '@/components/card/PhotoCard.vue';
 import SimplePagination from '@/components/SimplePagination.vue';
@@ -11,6 +11,7 @@ import { ref } from 'vue';
 import { sleep } from '@/utils';
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const { photoSources } = storeToRefs(store);
 
 const searchValue = defineModel('searchValue', { type: String, default: '' });
@@ -37,11 +38,8 @@ const search = (value: string) => {
 </script>
 
 <template>
-  <div
-    v-remember-scroll
-    class="w-full h-full overflow-x-hidden overflow-y-auto"
-  >
-    <div class="px-2 h-[50px] flex justify-between items-center">
+  <div class="w-full h-full flex flex-col overflow-hidden">
+    <header class="px-4 h-[50px] flex justify-between items-center">
       <LeftPopup></LeftPopup>
       <div class="flex gap-2 items-center h-[50px]">
         <SearchButton v-model="searchValue" @search="search"></SearchButton>
@@ -51,40 +49,44 @@ const search = (value: string) => {
           @click="() => (showShelf = true)"
         />
       </div>
-    </div>
-    <van-pull-refresh v-model="isRefreshing" @refresh="onRefresh">
-      <div v-for="item in photoSources" :key="item.item.id">
-        <template v-if="item.list">
-          <van-row justify="space-between" class="flex-nowrap px-2">
-            <van-button
-              :plain="true"
-              size="small"
-              @click="() => emit('openBaseUrl', item)"
-            >
-              <div class="truncate max-w-[100px] text-[--van-text-color]">
-                {{ item.item.name }}
-              </div>
-            </van-button>
-            <SimplePagination
-              v-model="item.list.page"
-              :page-count="item.list.totalPage"
-              @change="(page) => emit('pageChange', item, page)"
-              v-if="item.list && item.list.totalPage"
-            />
-          </van-row>
-          <div class="grid grid-cols-2 gap-1">
-            <p v-if="!item.list?.list.length" class="m-2 text-xs text-gray-600">
-              内容为空
-            </p>
-            <template v-for="photo in item.list?.list" :key="photo" v-else>
-              <PhotoCard :item="photo"></PhotoCard>
-            </template>
-          </div>
-          <van-divider :style="{ margin: '8px 0px' }" />
+    </header>
+    <van-pull-refresh
+      v-remember-scroll
+      v-model="isRefreshing"
+      @refresh="onRefresh"
+      class="main grow overflow-x-hidden overflow-y-auto"
+    >
+      <van-collapse v-model="displayStore.photoCollapse">
+        <template v-for="item in photoSources" :key="item.item.id">
+          <van-collapse-item
+            :title="item.item.name"
+            :name="item.item.name"
+            v-if="item.list"
+          >
+            <van-row justify="end" class="flex-nowrap mb-2">
+              <SimplePagination
+                v-model="item.list.page"
+                :page-count="item.list.totalPage"
+                @change="(page) => emit('pageChange', item, page)"
+                v-if="item.list && item.list.totalPage"
+              />
+            </van-row>
+            <div class="grid grid-cols-2 gap-2">
+              <p
+                v-if="!item.list?.list.length"
+                class="m-2 text-xs text-gray-600"
+              >
+                内容为空
+              </p>
+              <template v-for="photo in item.list?.list" :key="photo" v-else>
+                <PhotoCard :item="photo"></PhotoCard>
+              </template>
+            </div>
+          </van-collapse-item>
         </template>
-      </div>
+      </van-collapse>
+      <van-back-top bottom="60" right="10" />
     </van-pull-refresh>
-    <van-back-top bottom="60" right="10" />
 
     <PhotoShelf v-model:show="showShelf"></PhotoShelf>
   </div>

@@ -62,7 +62,7 @@ const sourceName = (book: BookItemInShelf) => {
         }
       }
     "
-    class="left-[50px] right-[0px] w-auto rounded-none up-shadow"
+    class="left-[0px] right-[0px] w-auto rounded-none up-shadow"
     :style="show ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
@@ -72,7 +72,18 @@ const sourceName = (book: BookItemInShelf) => {
             <p class="text-[--van-text-color]">书架</p>
           </slot>
         </h2>
-        <div class="text-button" @click="() => emit('hidePanel')">关闭书架</div>
+        <van-button
+          icon="cross"
+          size="small"
+          plain
+          round
+          @click="
+            () => {
+              emit('hidePanel');
+            }
+          "
+        >
+        </van-button>
       </div>
     </template>
     <div class="flex gap-2 m-2 p-1 shrink">
@@ -91,17 +102,13 @@ const sourceName = (book: BookItemInShelf) => {
         size="small"
         round
         @click="() => (displayStore.showAddBookShelfDialog = true)"
-      >
-        新增书架</van-button
-      >
+      ></van-button>
       <van-button
         icon="delete-o"
         size="small"
         round
         @click="() => (displayStore.showRemoveBookShelfDialog = true)"
-      >
-        删除书架</van-button
-      >
+      ></van-button>
     </div>
 
     <van-tabs shrink>

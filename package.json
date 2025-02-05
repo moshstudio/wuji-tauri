@@ -55,6 +55,7 @@
     "less": "^4.2.1",
     "postcss": "^8.4.49",
     "prettier": "^3.4.2",
+    "sass-embedded": "^1.83.4",
     "tailwindcss": "^3.4.16",
     "typescript": "^5.2.2",
     "unplugin-auto-import": "^0.18.6",
