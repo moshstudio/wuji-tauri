@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-exit-app"
+description = "Enables the exit_app command without any pre-configured scope."
+commands.allow = ["exit_app"]
+
+[[permission]]
+identifier = "deny-exit-app"
+description = "Denies the exit_app command without any pre-configured scope."
+commands.deny = ["exit_app"]

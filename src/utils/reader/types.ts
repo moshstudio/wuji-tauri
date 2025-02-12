@@ -26,6 +26,7 @@ export interface LineData {
   isTitle: boolean;
   center: boolean;
   pFirst: boolean;
+  pLast: boolean;
   pIndex: number;
   lineIndex: number;
   textIndex: number;

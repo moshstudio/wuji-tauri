@@ -14,10 +14,11 @@ import { onMounted, onUnmounted, ref, triggerRef, watch } from 'vue';
 import { PlaylistInfo, SongShelf } from '@/extensions/song';
 import { sleep } from '@/utils';
 import { SongShelfType } from '@/types/song';
-
-const show = defineModel('show', { type: Boolean, default: false });
+import { storeToRefs } from 'pinia';
 
 const store = useStore();
+const displayStore = useDisplayStore();
+const { showSongShelf } = storeToRefs(displayStore);
 const shelfStore = useSongShelfStore();
 
 const selectedShelf = ref<SongShelf>();
@@ -59,10 +60,10 @@ const shelfAnchors = ref([offset, Math.round(window.innerHeight) + offset]);
 const shelfHeight = ref(0);
 const hidePanel = () => {
   shelfHeight.value = shelfAnchors.value[0];
-  show.value = false;
+  showSongShelf.value = false;
 };
 watch(
-  show,
+  showSongShelf,
   (newValue) => {
     if (newValue) {
       shelfHeight.value = shelfAnchors.value[1];
@@ -74,7 +75,7 @@ watch(
 );
 const updateAnchors = () => {
   shelfAnchors.value[1] = Math.round(window.innerHeight) + offset;
-  if (show.value) {
+  if (showSongShelf.value) {
     shelfHeight.value = shelfAnchors.value[1];
   }
 };
@@ -121,7 +122,6 @@ watch(
   <PlatformSwitch>
     <template #mobile>
       <MobileSongShelf
-        v-model:show="show"
         v-model:shelf-anchors="shelfAnchors"
         v-model:shelf-height="shelfHeight"
         @load-page="loadPage"
@@ -131,7 +131,6 @@ watch(
     </template>
     <template #windows>
       <WinSongShelf
-        v-model:show="show"
         v-model:selected-shelf="selectedShelf"
         v-model:shelf-anchors="shelfAnchors"
         v-model:shelf-height="shelfHeight"

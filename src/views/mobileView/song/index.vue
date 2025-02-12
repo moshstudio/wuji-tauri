@@ -1,28 +1,25 @@
 <script setup lang="ts">
-import { useStore } from '@/store';
+import { useDisplayStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import _ from 'lodash';
 import PlaylistCard from '@/components/card/PlaylistCard.vue';
 import MobileSongCard from '@/components/card/songCards/MobileSongCard.vue';
 import HorizonList from '@/components/HorizonList.vue';
-import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
-import SimplePagination from '@/components/SimplePagination.vue';
+import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import { SongSource } from '@/types';
 import { SongInfo } from '@/extensions/song';
 import SongShelf from '@/views/song/SongShelf.vue';
+import MobileHeader from '@/components/mobile/MobileHeader.vue';
 import MobileSongBar from '@/components/mobile/MobileSongBar.vue';
-import SearchButton from '@/components/mobile/Search.vue';
+import SearchButton from '@/components/mobile/Search2.vue';
 import LeftPopup from '@/components/mobile/LeftPopup.vue';
 import { ref } from 'vue';
 import { sleep } from '@/utils';
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const { songSources } = storeToRefs(store);
 
-const showSongShelf = defineModel('showSongShelf', {
-  type: Boolean,
-  default: false,
-});
 const showPlayView = defineModel('showPlayView', {
   type: Boolean,
   default: false,
@@ -60,20 +57,12 @@ const onRefresh = async () => {
 
 <template>
   <div class="w-full h-full flex flex-col">
-    <header class="px-4 h-[50px] flex justify-between items-center">
-      <LeftPopup></LeftPopup>
-      <div class="flex gap-2 items-center h-[50px]">
-        <SearchButton
-          v-model="searchValue"
-          @search="() => emit('search')"
-        ></SearchButton>
-        <van-icon
-          name="star-o"
-          class="text-button-2"
-          @click="() => (showSongShelf = !showSongShelf)"
-        />
-      </div>
-    </header>
+    <MobileHeader
+      v-model:search-value="searchValue"
+      @search="() => emit('search')"
+      @show-shelf="() => (displayStore.showSongShelf = true)"
+    ></MobileHeader>
+
     <van-pull-refresh
       v-remember-scroll
       v-model="isRefreshing"
@@ -152,7 +141,7 @@ const onRefresh = async () => {
     <footer>
       <MobileSongBar v-model:show-play-view="showPlayView"></MobileSongBar>
     </footer>
-    <SongShelf v-model:show="showSongShelf"></SongShelf>
+    <SongShelf></SongShelf>
   </div>
 </template>
 

@@ -8,7 +8,6 @@ import { computed, PropType } from 'vue';
 import AddBookShelfDialog from '@/components/windows/dialogs/AddBookShelf.vue';
 import DeleteBookShelfDialog from '@/components/windows/dialogs/RemoveBookShelf.vue';
 
-const show = defineModel('show', { type: Boolean, default: false });
 const shelfAnchors = defineModel('shelfAnchors', {
   type: Array as PropType<number[]>,
   required: true,
@@ -58,12 +57,12 @@ const sourceName = (book: BookItemInShelf) => {
     @height-change="
       (height) => {
         if (height.height === 0) {
-          show = false;
+          displayStore.showBookShelf = false;
         }
       }
     "
     class="left-[50px] right-[0px] w-auto rounded-none up-shadow"
-    :style="show ? { height: `${shelfHeight}px` } : {}"
+    :style="displayStore.showBookShelf ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
       <div class="flex justify-between items-center p-4 border-b">
@@ -92,16 +91,14 @@ const sourceName = (book: BookItemInShelf) => {
         round
         @click="() => (displayStore.showAddBookShelfDialog = true)"
       >
-        新增书架</van-button
-      >
+      </van-button>
       <van-button
         icon="delete-o"
         size="small"
         round
         @click="() => (displayStore.showRemoveBookShelfDialog = true)"
       >
-        删除书架</van-button
-      >
+      </van-button>
     </div>
 
     <van-tabs shrink>

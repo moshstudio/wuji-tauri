@@ -27,6 +27,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
+import { showToast } from 'vant';
 
 /**
  * Configuration of a proxy that a Client should pass requests to.
@@ -145,6 +146,13 @@ export async function _fetch(
     if (!headers.get(key)) {
       headers.set(key, value);
     }
+  }
+  if (!headers.has('user-agent') && !headers.has('User-Agent')) {
+    headers.set(
+      'user-agent',
+      navigator.userAgent ||
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+    );
   }
 
   const headersArray =

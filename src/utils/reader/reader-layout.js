@@ -77,7 +77,6 @@ const trimAll = (str) => {
  * @return {Array} [] 输出转化好的行数组
  */
 function Reader(content, option) {
-  console.log(option);
 
   const { type, width, height, fontFamily, fontSize, title, titleSize } =
     option;
@@ -251,11 +250,15 @@ function p2line(pText, index, maxLen) {
       isTitle, // 是否标题
       center, // 是否两端对齐
       pFirst: !isTitle && tag === 1, // 段落首行
+      pLast: false, // 段落尾行
       pIndex: index, // 段落索引
       lineIndex: tag, // 行索引
       textIndex: pText.indexOf(lineText), // 文字在段落未分行的固定位置
       text: lineText, // 行文字内容
     });
+  }
+  if (lines.length) {
+    lines[lines.length - 1].pLast = true;
   }
   return lines;
 }

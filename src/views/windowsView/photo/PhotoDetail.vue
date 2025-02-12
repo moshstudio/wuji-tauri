@@ -26,7 +26,7 @@ const emit = defineEmits<{
   (e: 'collect'): void;
   (e: 'addPhotoToShelf', shelfId: string): void;
 }>();
-console.log(photoDetail);
+
 </script>
 
 <template>

@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { BookItemInShelf } from '@/extensions/book';
 import { router } from '@/router';
-import { useStore, useBookShelfStore } from '@/store';
+import { useStore, useBookShelfStore, useDisplayStore } from '@/store';
 import _ from 'lodash';
 import { showLoadingToast, showToast } from 'vant';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import WinBookShelf from '../windowsView/book/BookShelf.vue';
 import MobileBookShelf from '../mobileView/book/BookShelf.vue';
-
-const show = defineModel('show', { type: Boolean, default: false });
+import { storeToRefs } from 'pinia';
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const shelfStore = useBookShelfStore();
+const { showBookShelf } = storeToRefs(displayStore);
 
 const refreshChapters = async () => {
   await shelfStore.bookRefreshChapters();
@@ -41,7 +42,7 @@ const toBook = async (book: BookItemInShelf, chapterId?: string) => {
   }
 
   chapterId ||= book.book.chapters![0].id;
-  show.value = false;
+  showBookShelf.value = false;
   router.push({
     name: 'BookRead',
     params: {
@@ -60,10 +61,10 @@ const shelfAnchors = ref([0, Math.round(window.innerHeight)]);
 const shelfHeight = ref(0);
 const hidePanel = () => {
   shelfHeight.value = shelfAnchors.value[0];
-  show.value = false;
+  showBookShelf.value = false;
 };
 watch(
-  show,
+  showBookShelf,
   (newValue) => {
     if (newValue) {
       shelfHeight.value = shelfAnchors.value[1];
@@ -75,7 +76,7 @@ watch(
 );
 const updateAnchors = () => {
   shelfAnchors.value[1] = Math.round(window.innerHeight);
-  if (show.value) {
+  if (showBookShelf.value) {
     shelfHeight.value = shelfAnchors.value[1];
   }
 };
@@ -91,7 +92,6 @@ onUnmounted(() => {
   <PlatformSwitch>
     <template #mobile>
       <MobileBookShelf
-        v-model:show="show"
         v-model:shelf-anchors="shelfAnchors"
         v-model:shelf-height="shelfHeight"
         @refresh-chapters="refreshChapters"
@@ -102,7 +102,6 @@ onUnmounted(() => {
     </template>
     <template #windows>
       <WinBookShelf
-        v-model:show="show"
         v-model:shelf-anchors="shelfAnchors"
         v-model:shelf-height="shelfHeight"
         @refresh-chapters="refreshChapters"

@@ -3,12 +3,11 @@ import { BookChapter, BookItemInShelf } from '@/extensions/book';
 import { useBookShelfStore, useDisplayStore, useStore } from '@/store';
 import _ from 'lodash';
 import { storeToRefs } from 'pinia';
-import { Icon } from '@iconify/vue';
 import { computed, PropType } from 'vue';
 import AddBookShelfDialog from '@/components/windows/dialogs/AddBookShelf.vue';
 import DeleteBookShelfDialog from '@/components/windows/dialogs/RemoveBookShelf.vue';
+import MobileShelfBookCard from '@/components/card/bookCards/MobileShelfBookCard.vue';
 
-const show = defineModel('show', { type: Boolean, default: false });
 const shelfAnchors = defineModel('shelfAnchors', {
   type: Array as PropType<number[]>,
   required: true,
@@ -29,10 +28,6 @@ const emit = defineEmits<{
   (e: 'hidePanel'): void;
 }>();
 
-const lastChapter = (book: BookItemInShelf) => {
-  if (!book.book.chapters?.length) return null;
-  return book.book.chapters[book.book.chapters.length - 1];
-};
 // 计算还有多少章没读
 const unreadCount = (book: BookItemInShelf): number | undefined => {
   if (!book.lastReadChapter || !book.book.chapters?.length) return undefined;
@@ -58,12 +53,12 @@ const sourceName = (book: BookItemInShelf) => {
     @height-change="
       (height) => {
         if (height.height === 0) {
-          show = false;
+          displayStore.showBookShelf = false;
         }
       }
     "
     class="left-[0px] right-[0px] w-auto rounded-none up-shadow"
-    :style="show ? { height: `${shelfHeight}px` } : {}"
+    :style="displayStore.showBookShelf ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
       <div class="flex justify-between items-center p-4 border-b">
@@ -111,81 +106,27 @@ const sourceName = (book: BookItemInShelf) => {
       ></van-button>
     </div>
 
-    <van-tabs shrink>
+    <van-tabs shrink class="pb-[50px]">
       <van-tab :title="shelf.name" v-for="shelf in bookShelf" :key="shelf.id">
-        <van-list class="p-2">
-          <van-card
-            :desc="item.book.intro"
-            centered
-            lazy-load
-            v-for="item in _.orderBy(
-              shelf.books,
-              [(book) => book.lastReadTime || 0, (book) => book.createTime],
-              ['desc', 'desc']
-            )"
-            :key="item.book.id"
-          >
-            <template #thumb>
-              <van-image width="80px" height="100px" :src="item.book.cover">
-                <template #loading>
-                  <Icon icon="codicon:book" width="48" height="48" />
-                </template>
-                <template #error>
-                  <Icon icon="codicon:book" width="48" height="48" />
-                </template>
-              </van-image>
-            </template>
-            <template #title>
-              <van-row align="center" class="gap-4">
-                <h1
-                  class="text-button-2 text-base font-bold"
-                  @click="() => emit('toBook', item)"
-                >
-                  {{ item.book.title }}
-                </h1>
-                <span class="text-gray-400">{{ sourceName(item) }}</span>
-              </van-row>
-            </template>
-            <template #tags>
-              <p
-                class="text-button-2 text-[var(--van-card-desc-color)] font-normal pt-1"
-                @click="() => emit('toBook', item, lastChapter(item)?.id)"
-              >
-                {{
-                  item.book.chapters?.length
-                    ? '最新章节:' + lastChapter(item)?.title
-                    : ''
-                }}
-              </p>
-            </template>
-            <template #price>
-              <van-badge
-                :content="unreadCount(item)"
-                color="#1989fa"
-                :offset="[18, 13.8]"
-              >
-                <p
-                  class="text-button-2 text-[var(--van-card-desc-color)] pt-1"
-                  @click="() => emit('toBook', item, item.lastReadChapter?.id)"
-                >
-                  {{
-                    item.lastReadChapter
-                      ? '最近阅读:' + item.lastReadChapter.title
-                      : undefined
-                  }}
-                </p>
-              </van-badge>
-            </template>
-            <template #footer>
-              <van-button
-                size="mini"
-                @click="() => emit('removeBookFromShelf', item, shelf.id)"
-              >
-                移除
-              </van-button>
-            </template>
-          </van-card>
-        </van-list>
+        <transition name="list" tag="ul">
+          <van-list class="p-2">
+            <ul
+              v-for="item in _.orderBy(
+                shelf.books,
+                [(book) => book.lastReadTime || 0, (book) => book.createTime],
+                ['desc', 'desc']
+              )"
+              :key="item.book.id"
+            >
+              <MobileShelfBookCard
+                :shelf-book="item"
+                :unread="unreadCount(item)"
+                @click="(book, chapterId) => emit('toBook', book, chapterId)"
+                @remove="(book) => emit('removeBookFromShelf', book, shelf.id)"
+              ></MobileShelfBookCard>
+            </ul>
+          </van-list>
+        </transition>
       </van-tab>
     </van-tabs>
   </van-floating-panel>
@@ -197,5 +138,22 @@ const sourceName = (book: BookItemInShelf) => {
 :deep(.van-card__thumb) {
   width: 80px;
   height: 100px;
+}
+.list-move, /* 对移动中的元素应用的过渡 */
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.5s ease;
+}
+
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+/* 确保将离开的元素从布局流中删除
+  以便能够正确地计算移动的动画。 */
+.list-leave-active {
+  position: absolute;
 }
 </style>

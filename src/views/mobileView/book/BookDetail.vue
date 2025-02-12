@@ -19,10 +19,6 @@ const isAscending = defineModel('isAscending', {
   type: Boolean,
   required: true,
 });
-const showBookShelf = defineModel('showBookShelf', {
-  type: Boolean,
-  required: true,
-});
 
 const emit = defineEmits<{
   (e: 'back'): void;
@@ -32,15 +28,15 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="relative h-full flex flex-col">
+  <div class="relative w-full h-full flex flex-col">
     <van-nav-bar left-arrow @click-left="() => emit('back')" />
     <main
       ref="content"
-      class="grow flex flex-col items-center overflow-y-auto p-4 bg-[--van-background-3] select-none"
+      class="grow flex flex-col items-center w-full overflow-y-auto p-2 bg-[--van-background-3] select-none"
       v-if="book"
     >
-      <div class="flex flex-col gap-1 p-2 shadow-md rounded">
-        <van-row justify="center" align="center">
+      <div class="flex flex-col gap-1 p-2 w-full shadow-md rounded">
+        <div class="flex gap-2 items-center justify-center flex-nowrap">
           <van-image
             width="80px"
             height="100px"
@@ -58,7 +54,7 @@ const emit = defineEmits<{
             </template>
           </van-image>
           <div
-            class="flex flex-col gap-1 justify-start text-sm text-[--van-text-color] min-w-[180px] max-w-[50%]"
+            class="flex flex-col gap-1 justify-start text-sm text-[--van-text-color]"
           >
             <div class="font-bold truncate">
               {{ book.title }}
@@ -73,7 +69,7 @@ const emit = defineEmits<{
               <span class="text-xs">{{ book.latestChapter }}</span>
             </p>
           </div>
-        </van-row>
+        </div>
         <van-text-ellipsis
           :content="book.intro"
           class="text-xs text-[--van-text-color]"
@@ -84,16 +80,13 @@ const emit = defineEmits<{
       </div>
 
       <div
-        class="p-2 mt-4 shadow rounded text-[--van-text-color]"
+        class="p-2 mt-4 shadow rounded min-w-full text-[--van-text-color]"
         v-if="book.chapters"
       >
         <van-row align="center" justify="space-between">
           <p class="font-bold ml-6">共有{{ book.chapters.length }} 章</p>
           <div class="flex gap-2 items-center">
-            <BookShelfButton
-              :book="book"
-              @show-shelf="showBookShelf = true"
-            ></BookShelfButton>
+            <BookShelfButton :book="book"></BookShelfButton>
             <p>
               <van-button
                 :icon="isAscending ? 'ascending' : 'descending'"
@@ -119,7 +112,7 @@ const emit = defineEmits<{
         </ResponsiveGrid>
       </div>
     </main>
-    <BookShelf v-model:show="showBookShelf"></BookShelf>
+    <BookShelf></BookShelf>
   </div>
 </template>
 

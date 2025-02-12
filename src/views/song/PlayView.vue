@@ -13,18 +13,42 @@ import {
 import { useDisplayStore, useSongStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import { getLyric, Lyric, parseLyric } from '@/utils/lyric';
-
-const show = defineModel('show', { type: Boolean, default: false });
+import { cachedFetch } from '@/utils';
 
 const songStore = useSongStore();
 const displayStore = useDisplayStore();
 const { playingSong, isPlaying, audioCurrent } = storeToRefs(songStore);
+const { showPlayView } = storeToRefs(displayStore);
 const lyric = ref<Lyric>();
 const activeIndex = ref<number>(0); //高亮Index
 const transformStyle = ref<string>(''); //偏移量
 const panelBackgroundStyle = ref<CSSProperties>({
   'background-color': 'rgba(0, 0, 0, 0.1)',
 });
+
+const backgroundImageUrl = async (
+  url?: string,
+  headers?: Record<string, string>
+): Promise<string | null> => {
+  if (!url) return null;
+  if (!headers) {
+    return `url(${url})`;
+  } else {
+    const response = await cachedFetch(url, {
+      headers: headers,
+      verify: false,
+    });
+    const blob = await response.blob();
+
+    if (blob.size === 0) {
+      return null;
+    }
+    const u = URL.createObjectURL(
+      new Blob([blob], { type: blob.type || 'image/png' })
+    );
+    return `url(${u})`;
+  }
+};
 
 watch(
   playingSong,
@@ -34,7 +58,17 @@ watch(
     }
     if (newSong.picUrl || newSong.bigPicUrl) {
       panelBackgroundStyle.value.backgroundColor = '';
-      panelBackgroundStyle.value.backgroundImage = `url(${newSong.bigPicUrl || newSong.picUrl})`;
+      backgroundImageUrl(
+        newSong.bigPicUrl || newSong.picUrl,
+        newSong.picHeaders
+      ).then((url) => {
+        if (url) {
+          panelBackgroundStyle.value.backgroundImage = url;
+        } else {
+          panelBackgroundStyle.value.backgroundImage = '';
+        }
+        console.log(panelBackgroundStyle.value);
+      });
     } else {
       //background-color: #4158D0;
       //background-image: linear-gradient(43deg, #4158D0 0%, #C850C0 46%, #FFCC70 100%);
@@ -67,6 +101,11 @@ watch(
 );
 
 watch(audioCurrent, (newVal) => {
+  if (newVal === 0) {
+    activeIndex.value = 0;
+    transformStyle.value = `transform: translateY(0px)`;
+    return;
+  }
   newVal = newVal * 1000 + 200;
   if (lyric.value) {
     for (let i = 0; i < lyric.value.length; i++) {
@@ -101,10 +140,10 @@ const shelfAnchors = ref([
 const shelfHeight = ref(0);
 const hidePanel = () => {
   shelfHeight.value = shelfAnchors.value[0];
-  show.value = false;
+  showPlayView.value = false;
 };
 watch(
-  show,
+  showPlayView,
   (newValue) => {
     if (newValue) {
       shelfHeight.value = shelfAnchors.value[1];
@@ -117,7 +156,7 @@ watch(
 );
 const updateAnchors = () => {
   shelfAnchors.value[1] = Math.round(window.innerHeight) + offset.value;
-  if (show.value) {
+  if (showPlayView.value) {
     shelfHeight.value = shelfAnchors.value[1];
   }
 };
@@ -137,7 +176,7 @@ onUnmounted(() => {
         v-model:active-index="activeIndex"
         v-model:transform-style="transformStyle"
         v-model:panel-background-style="panelBackgroundStyle"
-        v-model:show="show"
+        v-model:show="showPlayView"
         v-model:shelf-anchors="shelfAnchors"
         v-model:shelf-height="shelfHeight"
         @hide-panel="hidePanel"
@@ -149,7 +188,7 @@ onUnmounted(() => {
         v-model:active-index="activeIndex"
         v-model:transform-style="transformStyle"
         v-model:panel-background-style="panelBackgroundStyle"
-        v-model:show="show"
+        v-model:show="showPlayView"
         v-model:shelf-anchors="shelfAnchors"
         v-model:shelf-height="shelfHeight"
         @hide-panel="hidePanel"

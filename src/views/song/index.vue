@@ -3,7 +3,7 @@ import WinSong from '../windowsView/song/index.vue';
 import MobileSong from '../mobileView/song/index.vue';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
 import { ref } from 'vue';
-import { useStore, useSongStore } from '@/store';
+import { useStore, useSongStore, useDisplayStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import _ from 'lodash';
 import { SongSource } from '@/types';
@@ -11,10 +11,10 @@ import { SongInfo } from '@/extensions/song';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const songStore = useSongStore();
 const { songSources } = storeToRefs(store);
 
-const showSongShelf = ref(false);
 const showPlayView = ref(false);
 
 const searchValue = ref('');
@@ -24,8 +24,9 @@ const activeTabIndex = ref(0);
 
 const search = createCancellableFunction(async () => {
   const keyword = searchValue.value;
+  const t = displayStore.showToast();
   if (!keyword) {
-    return recommend(true);
+    await recommend(true);
   } else {
     await Promise.all([
       ...songSources.value.map(async (source) => {
@@ -36,6 +37,7 @@ const search = createCancellableFunction(async () => {
       }),
     ]);
   }
+  displayStore.closeToast(t);
 });
 
 async function recommend(force: boolean = false) {
@@ -93,7 +95,6 @@ const openBaseUrl = async (source: SongSource) => {
   <PlatformSwitch>
     <template #mobile>
       <MobileSong
-        v-model:show-song-shelf="showSongShelf"
         v-model:show-play-view="showPlayView"
         v-model:search-value="searchValue"
         v-model:active-tab-index="activeTabIndex"
@@ -107,7 +108,6 @@ const openBaseUrl = async (source: SongSource) => {
     </template>
     <template #windows>
       <WinSong
-        v-model:show-song-shelf="showSongShelf"
         v-model:show-play-view="showPlayView"
         v-model:search-value="searchValue"
         v-model:active-tab-index="activeTabIndex"

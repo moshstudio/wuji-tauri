@@ -29,7 +29,6 @@ const { chapterId, bookId, sourceId, isPrev } = defineProps({
 });
 
 const store = useStore();
-const displayStore = useDisplayStore();
 const bookStore = useBookStore();
 const shelfStore = useBookShelfStore();
 
@@ -95,21 +94,27 @@ const loadData = retryOnFalse({ onFailed: back })(async () => {
   return true;
 });
 async function loadChapter(chapter?: BookChapter) {
+  if (!book.value) {
+    showToast('书籍不存在');
+    back();
+    return;
+  }
   if (!chapter) {
-    chapter = book.value?.chapters?.find((chapter) => chapter.id === chapterId);
+    chapter = book.value.chapters?.find((chapter) => chapter.id === chapterId);
   }
   if (!chapter) {
     showToast('章节不存在');
     back();
     return;
   }
+  shelfStore.updateBookReadInfo(book.value, chapter);
   showNavBar.value = true;
   const displayStore = useDisplayStore();
   const t = displayStore.showToast();
-  chapterList.value = book.value?.chapters || [];
+  chapterList.value = book.value.chapters || [];
   readingChapter.value = chapter;
   readingContent.value =
-    (await store.bookRead(bookSource.value!, book.value!, chapter)) || '';
+    (await store.bookRead(bookSource.value!, book.value, chapter)) || '';
 
   readingContent.value = purifyText(readingContent.value);
   displayStore.closeToast(t);
@@ -118,6 +123,12 @@ async function loadChapter(chapter?: BookChapter) {
   }
   nextTick(() => {
     updateReadingElements();
+    if (isPrev === 'true') {
+      readingChapterPage.value =
+        (readingPagedContent.value?.content.length || 1) - 1;
+    } else {
+      readingChapterPage.value = 0;
+    }
   });
 }
 
@@ -174,6 +185,9 @@ const updateReadingPagedContent = () => {
       isPrev: isPrev === 'true',
       content: list,
     };
+    if (readingChapterPage.value >= list.length) {
+      readingChapterPage.value = list.length - 1;
+    }
   }
 };
 
@@ -219,6 +233,16 @@ function nextChapter() {
     showToast('没有下一章了');
   }
 }
+function toChapter(chapter: BookChapter) {
+  router.push({
+    name: 'BookRead',
+    params: {
+      chapterId: chapter.id,
+      bookId: book.value?.id,
+      sourceId: book.value?.sourceId,
+    },
+  });
+}
 function openChapterPopup() {
   showChapters.value = true;
   nextTick(() => {
@@ -249,9 +273,23 @@ watch(readingChapter, (c) => (bookStore.readingChapter = c), {
 
 useElementResize(
   '#read-content',
-  _.throttle((width, height) => {
+  _.debounce((width, height) => {
     updateReadingPagedContent();
   }, 500)
+);
+watch(
+  [
+    () => bookStore.fontSize,
+    () => bookStore.lineHeight,
+    () => bookStore.readPGap,
+    () => bookStore.readMode,
+    () => bookStore.paddingX,
+    () => bookStore.paddingTop,
+    () => bookStore.paddingBottom,
+  ],
+  () => {
+    updateReadingElements();
+  }
 );
 </script>
 
@@ -265,13 +303,14 @@ useElementResize(
         v-model:reading-chapter="readingChapter"
         v-model:reading-content="readingContent"
         v-model:reading-paged-content="readingPagedContent"
+        v-model:chapter-page="readingChapterPage"
         v-model:show-chapters="showChapters"
         v-model:show-setting-dialog="showSettingDialog"
         v-model:show-book-shelf="showBookShelf"
         v-model:show-nav-bar="showNavBar"
         @back="back"
         @load-data="loadData"
-        @load-chapter="loadChapter"
+        @to-chapter="toChapter"
         @next-chapter="nextChapter"
         @open-chapter-popup="openChapterPopup"
         @prev-chapter="prevChapter"
@@ -291,7 +330,7 @@ useElementResize(
         v-model:show-nav-bar="showNavBar"
         @back="back"
         @load-data="loadData"
-        @load-chapter="loadChapter"
+        @to-chapter="toChapter"
         @next-chapter="nextChapter"
         @open-chapter-popup="openChapterPopup"
         @prev-chapter="prevChapter"

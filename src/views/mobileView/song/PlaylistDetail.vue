@@ -1,19 +1,20 @@
 <script setup lang="ts">
 import { PlaylistInfo } from '@/extensions/song';
-import { useSongStore, useSongShelfStore } from '@/store';
+import { useSongStore, useSongShelfStore, useDisplayStore } from '@/store';
 import { PropType } from 'vue';
 import MobileSongCard from '@/components/card/songCards/MobileSongCard.vue';
 import MobileSongBar from '@/components/mobile/MobileSongBar.vue';
 import SongShelf from '@/views/song/SongShelf.vue';
-import SimplePagination from '@/components/SimplePagination.vue';
+import SimplePagination from '@/components/pagination/SimplePagination.vue';
+import LoadImage from '@/components/LoadImage.vue';
 
 const songStore = useSongStore();
+const displayStore = useDisplayStore();
 const shelfStore = useSongShelfStore();
 
 const playlist = defineModel('playlist', {
   type: Object as PropType<PlaylistInfo>,
 });
-const showShelf = defineModel('showShelf', { type: Boolean, default: false });
 const currentPage = defineModel('currentPage', { type: Number, default: 1 });
 const content = defineModel('content', { type: HTMLElement });
 
@@ -33,39 +34,35 @@ const emit = defineEmits<{
       ref="content"
       class="flex flex-col px-4 pb-12 bg-[--van-background-2] grow gap-2 w-full overflow-y-auto"
     >
-      <div class="head flex justify-center my-4">
-        <div class="w-[120px] h-[120px]" v-if="playlist?.picUrl">
-          <van-image
+      <div class="head flex flex-col gap-2 items-center shadow rounded p-4">
+        <div class="flex gap-2 items-center justify-center">
+          <LoadImage
             v-if="playlist?.picUrl"
-            width="120"
-            height="120"
-            radius="8"
+            :width="120"
+            :height="120"
+            :radius="8"
             fit="cover"
             lazy-load
             :src="playlist?.picUrl"
+            :headers="playlist?.picHeaders"
           >
             <template v-slot:loading>
               <div class="text-center text-lg p-1">
                 {{ playlist.name }}
               </div>
             </template>
-          </van-image>
+          </LoadImage>
+          <div class="text-[--van-text-color] text-lg font-bold line-clamp-3">
+            {{ playlist?.name }}
+          </div>
         </div>
-
-        <div class="p-4 flex flex-col justify-around">
-          <van-text-ellipsis
-            :content="playlist?.name"
-            rows="3"
-            class="text-[--van-text-color] text-lg font-bold"
-          />
-          <van-text-ellipsis
-            :content="playlist?.desc"
-            rows="3"
-            expand-text="展开"
-            collapse-text="收起"
-            class="text-xs text-gray-400"
-          />
-        </div>
+        <van-text-ellipsis
+          :content="playlist?.desc"
+          rows="3"
+          expand-text="展开"
+          collapse-text="收起"
+          class="text-xs text-gray-400"
+        />
       </div>
       <van-row
         justify="space-between"
@@ -78,7 +75,7 @@ const emit = defineEmits<{
             <van-button
               size="small"
               type="primary"
-              @click="() => (showShelf = !showShelf)"
+              @click="() => (displayStore.showSongShelf = true)"
             >
               已收藏
             </van-button>
@@ -114,7 +111,7 @@ const emit = defineEmits<{
       </template>
     </div>
     <MobileSongBar></MobileSongBar>
-    <SongShelf v-model:show="showShelf"></SongShelf>
+    <SongShelf></SongShelf>
   </div>
 </template>
 

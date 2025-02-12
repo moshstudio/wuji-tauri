@@ -5,6 +5,7 @@ import { ref } from 'vue';
 import { Icon } from '@iconify/vue';
 import tinycolor from 'tinycolor2';
 import { useDisplayStore, useStore } from '@/store';
+import LoadImage from '../LoadImage.vue';
 
 const { playlist } = defineProps({
   playlist: {
@@ -40,12 +41,13 @@ const onClick = () => {
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
   >
-    <van-image
+    <LoadImage
       :width="displayStore.isMobile ? 100 : 160"
       :height="displayStore.isMobile ? 120 : 200"
       fit="cover"
       lazy-load
       :src="playlist.picUrl"
+      :headers="playlist.picHeaders"
       class="rounded-t-lg"
     >
       <template v-slot:loading>
@@ -56,7 +58,7 @@ const onClick = () => {
       <template v-slot:error>
         <Icon icon="mdi:playlist-music" width="60" height="60" />
       </template>
-    </van-image>
+    </LoadImage>
     <div
       :rows="1"
       class="text-xs p-2 text-[--van-text-color] h-[32px] truncate"

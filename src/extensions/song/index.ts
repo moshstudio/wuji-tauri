@@ -14,6 +14,7 @@ export interface SongInfo {
   url?: string | SongUrlMap;
   picUrl?: string;
   bigPicUrl?: string;
+  picHeaders?: Record<string, string>;
   flac?: string;
   duration?: number;
   sourceId: string;
@@ -55,6 +56,7 @@ export interface PlaylistInfo {
   name: string;
   id: string;
   picUrl: string;
+  picHeaders?: Record<string, string>;
   songCount?: string | number;
   playCount?: string | number;
   desc?: string;

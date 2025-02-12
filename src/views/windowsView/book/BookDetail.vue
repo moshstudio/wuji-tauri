@@ -7,6 +7,7 @@ import { PropType } from 'vue';
 import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
 import BookShelfButton from '@/components/BookShelfButton.vue';
 import BookShelf from '@/views/book/BookShelf.vue';
+import { useDisplayStore } from '@/store';
 
 const book = defineModel('book', {
   type: Object as PropType<BookItem>,
@@ -21,16 +22,14 @@ const isAscending = defineModel('isAscending', {
   type: Boolean,
   required: true,
 });
-const showBookShelf = defineModel('showBookShelf', {
-  type: Boolean,
-  required: true,
-});
 
 const emit = defineEmits<{
   (e: 'back'): void;
   (e: 'loadData'): void;
   (e: 'toChapter', chapter: BookChapter): void;
 }>();
+
+const displayStore = useDisplayStore();
 </script>
 
 <template>
@@ -78,17 +77,17 @@ const emit = defineEmits<{
         </div>
       </van-row>
       <div
-        class="p-2 mt-4 shadow-md w-[80%] text-[--van-text-color]"
+        class="p-2 mt-4 shadow-md text-[--van-text-color]"
         v-if="book.chapters"
       >
-        <van-row align="center" justify="space-between">
+        <div class="w-full flex justify-between gap-2 items-center">
           <p class="font-bold ml-6">共有{{ book.chapters.length }} 章</p>
           <div class="flex gap-2 items-center">
             <BookShelfButton
               :book="book"
-              @show-shelf="showBookShelf = true"
+              @show-shelf="() => (displayStore.showBookShelf = true)"
             ></BookShelfButton>
-            <p class="mr-6">
+            <p class="mr-1">
               <van-button
                 :icon="isAscending ? 'ascending' : 'descending'"
                 size="small"
@@ -98,7 +97,7 @@ const emit = defineEmits<{
               </van-button>
             </p>
           </div>
-        </van-row>
+        </div>
         <ResponsiveGrid>
           <li
             v-for="chapter in isAscending
@@ -113,7 +112,7 @@ const emit = defineEmits<{
         </ResponsiveGrid>
       </div>
     </main>
-    <BookShelf v-model:show="showBookShelf"></BookShelf>
+    <BookShelf></BookShelf>
   </div>
 </template>
 

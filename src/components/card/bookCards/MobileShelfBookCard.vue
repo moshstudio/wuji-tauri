@@ -1,0 +1,83 @@
+<script setup lang="ts">
+import _ from 'lodash';
+import { BookItem, BookItemInShelf } from '@/extensions/book';
+import { Icon } from '@iconify/vue';
+import { ref } from 'vue';
+import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
+
+const { shelfBook, unread } = defineProps<{
+  shelfBook: BookItemInShelf;
+  unread?: number;
+}>();
+const emit = defineEmits<{
+  (e: 'click', item: BookItemInShelf, chapterId?: string): void;
+  (e: 'remove', item: BookItemInShelf): void;
+}>();
+const showMoreOptions = ref(false);
+</script>
+
+<template>
+  <div
+    class="flex gap-2 m-2 p-2 bg-[--van-background] rounded-lg shadow transform transition-all duration-100 hover:-translate-y-1 hover:shadow-md cursor-pointer select-none active:bg-[--van-background-2]"
+    @click="() => emit('click', shelfBook, shelfBook.lastReadChapter?.id)"
+  >
+    <div class="w-[80px] h-[100px]">
+      <van-image
+        width="80px"
+        height="100px"
+        :src="shelfBook.book.cover"
+        v-if="shelfBook.book.cover"
+      >
+        <template #loading>
+          <Icon icon="codicon:book" width="48" height="48" />
+        </template>
+        <template #error>
+          <Icon icon="codicon:book" width="48" height="48" />
+        </template>
+      </van-image>
+    </div>
+
+    <div
+      class="grow flex flex-col gap-1 justify-around text-sm text-[--van-text-color]"
+    >
+      <p class="text-base font-bold h-6 line-clamp-1">
+        {{ shelfBook.book.title }}
+      </p>
+      <p class="text-xs line-clamp-1 flex gap-2">
+        <span v-if="shelfBook.book.author">{{ shelfBook.book.author }}</span>
+        <span v-if="unread"> {{ unread }}章未读 </span>
+      </p>
+      <p class="text-xs line-clamp-1">
+        {{ shelfBook.lastReadChapter?.title }}
+      </p>
+      <p>
+        <span class="text-xs line-clamp-1">
+          {{ _.last(shelfBook.book.chapters)?.title }}
+        </span>
+      </p>
+    </div>
+    <div class="flex flex-col justify-start mt-2 van-haptics-feedback">
+      <van-icon
+        name="ellipsis"
+        class="clickable text-[--van-text-color]"
+        size="16"
+        @click.stop="() => (showMoreOptions = true)"
+      />
+    </div>
+  </div>
+  <MoreOptionsSheet
+    v-model="showMoreOptions"
+    :actions="[
+      {
+        name: '从当前收藏夹移除',
+        color: '#1989fa',
+        callback: () => {
+          showMoreOptions = false;
+          emit('remove', shelfBook);
+        },
+      },
+    ]"
+  ></MoreOptionsSheet>
+</template>
+
+<style scoped lang="less"></style>

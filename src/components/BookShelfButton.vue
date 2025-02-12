@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, watch, PropType } from 'vue';
 import { BookItem } from '@/extensions/book';
-import { useBookShelfStore } from '@/store';
+import { useBookShelfStore, useDisplayStore } from '@/store';
 import { storeToRefs } from 'pinia';
 
 const { book } = defineProps({
@@ -15,8 +15,7 @@ const { book } = defineProps({
   },
 });
 
-const emit = defineEmits(['showShelf']);
-
+const displayStore = useDisplayStore();
 const shelfStore = useBookShelfStore();
 const { bookShelf } = storeToRefs(shelfStore);
 const numInShelf = ref(0);
@@ -65,7 +64,7 @@ watch(
     <template v-if="mode === 'rectangle'">
       <van-badge v-if="numInShelf > 0">
         <template #content>
-          <p @click="() => emit('showShelf')">
+          <p @click="() => (displayStore.showBookShelf = true)">
             {{ numInShelf }}
           </p>
         </template>
@@ -94,7 +93,7 @@ watch(
           square
           size="small"
           class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
-          @click="() => emit('showShelf')"
+          @click="() => (displayStore.showBookShelf = true)"
         >
           <span>已加书架</span>
         </van-button>

@@ -1,26 +1,21 @@
 <script setup lang="ts">
-import { useStore } from '@/store';
+import { useDisplayStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import _ from 'lodash';
 import PlaylistCard from '@/components/card/PlaylistCard.vue';
 import WinSongCard from '@/components/card/songCards/WinSongCard.vue';
-import SongCard from '@/components/card/SongCard.vue';
 import WinSongBar from '@/components/windows/WinSongBar.vue';
 import HorizonList from '@/components/HorizonList.vue';
 import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
-import SimplePagination from '@/components/SimplePagination.vue';
+import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import { SongSource } from '@/types';
 import { SongInfo } from '@/extensions/song';
 import SongShelf from '@/views/song/SongShelf.vue';
-import PlayView from '@/views/song/PlayView.vue';
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const { songSources } = storeToRefs(store);
 
-const showSongShelf = defineModel('showSongShelf', {
-  type: Boolean,
-  default: false,
-});
 const showPlayView = defineModel('showPlayView', {
   type: Boolean,
   default: false,
@@ -50,7 +45,7 @@ const emit = defineEmits<{
       <van-row justify="center" align="center" class="relative">
         <div
           class="absolute right-6 text-button"
-          @click="showSongShelf = !showSongShelf"
+          @click="displayStore.showSongShelf = true"
         >
           收藏
         </div>
@@ -126,7 +121,7 @@ const emit = defineEmits<{
           </ResponsiveGrid>
         </van-tab>
       </van-tabs>
-      <SongShelf v-model:show="showSongShelf"></SongShelf>
+      <SongShelf></SongShelf>
     </div>
     <WinSongBar v-model:show-play-view="showPlayView"></WinSongBar>
   </div>

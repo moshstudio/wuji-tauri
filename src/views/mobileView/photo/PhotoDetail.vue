@@ -3,6 +3,7 @@ import { PhotoDetail, PhotoItem } from '@/extensions/photo';
 import { PropType } from 'vue';
 import { usePhotoShelfStore } from '@/store';
 import LoadImage from '@/components/LoadImage.vue';
+import FullPagination from '@/components/pagination/FullPagination.vue';
 
 const shelfStore = usePhotoShelfStore();
 
@@ -63,10 +64,18 @@ const emit = defineEmits<{
       v-if="photoDetail?.totalPage && photoDetail?.totalPage > 1"
       class="w-full bg-[--van-background-2]"
     >
-      <van-pagination
+      <FullPagination
         v-model="currentPage"
         :page-count="Number(photoDetail.totalPage)"
-        :show-page-size="4"
+        class="p-1"
+        force-ellipses
+        @change="(pageNo) => emit('toPage', pageNo)"
+      >
+      </FullPagination>
+      <!-- <van-pagination
+        v-model="currentPage"
+        :page-count="Number(photoDetail.totalPage)"
+        show-page-size="4"
         class="p-1"
         force-ellipses
         @change="(pageNo) => emit('toPage', pageNo)"
@@ -78,7 +87,7 @@ const emit = defineEmits<{
           <van-icon name="arrow" />
         </template>
         <template #page="{ text }">{{ text }}</template>
-      </van-pagination>
+      </van-pagination> -->
     </van-row>
   </div>
   <van-dialog

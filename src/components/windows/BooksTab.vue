@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { BookItem, BookList, BooksList } from '@/extensions/book';
-import BookCard from '@/components/card/BookCard.vue';
+import BookCard from '@/components/card/bookCards/BookCard.vue';
 import HorizonList from '@/components/HorizonList.vue';
+import SimplePagination from '../pagination/SimplePagination.vue';
 import { BookSource } from '@/types';
 import { onMounted, ref, watch } from 'vue';
 import { debounce } from 'lodash';

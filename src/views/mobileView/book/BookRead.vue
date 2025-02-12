@@ -1,276 +1,12 @@
-<template>
-  <div
-    id="read-content"
-    class="select-none w-full h-screen fixed top-0 left-0 overflow-hidden box-border"
-    :class="[showMenu ? '' : 'hide_menu']"
-  >
-    <!-- 顶部菜单 -->
-    <div
-      class="top_menu fixed left-0 top-0 z-[5] p-2 w-full flex flex-nowrap items-center justify-between transition bg-black"
-    >
-      <div class="flex flex-nowrap items-center">
-        <van-icon name="arrow-left" color="white" size="22" @click="goBack()" />
-        <span class="ml-2 text-sm text-white line-clamp-1">{{
-          book?.title
-        }}</span>
-      </div>
-      <div class="option pr-2">
-        <BookShelfButton :book="book"></BookShelfButton>
-      </div>
-    </div>
-
-    <!-- 阅读内容页 -->
-    <div
-      class="content w-full h-full relative"
-      :style="{
-        backgroundColor: bookStore.currTheme.bgColor,
-        color: bookStore.currTheme.color,
-      }"
-      @touchstart="onTouchStart"
-      @touchmove="onTouchMove"
-      @touchend="onTouchEnd"
-    >
-      <div
-        v-for="({ style, content, pageNo }, index) in [
-          {
-            style: prevPageStyle,
-            content: prevPageContent,
-            pageNo: chapterPage + 1 > 1 ? chapterPage : '',
-          },
-          {
-            style: currPageStyle,
-            content: currPageContent,
-            pageNo: readingPagedContent ? chapterPage + 1 : '1',
-          },
-          {
-            style: nextPageStyle,
-            content: nextPageContent,
-            pageNo:
-              readingPagedContent &&
-              chapterPage + 1 < readingPagedContent.content.length
-                ? chapterPage + 2
-                : '',
-          },
-        ]"
-        class="page w-full h-full box-border shadow absolute left-0 top-0 overflow-hidden flex flex-col"
-        :key="'pageStyle' + index"
-        :style="{
-          transition: style.transition,
-          transform: 'translate3d(' + style.transform + ',0px,0px)',
-          'z-index': style.zIndex,
-          paddingLeft: `${bookStore.paddingX}px`,
-          paddingRight: `${bookStore.paddingX}px`,
-          backgroundColor: bookStore.currTheme.bgColor,
-          color: bookStore.currTheme.color,
-          textDecoration: bookStore.underline
-            ? 'underline solid 0.5px'
-            : 'none',
-          textUnderlineOffset: bookStore.underline ? '6px' : 'none',
-        }"
-      >
-        <!-- 顶部状态占位 -->
-        <div
-          class="status_bar w-full"
-          :style="{ height: `${bookStore.paddingTop}px` }"
-        ></div>
-        <!-- 小说段落 -->
-        <div class="grow">
-          <template v-for="line in content" :key="JSON.stringify(line)">
-            <p
-              v-if="line.isTitle"
-              :style="{
-                'font-size': bookStore.fontSize * 1.3 + 'px',
-                'line-height': bookStore.lineHeight * 1.3,
-                'text-indent': line.pFirst
-                  ? bookStore.fontSize * 1.3 * 2 + 'px'
-                  : '0px',
-                'text-align': 'justify',
-                'padding-top': line.pFirst
-                  ? bookStore.readPGap * 1.3 + 'px'
-                  : '0px',
-              }"
-            >
-              {{ line.text }}
-            </p>
-            <p
-              v-else
-              :style="{
-                'font-size': bookStore.fontSize + 'px',
-                'line-height': bookStore.lineHeight,
-                'text-indent': line.pFirst
-                  ? bookStore.fontSize * 2 + 'px'
-                  : '0px',
-                'text-align': 'justify',
-                'padding-top': line.pFirst ? bookStore.readPGap + 'px' : '0px',
-              }"
-            >
-              {{ line.text }}
-            </p>
-          </template>
-        </div>
-
-        <!-- 顶底部状态占位 -->
-        <div
-          class="bottom_bar flex items-center justify-between text-xs"
-          :style="{ height: `${bookStore.paddingBottom}px` }"
-        >
-          <p class="truncate">{{ readingChapter?.title }}</p>
-          <div class="flex flex-nowrap gap-1">
-            <span>
-              {{ pageNo }}/{{
-                typeof readingPagedContent === 'string'
-                  ? '1'
-                  : readingPagedContent?.content.length || 1
-              }}
-            </span>
-            <span v-if="chapterLists">
-              {{
-                (
-                  ((chapterLists.findIndex(
-                    (chapter) => chapter.id === readingChapter?.id
-                  ) || 0) /
-                    chapterLists.length) *
-                  100
-                ).toFixed(1)
-              }}%
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 底部菜单 -->
-    <div
-      class="bottom fixed bottom-0 left-0 z-[6] w-full flex flex-col p-2 pb-[50px] bg-black transition"
-    >
-      <div class="flex items-center gap-[10px]">
-        <div class="text-sm w-[50px] van-haptics-feedback" @click="chapterPrev">
-          上一章
-        </div>
-        <van-slider
-          class="w-[calc(100%-120px)]"
-          v-model="chapterPage"
-          :button-size="16"
-          :max="
-            readingPagedContent ? readingPagedContent.content.length - 1 : 0
-          "
-          @change="(val) => (chapterPage = val)"
-        ></van-slider>
-        <div class="text-sm w-[50px] van-haptics-feedback" @click="chapterNext">
-          下一章
-        </div>
-      </div>
-      <div class="w-full flex gap-1 items-center justify-between text-sm">
-        <div
-          class="flex flex-col gap-1 items-center van-haptics-feedback p-2"
-          @click="() => emit('openChapterPopup')"
-        >
-          <Icon icon="tabler:list" width="20" height="20" />
-          章节
-        </div>
-        <div
-          class="flex flex-col gap-1 items-center van-haptics-feedback p-2"
-          @click="() => (showSettingDialog = true)"
-        >
-          <Icon icon="ci:font" width="20" height="20" />
-          界面
-        </div>
-        <div class="flex flex-col gap-1 items-center van-haptics-feedback p-2">
-          <Icon icon="tabler:settings" width="20" height="20" />
-          设置
-        </div>
-      </div>
-    </div>
-    <van-popup
-      v-model:show="showChapters"
-      position="left"
-      :style="{
-        width: '70%',
-        height: '100%',
-        backgroundColor: 'black',
-      }"
-    >
-      <van-list>
-        <van-cell
-          v-for="item in book?.chapters"
-          :key="item.id"
-          :title="item.title"
-          :title-style="{
-            color:
-              readingChapter?.id === item.id
-                ? 'var(--van-primary-color)'
-                : 'white',
-          }"
-          :class="{
-            'bg-black': true,
-            'reading-chapter': readingChapter?.id === item.id,
-          }"
-          :icon="readingChapter?.id === item.id ? 'eye-o' : ''"
-          clickable
-          @click="
-            () => {
-              emit('loadChapter', item);
-              showChapters = false;
-            }
-          "
-        />
-      </van-list>
-    </van-popup>
-    <van-dialog
-      v-model:show="showSettingDialog"
-      title="阅读设置"
-      closeOnClickOverlay
-      :show-confirm-button="false"
-      class="setting-dialog bg-black"
-    >
-      <div class="flex flex-col gap-2 p-2 text-sm">
-        <div>字体和样式</div>
-        <van-cell class="bg-black">
-          <template #title>
-            <span class="text-white">字体大小</span>
-          </template>
-          <template #value>
-            <van-stepper v-model="bookStore.fontSize" min="10" max="40" />
-          </template>
-        </van-cell>
-        <van-cell class="bg-black">
-          <template #title>
-            <span class="text-white">下划线</span>
-          </template>
-          <template #value>
-            <van-switch v-model="bookStore.underline" />
-          </template>
-        </van-cell>
-        <div>文字颜色和背景</div>
-        <div class="flex gap-2 overflow-x-auto">
-          <div
-            v-for="theme in bookStore.themes"
-            :key="JSON.stringify(theme)"
-            class="rounded-full text-center p-2 border-2 w-[40px] h-[40px] cursor-pointer"
-            :class="[
-              theme === bookStore.currTheme
-                ? 'border-[var(--van-primary-color)]'
-                : 'border-white',
-            ]"
-            :style="{
-              backgroundColor: theme.bgColor,
-              color: theme.color,
-              textDecoration: bookStore.underline
-                ? 'underline solid 0.5px'
-                : 'none',
-              textUnderlineOffset: bookStore.underline ? '6px' : 'none',
-            }"
-            @click="bookStore.currTheme = theme"
-          >
-            文
-          </div>
-        </div>
-      </div>
-    </van-dialog>
-  </div>
-</template>
 <script lang="ts" setup>
-import { computed, ref, reactive, onBeforeUnmount, watch } from 'vue';
+import {
+  computed,
+  ref,
+  reactive,
+  onBeforeUnmount,
+  watch,
+  onActivated,
+} from 'vue';
 import { showToast } from 'vant';
 import { Icon } from '@iconify/vue';
 import { BookChapter, BookItem } from '@/extensions/book';
@@ -297,6 +33,10 @@ const readingContent = defineModel('readingContent', {
 const readingPagedContent = defineModel('readingPagedContent', {
   type: Object as PropType<{ isPrev: boolean; content: ReaderResult }>,
 });
+const chapterPage = defineModel('chapterPage', {
+  type: Number,
+  required: true,
+});
 const showBookShelf = defineModel('showBookShelf', {
   type: Boolean,
   required: true,
@@ -317,7 +57,7 @@ const showNavBar = defineModel('showNavBar', {
 const emit = defineEmits<{
   (e: 'back', checkShelf?: boolean): void;
   (e: 'loadData'): void;
-  (e: 'loadChapter', chapter: BookChapter): void;
+  (e: 'toChapter', chapter: BookChapter): void;
   (e: 'prevChapter', toLast?: boolean): void;
   (e: 'nextChapter'): void;
   (e: 'openChapterPopup'): void;
@@ -328,16 +68,20 @@ const bookStore = useBookStore();
 
 /** 显示菜单 */
 const showMenu = ref(false);
+const showReadSettingDialog = ref(false);
 
 watch(
   showMenu,
-  (val) => {
-    displayStore.showTabBar = val;
+  () => {
+    displayStore.showTabBar = showMenu.value;
   },
   {
     immediate: true,
   }
 );
+onActivated(() => {
+  displayStore.showTabBar = showMenu.value;
+});
 
 /** 页面过渡时间（毫秒） */
 const slideTime = 260;
@@ -383,34 +127,6 @@ const nextPageStyle = reactive({
   zIndex: 1,
 });
 
-/** 阅读器样式主题 */
-const themes = ref([
-  {
-    className: 'theme1',
-    text: '#383838',
-    slide: '#eeeeee',
-  },
-  {
-    className: 'theme2',
-    text: '#362302',
-    slide: '#d7d2bf',
-  },
-  {
-    className: 'theme3',
-    text: '#252a24',
-    slide: '#d0dac2',
-  },
-  {
-    className: 'theme4',
-    text: '#353a3d',
-    slide: '#c4d1da',
-  },
-  {
-    className: 'theme5',
-    text: '#6f6f6f',
-    slide: '#252525',
-  },
-]);
 /** 最大章节数 */
 const chapterMax = computed(() => chapterLists.value?.length || 0);
 /** 章节位置（0开始） */
@@ -420,8 +136,6 @@ const chapterIndex = computed(
       (item) => item.id === readingChapter.value?.id
     ) || 0
 );
-/** 章节的页数位置 */
-const chapterPage = ref(0);
 
 /** 页面内容列表 */
 const prevPageContent = computed<LineData[]>(() => {
@@ -431,6 +145,7 @@ const prevPageContent = computed<LineData[]>(() => {
         isTitle: false,
         center: true,
         pFirst: false,
+        pLast: false,
         pIndex: 0,
         lineIndex: 0,
         textIndex: 0,
@@ -444,6 +159,7 @@ const prevPageContent = computed<LineData[]>(() => {
         isTitle: false,
         center: true,
         pFirst: false,
+        pLast: false,
         pIndex: 0,
         lineIndex: 0,
         textIndex: 0,
@@ -457,6 +173,7 @@ const prevPageContent = computed<LineData[]>(() => {
           isTitle: false,
           center: true,
           pFirst: false,
+          pLast: false,
           pIndex: 0,
           lineIndex: 0,
           textIndex: 0,
@@ -479,6 +196,7 @@ const currPageContent = computed<LineData[]>(() => {
         isTitle: false,
         center: true,
         pFirst: false,
+        pLast: false,
         pIndex: 0,
         lineIndex: 0,
         textIndex: 0,
@@ -499,6 +217,7 @@ const nextPageContent = computed<LineData[]>(() => {
         isTitle: false,
         center: true,
         pFirst: false,
+        pLast: false,
         pIndex: 0,
         lineIndex: 0,
         textIndex: 0,
@@ -512,6 +231,7 @@ const nextPageContent = computed<LineData[]>(() => {
         isTitle: false,
         center: true,
         pFirst: false,
+        pLast: false,
         pIndex: 0,
         lineIndex: 0,
         textIndex: 0,
@@ -568,17 +288,27 @@ function checkTouchPosition(x: number, y: number) {
   const rect = element.getBoundingClientRect();
   const width = Math.floor(rect.width * 0.3);
   const height = Math.floor(rect.height * 0.3);
-  if (x < width) return 'left';
+  if (x < width) {
+    if (bookStore.fullScreenClickToNext) {
+      return 'right';
+    } else {
+      return 'left';
+    }
+  }
   if (x >= rect.width - width) return 'right';
-  if (y < height) return 'left';
+  if (y < height) {
+    if (bookStore.fullScreenClickToNext) {
+      return 'right';
+    } else {
+      return 'left';
+    }
+  }
   if (y >= rect.height - height) return 'right';
   return 'middle';
 }
 
 /** 重置页面（位置偏移） */
 function resetPage() {
-  console.log('reset page');
-
   prevPageStyle.transition = '0s all';
   prevPageStyle.transform = touchParams.pageSlideValue;
 
@@ -591,8 +321,6 @@ function resetPage() {
 
 /** 切换到上一页 */
 function pagePrev() {
-  console.log('prevpage');
-
   prevPageStyle.transition = `${slideTime}ms all`;
   prevPageStyle.transform = `0px`;
 
@@ -616,8 +344,6 @@ function pagePrev() {
 
 /** 切换到下一页 */
 function pageNext() {
-  console.log('next page');
-
   prevPageStyle.transition = '0s all';
   prevPageStyle.transform = touchParams.pageSlideValue;
 
@@ -753,61 +479,306 @@ function chapterNext() {
     return showToast('当前小说已完结');
   emit('nextChapter');
 }
-
-/** 滑动切换章节 */
-function sliderChapter(e: any) {
-  // chapterIndex.value = Number(e.detail.value);
-  // // console.log(chapterIndex.value);
-  // getChapterData(chapterIndex.value, (res) => {
-  //   chapterPage.value = 0; // 重置章节到第一页
-  //   updateChapterList(chapterIndex.value, res);
-  //   updateContent();
-  // });
-}
-
-/** 加大字体 */
-function addFontSize() {
-  // if (bookOption.sizeInfo.p >= 22) return showToast('已经是最大字体了');
-  // bookOption.sizeInfo.title++;
-  // bookOption.sizeInfo.p++;
-  // bookOption.sizeInfo.tLineHeight = bookOption.sizeInfo.title * 1.5;
-  // bookOption.sizeInfo.pLineHeight = bookOption.sizeInfo.p * 1.5;
-  // // store.saveBookOption();
-  // getChapterData(chapterIndex.value, (res) => {
-  //   updateChapterList(chapterIndex.value, res);
-  //   updateContent();
-  // });
-}
-
-/** 缩小字体 */
-function reduceFontSize() {
-  // if (bookOption.sizeInfo.p <= 15) return showToast('已经是最小字体了');
-  // bookOption.sizeInfo.title--;
-  // bookOption.sizeInfo.p--;
-  // bookOption.sizeInfo.tLineHeight = bookOption.sizeInfo.title * 1.5;
-  // bookOption.sizeInfo.pLineHeight = bookOption.sizeInfo.p * 1.5;
-  // // store.saveBookOption();
-  // getChapterData(chapterIndex.value, (res) => {
-  //   updateChapterList(chapterIndex.value, res);
-  //   updateContent();
-  // });
-}
-
-watch(readingPagedContent, (val) => {
-  if (val) {
-    if (val.isPrev) {
-      //上一章
-      chapterPage.value = (readingPagedContent.value?.content.length || 1) - 1;
-    } else {
-      //下一章
-      chapterPage.value = 0;
-    }
-  }
-});
 onBeforeUnmount(function () {
   slideTimer && clearTimeout(slideTimer);
 });
 </script>
+<template>
+  <div
+    id="read-content"
+    class="select-none w-full h-screen fixed top-0 left-0 overflow-hidden box-border"
+    :class="[showMenu ? '' : 'hide_menu']"
+  >
+    <!-- 顶部菜单 -->
+    <div
+      class="top_menu fixed left-0 top-0 z-[5] p-2 w-full flex flex-nowrap items-center justify-between transition bg-[#1f1f1f]"
+    >
+      <div class="flex flex-nowrap items-center">
+        <van-icon name="arrow-left" color="white" size="22" @click="goBack()" />
+        <span class="ml-2 text-sm text-white line-clamp-1">{{
+          book?.title
+        }}</span>
+      </div>
+      <div class="option pr-2">
+        <BookShelfButton :book="book"></BookShelfButton>
+      </div>
+    </div>
+
+    <!-- 阅读内容页 -->
+    <div
+      class="content w-full h-full relative"
+      :style="{
+        backgroundColor: bookStore.currTheme.bgColor,
+        color: bookStore.currTheme.color,
+      }"
+      @touchstart="onTouchStart"
+      @touchmove="onTouchMove"
+      @touchend="onTouchEnd"
+    >
+      <div
+        v-for="({ style, content, pageNo }, index) in [
+          {
+            style: prevPageStyle,
+            content: prevPageContent,
+            pageNo: chapterPage + 1 > 1 ? chapterPage : '',
+          },
+          {
+            style: currPageStyle,
+            content: currPageContent,
+            pageNo: readingPagedContent ? chapterPage + 1 : '1',
+          },
+          {
+            style: nextPageStyle,
+            content: nextPageContent,
+            pageNo:
+              readingPagedContent &&
+              chapterPage + 1 < readingPagedContent.content.length
+                ? chapterPage + 2
+                : '',
+          },
+        ]"
+        class="page w-full h-full box-border shadow absolute left-0 top-0 overflow-hidden flex flex-col"
+        :key="'pageStyle' + index"
+        :style="{
+          transition: style.transition,
+          transform: 'translate3d(' + style.transform + ',0px,0px)',
+          'z-index': style.zIndex,
+          paddingLeft: `${bookStore.paddingX}px`,
+          paddingRight: `${bookStore.paddingX}px`,
+          backgroundColor: bookStore.currTheme.bgColor,
+          color: bookStore.currTheme.color,
+          textDecoration: bookStore.underline
+            ? 'underline solid 0.5px'
+            : 'none',
+          textUnderlineOffset: bookStore.underline ? '6px' : 'none',
+        }"
+      >
+        <!-- 顶部状态占位 -->
+        <div
+          class="status_bar w-full"
+          :style="{ height: `${bookStore.paddingTop}px` }"
+        ></div>
+        <!-- 小说段落 -->
+        <div class="grow">
+          <template v-for="line in content" :key="JSON.stringify(line)">
+            <p
+              v-if="line.isTitle"
+              :style="{
+                'font-size': bookStore.fontSize * 1.3 + 'px',
+                'line-height': bookStore.lineHeight * 1.3,
+                'text-indent': line.pFirst
+                  ? bookStore.fontSize * 1.3 * 2 + 'px'
+                  : '0px',
+                'text-align': 'justify',
+                'text-align-last': line.pLast ? 'auto' : 'justify',
+                'padding-top': line.pFirst
+                  ? bookStore.readPGap * 1.3 + 'px'
+                  : '0px',
+              }"
+            >
+              {{ line.text }}
+            </p>
+            <p
+              v-else
+              :style="{
+                'font-size': bookStore.fontSize + 'px',
+                'line-height': bookStore.lineHeight,
+                'text-indent': line.pFirst
+                  ? bookStore.fontSize * 2 + 'px'
+                  : '0px',
+                'text-align': 'justify',
+                'text-align-last': line.pLast ? 'auto' : 'justify',
+                'padding-top': line.pFirst ? bookStore.readPGap + 'px' : '0px',
+              }"
+            >
+              {{ line.text }}
+            </p>
+          </template>
+        </div>
+
+        <!-- 顶底部状态占位 -->
+        <div
+          class="bottom_bar flex items-center justify-between text-xs"
+          :style="{ height: `${bookStore.paddingBottom}px` }"
+        >
+          <p class="truncate">{{ readingChapter?.title }}</p>
+          <div class="flex flex-nowrap gap-1">
+            <span>
+              {{ pageNo }}/{{
+                typeof readingPagedContent === 'string'
+                  ? '1'
+                  : readingPagedContent?.content.length || 1
+              }}
+            </span>
+            <span v-if="chapterLists">
+              {{
+                (
+                  ((chapterLists.findIndex(
+                    (chapter) => chapter.id === readingChapter?.id
+                  ) || 0) /
+                    chapterLists.length) *
+                  100
+                ).toFixed(1)
+              }}%
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部菜单 -->
+    <div
+      class="bottom fixed bottom-0 left-0 z-[6] w-full flex flex-col p-2 pb-[50px] bg-[#1f1f1f] text-white transition"
+    >
+      <div class="flex items-center gap-[10px]">
+        <div class="text-sm w-[50px] van-haptics-feedback" @click="chapterPrev">
+          上一章
+        </div>
+        <van-slider
+          class="w-[calc(100%-120px)]"
+          v-model="chapterPage"
+          :button-size="16"
+          :max="
+            readingPagedContent ? readingPagedContent.content.length - 1 : 0
+          "
+          @change="(val) => (chapterPage = val)"
+        ></van-slider>
+        <div class="text-sm w-[50px] van-haptics-feedback" @click="chapterNext">
+          下一章
+        </div>
+      </div>
+      <div class="w-full flex gap-1 items-center justify-between text-sm">
+        <div
+          class="flex flex-col gap-1 items-center van-haptics-feedback p-2"
+          @click="() => emit('openChapterPopup')"
+        >
+          <Icon icon="tabler:list" width="20" height="20" />
+          章节
+        </div>
+        <div
+          class="flex flex-col gap-1 items-center van-haptics-feedback p-2"
+          @click="() => (showSettingDialog = true)"
+        >
+          <Icon icon="ci:font" width="20" height="20" />
+          界面
+        </div>
+        <div
+          class="flex flex-col gap-1 items-center van-haptics-feedback p-2"
+          @click="() => (showReadSettingDialog = true)"
+        >
+          <Icon icon="tabler:settings" width="20" height="20" />
+          设置
+        </div>
+      </div>
+    </div>
+    <van-popup
+      v-model:show="showChapters"
+      position="left"
+      :style="{
+        width: '70%',
+        height: 'calc(100% - 50px)',
+        top: 'calc(50% - 25px)',
+        backgroundColor: '#1f1f1f',
+      }"
+    >
+      <van-list>
+        <van-cell
+          v-for="item in book?.chapters"
+          :key="item.id"
+          :title="item.title"
+          :title-style="{
+            color:
+              readingChapter?.id === item.id
+                ? 'var(--van-primary-color)'
+                : 'white',
+          }"
+          :class="{
+            'bg-[#1f1f1f] text-white': true,
+            'reading-chapter': readingChapter?.id === item.id,
+          }"
+          :icon="readingChapter?.id === item.id ? 'eye-o' : ''"
+          clickable
+          @click="
+            () => {
+              emit('toChapter', item);
+              showChapters = false;
+            }
+          "
+        />
+      </van-list>
+    </van-popup>
+    <van-dialog
+      v-model:show="showSettingDialog"
+      title="界面设置"
+      closeOnClickOverlay
+      :show-confirm-button="false"
+      class="setting-dialog bg-[#1f1f1f] text-white"
+    >
+      <div class="flex flex-col gap-2 p-2 text-sm">
+        <div>字体和样式</div>
+        <van-cell class="bg-[#1f1f1f]">
+          <template #title>
+            <span class="text-white">字体大小</span>
+          </template>
+          <template #value>
+            <van-stepper v-model="bookStore.fontSize" min="10" max="40" />
+          </template>
+        </van-cell>
+        <van-cell class="bg-[#1f1f1f]">
+          <template #title>
+            <span class="text-white">下划线</span>
+          </template>
+          <template #value>
+            <van-switch v-model="bookStore.underline" />
+          </template>
+        </van-cell>
+        <div>文字颜色和背景</div>
+        <div v-horizontal-scroll class="flex gap-2 overflow-x-auto">
+          <div
+            v-for="theme in bookStore.themes"
+            :key="JSON.stringify(theme)"
+            class="rounded-full text-center p-2 border-2 w-[40px] h-[40px] cursor-pointer shrink-0"
+            :class="[
+              theme === bookStore.currTheme
+                ? 'border-[var(--van-primary-color)]'
+                : 'border-white',
+            ]"
+            :style="{
+              backgroundColor: theme.bgColor,
+              color: theme.color,
+              textDecoration: bookStore.underline
+                ? 'underline solid 0.5px'
+                : 'none',
+              textUnderlineOffset: bookStore.underline ? '6px' : 'none',
+            }"
+            @click="bookStore.currTheme = theme"
+          >
+            文
+          </div>
+        </div>
+      </div>
+    </van-dialog>
+    <van-dialog
+      v-model:show="showReadSettingDialog"
+      title="阅读设置"
+      closeOnClickOverlay
+      :show-confirm-button="false"
+      class="setting-dialog bg-[#1f1f1f]"
+    >
+      <div class="flex flex-col gap-2 p-2 text-sm">
+        <van-cell class="bg-[#1f1f1f]">
+          <template #title>
+            <span class="text-white">全屏点击向下翻页</span>
+          </template>
+          <template #value>
+            <van-switch v-model="bookStore.fullScreenClickToNext" />
+          </template>
+        </van-cell>
+      </div>
+    </van-dialog>
+  </div>
+</template>
+
 <style lang="scss" scoped>
 /* 菜单显示隐藏 */
 .hide_menu {

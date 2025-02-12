@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import _ from 'lodash';
 import { BookItem, BookList, BooksList } from '@/extensions/book';
-import BookCard from '@/components/card/BookCard.vue';
-import HorizonList from '@/components/HorizonList.vue';
+import BookCard from '@/components/card/bookCards/BookCard.vue';
+import SimplePagination from '../pagination/SimplePagination.vue';
 import { BookSource } from '@/types';
 import { onMounted, ref, watch } from 'vue';
 import { debounce } from 'lodash';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { nanoid } from 'nanoid';
 const { source } = defineProps<{
   source: BookSource;
@@ -43,11 +43,6 @@ const toDetail = (item: BookItem) => {
   emit('onDetail', source, item);
 };
 
-onMounted(() => {
-  if (source.list && !Array.isArray(source.list)) {
-    load(active.value);
-  }
-});
 watch(
   () => source.list,
   debounce((list: BooksList | undefined) => {
@@ -59,7 +54,7 @@ watch(
 </script>
 
 <template>
-  <template v-if="!source.list"> </template>
+  <template v-if="!source.list"></template>
   <template v-else-if="Array.isArray(source.list)">
     <van-tabs
       v-model:active="active"
@@ -72,7 +67,10 @@ watch(
         v-for="(item, index) in source.list"
         :key="index"
       >
-        <van-row v-if="item.page && item.totalPage && item.totalPage > 1">
+        <van-row
+          v-if="item.page && item.totalPage && item.totalPage > 1"
+          class="px-4 py-1"
+        >
           <SimplePagination
             v-model="item.page"
             :page-count="item.totalPage"
@@ -90,24 +88,22 @@ watch(
   </template>
   <template v-else>
     <van-row
-      justify="end"
-      align="center"
-      class="absolute transform -translate-y-9 right-0"
+      v-if="
+        source.list.page && source.list.totalPage && source.list.totalPage > 1
+      "
     >
       <SimplePagination
         v-model="source.list.page"
         :page-count="source.list.totalPage"
         @change="(page: number) => changePage(0, page)"
-        v-if="
-          source.list.page && source.list.totalPage && source.list.totalPage > 1
-        "
       ></SimplePagination>
     </van-row>
-    <HorizonList>
+    <van-loading class="p-2" v-if="!source.list.list.length" />
+    <div class="flex flex-col">
       <template v-for="book in source.list.list" :key="book.id">
         <BookCard :book-item="book" @click="toDetail"> </BookCard>
       </template>
-    </HorizonList>
+    </div>
   </template>
 </template>
 

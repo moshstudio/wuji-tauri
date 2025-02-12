@@ -5,12 +5,13 @@ import PlatformSwitch from '@/components/PlatformSwitch.vue';
 
 import { BookChapter, BookItem } from '@/extensions/book';
 import { router } from '@/router';
-import { useStore } from '@/store';
+import { useDisplayStore, useStore } from '@/store';
 import { BookSource } from '@/types';
 import { showLoadingToast, showToast } from 'vant';
 import _ from 'lodash';
 import { ref, triggerRef, watch, onActivated } from 'vue';
 import { retryOnFalse, sleep } from '@/utils';
+import { storeToRefs } from 'pinia';
 
 const { bookId, sourceId } = defineProps({
   bookId: String,
@@ -23,7 +24,6 @@ const book = ref<BookItem>();
 const content = ref<HTMLElement>();
 const shouldLoad = ref(true);
 const isAscending = ref(true);
-const showBookShelf = ref(false);
 function back() {
   shouldLoad.value = true;
   router.push({ name: 'Book' });
@@ -62,7 +62,7 @@ const loadData = retryOnFalse({ onFailed: back })(async () => {
   if (!detail?.chapters) {
     showToast('章节列表为空');
   }
-  content.value!.scrollTop = 0;
+  if (content.value) content.value.scrollTop = 0;
   triggerRef(book);
   return true;
 });
@@ -99,7 +99,6 @@ onActivated(async () => {
         v-model:book-source="bookSource"
         v-model:content="content"
         v-model:is-ascending="isAscending"
-        v-model:show-book-shelf="showBookShelf"
         @back="back"
         @load-data="loadData"
         @to-chapter="toChapter"
@@ -111,7 +110,6 @@ onActivated(async () => {
         v-model:book-source="bookSource"
         v-model:content="content"
         v-model:is-ascending="isAscending"
-        v-model:show-book-shelf="showBookShelf"
         @back="back"
         @load-data="loadData"
         @to-chapter="toChapter"

@@ -40,6 +40,9 @@ url = "2.5.4"
 urlpattern = "0.3"
 tauri-plugin-fs = "2.2.0"
 tauri-plugin-os = "2"
+tauri-plugin-commands = { path = "../tauri-plugin-commands/" }
+tauri-plugin-log = "2"
+log = "0.4.25"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"

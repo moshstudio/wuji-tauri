@@ -1,15 +1,11 @@
 <script setup lang="ts">
-import { useStore } from '@/store';
+import { useDisplayStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import BooksTab from '@/components/windows/BooksTab.vue';
 import BookShelf from '@/views/book/BookShelf.vue';
 import { BookSource } from '@/types';
 import { BookItem } from '@/extensions/book';
 
-const showBookShelf = defineModel('showBookShelf', {
-  type: Boolean,
-  required: true,
-});
 const searchValue = defineModel('searchValue', { type: String, default: '' });
 
 const emit = defineEmits<{
@@ -22,6 +18,7 @@ const emit = defineEmits<{
 }>();
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const { bookSources } = storeToRefs(store);
 </script>
 
@@ -30,7 +27,7 @@ const { bookSources } = storeToRefs(store);
     <van-row justify="center" align="center" class="relative">
       <div
         class="absolute right-6 text-button"
-        @click="() => (showBookShelf = !showBookShelf)"
+        @click="() => (displayStore.showBookShelf = true)"
       >
         书架
       </div>
@@ -70,7 +67,7 @@ const { bookSources } = storeToRefs(store);
         <van-divider :style="{ margin: '8px 0px' }" />
       </template>
     </div>
-    <BookShelf v-model:show="showBookShelf"></BookShelf>
+    <BookShelf></BookShelf>
   </div>
 </template>
 

@@ -3,12 +3,8 @@ import { useSongStore, useSongShelfStore, useDisplayStore } from '@/store';
 import _ from 'lodash';
 
 import { PropType } from 'vue';
-import WinShelfSongCard from '@/components/card/songCards/WinShelfSongCard.vue';
-import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
-import SimplePagination from '@/components/SimplePagination.vue';
 import AddSongShelfDialog from '@/components/windows/dialogs/AddSongShelf.vue';
 import RemoveSongShelfDialog from '@/components/windows/dialogs/RemoveSongShelf.vue';
-import { SongShelfType } from '@/types/song';
 import { PlaylistInfo, SongShelf } from '@/extensions/song';
 import SongShelfSideBar from '@/components/SongShelfSideBar.vue';
 
@@ -16,7 +12,6 @@ const displayStore = useDisplayStore();
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
 
-const show = defineModel('show', { type: Boolean, default: false });
 const selectedShelf = defineModel('selectedShelf', {
   type: Object as PropType<SongShelf>,
 });
@@ -41,12 +36,12 @@ const emit = defineEmits<{
     @height-change="
       (height) => {
         if (height.height === shelfAnchors[0]) {
-          show = false;
+          displayStore.showSongShelf = false;
         }
       }
     "
     class="absolute left-[50px] right-[0px] w-auto rounded-none up-shadow bottom-[80px]"
-    :style="show ? { height: `${shelfHeight}px` } : {}"
+    :style="displayStore.showSongShelf ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
       <div class="flex justify-between items-center p-4 border-b">

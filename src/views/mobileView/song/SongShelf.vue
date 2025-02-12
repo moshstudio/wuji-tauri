@@ -3,6 +3,7 @@ import { useSongStore, useSongShelfStore, useDisplayStore } from '@/store';
 import _ from 'lodash';
 
 import { onMounted, onUnmounted, PropType, ref, watch } from 'vue';
+import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import AddSongShelfDialog from '@/components/windows/dialogs/AddSongShelf.vue';
 import RemoveSongShelfDialog from '@/components/windows/dialogs/RemoveSongShelf.vue';
 import MobileShelfSongCard from '@/components/card/songCards/MobileShelfSongCard.vue';
@@ -15,7 +16,6 @@ const displayStore = useDisplayStore();
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
 
-const show = defineModel('show', { type: Boolean, default: false });
 const selectedShelf = defineModel('selectedShelf', {
   type: Object as () => SongShelf,
 });
@@ -93,12 +93,12 @@ onUnmounted(() => {
     @height-change="
       (height) => {
         if (height.height === shelfAnchors[0]) {
-          show = false;
+          displayStore.showSongShelf = false;
         }
       }
     "
     class="absolute left-[0px] right-[0px] bottom-[80px] w-auto rounded-none up-shadow"
-    :style="show ? { height: `${shelfHeight}px` } : {}"
+    :style="displayStore.showSongShelf ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
       <div class="flex justify-between items-center p-4 border-b">

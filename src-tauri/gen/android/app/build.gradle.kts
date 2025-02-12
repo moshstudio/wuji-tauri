@@ -19,7 +19,7 @@ android {
     compileSdk = 34
     namespace = "com.wuji_app.app"
     defaultConfig {
-        manifestPlaceholders["usesCleartextTraffic"] = "false"
+        manifestPlaceholders["usesCleartextTraffic"] = "true"
         applicationId = "com.wuji_app.app"
         minSdk = 24
         targetSdk = 34

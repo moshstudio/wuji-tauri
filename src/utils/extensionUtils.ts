@@ -9,11 +9,13 @@ export function maxPageNoFromElements(
 ): number | null {
   if (!elements) return null;
 
-  return Math.max(
+  const res = Math.max(
     ...Array.from(elements.values())
       .map((el) => Number(el.textContent))
       .filter((v) => !isNaN(v))
   );
+  if (res === Infinity || res === -Infinity) return null;
+  return res;
 }
 
 export function parseAndExecuteHtml(

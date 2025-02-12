@@ -4,6 +4,7 @@ import { useSongStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import { Icon } from '@iconify/vue';
 import { Lyric } from '@/utils/lyric';
+import LoadImage from '@/components/LoadImage.vue';
 
 const songStore = useSongStore();
 const { playingSong, isPlaying } = storeToRefs(songStore);
@@ -67,11 +68,12 @@ const emit = defineEmits<{
             class="relative animate-spin-slow w-[200px] h-[200px] sm:w-[250px] sm:h-[250px] md:w-[300px] md:h-[300px] lg:w-[350px] lg:h-[350px]"
             :class="{ 'pause-spin': !isPlaying }"
           >
-            <van-image
+            <LoadImage
               width="100%"
               height="100%"
-              round
+              :radius="9999"
               :src="playingSong.picUrl"
+              :headers="playingSong.picHeaders"
               class="p-5"
             >
               <template #loading>
@@ -88,7 +90,7 @@ const emit = defineEmits<{
                   height="min(15vh, 15vw)"
                 />
               </template>
-            </van-image>
+            </LoadImage>
             <span
               class="mask absolute top-0 left-0 w-full h-full bg-cover"
             ></span>

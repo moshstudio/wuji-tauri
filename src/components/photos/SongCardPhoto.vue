@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue';
+import LoadImage from '../LoadImage.vue';
 
 const { url, isHover, isPlayingSong, isPlaying } = defineProps<{
   url?: string;
+  headers?: Record<string, string>;
   isHover: boolean;
   isPlayingSong: boolean;
   isPlaying: boolean;
@@ -14,21 +16,22 @@ const emit = defineEmits(['play', 'pause']);
 
 <template>
   <div class="relative flex items-center justify-center">
-    <van-image
+    <LoadImage
       :width="width"
       :height="height"
-      radius="8"
+      :radius="8"
       fit="cover"
       lazy-load
-      :src="url"
+      :src="url || ''"
+      :headers="headers"
     >
       <template v-slot:loading>
-        <Icon icon="basil:music-solid" width="24" height="24" />
+        <Icon icon="basil:music-solid" width="22" height="22" />
       </template>
       <template v-slot:error>
-        <Icon icon="basil:music-solid" width="24" height="24" />
+        <Icon icon="basil:music-solid" width="22" height="22" />
       </template>
-    </van-image>
+    </LoadImage>
     <div
       class="absolute leading-[16px] rounded-[50%] bg-black/50 p-1 hover:scale-110 cursor-pointer"
       v-if="isHover || isPlayingSong"

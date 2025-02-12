@@ -21,7 +21,6 @@ const shelfStore = useSongShelfStore();
 const songSource = ref<SongSource>();
 const playlist = ref<PlaylistInfo>();
 
-const showShelf = ref(false);
 const currentPage = ref(1);
 const content = ref<HTMLElement>();
 const shouldLoad = ref(true);
@@ -75,7 +74,7 @@ const loadData = retryOnFalse({ onFailed: back })(async (pageNo?: number) => {
     showToast('播放列表为空');
   }
   currentPage.value = detail?.list?.page || 1;
-  content.value!.scrollTop = 0;
+  if (content.value) content.value.scrollTop = 0;
   return true;
 });
 const toPage = debounce(loadData, 600);
@@ -120,7 +119,6 @@ onActivated(async () => {
       <MobilePlaylistDetail
         v-model:playlist="playlist"
         v-model:current-page="currentPage"
-        v-model:show-shelf="showShelf"
         v-model:content="content"
         @back="back"
         @load-data="loadData"
@@ -133,7 +131,6 @@ onActivated(async () => {
       <WinPlaylistDetail
         v-model:playlist="playlist"
         v-model:current-page="currentPage"
-        v-model:show-shelf="showShelf"
         v-model:content="content"
         @back="back"
         @load-data="loadData"

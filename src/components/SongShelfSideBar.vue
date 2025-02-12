@@ -3,7 +3,7 @@ import { useSongShelfStore, useSongStore, useStore } from '@/store';
 import { ref, reactive, watch, onMounted, triggerRef } from 'vue';
 import SongPlaylistPhoto from './photos/SongPlaylistPhoto.vue';
 import ResponsiveGrid from './ResponsiveGrid.vue';
-import SimplePagination from './SimplePagination.vue';
+import SimplePagination from './pagination/SimplePagination.vue';
 import WinShelfSongCard from './card/songCards/WinShelfSongCard.vue';
 import { PlaylistInfo, SongShelf } from '@/extensions/song';
 import { SongShelfType } from '@/types/song';

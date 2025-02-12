@@ -2,17 +2,15 @@
 import _ from 'lodash';
 import { useDisplayStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
-import BooksTab from '@/components/windows/BooksTab.vue';
 import BookShelf from '@/views/book/BookShelf.vue';
-import SearchButton from '@/components/mobile/Search.vue';
+import MobileHeader from '@/components/mobile/MobileHeader.vue';
 import MobileBooksTab from '@/components/tabs/MobileBooksTab.vue';
 import { BookSource } from '@/types';
 import { BookItem } from '@/extensions/book';
-import { ref } from 'vue';
+import { ComponentPublicInstance, ref } from 'vue';
 import { sleep } from '@/utils';
 
 const searchValue = defineModel('searchValue', { type: String, default: '' });
-const showShelf = defineModel('showShelf', { type: Boolean, default: false });
 
 const emit = defineEmits<{
   (e: 'recommend', force?: boolean): void;
@@ -38,46 +36,67 @@ const search = (value: string) => {
   searchValue.value = value;
   emit('search');
 };
+
+const containers = ref<Array<HTMLElement | undefined>>(
+  new Array(2000).fill(undefined)
+);
+const setContainerRef = (
+  el: Element | ComponentPublicInstance | null,
+  index: number
+) => {
+  if (el) {
+    containers.value[index] = el as HTMLElement;
+  }
+};
 </script>
 
 <template>
-  <div class="w-full h-full flex flex-col overflow-hidden">
-    <header class="px-4 h-[50px] flex justify-between items-center">
-      <LeftPopup></LeftPopup>
-      <div class="flex gap-2 items-center h-[50px]">
-        <SearchButton v-model="searchValue" @search="search"></SearchButton>
-        <van-icon
-          name="star-o"
-          class="text-button-2"
-          @click="() => (showShelf = true)"
-        />
-      </div>
-    </header>
-    <main v-remember-scroll class="main grow overflow-x-hidden overflow-y-auto">
-      <van-pull-refresh v-model="isRefreshing" @refresh="onRefresh">
-        <van-collapse v-model="displayStore.bookCollapse">
-          <template v-for="item in bookSources" :key="item.item.id">
-            <van-collapse-item
-              :title="item.item.name"
-              :name="item.item.name"
-              v-if="item.list"
-            >
-              <MobileBooksTab
-                :source="item"
-                @on-load="(source, type) => emit('loadType', source, type)"
-                @load-page="
-                  (source, pageNo, type) =>
-                    emit('loadPage', source, pageNo, type)
-                "
-                @on-detail="(source, item) => emit('toDetail', source, item)"
-              ></MobileBooksTab>
-            </van-collapse-item>
-          </template>
-        </van-collapse>
-      </van-pull-refresh>
-    </main>
-    <BookShelf v-model:show="showShelf"></BookShelf>
+  <div class="w-full h-full flex flex-col">
+    <MobileHeader
+      v-model:search-value="searchValue"
+      @search="search"
+      @show-shelf="() => (displayStore.showBookShelf = true)"
+    ></MobileHeader>
+    <van-pull-refresh
+      v-remember-scroll
+      v-model="isRefreshing"
+      @refresh="onRefresh"
+      class="main grow overflow-x-hidden overflow-y-auto"
+    >
+      <van-collapse v-model="displayStore.bookCollapse">
+        <div
+          v-for="(item, index) in bookSources"
+          :key="item.item.id"
+          :ref="(el) => setContainerRef(el, index)"
+        >
+          <van-collapse-item :name="item.item.name" v-if="item.list">
+            <template #title>
+              <van-sticky offset-top="50" :container="containers[index]">
+                <span class="rounded-br-lg px-2 py-1">
+                  {{ item.item.name }}
+                </span>
+              </van-sticky>
+            </template>
+            <MobileBooksTab
+              :source="item"
+              @on-load="(source, type) => emit('loadType', source, type)"
+              @load-page="
+                (source, pageNo, type) => emit('loadPage', source, pageNo, type)
+              "
+              @on-detail="(source, item) => emit('toDetail', source, item)"
+            ></MobileBooksTab>
+          </van-collapse-item>
+        </div>
+      </van-collapse>
+      <van-back-top bottom="60" right="10" />
+    </van-pull-refresh>
+    <BookShelf></BookShelf>
   </div>
 </template>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+:deep(.van-sticky--fixed) span {
+  background-color: var(--van-background-2);
+  opacity: 0.5;
+}
+</style>

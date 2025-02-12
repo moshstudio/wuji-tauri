@@ -2,6 +2,8 @@
 use tauri::AppHandle;
 use tauri::Manager;
 mod fetch_plugin;
+use log::LevelFilter;
+use tauri_plugin_log::{Target, TargetKind};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -11,12 +13,24 @@ fn greet(name: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
+                .targets([
+                    Target::new(TargetKind::Stdout),
+                    Target::new(TargetKind::LogDir { file_name: None }),
+                    Target::new(TargetKind::Webview),
+                ])
+                .level(LevelFilter::Info)
+                .build(),
+        )
         .plugin(tauri_plugin_os::init())
         .setup(move |app| {
             let handle = app.handle();
             handle.plugin(fetch_plugin::init())?;
             Ok(())
         })
+        .plugin(tauri_plugin_commands::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init());

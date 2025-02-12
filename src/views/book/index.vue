@@ -4,7 +4,7 @@ import WinBook from '../windowsView/book/index.vue';
 import MobileBook from '../mobileView/book/index.vue';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
 import { ref, triggerRef, watch } from 'vue';
-import { useStore } from '@/store';
+import { useDisplayStore, useStore } from '@/store';
 import { BookSource } from '@/types';
 import { debounce } from 'lodash';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
@@ -12,9 +12,8 @@ import { router } from '@/router';
 import { BookItem } from '@/extensions/book';
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const { bookSources } = storeToRefs(store);
-
-const showBookShelf = ref(false);
 
 const searchValue = ref('');
 
@@ -30,6 +29,7 @@ const recommend = createCancellableFunction(async (force: boolean = false) => {
 
 const search = createCancellableFunction(async () => {
   const keyword = searchValue.value;
+  const t = displayStore.showToast();
   if (!keyword) {
     await recommend(true);
     triggerRef(bookSources);
@@ -40,6 +40,7 @@ const search = createCancellableFunction(async () => {
       })
     );
   }
+  displayStore.closeToast(t);
 });
 const loadType = async (source: BookSource, type?: string) => {
   await store.bookRecommendList(source, 1, type);
@@ -79,7 +80,6 @@ const openBaseUrl = async (source: BookSource) => {
     <template #mobile>
       <MobileBook
         v-model:search-value="searchValue"
-        v-model:show-book-shelf="showBookShelf"
         @search="search"
         @load-type="loadType"
         @load-page="loadPage"
@@ -91,7 +91,6 @@ const openBaseUrl = async (source: BookSource) => {
     <template #windows>
       <WinBook
         v-model:search-value="searchValue"
-        v-model:show-book-shelf="showBookShelf"
         @search="search"
         @load-type="loadType"
         @load-page="loadPage"

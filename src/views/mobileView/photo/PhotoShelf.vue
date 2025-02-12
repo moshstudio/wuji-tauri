@@ -10,7 +10,6 @@ import PhotoCard from '@/components/card/PhotoCard.vue';
 const displayStore = useDisplayStore();
 const shelfStore = usePhotoShelfStore();
 
-const show = defineModel('show', { type: Boolean, default: false });
 const activeIndex = defineModel('activeIndex', { type: Number, default: 0 });
 const selecteMode = defineModel('selecteMode', {
   type: Boolean,
@@ -54,12 +53,12 @@ watch(selecteMode, (mode) => {
     @height-change="
       (height) => {
         if (height.height === 0) {
-          show = false;
+          displayStore.showPhotoShelf = false;
         }
       }
     "
     class="left-[0px] right-[0px] w-auto rounded-none up-shadow"
-    :style="show ? { height: `${shelfHeight}px` } : {}"
+    :style="displayStore.showPhotoShelf ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
       <div class="flex justify-between items-center p-4 border-b">

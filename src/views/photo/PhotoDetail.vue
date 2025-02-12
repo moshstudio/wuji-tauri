@@ -64,7 +64,7 @@ const loadData = retryOnFalse({ onFailed: back })(
         sourceId: item.sourceId,
       };
       currentPage.value = 1;
-      content.value!.scrollTop = 0;
+      if (content.value) content.value.scrollTop = 0;
       return true;
     }
 
@@ -83,7 +83,7 @@ const loadData = retryOnFalse({ onFailed: back })(
     photoDetail.value = detail || undefined;
     currentPage.value = detail?.page || 1;
     toast.close();
-    content.value!.scrollTop = 0;
+    if (content.value) content.value.scrollTop = 0;
     return true;
   })
 );

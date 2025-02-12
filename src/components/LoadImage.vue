@@ -6,7 +6,7 @@
   >
     <!-- 图片容器 -->
     <img
-      v-if="imageSrc"
+      v-if="imageSrc && !isError && !isLoading"
       :src="imageSrc"
       class="w-full h-full"
       :class="props.class"
@@ -16,14 +16,14 @@
     />
 
     <!-- 加载中占位图 -->
-    <div v-if="isLoading" class="loading-placeholder">
+    <div v-if="isLoading" class="loading-placeholder text-gray-400">
       <slot name="loading">
         <van-loading type="spinner" size="30" />
       </slot>
     </div>
 
     <!-- 加载失败占位图 -->
-    <div v-if="isError" class="error-placeholder">
+    <div v-if="isError" class="error-placeholder text-gray-400">
       <slot name="error">
         <van-icon name="photo-failed" size="30" />
       </slot>
@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, CSSProperties, PropType } from 'vue';
+import { ref, computed, onMounted, CSSProperties, PropType, watch } from 'vue';
 import { useIntersectionObserver } from '@vueuse/core'; // 用于懒加载
 import { cachedFetch } from '@/utils';
 
@@ -54,6 +54,11 @@ const props = defineProps({
   height: {
     type: [String, Number],
     default: '100%',
+    required: false,
+  },
+  radius: {
+    type: [String, Number],
+    default: '0',
     required: false,
   },
   fit: {
@@ -91,12 +96,20 @@ const imageStyle = computed(() => {
         ? `${props.height}px`
         : props.height || '100%',
     'object-fit': props.fit,
+    borderRadius:
+      typeof props.radius === 'number'
+        ? `${props.radius}px`
+        : props.radius || '0',
   };
 });
 
 // 加载图片
 const loadImage = async () => {
-  if (!props.src) return;
+  if (!props.src) {
+    isError.value = true;
+    isLoading.value = false;
+    return;
+  }
 
   // 触发 beforeLoad 事件
   emit('beforeLoad');
@@ -106,12 +119,15 @@ const loadImage = async () => {
     isError.value = false;
 
     // 如果有 headers，则通过 fetch 获取图片
-    if (props.headers) {
+    if (props.headers != null && props.headers != undefined) {
       const response = await cachedFetch(props.src, {
         headers: props.headers,
         verify: false,
       });
       const blob = await response.blob();
+      if (blob.size === 0) {
+        throw new Error('图片加载失败');
+      }
       imageSrc.value = URL.createObjectURL(
         new Blob([blob], { type: blob.type || 'image/png' })
       ); // 将二进制数据转换为 URL
@@ -140,19 +156,32 @@ const handleError = () => {
 
 // 懒加载逻辑
 const target = ref(null);
-if (props.lazyLoad) {
-  const { stop } = useIntersectionObserver(target, ([{ isIntersecting }]) => {
-    if (isIntersecting) {
+const stopFunc = ref<() => void>();
+
+watch(
+  () => props.src,
+  async () => {
+    stopFunc.value?.();
+    imageSrc.value = '';
+    isLoading.value = false;
+    isError.value = false;
+    if (props.lazyLoad) {
+      const { stop } = useIntersectionObserver(
+        target,
+        ([{ isIntersecting }]) => {
+          if (isIntersecting) {
+            loadImage();
+            stop(); // 停止监听
+          }
+        }
+      );
+      stopFunc.value = stop;
+    } else {
       loadImage();
-      stop(); // 停止监听
     }
-  });
-} else {
-  // 非懒加载模式，在 onMounted 时加载图片
-  onMounted(() => {
-    loadImage();
-  });
-}
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>

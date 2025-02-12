@@ -2,20 +2,21 @@
 import { useDisplayStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import PhotoCard from '@/components/card/PhotoCard.vue';
-import SimplePagination from '@/components/SimplePagination.vue';
+import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import PhotoShelf from '@/views/photo/PhotoShelf.vue';
 import { PhotoSource } from '@/types';
-import SearchButton from '@/components/mobile/Search.vue';
-import LeftPopup from '@/components/mobile/LeftPopup.vue';
-import { ref } from 'vue';
+import MobileHeader from '@/components/mobile/MobileHeader.vue';
+import { ComponentPublicInstance, onBeforeUpdate, ref, watch } from 'vue';
 import { sleep } from '@/utils';
 
 const store = useStore();
 const displayStore = useDisplayStore();
 const { photoSources } = storeToRefs(store);
 
-const searchValue = defineModel('searchValue', { type: String, default: '' });
-const showShelf = defineModel('showShelf', { type: Boolean, default: false });
+const searchValue = defineModel('searchValue', {
+  type: String,
+  required: true,
+});
 
 const emit = defineEmits<{
   (e: 'recommend', force?: boolean): void;
@@ -35,21 +36,27 @@ const search = (value: string) => {
   searchValue.value = value;
   emit('search');
 };
+
+const containers = ref<Array<HTMLElement | undefined>>(
+  new Array(2000).fill(undefined)
+);
+const setContainerRef = (
+  el: Element | ComponentPublicInstance | null,
+  index: number
+) => {
+  if (el) {
+    containers.value[index] = el as HTMLElement;
+  }
+};
 </script>
 
 <template>
-  <div class="w-full h-full flex flex-col overflow-hidden">
-    <header class="px-4 h-[50px] flex justify-between items-center">
-      <LeftPopup></LeftPopup>
-      <div class="flex gap-2 items-center h-[50px]">
-        <SearchButton v-model="searchValue" @search="search"></SearchButton>
-        <van-icon
-          name="star-o"
-          class="text-button-2"
-          @click="() => (showShelf = true)"
-        />
-      </div>
-    </header>
+  <div class="w-full h-full flex flex-col">
+    <MobileHeader
+      v-model:search-value="searchValue"
+      @search="search"
+      @show-shelf="() => (displayStore.showPhotoShelf = true)"
+    ></MobileHeader>
     <van-pull-refresh
       v-remember-scroll
       v-model="isRefreshing"
@@ -57,12 +64,19 @@ const search = (value: string) => {
       class="main grow overflow-x-hidden overflow-y-auto"
     >
       <van-collapse v-model="displayStore.photoCollapse">
-        <template v-for="item in photoSources" :key="item.item.id">
-          <van-collapse-item
-            :title="item.item.name"
-            :name="item.item.name"
-            v-if="item.list"
-          >
+        <div
+          v-for="(item, index) in photoSources"
+          :key="item.item.id"
+          :ref="(el) => setContainerRef(el, index)"
+        >
+          <van-collapse-item :name="item.item.name" v-if="item.list">
+            <template #title>
+              <van-sticky offset-top="50" :container="containers[index]">
+                <span class="rounded-br-lg px-2 py-1">
+                  {{ item.item.name }}
+                </span>
+              </van-sticky>
+            </template>
             <van-row justify="end" class="flex-nowrap mb-2">
               <SimplePagination
                 v-model="item.list.page"
@@ -83,13 +97,18 @@ const search = (value: string) => {
               </template>
             </div>
           </van-collapse-item>
-        </template>
+        </div>
       </van-collapse>
       <van-back-top bottom="60" right="10" />
     </van-pull-refresh>
 
-    <PhotoShelf v-model:show="showShelf"></PhotoShelf>
+    <PhotoShelf></PhotoShelf>
   </div>
 </template>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+:deep(.van-sticky--fixed) span {
+  background-color: var(--van-background-2);
+  opacity: 0.5;
+}
+</style>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { SongInfo } from '@/extensions/song';
-import { useSongStore, useSongShelfStore } from '@/store';
+import { useSongStore, useSongShelfStore, useDisplayStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import { ref, watch } from 'vue';
 import { Icon } from '@iconify/vue';
@@ -9,33 +9,32 @@ import { joinSongArtists, transTime } from '@/utils';
 import WinSongCard from '../card/songCards/WinSongCard.vue';
 import VolumeControl from './VolumeControl.vue';
 import PlayView from '@/views/song/PlayView.vue';
+import LoadImage from '../LoadImage.vue';
 
-const showPlayView = defineModel('showPlayView', {
-  type: Boolean,
-  default: false,
-});
 const songStore = useSongStore();
+const displayStore = useDisplayStore();
 const shelfStore = useSongShelfStore();
 const { audioRef, playingSong, audioVolume } = storeToRefs(songStore);
-const showRight = ref(false);
+const { showPlayingPlaylist } = storeToRefs(displayStore);
 </script>
 
 <template>
-  <PlayView v-model:show="showPlayView"></PlayView>
+  <PlayView></PlayView>
   <div
     class="flex justify-between items-center py-2 px-4 border-t-[1px] select-none flex-nowrap h-[80px] z-[1000] bg-[--van-background]"
     v-if="playingSong"
   >
     <div class="flex gap-4 shrink-0">
-      <van-image
-        width="50"
-        height="50"
-        radius="99999"
+      <LoadImage
+        :width="50"
+        :height="50"
+        :radius="99999"
         fit="cover"
         lazy-load
-        :src="playingSong.picUrl"
+        :src="playingSong.picUrl || ''"
+        :headers="playingSong.picHeaders"
         class="cursor-pointer hover:-translate-y-1 trasnform ease-in-out duration-100"
-        @click="() => (showPlayView = !showPlayView)"
+        @click="() => (displayStore.showPlayView = !displayStore.showPlayView)"
       >
         <template #loading>
           <Icon icon="pepicons-pop:music-note-double" width="25" height="25" />
@@ -43,7 +42,7 @@ const showRight = ref(false);
         <template #error>
           <Icon icon="pepicons-pop:music-note-double" width="25" height="25" />
         </template>
-      </van-image>
+      </LoadImage>
       <div class="flex flex-col justify-center w-[140px]">
         <span class="text-base text-[--van-text-color] truncate">
           {{ playingSong.name }}
@@ -161,12 +160,12 @@ const showRight = ref(false);
         width="22px"
         height="22px"
         class="cursor-pointer van-haptics-feedback text-gray-400 hover:text-[--van-text-color]"
-        @click="() => (showRight = !showRight)"
+        @click="() => (showPlayingPlaylist = !showPlayingPlaylist)"
       />
     </div>
   </div>
   <van-popup
-    v-model:show="showRight"
+    v-model:show="showPlayingPlaylist"
     position="right"
     :style="{ width: '200px', height: '100%' }"
   >

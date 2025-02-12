@@ -37,17 +37,17 @@ watch(height, (h) => {
 </script>
 
 <template>
-  <!-- <van-overlay :show="show" @click="show = false" class="z-[999]"> -->
+  <!-- <van-overlay :show="show" @click="show = false" class="z-[1001]"> -->
   <van-floating-panel
     v-model:height="height"
     title="播放列表"
     :anchors="anchors"
-    :content-draggable="false"
+    :content-draggable="true"
     teleport="body"
     class="pb-[110px] z-[1001]"
     @click.stop
   >
-    <van-cell-group class="flex flex-col px-4 h-full overflow-y-auto">
+    <div class="flex flex-col px-4">
       <div class="flex select-none pb-2">
         <div class="playMode">
           <div
@@ -82,7 +82,7 @@ watch(height, (h) => {
           @play="() => onPlay(song)"
         ></MobileSongCard>
       </div>
-    </van-cell-group>
+    </div>
   </van-floating-panel>
   <!-- </van-overlay> -->
 </template>

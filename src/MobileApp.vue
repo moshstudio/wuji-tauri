@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import { Window } from '@tauri-apps/api/window';
+import { exit_app, set_status_bar } from 'tauri-plugin-commands-api';
 import { useBookShelfStore, useBookStore, useDisplayStore } from './store';
 import { onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { router } from './router';
-import { showConfirmDialog, showToast } from 'vant';
+import { showConfirmDialog, showNotify, showToast } from 'vant';
 
 const displayStore = useDisplayStore();
 const bookStore = useBookStore();
@@ -53,6 +54,26 @@ watch(
   }
 );
 
+watch(
+  [() => displayStore.isDark, () => route.path],
+  () => {
+    const path = route.name;
+    if (path === 'BookRead') {
+      set_status_bar('#000000');
+    } else {
+      if (displayStore.isDark) {
+        set_status_bar('#000000');
+      } else {
+        set_status_bar('#80424242');
+      }
+    }
+  },
+  {
+    immediate: true,
+  }
+);
+
+//移动版是没有home页面的
 onMounted(() => {
   setTimeout(() => {
     if (route.path.startsWith('/home')) {
@@ -61,6 +82,8 @@ onMounted(() => {
     }
   }, 300);
 });
+
+// 同步更新tabbar的目标
 onMounted(() => {
   setTimeout(() => {
     // 获取当前页面的 key
@@ -71,6 +94,7 @@ onMounted(() => {
     activeKey.value = currentPageKey !== -1 ? currentPageKey : 0;
   }, 500);
 });
+// 更新showtabbar
 const showTabBar = ref(true);
 onMounted(() => {
   setTimeout(() => {
@@ -85,15 +109,41 @@ onMounted(() => {
     );
   }, 1000);
 });
+
+// 安卓返回的回调
 const backTs = ref(Date.now());
 window.androidBackCallback = async () => {
+  const checkBack = async () => {
+    const now = Date.now();
+    if (now - backTs.value > 1000) {
+      backTs.value = now;
+      showToast('再按一次退出');
+    } else {
+      await exit_app();
+    }
+  };
   const path = route.name?.toString();
   if (path === 'PhotoDetail') {
     router.push({ name: 'Photo' });
   } else if (path === 'SongPlaylist') {
-    router.push({ name: 'Song' });
+    if (displayStore.showPlayingPlaylist) {
+      // 关闭播放列表
+      displayStore.showPlayingPlaylist = false;
+    } else if (displayStore.showPlayView) {
+      // 关闭播放页
+      displayStore.showPlayView = false;
+    } else if (displayStore.showSongShelf) {
+      displayStore.showSongShelf = false;
+    } else {
+      router.push({ name: 'Song' });
+    }
   } else if (path === 'BookDetail') {
-    router.push({ name: 'Book' });
+    if (displayStore.showBookShelf) {
+      // 关闭书架
+      displayStore.showBookShelf = false;
+    } else {
+      router.push({ name: 'Book' });
+    }
   } else if (path === 'BookRead') {
     if (bookStore.readingBook) {
       if (!bookShelfStore.isBookInShelf(bookStore.readingBook)) {
@@ -116,20 +166,32 @@ window.androidBackCallback = async () => {
     }
     displayStore.showTabBar = true;
     router.push({ name: 'Book' });
-  } else if (
-    !path ||
-    path === 'Home' ||
-    path === 'Photo' ||
-    path === 'Book' ||
-    path === 'Song'
-  ) {
-    const now = Date.now();
-    if (now - backTs.value > 1000) {
-      backTs.value = now;
-      showToast('再按一次退出');
+  } else if (path === 'Photo') {
+    if (displayStore.showPhotoShelf) {
+      displayStore.showPhotoShelf = false;
     } else {
-      Window.getCurrent()?.destroy();
+      await checkBack();
     }
+  } else if (path === 'Song') {
+    if (displayStore.showPlayingPlaylist) {
+      // 关闭播放列表
+      displayStore.showPlayingPlaylist = false;
+    } else if (displayStore.showPlayView) {
+      // 关闭播放页
+      displayStore.showPlayView = false;
+    } else if (displayStore.showSongShelf) {
+      displayStore.showSongShelf = false;
+    } else {
+      await checkBack();
+    }
+  } else if (path === 'Book') {
+    if (displayStore.showBookShelf) {
+      displayStore.showBookShelf = false;
+    } else {
+      await checkBack();
+    }
+  } else if (!path || path === 'Home') {
+    await checkBack();
   } else {
     showToast(`未定义的返回路径 ${route.path}`);
   }

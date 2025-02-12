@@ -200,11 +200,9 @@ pub async fn fetch<R: Runtime>(
             let mut builder = reqwest::ClientBuilder::new();
 
             if !verify.unwrap_or(true) {
-                println!("unverify request {:?}", url.clone());
                 builder = builder.danger_accept_invalid_certs(true);
                 builder = builder.danger_accept_invalid_hostnames(true);
             } else {
-                println!("verify request {:?}", url.clone());
             }
 
             if let Some(timeout) = connect_timeout {
@@ -227,7 +225,8 @@ pub async fn fetch<R: Runtime>(
             // {
             //     builder = builder.cookie_provider(state.cookies_jar.clone());
             // }
-            builder = builder.cookie_provider(state.cookies_jar.clone());
+            // builder = builder.cookie_provider(state.cookies_jar.clone());
+            // 暂不使用cookie保存
 
             let mut request = builder.build()?.request(method.clone(), url);
 

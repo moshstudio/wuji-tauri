@@ -26,10 +26,6 @@ const readingPagedContent = defineModel('readingPagedContent', {
 const readingContent = defineModel('readingContent', {
   type: String,
 });
-const showBookShelf = defineModel('showBookShelf', {
-  type: Boolean,
-  required: true,
-});
 const showChapters = defineModel('showChapters', {
   type: Boolean,
   required: true,
@@ -46,13 +42,12 @@ const showNavBar = defineModel('showNavBar', {
 const emit = defineEmits<{
   (e: 'back', checkShelf?: boolean): void;
   (e: 'loadData'): void;
-  (e: 'loadChapter', chapter: BookChapter): void;
+  (e: 'toChapter', chapter: BookChapter): void;
   (e: 'prevChapter'): void;
   (e: 'nextChapter'): void;
   (e: 'openChapterPopup'): void;
 }>();
 
-const displayStore = useDisplayStore();
 const bookStore = useBookStore();
 
 let savedScrollPosition = 0;
@@ -116,22 +111,26 @@ onMounted(() => {
       </template>
     </NavBar>
     <div
-      class="scroll-container flex h-full overflow-y-auto min-w-[400px] w-[95%] sm:w-[90%] md:w-[75%] lg:w-[60%] bg-gray-50/50 dark:bg-gray-950/50"
+      class="scroll-container flex h-full overflow-y-auto min-w-[400px] w-[95%] sm:w-[90%] md:w-[75%] lg:w-[60%]"
     >
       <div
         id="read-content"
         class="pt-[80px] relative overflow-y-auto p-4 text-justify leading-[1.8] text-[--van-text-color]"
-        :style="{ fontSize: bookStore.fontSize + 'px' }"
+        :style="{
+          fontSize: bookStore.fontSize + 'px',
+          color: bookStore.currTheme.color,
+          backgroundColor: bookStore.currTheme.bgColor,
+          textDecoration: bookStore.underline
+            ? 'underline solid 0.5px'
+            : 'none',
+          textUnderlineOffset: bookStore.underline ? '6px' : 'none',
+        }"
         v-if="readingContent"
       ></div>
       <div
-        class="read-sidebar absolute right-[8px] bottom-[8px] flex flex-col gap-1 opacity-0 sm:opacity-100 hover:opacity-100"
+        class="read-sidebar absolute right-[8px] bottom-[8px] flex flex-col gap-1 opacity-80 sm:opacity-100 hover:opacity-100"
       >
-        <BookShelfButton
-          :book="book"
-          mode="square"
-          @show-shelf="showBookShelf = true"
-        ></BookShelfButton>
+        <BookShelfButton :book="book" mode="square"></BookShelfButton>
         <van-button
           icon="bars"
           square
@@ -153,7 +152,6 @@ onMounted(() => {
         <van-button
           icon="arrow-down"
           square
-          plain
           type="primary"
           size="small"
           class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
@@ -205,7 +203,7 @@ onMounted(() => {
           clickable
           @click="
             () => {
-              emit('loadChapter', item);
+              emit('toChapter', item);
               showChapters = false;
             }
           "
@@ -220,12 +218,29 @@ onMounted(() => {
       class="setting-dialog bg-black"
     >
       <div class="flex flex-col gap-2 p-2 text-sm">
+        <div>字体和样式</div>
+        <van-cell class="bg-black">
+          <template #title>
+            <span class="text-white">字体大小</span>
+          </template>
+          <template #value>
+            <van-stepper v-model="bookStore.fontSize" min="10" max="40" />
+          </template>
+        </van-cell>
+        <van-cell class="bg-black">
+          <template #title>
+            <span class="text-white">下划线</span>
+          </template>
+          <template #value>
+            <van-switch v-model="bookStore.underline" />
+          </template>
+        </van-cell>
         <div>文字颜色和背景</div>
-        <div class="flex gap-2 overflow-x-auto">
+        <div v-horizontal-scroll class="flex gap-2 flex-nowrap overflow-x-auto">
           <div
             v-for="theme in bookStore.themes"
             :key="JSON.stringify(theme)"
-            class="rounded-full text-center p-2 border-2 w-[40px] h-[40px] cursor-pointer"
+            class="rounded-full text-center p-2 border-2 w-[40px] h-[40px] cursor-pointer shrink-0"
             :class="[
               theme === bookStore.currTheme
                 ? 'border-[var(--van-primary-color)]'
@@ -234,7 +249,10 @@ onMounted(() => {
             :style="{
               backgroundColor: theme.bgColor,
               color: theme.color,
-              textDecorationLine: theme.underLine ? 'underline' : 'none',
+              textDecoration: bookStore.underline
+                ? 'underline solid 0.5px'
+                : 'none',
+              textUnderlineOffset: bookStore.underline ? '6px' : 'none',
             }"
             @click="bookStore.currTheme = theme"
           >
@@ -243,7 +261,7 @@ onMounted(() => {
         </div>
       </div>
     </van-dialog>
-    <BookShelf v-model:show="showBookShelf"></BookShelf>
+    <BookShelf></BookShelf>
   </div>
 </template>
 

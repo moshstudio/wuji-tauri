@@ -41,6 +41,7 @@ const onPause = () => {
   >
     <SongCardPhoto
       :url="song.picUrl"
+      :headers="song.picHeaders"
       :is-hover="playButtonVisible"
       :is-playing-song="isPlayingSong"
       :is-playing="songStore.isPlaying"

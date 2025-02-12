@@ -3,13 +3,14 @@ import _ from 'lodash';
 import WinPhotoShelf from '../windowsView/photo/PhotoShelf.vue';
 import MobilePhotoShelf from '../mobileView/photo/PhotoShelf.vue';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
-import { usePhotoShelfStore } from '@/store';
+import { useDisplayStore, usePhotoShelfStore } from '@/store';
 import { onMounted, onUnmounted, ref, triggerRef, watch } from 'vue';
 import { PhotoItem, PhotoShelf } from '@/extensions/photo';
+import { storeToRefs } from 'pinia';
 
-const show = defineModel('show', { type: Boolean, default: false });
-
+const displayStore = useDisplayStore();
 const shelfStore = usePhotoShelfStore();
+const { showPhotoShelf } = storeToRefs(displayStore);
 
 const activeIndex = ref(0);
 const selecteMode = ref(false);
@@ -36,13 +37,11 @@ const shelfAnchors = ref([0, Math.round(window.innerHeight)]);
 const shelfHeight = ref(0);
 const hidePanel = () => {
   shelfHeight.value = shelfAnchors.value[0];
-  console.log(shelfAnchors.value);
-  console.log(shelfHeight.value);
 
-  show.value = false;
+  showPhotoShelf.value = false;
 };
 watch(
-  show,
+  showPhotoShelf,
   (newValue) => {
     if (newValue) {
       shelfHeight.value = shelfAnchors.value[1];
@@ -54,7 +53,7 @@ watch(
 );
 const updateAnchors = () => {
   shelfAnchors.value[1] = Math.round(window.innerHeight);
-  if (show.value) {
+  if (showPhotoShelf.value) {
     shelfHeight.value = shelfAnchors.value[1];
   }
 };
@@ -70,7 +69,6 @@ onUnmounted(() => {
   <PlatformSwitch>
     <template #mobile>
       <MobilePhotoShelf
-        v-model:show="show"
         v-model:selecte-mode="selecteMode"
         v-model:selected-items="selectedItems"
         @delete-selected="deleteSelected"
@@ -81,7 +79,6 @@ onUnmounted(() => {
     </template>
     <template #windows>
       <WinPhotoShelf
-        v-model:show="show"
         v-model:active-index="activeIndex"
         v-model:selecte-mode="selecteMode"
         v-model:selected-items="selectedItems"

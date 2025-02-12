@@ -45,6 +45,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             let state = Http {
                 cookies_jar: std::sync::Arc::new(reqwest::cookie::Jar::default()),
             };
+
             app.manage(state);
 
             Ok(())

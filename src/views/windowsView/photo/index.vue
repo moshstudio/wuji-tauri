@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { useStore } from '@/store';
+import { useDisplayStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import PhotoCard from '@/components/card/PhotoCard.vue';
 import HorizonList from '@/components/HorizonList.vue';
-import SimplePagination from '@/components/SimplePagination.vue';
+import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import PhotoShelf from '@/views/photo/PhotoShelf.vue';
 import { PhotoSource } from '@/types';
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const { photoSources } = storeToRefs(store);
 
 const searchValue = defineModel('searchValue', { type: String, default: '' });
-const showShelf = defineModel('showShelf', { type: Boolean, default: false });
 
 const emit = defineEmits<{
   (e: 'recommend', force?: boolean): void;
@@ -27,7 +27,10 @@ const emit = defineEmits<{
     class="w-full h-full overflow-x-hidden overflow-y-auto"
   >
     <van-row justify="center" align="center" class="relative">
-      <div class="absolute right-6 text-button" @click="showShelf = !showShelf">
+      <div
+        class="absolute right-6 text-button"
+        @click="displayStore.showPhotoShelf = true"
+      >
         收藏
       </div>
       <van-search
@@ -71,7 +74,7 @@ const emit = defineEmits<{
         <van-divider :style="{ margin: '8px 0px' }" />
       </template>
     </div>
-    <PhotoShelf v-model:show="showShelf"></PhotoShelf>
+    <PhotoShelf></PhotoShelf>
   </div>
 </template>
 

@@ -38,6 +38,8 @@
     "core:window:allow-set-min-size",
     "core:window:allow-destroy",
     "core:window:allow-hide",
-    "core:window:allow-get-all-windows"
+    "core:window:allow-get-all-windows",
+    "commands:default",
+    "log:allow-log"
   ]
 }

@@ -127,9 +127,10 @@ abstract class Extension {
         const latestUpdateE = element.querySelector(latestUpdate)?.textContent;
 
         const urlE = element.querySelector(url)?.getAttribute('href');
+        if (!titleE) continue;
         list.push({
           id: urlE || this.nanoid(),
-          title: titleE || '',
+          title: titleE,
           intro: introE || undefined,
           cover: coverE || undefined,
           author: authorE || undefined,
@@ -165,21 +166,24 @@ abstract class Extension {
           img?.getAttribute('data-original') ||
           img?.getAttribute('data-src') ||
           img?.getAttribute('src');
-        const titleE = element.querySelector(title)?.textContent;
+        const titleE =
+          element.querySelector(title)?.textContent ||
+          element.querySelector(title)?.getAttribute('title');
         const descE = element.querySelector(desc)?.textContent;
         const authorE = element.querySelector(author)?.textContent;
         const datetimeE = element.querySelector(datetime)?.textContent;
         const hotE = element.querySelector(hot)?.textContent;
         const viewE = element.querySelector(view)?.textContent;
         const urlE = element.querySelector(url)?.getAttribute('href');
+        if (!titleE) continue;
         list.push({
-          id: urlE || this.nanoid(),
-          title: titleE || '',
-          desc: descE || undefined,
-          cover: coverE || '',
-          author: authorE || undefined,
-          datetime: datetimeE || undefined,
-          hot: hotE || undefined,
+          id: urlE?.trim() || this.nanoid(),
+          title: titleE?.trim() || '',
+          desc: descE?.trim() || undefined,
+          cover: coverE?.trim() || '',
+          author: authorE?.trim() || undefined,
+          datetime: datetimeE?.trim() || undefined,
+          hot: hotE?.trim() || undefined,
           view: Number(viewE) || undefined,
           url: this.urlJoin(this.baseUrl, urlE || null),
           sourceId: '',

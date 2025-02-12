@@ -4,17 +4,17 @@ import WinPhotoList from '@/views/windowsView/photo/index.vue';
 import MobilePhotoList from '@/views/mobileView/photo/index.vue';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
 import { ref, onMounted } from 'vue';
-import { useStore } from '@/store';
+import { useDisplayStore, useStore } from '@/store';
 import { PhotoSource } from '@/types';
 import { showLoadingToast } from 'vant';
 import { debounce } from 'lodash';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const { photoSources } = storeToRefs(store);
 
 const searchValue = ref('');
-const showShelf = ref(false);
 
 const recommend = createCancellableFunction(async (force: boolean = false) => {
   await Promise.all(
@@ -28,8 +28,9 @@ const recommend = createCancellableFunction(async (force: boolean = false) => {
 
 const search = createCancellableFunction(async () => {
   const keyword = searchValue.value;
+  const t = displayStore.showToast();
   if (!keyword) {
-    return recommend(true);
+    await recommend(true);
   } else {
     await Promise.all(
       photoSources.value.map(async (source) => {
@@ -37,6 +38,7 @@ const search = createCancellableFunction(async () => {
       })
     );
   }
+  displayStore.closeToast(t);
 });
 
 const pageChange = debounce(
@@ -69,7 +71,6 @@ const openBaseUrl = async (source: PhotoSource) => {
     <template #mobile>
       <MobilePhotoList
         v-model:search-value="searchValue"
-        v-model:show-shelf="showShelf"
         @search="search"
         @page-change="pageChange"
         @open-base-url="openBaseUrl"
@@ -79,7 +80,6 @@ const openBaseUrl = async (source: PhotoSource) => {
     <template #windows>
       <WinPhotoList
         v-model:search-value="searchValue"
-        v-model:show-shelf="showShelf"
         @search="search"
         @page-change="pageChange"
         @open-base-url="openBaseUrl"

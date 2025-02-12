@@ -1,8 +1,11 @@
+import { warn, debug, trace, info, error } from '@tauri-apps/plugin-log';
 import { ArtistInfo } from '@/extensions/song';
 import { ClientOptions, fetch } from '@/utils/fetch';
 import { onBeforeUnmount, onMounted } from 'vue';
 export * from './extensionUtils';
 
+export const DEFAULT_SOURCE_URL =
+  'https://wuji.s3.bitiful.net/wuji%2Fdefault_source.json';
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -224,4 +227,23 @@ export function useElementResize(
       resizeObserver.disconnect(); // 清理观察器
     }
   });
+}
+
+export function forwardConsoleLog() {
+  function forwardConsole(
+    fnName: 'log' | 'debug' | 'info' | 'warn' | 'error',
+    logger: (message: string) => Promise<void>
+  ) {
+    const original = console[fnName];
+    console[fnName] = (...args: any[]) => {
+      original(...args);
+      logger(JSON.stringify(args));
+    };
+  }
+
+  forwardConsole('log', trace);
+  forwardConsole('debug', debug);
+  forwardConsole('info', info);
+  forwardConsole('warn', warn);
+  forwardConsole('error', error);
 }
