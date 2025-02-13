@@ -11,7 +11,7 @@ const emit = defineEmits<{
     placeholder="请输入搜索关键词"
     left-icon=""
     shape="round"
-    autofocus
+    :autofocus="false"
     @click-right-icon="() => emit('search', searchValue)"
     @search="() => emit('search', searchValue)"
     @clear="

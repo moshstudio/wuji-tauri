@@ -123,7 +123,7 @@ const emit = defineEmits<{
       </van-tabs>
       <SongShelf></SongShelf>
     </div>
-    <WinSongBar v-model:show-play-view="showPlayView"></WinSongBar>
+    <WinSongBar></WinSongBar>
   </div>
 </template>
 

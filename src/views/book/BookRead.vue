@@ -29,6 +29,7 @@ const { chapterId, bookId, sourceId, isPrev } = defineProps({
 });
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const bookStore = useBookStore();
 const shelfStore = useBookShelfStore();
 
@@ -47,6 +48,7 @@ const showBookShelf = ref(false);
 const showNavBar = ref(true);
 
 async function back(checkShelf: boolean = false) {
+  displayStore.showTabBar = true;
   if (checkShelf && book.value) {
     if (!shelfStore.isBookInShelf(book.value)) {
       try {

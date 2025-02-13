@@ -1,3 +1,4 @@
+import { showNotify } from 'vant';
 import { SongExtension } from '.';
 
 class TestSongExtension extends SongExtension {
@@ -206,15 +207,19 @@ class TestSongExtension extends SongExtension {
       }
     );
     const json = await response.json();
+
     const data = json.data;
     let audioList = data['dash']['audio'].slice(); // 使用 slice() 创建数组的副本
+
     // 排序，取带宽最大的音质最高
     audioList.sort((a, b) => b['bandwidth'] - a['bandwidth']);
 
     return {
       '128k': audioList[0]['baseUrl'],
       lyric: json.data.lrc,
-      headers: { referer: this.baseUrl },
+      headers: {
+        referer: this.baseUrl,
+      },
     };
   }
   async getLyric(item) {

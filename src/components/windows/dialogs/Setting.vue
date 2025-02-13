@@ -34,6 +34,7 @@ const clearData = () => {
   </van-dialog>
   <van-action-sheet
     v-model:show="showConfirmClearData"
+    teleport="body"
     cancel-text="取消"
     :actions="[
       { name: '确认清空数据?', color: '#ee0a24', callback: clearData },

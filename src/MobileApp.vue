@@ -3,7 +3,7 @@ import { storeToRefs } from 'pinia';
 import { Window } from '@tauri-apps/api/window';
 import { exit_app, set_status_bar } from 'tauri-plugin-commands-api';
 import { useBookShelfStore, useBookStore, useDisplayStore } from './store';
-import { onMounted, ref, watch } from 'vue';
+import { nextTick, onBeforeMount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { router } from './router';
 import { showConfirmDialog, showNotify, showToast } from 'vant';
@@ -15,9 +15,8 @@ const bookShelfStore = useBookShelfStore();
 const activeKey = ref(0);
 const route = useRoute();
 
-const photoPath = ref('/photo');
-const songPath = ref('/song');
-const bookPath = ref('/book');
+const { photoPath, songPath, bookPath } = storeToRefs(displayStore);
+
 const pages = ref([
   {
     name: 'Photo',
@@ -40,6 +39,7 @@ const pages = ref([
 watch(
   () => route.path,
   (newPath) => {
+    displayStore.routerCurrPath = newPath;
     if (newPath.startsWith('/photo')) {
       photoPath.value = newPath;
       activeKey.value = 0;
@@ -75,12 +75,9 @@ watch(
 
 //移动版是没有home页面的
 onMounted(() => {
-  setTimeout(() => {
-    if (route.path.startsWith('/home')) {
-      router.replace('/photo');
-      activeKey.value = 0;
-    }
-  }, 300);
+  nextTick(async () => {
+    router.replace(photoPath.value);
+  });
 });
 
 // 同步更新tabbar的目标

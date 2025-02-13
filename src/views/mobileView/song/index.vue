@@ -69,7 +69,13 @@ const onRefresh = async () => {
       @refresh="onRefresh"
       class="main grow overflow-x-hidden overflow-y-auto"
     >
-      <van-tabs v-model:active="activeTabIndex" shrink sticky offset-top="50px">
+      <van-tabs
+        v-model:active="activeTabIndex"
+        shrink
+        sticky
+        swipeable
+        offset-top="50px"
+      >
         <van-tab
           v-for="item in songSources.filter((s) => s.playlist || s.songList)"
           :key="item.item.id"
@@ -139,7 +145,7 @@ const onRefresh = async () => {
       
     </main> -->
     <footer>
-      <MobileSongBar v-model:show-play-view="showPlayView"></MobileSongBar>
+      <MobileSongBar></MobileSongBar>
     </footer>
     <SongShelf></SongShelf>
   </div>

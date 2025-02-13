@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, Ref, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, Ref, ref, watch } from 'vue';
 import { useStore, useDisplayStore } from './store';
 import { Icon } from '@iconify/vue';
 import { useRoute } from 'vue-router';
@@ -9,6 +9,8 @@ import ManageSubscribeDialog from './components/windows/dialogs/ManageSubscribe.
 import AboutDialog from '@/components/dialogs/About.vue';
 import SettingDialog from './components/windows/dialogs/Setting.vue';
 import { TrayIcon } from '@tauri-apps/api/tray';
+import { storeToRefs } from 'pinia';
+import { router } from './router';
 
 interface PageItem {
   name: string;
@@ -21,9 +23,7 @@ const store = useStore();
 const displayStore = useDisplayStore();
 
 const homePath = ref('/home');
-const photoPath = ref('/photo');
-const songPath = ref('/song');
-const bookPath = ref('/book');
+const { photoPath, songPath, bookPath } = storeToRefs(displayStore);
 const pages = ref<PageItem[]>([
   {
     name: 'Home',
@@ -97,6 +97,7 @@ const onClickAction = (action: { text: string; onClick: Function }) =>
 watch(
   () => route.path,
   (newPath) => {
+    displayStore.routerCurrPath = newPath;
     if (newPath.startsWith('/home')) {
       activeKey.value = '0';
     } else if (newPath.startsWith('/photo')) {

@@ -935,15 +935,20 @@ export const useDisplayStore = defineStore('display', () => {
   const toastActive = ref(false);
   const toastId = ref('');
 
-  const photoCollapse = useStorage('photoCollapse', []);
-  const songCollapse = useStorage('songCollapse', []);
-  const bookCollapse = useStorage('bookCollapse', []);
+  const photoCollapse = useStorageAsync('photoCollapse', []);
+  const songCollapse = useStorageAsync('songCollapse', []);
+  const bookCollapse = useStorageAsync('bookCollapse', []);
 
-  const showPhotoShelf = useStorage('showPhotoShelf', false);
-  const showSongShelf = useStorage('showSongShelf', false);
-  const showBookShelf = useStorage('showBookShelf', false);
-  const showPlayView = useStorage('showPlayView', false);
-  const showPlayingPlaylist = useStorage('showPlayingPlaylist', false);
+  const routerCurrPath = useStorageAsync('routerCurrPath', '/');
+  const photoPath = useStorageAsync('photoPath', '/photo');
+  const songPath = useStorageAsync('songPath', '/song');
+  const bookPath = useStorageAsync('bookPath', '/book');
+
+  const showPhotoShelf = useStorageAsync('showPhotoShelf', false);
+  const showSongShelf = useStorageAsync('showSongShelf', false);
+  const showBookShelf = useStorageAsync('showBookShelf', false);
+  const showPlayView = useStorageAsync('showPlayView', false);
+  const showPlayingPlaylist = useStorageAsync('showPlayingPlaylist', false);
 
   const showToast = () => {
     toastActive.value = true;
@@ -995,6 +1000,11 @@ export const useDisplayStore = defineStore('display', () => {
     photoCollapse,
     songCollapse,
     bookCollapse,
+
+    routerCurrPath,
+    photoPath,
+    songPath,
+    bookPath,
 
     showPhotoShelf,
     showSongShelf,
@@ -1062,18 +1072,26 @@ export const useSongStore = defineStore('song', () => {
   const volumeVisible = ref<boolean>(false); // 设置音量弹窗
   const audioRef = ref<HTMLAudioElement>(); // 音频标签对象
 
-  const playlist = useStorage<SongInfo[]>('songPlaylist', []);
-  const playingPlaylist = useStorage<SongInfo[]>('songPlayingPlaylist', []); // 当前播放列表
-  const playingSong = useStorage<SongInfo>('songPlayingSong', null, undefined, {
-    serializer: {
-      read: (raw: string) => {
-        return JSON.parse(raw);
+  const playlist = useStorageAsync<SongInfo[]>('songPlaylist', []);
+  const playingPlaylist = useStorageAsync<SongInfo[]>(
+    'songPlayingPlaylist',
+    []
+  ); // 当前播放列表
+  const playingSong = useStorageAsync<SongInfo>(
+    'songPlayingSong',
+    null,
+    undefined,
+    {
+      serializer: {
+        read: (raw: string) => {
+          return JSON.parse(raw);
+        },
+        write: (value: SongInfo) => {
+          return JSON.stringify(value);
+        },
       },
-      write: (value: SongInfo) => {
-        return JSON.stringify(value);
-      },
-    },
-  }); // 当前播放
+    }
+  ); // 当前播放
 
   const audioDuration = ref(0); // 音频总时长
   const audioCurrent = ref(0); // 音频当前播放时间
@@ -1200,9 +1218,11 @@ export const useSongStore = defineStore('song', () => {
 
       try {
         if (headers) {
-          const response = await fetch(src, { headers });
+          const response = await fetch(src, { headers, verify: false });
           const blob = await response.blob();
-          const blobUrl = URL.createObjectURL(blob);
+          const blobUrl = URL.createObjectURL(
+            new Blob([blob], { type: blob.type || 'audio/mpeg' })
+          );
           audioRef.value.src = blobUrl;
         } else {
           audioRef.value.src = src;
