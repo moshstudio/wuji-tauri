@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { PhotoItem } from '@/extensions/photo';
 import { router } from '@/router';
-import { onMounted, ref } from 'vue';
+import { onMounted, PropType, ref } from 'vue';
 import LoadImage from '../LoadImage.vue';
 import { PhotoSource } from '@/types';
 import { useDisplayStore, useStore } from '@/store';
 
 const { item, selecteMode } = defineProps({
   item: {
-    type: Object as () => PhotoItem,
+    type: Object as PropType<PhotoItem>,
     required: true,
   },
   selecteMode: {

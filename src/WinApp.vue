@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, Ref, ref, watch } from 'vue';
+import {
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  Ref,
+  ref,
+  VNode,
+  watch,
+} from 'vue';
 import { useStore, useDisplayStore } from './store';
 import { Icon } from '@iconify/vue';
 import { useRoute } from 'vue-router';
@@ -18,6 +26,10 @@ interface PageItem {
   selectedIcon: string;
   to: Ref;
 }
+
+const { routerView } = defineProps<{
+  routerView: VNode;
+}>();
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -215,11 +227,12 @@ onBeforeUnmount(async () => {
       </div>
       <transition name="slide">
         <div class="content grow w-full h-full overflow-hidden">
-          <router-view v-slot="{ Component }">
+          <Component :is="routerView" />
+          <!-- <router-view v-slot="{ Component }">
             <keep-alive>
               <component :is="Component" />
             </keep-alive>
-          </router-view>
+          </router-view> -->
         </div>
       </transition>
     </div>

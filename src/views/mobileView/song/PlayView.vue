@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, CSSProperties, PropType } from 'vue';
-import { useSongShelfStore, useSongStore } from '@/store';
+import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import { Icon } from '@iconify/vue';
 import { Lyric } from '@/utils/lyric';
@@ -59,15 +59,15 @@ const addSongToShelf = (shelfId: string) => {
         }
       }
     "
-    class="absolute z-[1000] left-[0px] right-[0px] w-auto rounded-none up-shadow bottom-[110px] overflow-hidden playing-bg"
+    class="absolute z-[1000] left-[0px] right-[0px] w-auto h-full rounded-none up-shadow bottom-[110px] overflow-hidden playing-bg"
     :style="show ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
-      <van-row class="p-4">
+      <van-row class="absolute p-4 z-[1001]">
         <van-icon
           name="arrow-left"
           class="text-white van-haptics-feedback"
-          @click="() => (show = false)"
+          @click.self="() => (show = false)"
         />
       </van-row>
     </template>
@@ -185,6 +185,7 @@ const addSongToShelf = (shelfId: string) => {
       :show-confirm-button="false"
       teleport="body"
       show-cancel-button
+      v-if="songStore.playingSong"
     >
     </SongSelectShelfSheet>
   </van-floating-panel>
@@ -245,7 +246,9 @@ const addSongToShelf = (shelfId: string) => {
   height: 100%;
   perspective: 10000px;
   cursor: pointer;
-  transition: transform 0.6s;
+  transform-style: preserve-3d; /* 确保子元素在 3D 空间内渲染 */
+  position: relative; /* 确保子元素的绝对定位相对于此容器 */
+  will-change: transform; /* 优化渲染性能 */
   overflow: hidden;
 }
 
@@ -263,6 +266,9 @@ const addSongToShelf = (shelfId: string) => {
   height: 100%;
   position: absolute;
   backface-visibility: hidden;
+  transition: transform 0.6s;
+  clip-path: inset(0 0 0 0); /* 裁剪内容 */
+  transform: translateZ(1px); /* 强制分层 */
 }
 
 .front {
@@ -270,7 +276,6 @@ const addSongToShelf = (shelfId: string) => {
   justify-content: center;
   align-items: center;
   transform: rotateY(0deg);
-  transition: transform 0.6s;
 }
 
 .back {
@@ -278,6 +283,5 @@ const addSongToShelf = (shelfId: string) => {
   justify-content: center;
   align-items: start;
   transform: rotateY(-180deg);
-  transition: transform 0.6s;
 }
 </style>

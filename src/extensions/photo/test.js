@@ -4,112 +4,71 @@ class TestPhotoExtension extends PhotoExtension {
   id = 'testPhoto';
   name = 'ceshi';
   version = '0.0.1';
-  baseUrl = 'https://clickme.net/';
+  baseUrl = 'https://meirentu.cc/';
 
-  async getRecommendList(pageNo) {
-    pageNo ||= 1;
-    let url = `https://api.clickme.net/article/list?key=clickme`;
-    try {
-      const formData = new FormData();
-      for (const [key, value] of new Map([
-        ['articleType', 'article'],
-        ['subtype', 'category'],
-        ['subtypeSlug', 'beauty'],
-        ['device', ''],
-        ['limit', '18'],
-        ['page', pageNo],
-      ]).entries()) {
-        formData.append(key, value);
-      }
-
-      const response = await this.fetch(url, {
-        method: 'POST',
-        body: formData,
-      });
-      const json = await response.json();
-      if (json.hasError) return null;
-
-      return {
-        list: json.data.items.map((item) => {
-          return {
-            id: item.articleIndex,
-            title: item.title,
-            url: item.url,
-            cover: item.thumbnail,
-            coverHeaders: { Referer: this.baseUrl },
-            datetime: item.date,
-            view: item.visitedCount,
-            sourceId: '',
-          };
-        }),
-        page: pageNo,
-        totalPage: json.data.total_pages,
-      };
-    } catch (error) {
-      console.log(error);
-      return null;
-    }
+  async getRecommendList(pageNo = 1) {
+    const url = `${this.baseUrl}index/${pageNo}.html`;
+    return await this.fetchImages(url, pageNo, 15);
   }
 
-  async search(keyword, pageNo) {
-    pageNo ||= 1;
-    let url = `https://api.clickme.net/article/list?key=clickme`;
-    try {
-      const formData = new FormData();
-      for (const [key, value] of new Map([
-        ['articleType', 'article'],
-        ['subtype', 'search'],
-        ['subtypeSlug', keyword],
-        ['device', ''],
-        ['limit', '18'],
-        ['page', pageNo],
-      ]).entries()) {
-        formData.append(key, value);
-      }
-
-      const response = await this.fetch(url, {
-        method: 'POST',
-        body: formData,
-      });
-      const json = await response.json();
-      if (json.hasError) return null;
-      return {
-        list: json.data.items.map((item) => {
-          return {
-            id: item.articleIndex,
-            title: item.title,
-            url: item.url,
-            cover: item.thumbnail,
-            coverHeaders: { Referer: this.baseUrl },
-            datetime: item.date,
-            view: item.visitedCount,
-            sourceId: '',
-          };
-        }),
-        page: pageNo,
-        totalPage: json.data.total_pages,
-      };
-    } catch (error) {
-      console.log(error);
-      return null;
-    }
+  async search(keyword, pageNo = 1) {
+    const url = `${this.baseUrl}s/${keyword}-${pageNo}.html`;
+    return await this.fetchImages(url, pageNo);
   }
-  async getPhotoDetail(item, pageNo) {
-    try {
-      const document = await this.fetchDom(item.url);
-      const imgs = document.querySelectorAll('.article-detail-content img');
-      const imgItems = Array.from(imgs).map((img) => img.getAttribute('src'));
-      return {
-        item,
-        photos: imgItems,
-        photosHeaders: { referer: this.baseUrl },
-        page: 1,
-        totalPage: 1,
+
+  async fetchImages(url, pageNo, totalPage) {
+    const body = await this.fetchDom(url, {
+      headers: { 'upgrade-insecure-requests': '1' },
+      verify: false,
+      connectTimeout: 6000,
+    });
+
+    const list = await this.queryPhotoElements(body, {
+      element: '.update_area_content li',
+      cover: 'img',
+      title: '.meta-title',
+      datetime: 'meta-post span',
+      hot: '.cx_like span',
+      url: 'a',
+    });
+    list.forEach((item) => {
+      item.coverHeaders = {
+        referer: this.baseUrl,
       };
-    } catch (error) {
-      console.log(error);
-      return null;
+    });
+    if (!list.length) return null;
+
+    const pageElements = body.querySelectorAll('.page a');
+    return {
+      list,
+      page: pageNo,
+      totalPage: totalPage || this.maxPageNoFromElements(pageElements),
+    };
+  }
+
+  async getPhotoDetail(item, pageNo = 1) {
+    if (!item.url || item.url.length < 5) return null;
+    const url = item.url.substring(0, item.url.length - 5) + `-${pageNo}.html`;
+    const body = await this.fetchDom(url);
+    const elements = body.querySelectorAll('.content img');
+    const photos = [];
+    for (const element of elements) {
+      const src = element.getAttribute('src');
+      if (src) {
+        photos.push(src);
+      }
     }
+    const pageElements = body.querySelectorAll('.page a');
+    return {
+      item,
+      photos,
+      photosHeaders: {
+        referer: url,
+      },
+      page: pageNo,
+      totalPage: this.maxPageNoFromElements(pageElements),
+      sourceId: '',
+    };
   }
 }
 

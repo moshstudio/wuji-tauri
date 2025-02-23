@@ -73,7 +73,7 @@ watch(
         v-for="(item, index) in source.list"
         :key="index"
       >
-        <div class="absolute transform -translate-y-9 right-0">
+        <div class="pl-2 pt-1">
           <SimplePagination
             v-model="item.page"
             :page-count="item.totalPage"

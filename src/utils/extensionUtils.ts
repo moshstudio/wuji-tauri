@@ -2,7 +2,8 @@ import { showNotify } from 'vant';
 
 export function toProxyUrl(url?: string | undefined | null): string {
   if (!url) return '';
-  return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+  return url;
+  // return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
 }
 export function maxPageNoFromElements(
   elements?: NodeListOf<Element> | null

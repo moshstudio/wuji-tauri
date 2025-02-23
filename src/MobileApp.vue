@@ -1,12 +1,24 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
-import { Window } from '@tauri-apps/api/window';
 import { exit_app, set_status_bar } from 'tauri-plugin-commands-api';
 import { useBookShelfStore, useBookStore, useDisplayStore } from './store';
-import { nextTick, onBeforeMount, onMounted, ref, watch } from 'vue';
+import {
+  nextTick,
+  onBeforeMount,
+  onMounted,
+  ref,
+  RendererElement,
+  RendererNode,
+  VNode,
+  watch,
+} from 'vue';
 import { useRoute } from 'vue-router';
 import { router } from './router';
-import { showConfirmDialog, showNotify, showToast } from 'vant';
+import { showConfirmDialog, showToast } from 'vant';
+
+const { routerView } = defineProps<{
+  routerView: VNode;
+}>();
 
 const displayStore = useDisplayStore();
 const bookStore = useBookStore();
@@ -40,6 +52,9 @@ watch(
   () => route.path,
   (newPath) => {
     displayStore.routerCurrPath = newPath;
+    if (!newPath.startsWith('/book/read/')) {
+      displayStore.showTabBar = true;
+    }
     if (newPath.startsWith('/photo')) {
       photoPath.value = newPath;
       activeKey.value = 0;
@@ -76,7 +91,9 @@ watch(
 //移动版是没有home页面的
 onMounted(() => {
   nextTick(async () => {
-    router.replace(photoPath.value);
+    if (route.path === '/home') {
+      router.replace(photoPath.value);
+    }
   });
 });
 
@@ -199,11 +216,13 @@ window.androidBackCallback = async () => {
   <div class="flex flex-col w-screen h-screen bg-[var(--van-background-2)]">
     <transition name="slide">
       <div class="content flex-1 w-full h-full overflow-hidden">
-        <router-view v-slot="{ Component }">
+        <Component :is="routerView" />
+
+        <!-- <router-view v-slot="{ Component }">
           <keep-alive>
             <component :is="Component" />
           </keep-alive>
-        </router-view>
+        </router-view> -->
       </div>
     </transition>
     <van-tabbar

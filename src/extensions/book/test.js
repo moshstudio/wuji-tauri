@@ -4,159 +4,208 @@ class TestBookExtension extends BookExtension {
   id = 'testBook';
   name = 'testBook';
   version = '0.0.1';
-  baseUrl = 'https://www.qhdbu.com';
+  baseUrl = 'http://sma.yueyouxs.com/';
 
   async getRecommendBooks(pageNo, type) {
+    const prefixUrl = this.urlJoin(this.baseUrl, 'api/book/classify');
     let items = [
       {
-        name: '热门小说',
-        url: this.urlJoin(this.baseUrl, 'top/'),
+        name: '都市人生',
+        id: 1100,
       },
       {
-        name: '总点击榜',
-        url: this.urlJoin(this.baseUrl, 'top/'),
+        name: '玄幻奇幻',
+        id: 1101,
       },
       {
-        name: '月点击榜',
-        url: this.urlJoin(this.baseUrl, 'top/'),
+        name: '仙侠武侠',
+        id: 1102,
       },
       {
-        name: '周点击榜',
-        url: this.urlJoin(this.baseUrl, 'top/'),
+        name: '军事历史',
+        id: 1103,
+      },
+      {
+        name: '科幻末世',
+        id: 1104,
+      },
+      {
+        name: '游戏体育',
+        id: 1105,
+      },
+      {
+        name: '悬疑灵异',
+        id: 1107,
+      },
+      {
+        name: '脑洞大开',
+        id: 1108,
+      },
+      {
+        name: '现代言情',
+        id: 2100,
+      },
+      {
+        name: '古代言情',
+        id: 2101,
+      },
+      {
+        name: '幻想言情',
+        id: 2102,
+      },
+      {
+        name: '穿越时空',
+        id: 2104,
+      },
+      {
+        name: '宫闱争斗',
+        id: 2105,
+      },
+      {
+        name: '豪门总裁',
+        id: 2106,
+      },
+      {
+        name: '婚恋爱情',
+        id: 2107,
+      },
+      {
+        name: '经商种田',
+        id: 2108,
+      },
+      {
+        name: '现实情感',
+        id: 4100,
+      },
+      {
+        name: '世俗百态',
+        id: 4101,
+      },
+      {
+        name: '家庭婚姻',
+        id: 4102,
+      },
+      {
+        name: '热血青春',
+        id: 4103,
+      },
+      {
+        name: '治愈成长',
+        id: 4104,
+      },
+      {
+        name: '奇闻怪谈',
+        id: 4105,
+      },
+      {
+        name: '悬疑脑洞',
+        id: 4106,
+      },
+      {
+        name: '古风言情',
+        id: 4107,
+      },
+      {
+        name: '学习强国',
+        id: 3104,
+      },
+      {
+        name: '文学小说',
+        id: 3102,
+      },
+      {
+        name: '出版读物',
+        id: 3101,
+      },
+      {
+        name: '史家专著',
+        id: 3108,
       },
     ];
     if (!type) {
       return items.map((item) => ({
-        id: item.url,
+        id: prefixUrl + `?site_id=&classify_id=${item.id}`,
         type: item.name,
         list: [],
         page: pageNo,
-        totalPage: 1,
         sourceId: '',
       }));
     }
     const item = items.find((item) => item.name === type);
     if (!item) return null;
+    pageNo = pageNo || 1;
+    let url = prefixUrl + `?site_id=&classify_id=${item.id}&page=${pageNo}`;
 
-    const body = await this.fetchDom(item.url, {
-      referrer: this.baseUrl,
-      headers: {
-        'accept-language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
-      },
-    });
-    if (type == '热门小说') {
-      const list = await this.queryBookElements(body, {
-        element: '#fengtui .bookbox',
-        cover: 'img',
-        title: 'h4 a',
-        intro: '.update',
-        author: '.author a',
-        tags: '.author:nth-of-type(2)',
-        status: '.author .author',
-        url: 'h4 a',
-        latestChapter: '.cat a',
-        latestUpdate: '.author:nth-of-type(3)',
-      });
-      return {
-        list: list,
-        page: pageNo,
-        totalPage: 1,
-      };
-    } else {
-      let q = '#fengyou:nth-of-type(1) li';
-      if (type === '月点击榜') {
-        q = '#fengyou:nth-of-type(2) li';
-      }
-      if (type === '周点击榜') {
-        q = '#fengyou:nth-of-type(3) li';
-      }
-      const list = await this.queryBookElements(body, {
-        element: q,
-        title: 'a',
-        author: 'span a',
-        url: 'a',
-        latestChapter: '.cat a',
-      });
-      return {
-        list: list,
-        page: pageNo,
-        totalPage: 1,
-      };
+    const response = await this.fetch(url);
+    const json = await response.json();
+    if (json.code !== 0) {
+      return null;
     }
+
+    return {
+      list: json.data.list.map((item) => {
+        return {
+          id: item.id,
+          title: item.bookName,
+          intro: item.intro,
+          cover: item.bookPic,
+          author: item.authorName,
+          tags: [item.classifyName, item.classifySecondName],
+          latestChapter: item.latestChapterName,
+          latestUpdate: item.updateTime,
+          extra: { wapBookId: item.wapBookId },
+          sourceId: '',
+        };
+      }),
+      page: pageNo,
+      totalPage: Math.floor(json.data.count / json.data.list.length),
+      type: item.name,
+      sourceId: '',
+    };
   }
 
   async search(keyword, pageNo) {
-    const url = `https://www.jdzwo.com/search.php?searchkey=${keyword}&action=login&submit=&page=${pageNo}`;
-    const body = await this.fetchDom(url, {
-      headers: {
-        'accept-language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
-      },
-    });
-    console.log(body);
-
-    const list = await this.queryBookElements(body, {
-      element: '#fengtui .bookbox',
-      cover: 'img',
-      title: 'h4 a',
-      intro: '.update',
-      author: '.author a',
-      tags: '.author:nth-of-type(2)',
-      status: '.author .author',
-      url: 'h4 a',
-      latestChapter: '.cat a',
-      latestUpdate: '.author:nth-of-type(3)',
-    });
-
-    if (!list.length) {
-      // 直接跳转到了书籍中
-      return {
-        list: (
-          await this.queryBookElements(body, {
-            element: 'html',
-            cover: 'img',
-            title: 'h1',
-            url: "head link[rel='canonical']",
-            intro: '.bookintromore',
-            author: '.booktag a',
-            status: '.booktag span:nth-of-type(2)',
-            latestChapter: '.bookchapter',
-            latestUpdate: '.booktime',
-          })
-        ).filter((item) => item.url),
-        page: pageNo,
-        totalPage: 1,
-      };
+    const url = `${this.baseUrl}api/book/search?keyword=${keyword}&page=${pageNo}`;
+    const response = await this.fetch(url);
+    const json = await response.json();
+    if (json.code !== 0) {
+      return null;
     }
-    const totalPage = this.maxPageNoFromElements(
-      body.querySelectorAll('.pagination a')
-    );
 
     return {
-      list,
+      list: json.data.list.map((item) => {
+        return {
+          id: item.id,
+          title: item.bookName,
+          intro: item.intro,
+          cover: item.bookPic,
+          author: item.authorName,
+          tags: [item.classifyName, item.classifySecondName],
+          latestChapter: item.latestChapterName,
+          latestUpdate: item.updateTime,
+          extra: { wapBookId: item.wapBookId },
+          sourceId: '',
+        };
+      }),
       page: pageNo,
-      totalPage: totalPage,
+      totalPage: Math.floor(json.data.count / json.data.list.length),
+      sourceId: '',
     };
   }
 
   async getBookDetail(item) {
-    console.log(item);
+    const url = `${this.baseUrl}c/${item.extra.wapBookId}.html`;
+    const document = await this.fetchDom(url);
+    const chapterElements = document.querySelectorAll('.catalog_ls li a');
 
-    if (!item.url) return null;
-    const body = await this.fetchDom(item.url, {
-      headers: {
-        'accept-language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
-      },
-    });
-
-    const chapterElements = body.querySelectorAll('#showmore01 a');
     const chapters = [];
-    chapterElements.forEach((element) => {
-      const href = element.getAttribute('href');
+    chapterElements.forEach((a) => {
+      const href = a.getAttribute('href');
       if (!href) {
         return;
       }
       const url = this.urlJoin(this.baseUrl, href);
-      const title = element.textContent;
+      const title = a.textContent.trim();
       chapters.push({
         id: url,
         title: title || '',
@@ -170,15 +219,15 @@ class TestBookExtension extends BookExtension {
   }
 
   async getContent(item, chapter) {
-    if (!chapter.url) return '';
-    const body = await this.fetchDom(chapter.url, {
-      headers: {
-        'accept-language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
-      },
-    });
-    return Array.from(body.querySelectorAll('#TextContent p'))
+    const body = await this.fetchDom(chapter.url);
+    const res = Array.from(body.querySelectorAll('.con p'))
       .map((p) => p.textContent || '')
       .join('\n');
+    // 将 （本章完）|（本章未完，请翻页）|.*书友群.* 使用正则去掉
+    return res.replace(
+      /（本章完）|（本章未完，请翻页）|.*书友群.*|（本章未完，请翻页）/g,
+      ''
+    );
   }
 }
 

@@ -1,26 +1,24 @@
 type CancellableFunction<T, Args extends any[]> = (...args: Args) => Promise<T>;
 
 function createCancellableFunction<T, Args extends any[]>(
-  fn: CancellableFunction<T, Args>
+  fn: (signal: AbortSignal, ...args: Args) => Promise<T>
 ): CancellableFunction<T, Args> {
   let abortController: AbortController | null = null;
 
   return async (...args: Args) => {
     // 如果之前有调用在进行，中断它
-    if (abortController) {
-      abortController.abort();
-    }
+    const temp = abortController;
+    temp?.abort();
 
     // 创建新的 AbortController
     abortController = new AbortController();
-
     const signal = abortController.signal;
 
     try {
       // 将原函数包装为一个支持中断的 Promise
       const result = await new Promise<T>((resolve, reject) => {
         // 执行原函数
-        const originalPromise = fn(...args);
+        const originalPromise = fn(signal, ...args);
 
         // 监听中断信号
         signal.addEventListener('abort', () => {
@@ -33,11 +31,15 @@ function createCancellableFunction<T, Args extends any[]>(
       return result;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
+        // 处理中断错误
+        console.log('操作被中断');
       } else {
+        // 处理其他错误
+        console.error('操作失败:', error);
       }
       throw error;
     } finally {
-      abortController = null;
+      // abortController = null;
     }
   };
 }

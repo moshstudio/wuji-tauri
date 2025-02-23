@@ -69,6 +69,7 @@ const changePage = (params: PickerConfirmEventParams) => {
       destroy-on-close
       round
       position="bottom"
+      teleport="body"
     >
       <van-picker
         title="选择页码"

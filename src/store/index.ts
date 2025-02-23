@@ -18,6 +18,7 @@ import {
 } from '@/types';
 import {
   StorageLikeAsync,
+  useBase64,
   useDark,
   useStorage,
   useStorageAsync,
@@ -41,6 +42,7 @@ import {
 } from 'vue';
 import { Store } from '@tauri-apps/plugin-store';
 import { type as osType } from '@tauri-apps/plugin-os';
+import Database from '@tauri-apps/plugin-sql';
 import { fetch } from '@/utils/fetch';
 import {
   loadSongExtensionString,
@@ -53,12 +55,14 @@ import { SongPlayMode, SongShelfType } from '@/types/song';
 import { ReadTheme } from '@/types/book';
 import { watch } from 'vue';
 import { DEFAULT_SOURCE_URL, sleep, tryCatchProxy } from '@/utils';
+import * as sql from '@/utils/sqlScript';
 import {
   BookChapter,
   BookExtension,
   BookItem,
   BookList,
   BookShelf,
+  BooksList,
   loadBookExtensionString,
 } from '@/extensions/book';
 import { Extension } from '@/extensions/baseExtension';
@@ -74,6 +78,7 @@ export const useStore = defineStore('store', () => {
 
   const subscribeSourceStore = useSubscribeSourceStore();
   const kvStorage = createKVStore();
+  const dbStore = useDBStore();
 
   const sourceClasses = new Map<String, Extension | null>();
   const sourceClass = async (
@@ -500,13 +505,60 @@ export const useStore = defineStore('store', () => {
   const bookRead = async (
     source: BookSource,
     book: BookItem,
-    chapter: BookChapter
+    chapter: BookChapter,
+    cacheMoreChapters: boolean = true
   ): Promise<string | null> => {
+    const content = await dbStore.getBookChapter(book, chapter);
+    if (content) {
+      if (cacheMoreChapters) {
+        cacheBookChapters(source, book, chapter);
+      }
+      return content;
+    }
     const sc = (await sourceClass(source.item)) as BookExtension;
     const res = await sc?.getContent(book, chapter);
+    if (res) {
+      await dbStore.saveBookChapter(book, chapter, res);
+      if (cacheMoreChapters) {
+        cacheBookChapters(source, book, chapter);
+      }
+    }
 
     return res;
   };
+  const cacheBookChapters = createCancellableFunction(
+    async (
+      signal: AbortSignal,
+      source: BookSource,
+      book: BookItem,
+      chapter: BookChapter
+    ) => {
+      if (!book.chapters) return;
+      const index = book.chapters.findIndex(
+        (item) => String(item.id) === String(chapter.id)
+      );
+      if (index === -1) return;
+      let count = 1;
+      const bookStore = useBookStore();
+      while (count <= bookStore.chapterCacheNum) {
+        console.log('aborted?', signal.aborted);
+
+        if (signal.aborted) {
+          return;
+        }
+        const targetChapter = book.chapters[index + count];
+        if (targetChapter) {
+          console.log(`缓存章节 ${targetChapter.title}`, signal.aborted);
+
+          await bookRead(source, book, targetChapter, false);
+        }
+        count += 1;
+        if (count >= book.chapters.length) {
+          return;
+        }
+      }
+    }
+  );
   const getBookSource = (sourceId: string): BookSource | undefined => {
     return bookSources.value.find((item) => item.item.id === sourceId);
   };
@@ -834,9 +886,9 @@ export const useStore = defineStore('store', () => {
         }
       } catch (error) {}
     }
-    // keepTest.value = true;
+    keepTest.value = true;
     // addTestSource(new TestSongExtension(), SourceType.Song);
-    // addTestSource(new TestBookExtension(), SourceType.Book);
+    addTestSource(new TestBookExtension(), SourceType.Book);
     // addTestSource(new TestPhotoExtension(), SourceType.Photo);
     loadSubscribeSources(true);
   });
@@ -882,11 +934,12 @@ export const useStore = defineStore('store', () => {
 
 export const useDisplayStore = defineStore('display', () => {
   // 检测是否为手机尺寸
-  const mobileMediaQuery = window.matchMedia('(max-width: 361px)');
+  const mobileMediaQuery = window.matchMedia('(max-width: 420px)');
   // 检测是否为横屏
   const landscapeMediaQuery = window.matchMedia('(orientation: landscape)');
 
   const isMobile = ref(osType() == 'android' || mobileMediaQuery.matches);
+  const isAndroid = ref(osType() == 'android');
   const isLandscape = ref(landscapeMediaQuery.matches);
 
   const checkMobile = (event: MediaQueryListEvent) => {
@@ -956,13 +1009,16 @@ export const useDisplayStore = defineStore('display', () => {
     return toastId.value;
   };
   const closeToast = (id?: string) => {
-    if (!id) {
+    if (!id || !toastId.value) {
       toastActive.value = false;
       toastId.value = '';
       return;
     }
     if (id && Number(id) >= Number(toastId.value)) {
-      toastActive.value = false;
+      if (toastActive.value) {
+        toastActive.value = false;
+      }
+
       toastId.value = '';
       return;
     }
@@ -970,6 +1026,7 @@ export const useDisplayStore = defineStore('display', () => {
 
   return {
     isMobile,
+    isAndroid,
 
     taichiAnimateRandomized,
     isDark,
@@ -1135,6 +1192,23 @@ export const useSongStore = defineStore('song', () => {
         nextSong();
       }
     };
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play', () => {
+        onPlay();
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        onPause();
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        nextSong();
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        prevSong();
+      });
+      if (playingSong.value) {
+        setMedisSession(playingSong.value, 'paused');
+      }
+    }
   });
 
   watch(
@@ -1163,7 +1237,7 @@ export const useSongStore = defineStore('song', () => {
     }
   );
   const playingSongSetSrc = createCancellableFunction(
-    async (song: SongInfo) => {
+    async (signal: AbortSignal, song: SongInfo) => {
       if (!audioRef.value || !song) return;
 
       // 暂停并重置音频
@@ -1190,6 +1264,10 @@ export const useSongStore = defineStore('song', () => {
         t = displayStore.showToast();
         const sc = (await store.sourceClass(source?.item)) as SongExtension;
         const newUrl = await sc?.getSongUrl(song);
+        if (signal.aborted) {
+          displayStore.closeToast(t);
+          return;
+        }
 
         if (typeof newUrl === 'string') {
           src = newUrl;
@@ -1232,6 +1310,10 @@ export const useSongStore = defineStore('song', () => {
         console.error('加载歌曲失败:', error);
         showNotify(`歌曲 ${song.name} 加载失败`);
         onPause();
+      }
+      if (signal.aborted) {
+        displayStore.closeToast();
+        return;
       }
       if (t) displayStore.closeToast(t);
       if (!song.lyric) {
@@ -1281,15 +1363,72 @@ export const useSongStore = defineStore('song', () => {
       showToast('歌曲无法播放');
       return;
     }
+    if (playingSong.value && 'mediaSession' in navigator) {
+      setMedisSession(playingSong.value, 'playing');
+    }
 
     await audioRef.value.play();
+  };
+  const setMedisSession = async (
+    song: SongInfo,
+    playbackState?: MediaSessionPlaybackState
+  ) => {
+    try {
+      const artwork = [];
+      if (song.picUrl) {
+        if (song.picHeaders) {
+          const response = await fetch(song.picUrl, {
+            headers: song.picHeaders,
+            verify: false,
+          });
+          const blob = new Blob([await response.blob()], {
+            type: 'image/png',
+          });
+
+          const b64: string = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              // reader.result 是一个包含 Base64 编码的字符串
+              const base64String = reader.result as string;
+              resolve(base64String);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          artwork.push({
+            src: b64,
+            type: 'image/png',
+          });
+        } else {
+          artwork.push({
+            src: song.picUrl,
+          });
+        }
+      }
+      const metaData = new MediaMetadata({
+        // 媒体标题
+        title: song.name,
+        // 媒体类型
+        artist: song.artists?.join(','),
+        // 媒体封面
+        artwork: artwork,
+      });
+      // 设置媒体元数据
+      navigator.mediaSession.metadata = metaData;
+      if (playbackState) {
+        navigator.mediaSession.playbackState = playbackState;
+      }
+    } catch (error) {}
   };
   const onPause = () => {
     if (!audioRef.value) return;
     audioRef.value.pause();
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
+    }
   };
 
-  const nextSong = createCancellableFunction(async () => {
+  const nextSong = createCancellableFunction(async (signal: AbortSignal) => {
     // 下一首
     if (!playingPlaylist.value) return;
     const index = playingPlaylist.value.findIndex(
@@ -1302,9 +1441,10 @@ export const useSongStore = defineStore('song', () => {
       playingSong.value = playingPlaylist.value[index + 1];
     }
     await playingSongSetSrc(playingSong.value);
+    if (signal.aborted) return;
     await onPlay();
   });
-  const prevSong = createCancellableFunction(async () => {
+  const prevSong = createCancellableFunction(async (signal: AbortSignal) => {
     // 上一首
     if (!playingPlaylist.value) return;
     const index = playingPlaylist.value.findIndex(
@@ -1318,6 +1458,7 @@ export const useSongStore = defineStore('song', () => {
       playingSong.value = playingPlaylist.value[index - 1];
     }
     await playingSongSetSrc(playingSong.value);
+    if (signal.aborted) return;
     await onPlay();
   });
   // 设置音量
@@ -1364,13 +1505,14 @@ export const useBookStore = defineStore('book', () => {
       readMode.value = displayStore.isMobile ? 'slide' : 'scroll';
     }
   );
-  const fontSize = useStorageAsync('fontSize', 20);
-  const lineHeight = useStorageAsync('lineHeight', 1.5);
+  const fontSize = useStorageAsync('readFontSize', 20);
+  const fontFamily = useStorageAsync('eradFontFamily', 'alipuhui');
+  const lineHeight = useStorageAsync('readLineHeight', 1.5);
   const readPGap = useStorageAsync('readPGap', 8);
-  const underline = useStorageAsync('underline', false);
-  const paddingX = useStorageAsync('paddingX', 16);
-  const paddingTop = useStorageAsync('paddingTop', 10);
-  const paddingBottom = useStorageAsync('paddingBottom', 20);
+  const underline = useStorageAsync('readUnderline', false);
+  const paddingX = useStorageAsync('readPaddingX', 16);
+  const paddingTop = useStorageAsync('readPaddingTop', 4);
+  const paddingBottom = useStorageAsync('readPaddingBottom', 18);
 
   const defaultThemes: ReadTheme[] = [
     {
@@ -1422,14 +1564,20 @@ export const useBookStore = defineStore('book', () => {
   const customThemes = useStorageAsync<ReadTheme[]>('customReadThemes', []);
   const themes = computed(() => [...defaultThemes, ...customThemes.value]);
   const currTheme = useStorageAsync<ReadTheme>('readTheme', defaultThemes[0]);
-  const fullScreenClickToNext = useStorageAsync('fullScreenClickToNext', false);
+  const fullScreenClickToNext = useStorageAsync(
+    'readFullScreenClickToNext',
+    false
+  );
 
   const readingBook = ref<BookItem>();
   const readingChapter = ref<BookChapter>();
 
+  const chapterCacheNum = useStorageAsync('readChapterCacheNum', 10);
+
   return {
     readMode,
     fontSize,
+    fontFamily,
     lineHeight,
     readPGap,
     underline,
@@ -1444,6 +1592,7 @@ export const useBookStore = defineStore('book', () => {
 
     readingBook,
     readingChapter,
+    chapterCacheNum,
   };
 });
 
@@ -1587,9 +1736,10 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     for (let shelf of bookShelf.value) {
       for (let book of shelf.books) {
         if (book.book.id === bookItem.id) {
-          book.lastReadChapter = chapter;
-          book.lastReadTime = Date.now();
-          break;
+          if (book.book.chapters?.find((item) => item.id === chapter.id)) {
+            book.lastReadChapter = chapter;
+            book.lastReadTime = Date.now();
+          }
         }
       }
     }
@@ -1916,5 +2066,53 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
     removePhotoFromShelf,
     removeShelf,
     clear,
+  };
+});
+
+export const useDBStore = defineStore('DBStore', () => {
+  const db = ref<Database>();
+  onUnmounted(() => {
+    db.value?.close();
+  });
+  const initDB = async () => {
+    if (!db.value) {
+      db.value = await Database.load('sqlite:db.db');
+      await db.value.execute(sql.CREATE_BOOK_CHAPTERS_TABLE);
+    }
+  };
+  const saveBookChapter = async (
+    book: BookItem,
+    chapter: BookChapter,
+    content: string
+  ) => {
+    if (!db.value) {
+      await initDB();
+    }
+    await db.value?.execute(sql.ADD_BOOK_CHAPTER, [
+      String(book.id),
+      String(chapter.id),
+      String(book.sourceId),
+      JSON.stringify(chapter),
+      content,
+    ]);
+  };
+  const getBookChapter = async (
+    book: BookItem,
+    chapter: BookChapter
+  ): Promise<string | undefined> => {
+    if (!db.value) {
+      await initDB();
+    }
+    const row = await db.value?.select<sql.DBBookChapter[]>(
+      sql.GET_BOOK_CHAPTER,
+      [String(book.id), String(chapter.id), String(book.sourceId)]
+    );
+
+    return row?.[0]?.content;
+  };
+  return {
+    db,
+    saveBookChapter,
+    getBookChapter,
   };
 });

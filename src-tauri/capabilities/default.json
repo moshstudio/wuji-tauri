@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "core:window:default",
@@ -33,6 +35,11 @@
     "store:allow-has",
     "store:allow-length",
     "store:allow-reset",
+    "sql:default",
+    "sql:allow-load",
+    "sql:allow-close",
+    "sql:allow-execute",
+    "sql:allow-select",
     "fetch-plugin:default",
     "os:default",
     "core:window:allow-set-min-size",
@@ -40,6 +47,37 @@
     "core:window:allow-hide",
     "core:window:allow-get-all-windows",
     "commands:default",
-    "log:allow-log"
+    "log:allow-log",
+    "fs:default",
+    "fs:allow-exists",
+    "fs:allow-open",
+    "fs:allow-write",
+    "fs:allow-write-text-file",
+    "fs:allow-read",
+    "fs:allow-read-file",
+    "fs:allow-read-text-file",
+    "fs:allow-rename",
+    "fs:allow-mkdir",
+    "fs:allow-create",
+    "fs:allow-remove",
+    "fs:scope-download-recursive",
+    "fs:scope-resource-recursive",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        {
+          "path": "**"
+        },
+        {
+          "path": "$DOWNLOAD/**"
+        },
+        {
+          "path": "$PICTURE/**"
+        }
+      ],
+      "deny": [
+        "$APPDATA/db/*.stronghold"
+      ]
+    }
   ]
 }

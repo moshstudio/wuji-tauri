@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { SongInfo, SongShelf } from '@/extensions/song';
-import { computed, ref } from 'vue';
+import { computed, PropType, ref } from 'vue';
 import { useSongStore, useSongShelfStore, useDisplayStore } from '@/store';
 import { Icon } from '@iconify/vue';
 import { joinSongArtists } from '@/utils';
@@ -10,11 +10,11 @@ import SongToFavoriteButton from '@/components/buttons/SongToFavoriteButton.vue'
 
 const props = defineProps({
   song: {
-    type: Object as () => SongInfo,
+    type: Object as PropType<SongInfo>,
     required: true,
   },
   shelf: {
-    type: Object as () => SongShelf,
+    type: Object as PropType<SongShelf>,
     required: true,
   },
 });

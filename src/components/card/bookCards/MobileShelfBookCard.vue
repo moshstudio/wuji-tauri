@@ -4,6 +4,7 @@ import { BookItem, BookItemInShelf } from '@/extensions/book';
 import { Icon } from '@iconify/vue';
 import { ref } from 'vue';
 import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
+import { useStore } from '@/store';
 
 const { shelfBook, unread } = defineProps<{
   shelfBook: BookItemInShelf;
@@ -13,6 +14,8 @@ const emit = defineEmits<{
   (e: 'click', item: BookItemInShelf, chapterId?: string): void;
   (e: 'remove', item: BookItemInShelf): void;
 }>();
+
+const store = useStore();
 const showMoreOptions = ref(false);
 </script>
 
@@ -40,9 +43,15 @@ const showMoreOptions = ref(false);
     <div
       class="grow flex flex-col gap-1 justify-around text-sm text-[--van-text-color]"
     >
-      <p class="text-base font-bold h-6 line-clamp-1">
-        {{ shelfBook.book.title }}
-      </p>
+      <div class="flex gap-2 items-center">
+        <p class="text-base font-bold h-6 line-clamp-1">
+          {{ shelfBook.book.title }}
+        </p>
+        <p class="text-xs text-gray-400">
+          {{ store.getBookSource(shelfBook.book.sourceId)?.item.name }}
+        </p>
+      </div>
+
       <p class="text-xs line-clamp-1 flex gap-2">
         <span v-if="shelfBook.book.author">{{ shelfBook.book.author }}</span>
         <span v-if="unread"> {{ unread }}章未读 </span>

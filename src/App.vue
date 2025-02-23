@@ -3,10 +3,10 @@ import { useDisplayStore } from './store';
 import WinApp from './WinApp.vue';
 import MobileApp from './MobileApp.vue';
 import { storeToRefs } from 'pinia';
-import { nextTick, onMounted } from 'vue';
-import { forwardConsoleLog } from './utils';
-import { attachConsole } from '@tauri-apps/plugin-log';
+import { h, nextTick, onMounted, VNode } from 'vue';
 import { router } from './router';
+import PlatformSwitch from './components/PlatformSwitch.vue';
+import View from './components/View.vue';
 
 const displayStore = useDisplayStore();
 const { isMobile } = storeToRefs(displayStore);
@@ -25,13 +25,60 @@ onMounted(() => {
   // // 将浏览器控制台与日志流分离
   // detach();
 });
+
+// 使用 render 函数生成 <router-view> 结构
+const routerView = h(View);
 </script>
 
 <template>
-  <van-config-provider :theme="displayStore.isDark ? 'dark' : 'light'">
-    <WinApp v-if="!isMobile"></WinApp>
-    <MobileApp v-else></MobileApp>
+  <van-config-provider
+    :theme="displayStore.isDark ? 'dark' : 'light'"
+    :class="displayStore.isMobile ? 'mobile-scrollbar' : 'not-mobile-scrollbar'"
+  >
+    <PlatformSwitch>
+      <template #mobile>
+        <MobileApp :routerView="routerView"></MobileApp>
+      </template>
+      <template #windows>
+        <WinApp :routerView="routerView"></WinApp>
+      </template>
+    </PlatformSwitch>
   </van-config-provider>
 </template>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+.not-mobile-scrollbar {
+  ::-webkit-scrollbar {
+    background-color: transparent;
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 6px;
+  }
+  :hover::-webkit-scrollbar-thumb {
+    background-color: rgba(110, 110, 110, 0.2);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(110, 110, 110, 0.6);
+  }
+}
+.mobile-scrollbar {
+  ::-webkit-scrollbar {
+    background-color: transparent;
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(110, 110, 110, 0.2);
+    border-radius: 6px;
+  }
+  :hover::-webkit-scrollbar-thumb {
+    background-color: rgba(110, 110, 110, 0.6);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(110, 110, 110, 0.8);
+  }
+}
+</style>

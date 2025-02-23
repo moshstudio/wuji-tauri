@@ -58,7 +58,7 @@ const displayStore = useDisplayStore();
           </template>
         </van-image>
         <div
-          class="flex flex-col gap-1 justify-start text-sm text-[--van-text-color] min-w-[180px] max-w-[50%]"
+          class="flex flex-col gap-1 justify-start text-sm text-[--van-text-color] w-[80%]"
         >
           <p class="text-base font-bold">
             {{ book.title }}
@@ -77,16 +77,13 @@ const displayStore = useDisplayStore();
         </div>
       </van-row>
       <div
-        class="p-2 mt-4 shadow-md text-[--van-text-color]"
+        class="p-2 mt-4 shadow-md text-[--van-text-color] w-[80%]"
         v-if="book.chapters"
       >
         <div class="w-full flex justify-between gap-2 items-center">
           <p class="font-bold ml-6">共有{{ book.chapters.length }} 章</p>
           <div class="flex gap-2 items-center">
-            <BookShelfButton
-              :book="book"
-              @show-shelf="() => (displayStore.showBookShelf = true)"
-            ></BookShelfButton>
+            <BookShelfButton :book="book"></BookShelfButton>
             <p class="mr-1">
               <van-button
                 :icon="isAscending ? 'ascending' : 'descending'"

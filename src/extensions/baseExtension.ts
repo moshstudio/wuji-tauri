@@ -1,7 +1,7 @@
 import CryptoJS from 'crypto-js';
 import urlJoin from 'url-join';
 import { nanoid } from 'nanoid';
-import { fetch } from '@/utils/fetch';
+import { ClientOptions, fetch } from '@/utils/fetch';
 import {
   maxPageNoFromElements,
   parseAndExecuteHtml,
@@ -9,13 +9,14 @@ import {
 } from '@/utils';
 import { BookChapter, BookItem } from './book';
 import { PhotoItem } from './photo';
+import { urlJoin as myUrlJoin } from '@/utils';
 
 abstract class Extension {
   cryptoJs: typeof CryptoJS;
   fetch: typeof fetch;
   fetchDom: (
     input: URL | Request | string,
-    init?: RequestInit & { verify?: boolean },
+    init?: RequestInit & ClientOptions,
     domType?: DOMParserSupportedType
   ) => Promise<Document>;
   queryBookElements: (
@@ -64,17 +65,9 @@ abstract class Extension {
     this.fetch = fetch;
     this.fetchDom = async (
       input: URL | Request | string,
-      init?: RequestInit & { verify?: boolean },
+      init?: RequestInit & ClientOptions,
       domType: DOMParserSupportedType = 'text/html'
     ) => {
-      init = init || {};
-      init.headers = new Headers(init.headers || {});
-      init.headers.set(
-        'User-Agent',
-        init.headers.get('User-Agent') ||
-          init.headers.get('user-agent') ||
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-      );
       const response = await this.fetch(input, init);
       const text = await response.text();
 
@@ -83,11 +76,7 @@ abstract class Extension {
     this.nanoid = nanoid;
 
     this.urlJoin = (...parts: (string | null | undefined)[]): string => {
-      const filter = parts.filter((part) => part != null && part !== undefined);
-      if (!filter.length) return '';
-      if (filter.length === 1) return filter[0];
-      if (filter[1].startsWith('http')) return this.urlJoin(...filter.slice(1));
-      return urlJoin(...filter);
+      return myUrlJoin(parts, { baseUrl: this.baseUrl });
     };
     this.maxPageNoFromElements = maxPageNoFromElements;
     this.parseAndExecuteHtml = parseAndExecuteHtml;
@@ -111,10 +100,19 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(cover);
-        const coverE =
+        let coverE =
           img?.getAttribute('data-original') ||
           img?.getAttribute('data-src') ||
           img?.getAttribute('src');
+        if (coverE) {
+          if (!coverE.startsWith('http')) {
+            if (coverE.startsWith('//')) {
+              coverE = `https:${coverE}`;
+            } else {
+              coverE = this.urlJoin(this.baseUrl, coverE);
+            }
+          }
+        }
         const titleE =
           element.querySelector(title)?.textContent ||
           element.querySelector(title)?.getAttribute('title');
@@ -129,7 +127,7 @@ abstract class Extension {
         const urlE = element.querySelector(url)?.getAttribute('href');
         if (!titleE) continue;
         list.push({
-          id: urlE || this.nanoid(),
+          id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           title: titleE,
           intro: introE || undefined,
           cover: coverE || undefined,
@@ -174,10 +172,10 @@ abstract class Extension {
         const datetimeE = element.querySelector(datetime)?.textContent;
         const hotE = element.querySelector(hot)?.textContent;
         const viewE = element.querySelector(view)?.textContent;
-        const urlE = element.querySelector(url)?.getAttribute('href');
+        const urlE = element.querySelector(url)?.getAttribute('href')?.trim();
         if (!titleE) continue;
         list.push({
-          id: urlE?.trim() || this.nanoid(),
+          id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           title: titleE?.trim() || '',
           desc: descE?.trim() || undefined,
           cover: coverE?.trim() || '',

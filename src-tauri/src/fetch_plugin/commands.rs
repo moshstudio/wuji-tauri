@@ -5,6 +5,7 @@
 use std::{future::Future, pin::Pin, str::FromStr, sync::Arc, time::Duration};
 
 use http::{header, HeaderMap, HeaderName, HeaderValue, Method, StatusCode};
+use rand::{seq::SliceRandom, thread_rng};
 use reqwest::{redirect::Policy, NoProxy};
 use serde::{Deserialize, Serialize};
 use tauri::{
@@ -20,6 +21,28 @@ use crate::fetch_plugin::{
 };
 
 const HTTP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+pub const STATIC_CHROME_AGENTS: &'static [&'static str; 20] = &[
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+];
 
 struct ReqwestResponse(reqwest::Response);
 impl tauri::Resource for ReqwestResponse {}
@@ -186,7 +209,7 @@ pub async fn fetch<R: Runtime>(
     // 克隆 url 以避免移动问题
     let url_clone = url.clone();
 
-    let scheme = url.scheme();
+    let scheme = url_clone.scheme();
     let method = Method::from_bytes(method.as_bytes())?;
 
     let mut headers = HeaderMap::new();
@@ -198,6 +221,7 @@ pub async fn fetch<R: Runtime>(
     match scheme {
         "http" | "https" => {
             let mut builder = reqwest::ClientBuilder::new();
+            builder = builder.use_rustls_tls();
 
             if !verify.unwrap_or(true) {
                 builder = builder.danger_accept_invalid_certs(true);
@@ -215,6 +239,8 @@ pub async fn fetch<R: Runtime>(
                 } else {
                     Policy::limited(max_redirections)
                 });
+            } else {
+                builder = builder.redirect(Policy::limited(10));
             }
 
             if let Some(proxy_config) = proxy {
@@ -228,7 +254,7 @@ pub async fn fetch<R: Runtime>(
             // builder = builder.cookie_provider(state.cookies_jar.clone());
             // 暂不使用cookie保存
 
-            let mut request = builder.build()?.request(method.clone(), url);
+            let mut request = builder.build()?.request(method.clone(), url_clone);
 
             // POST and PUT requests should always have a 0 length content-length,
             // if there is no body. https://fetch.spec.whatwg.org/#http-network-or-cache-fetch
@@ -243,30 +269,59 @@ pub async fn fetch<R: Runtime>(
             }
 
             if !headers.contains_key(header::USER_AGENT) {
-                headers.append(header::USER_AGENT, HeaderValue::from_str(HTTP_USER_AGENT)?);
-            }
-
-            // ensure we have an Origin header set
-            if !headers.contains_key(header::ORIGIN) {
-                if let Ok(url) = webview.url() {
-                    headers.append(
-                        header::ORIGIN,
-                        HeaderValue::from_str(&url.origin().ascii_serialization())?,
-                    );
+                let mut rng = thread_rng(); // 创建一个随机数生成器
+                if let Some(random_ua) = STATIC_CHROME_AGENTS.choose(&mut rng) {
+                    headers.append(header::USER_AGENT, HeaderValue::from_str(random_ua)?);
                 }
             }
 
+            // if !headers.contains_key(header::ACCEPT) {
+            //     headers.append(header::ACCEPT, HeaderValue::from_str("*/*")?);
+            // }
+            // if !headers.contains_key(header::ACCEPT_ENCODING) {
+            //     headers.append(
+            //         header::ACCEPT_ENCODING,
+            //         HeaderValue::from_str("gzip, deflate, br, zstd")?,
+            //     );
+            // }
+            // if !headers.contains_key(header::ACCEPT_LANGUAGE) {
+            //     headers.append(
+            //         header::ACCEPT_LANGUAGE,
+            //         HeaderValue::from_str("zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7")?,
+            //     );
+            // }
+            // if !headers.contains_key(header::CONNECTION) {
+            //     headers.append(header::CONNECTION, HeaderValue::from_str("keep-alive")?);
+            // }
+
+            // ensure we have an Origin header set
+            // if !headers.contains_key(header::ORIGIN) {
+            //     headers.append(
+            //         header::ORIGIN,
+            //         HeaderValue::from_str(&url_for_origin.origin().ascii_serialization())?,
+            //     );
+            // }
+
             // In case empty origin is passed, remove it. Some services do not like Origin header
             // so this way we can remove it in explicit way. The default behaviour is still to set it
-            if headers.get(header::ORIGIN) == Some(&HeaderValue::from_static("")) {
-                headers.remove(header::ORIGIN);
-            };
+            // if headers.get(header::ORIGIN) == Some(&HeaderValue::from_static("")) {
+            //     headers.remove(header::ORIGIN);
+            // };
 
             if let Some(data) = data {
                 request = request.body(data);
             }
 
             request = request.headers(headers);
+
+            // let fut = async move {
+            //     let mut redirect_history = Vec::new();
+            //     let response = request.send().await.map_err(Into::into)?;
+            //     if let Some(redirect_url) = response.url().to_string() {
+            //         redirect_history.push(redirect_url);
+            //     }
+            //     Ok((response, redirect_history))
+            // };
 
             let fut = async move { request.send().await.map_err(Into::into) };
             let mut resources_table = webview.resources_table();
@@ -329,7 +384,15 @@ pub async fn fetch_send<R: Runtime>(
     let mut fut = req.fut.lock().await;
 
     let res = tokio::select! {
-        res = fut.as_mut() => res?,
+        res = fut.as_mut() => {
+            match res {
+                Ok(res) => res,
+                Err(e) => {
+                    eprintln!("Request failed: {:?}", e);
+                    return Err(e.into());
+                }
+            }
+        },
         _ = abort_rx.0 => {
             let mut resources_table = webview.resources_table();
             resources_table.close(rid)?;

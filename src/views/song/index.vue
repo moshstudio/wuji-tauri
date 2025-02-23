@@ -22,7 +22,7 @@ let playlistTimer: NodeJS.Timeout;
 let songTimer: NodeJS.Timeout;
 const activeTabIndex = ref(0);
 
-const search = createCancellableFunction(async () => {
+const search = createCancellableFunction(async (signal: AbortSignal) => {
   const keyword = searchValue.value;
   const t = displayStore.showToast();
   if (!keyword) {
@@ -30,9 +30,11 @@ const search = createCancellableFunction(async () => {
   } else {
     await Promise.all([
       ...songSources.value.map(async (source) => {
+        if (signal.aborted) return;
         await store.songSearchPlaylist(source, keyword, 1);
       }),
       ...songSources.value.map(async (source) => {
+        if (signal.aborted) return;
         await store.songSearchSong(source, keyword, 1);
       }),
     ]);

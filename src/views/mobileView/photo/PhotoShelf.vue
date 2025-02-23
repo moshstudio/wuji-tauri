@@ -131,7 +131,7 @@ watch(selecteMode, (mode) => {
         :key="shelf.id"
         v-if="!selecteMode"
       >
-        <div class="p-4 grid grid-cols-2 gap-1">
+        <div class="p-4 grid grid-cols-2 gap-2">
           <PhotoCard
             :item="photo"
             v-for="photo in shelf.photos"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useSongShelfStore, useSongStore, useStore } from '@/store';
-import { ref, reactive, watch, onMounted, triggerRef } from 'vue';
+import { ref, reactive, watch, onMounted, triggerRef, PropType } from 'vue';
 import SongPlaylistPhoto from './photos/SongPlaylistPhoto.vue';
 import ResponsiveGrid from './ResponsiveGrid.vue';
 import SimplePagination from './pagination/SimplePagination.vue';
@@ -11,7 +11,7 @@ import { SongShelfType } from '@/types/song';
 const shelfStore = useSongShelfStore();
 const songStore = useSongStore();
 const selectedShelf = defineModel('selectedShelf', {
-  type: Object as () => SongShelf,
+  type: Object as PropType<SongShelf>,
 });
 const emit = defineEmits<{
   (e: 'loadPage', id: String, pageNo?: number): void;

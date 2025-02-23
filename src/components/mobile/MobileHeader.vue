@@ -20,7 +20,7 @@ const emit = defineEmits<{
       v-model="searchValue"
       @search="(v) => emit('search', v)"
     ></SearchButton>
-    <div class="h-[50px] content-center">
+    <div class="h-[50px] flex items-center justify-center gap-2">
       <van-icon
         name="star-o"
         class="text-button-2"

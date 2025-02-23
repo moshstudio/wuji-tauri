@@ -11,10 +11,14 @@ const { isMobile } = storeToRefs(displayStore);
 
 <template>
   <template v-if="!isMobile">
-    <slot name="windows" v-bind="attrs"></slot>
+    <keep-alive>
+      <slot name="windows" v-bind="attrs"></slot>
+    </keep-alive>
   </template>
   <template v-else>
-    <slot name="mobile" v-bind="attrs"></slot>
+    <keep-alive>
+      <slot name="mobile" v-bind="attrs"></slot>
+    </keep-alive>
   </template>
 </template>
 

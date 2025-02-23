@@ -16,6 +16,7 @@ import { BookSource } from '@/types';
 import { PropType } from 'vue';
 import { ReaderResult, type LineData } from '@/utils/reader/types';
 import BookShelfButton from '@/components/BookShelfButton.vue';
+import SwitchBookSourceDialog from '@/components/dialogs/SwitchBookSource.vue';
 
 const book = defineModel('book', { type: Object as PropType<BookItem> });
 const bookSource = defineModel('bookSource', {
@@ -53,6 +54,13 @@ const showNavBar = defineModel('showNavBar', {
   type: Boolean,
   required: true,
 });
+const allSourceResults = defineModel('allSourceResults', {
+  type: Array as PropType<BookItem[]>,
+});
+const showSwitchSourceDialog = defineModel('showSwitchSourceDialog', {
+  type: Boolean,
+  required: true,
+});
 
 const emit = defineEmits<{
   (e: 'back', checkShelf?: boolean): void;
@@ -61,6 +69,8 @@ const emit = defineEmits<{
   (e: 'prevChapter', toLast?: boolean): void;
   (e: 'nextChapter'): void;
   (e: 'openChapterPopup'): void;
+  (e: 'searchAllSources', targetBook: BookItem): void;
+  (e: 'switchSource', newBookItem: BookItem): void;
 }>();
 
 const displayStore = useDisplayStore();
@@ -106,8 +116,6 @@ const touchParams = reactive({
   moveTime: 0,
 });
 
-/** 首次打开提示 */
-const firstTip = ref(false);
 /** 滑动计时器 */
 let slideTimer: NodeJS.Timeout | null;
 
@@ -257,25 +265,11 @@ const isLastPage = computed(
     false
 );
 
-/** 关闭新手提示 */
-function closeBookTip() {
-  touchParams.firstTip = firstTip.value = false;
-  // store.saveBookOption();
-}
-
 function goBack() {
   // uni.navigateBack();
   emit('back', true);
 }
 
-/**
- * 切换主题
- * @param index
- */
-function switchTheme(index: number) {
-  // bookOption.theme = index;
-  // store.saveBookOption();
-}
 /**
  * 检查点击的位置
  * @returns 'left'|'middle'|'right'
@@ -415,7 +409,7 @@ function onTouchEnd(e: TouchEvent) {
     currPageStyle.transform = '0px';
   };
   // console.log("onTouchEnd", slideX);
-  if (Math.abs(slideX) <= 0) {
+  if (Math.abs(slideX) <= 10) {
     // 处理点击事件
     switch (checkTouchPosition(pageX, pageY)) {
       case 'left':
@@ -491,16 +485,40 @@ onBeforeUnmount(function () {
   >
     <!-- 顶部菜单 -->
     <div
-      class="top_menu fixed left-0 top-0 z-[5] p-2 w-full flex flex-nowrap items-center justify-between transition bg-[#1f1f1f]"
+      class="top_menu fixed left-0 top-0 z-[5] p-2 flex flex-col gap-2 w-full transition bg-[#1f1f1f]"
     >
-      <div class="flex flex-nowrap items-center">
-        <van-icon name="arrow-left" color="white" size="22" @click="goBack()" />
-        <span class="ml-2 text-sm text-white line-clamp-1">{{
-          book?.title
-        }}</span>
+      <div class="flex flex-nowrap items-center justify-between">
+        <div class="flex flex-nowrap items-center">
+          <van-icon
+            name="arrow-left"
+            color="white"
+            size="22"
+            @click="goBack()"
+          />
+          <span class="ml-2 text-sm text-white line-clamp-1">
+            {{ book?.title }}
+          </span>
+        </div>
+        <div class="options pr-2 flex gap-2 items-center">
+          <van-icon
+            name="exchange"
+            class="text-white van-haptics-feedback"
+            @click="() => (showSwitchSourceDialog = true)"
+          />
+
+          <BookShelfButton :book="book" :reading-chapter="readingChapter"></BookShelfButton>
+        </div>
       </div>
-      <div class="option pr-2">
-        <BookShelfButton :book="book"></BookShelfButton>
+      <div
+        class="flex flex-nowrap items-center justify-between text-white text-xs"
+      >
+        <span v-if="readingChapter">{{ readingChapter?.title }}</span>
+        <div
+          class="p-1 rounded bg-[var(--van-primary-color)] mr-2"
+          v-if="bookSource"
+        >
+          {{ bookSource?.item.name }}
+        </div>
       </div>
     </div>
 
@@ -560,18 +578,25 @@ onBeforeUnmount(function () {
         ></div>
         <!-- 小说段落 -->
         <div class="grow">
-          <template v-for="line in content" :key="JSON.stringify(line)">
+          <template
+            v-for="(line, index) of content"
+            :key="JSON.stringify(line) + index"
+          >
             <p
               v-if="line.isTitle"
               :style="{
                 'font-size': bookStore.fontSize * 1.3 + 'px',
+                'font-family': `'${bookStore.fontFamily}'`,
                 'line-height': bookStore.lineHeight * 1.3,
                 'text-indent': line.pFirst
                   ? bookStore.fontSize * 1.3 * 2 + 'px'
                   : '0px',
                 'text-align': 'justify',
                 'text-align-last': line.pLast ? 'auto' : 'justify',
-                'padding-top': line.pFirst
+                // 'padding-top': line.pFirst
+                //   ? bookStore.readPGap * 1.3 + 'px'
+                //   : '0px',
+                'padding-bottom': line.pLast
                   ? bookStore.readPGap * 1.3 + 'px'
                   : '0px',
               }"
@@ -582,6 +607,7 @@ onBeforeUnmount(function () {
               v-else
               :style="{
                 'font-size': bookStore.fontSize + 'px',
+                'font-family': `'${bookStore.fontFamily}'`,
                 'line-height': bookStore.lineHeight,
                 'text-indent': line.pFirst
                   ? bookStore.fontSize * 2 + 'px'
@@ -709,13 +735,15 @@ onBeforeUnmount(function () {
     </van-popup>
     <van-dialog
       v-model:show="showSettingDialog"
-      title="界面设置"
       closeOnClickOverlay
       :show-confirm-button="false"
       class="setting-dialog bg-[#1f1f1f] text-white"
     >
-      <div class="flex flex-col gap-2 p-2 text-sm">
-        <div>字体和样式</div>
+      <template #title>
+        <div class="text-white">界面设置</div>
+      </template>
+      <div class="flex flex-col p-2 text-sm">
+        <div class="pb-2">字体和样式</div>
         <van-cell class="bg-[#1f1f1f]">
           <template #title>
             <span class="text-white">字体大小</span>
@@ -726,13 +754,43 @@ onBeforeUnmount(function () {
         </van-cell>
         <van-cell class="bg-[#1f1f1f]">
           <template #title>
+            <span class="text-white">行间距</span>
+          </template>
+          <template #value>
+            <van-stepper
+              v-model="bookStore.lineHeight"
+              step="0.1"
+              :decimal-length="1"
+              min="0.5"
+              max="3"
+            />
+          </template>
+        </van-cell>
+        <van-cell class="bg-[#1f1f1f]">
+          <template #title>
+            <span class="text-white">段间距</span>
+          </template>
+          <template #value>
+            <van-stepper v-model="bookStore.readPGap" min="0" max="30" />
+          </template>
+        </van-cell>
+        <van-cell class="bg-[#1f1f1f]">
+          <template #title>
+            <span class="text-white">左右边距</span>
+          </template>
+          <template #value>
+            <van-stepper v-model="bookStore.paddingX" min="0" max="60" />
+          </template>
+        </van-cell>
+        <van-cell class="bg-[#1f1f1f]">
+          <template #title>
             <span class="text-white">下划线</span>
           </template>
           <template #value>
             <van-switch v-model="bookStore.underline" />
           </template>
         </van-cell>
-        <div>文字颜色和背景</div>
+        <div class="pb-2">文字颜色和背景</div>
         <div v-horizontal-scroll class="flex gap-2 overflow-x-auto">
           <div
             v-for="theme in bookStore.themes"
@@ -776,6 +834,20 @@ onBeforeUnmount(function () {
         </van-cell>
       </div>
     </van-dialog>
+    <SwitchBookSourceDialog
+      v-model:show="showSwitchSourceDialog"
+      :search-result="allSourceResults || []"
+      :book="book"
+      @search="
+        () => {
+          if (book) {
+            emit('searchAllSources', book);
+          }
+        }
+      "
+      @select="(item) => emit('switchSource', item)"
+      v-if="book"
+    ></SwitchBookSourceDialog>
   </div>
 </template>
 

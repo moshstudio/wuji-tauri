@@ -67,7 +67,6 @@ watch(
         } else {
           panelBackgroundStyle.value.backgroundImage = '';
         }
-        console.log(panelBackgroundStyle.value);
       });
     } else {
       //background-color: #4158D0;

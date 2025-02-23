@@ -9,6 +9,7 @@ import NavBar from '@/components/NavBar.vue';
 import { onActivated, onDeactivated, onMounted, PropType } from 'vue';
 import { useScroll } from '@vueuse/core';
 import { ReaderResult } from '@/utils/reader/types';
+import SwitchBookSourceDialog from '@/components/dialogs/SwitchBookSource.vue';
 
 const book = defineModel('book', { type: Object as PropType<BookItem> });
 const bookSource = defineModel('bookSource', {
@@ -38,6 +39,13 @@ const showNavBar = defineModel('showNavBar', {
   type: Boolean,
   required: true,
 });
+const allSourceResults = defineModel('allSourceResults', {
+  type: Array as PropType<BookItem[]>,
+});
+const showSwitchSourceDialog = defineModel('showSwitchSourceDialog', {
+  type: Boolean,
+  required: true,
+});
 
 const emit = defineEmits<{
   (e: 'back', checkShelf?: boolean): void;
@@ -46,6 +54,8 @@ const emit = defineEmits<{
   (e: 'prevChapter'): void;
   (e: 'nextChapter'): void;
   (e: 'openChapterPopup'): void;
+  (e: 'searchAllSources', targetBook: BookItem): void;
+  (e: 'switchSource', newBookItem: BookItem): void;
 }>();
 
 const bookStore = useBookStore();
@@ -106,6 +116,15 @@ onMounted(() => {
               <van-icon name="points" />
               {{ readingContent?.length }} 字
             </span>
+            <span class="text-xs text-[--van-text-color-2]" v-if="bookSource">
+              <van-icon name="flag-o" />
+              {{ bookSource?.item.name }}
+            </span>
+            <van-icon
+              name="exchange"
+              class="text-[--van-text-color-2] van-haptics-feedback"
+              @click="() => (showSwitchSourceDialog = true)"
+            />
           </div>
         </div>
       </template>
@@ -118,6 +137,10 @@ onMounted(() => {
         class="pt-[80px] relative overflow-y-auto p-4 text-justify leading-[1.8] text-[--van-text-color]"
         :style="{
           fontSize: bookStore.fontSize + 'px',
+          fontFamily: `'${bookStore.fontFamily}'`,
+          lineHeight: bookStore.lineHeight,
+          // 'text-indent': bookStore.fontSize * 2 + 'px',
+          'text-align': 'justify',
           color: bookStore.currTheme.color,
           backgroundColor: bookStore.currTheme.bgColor,
           textDecoration: bookStore.underline
@@ -130,7 +153,11 @@ onMounted(() => {
       <div
         class="read-sidebar absolute right-[8px] bottom-[8px] flex flex-col gap-1 opacity-80 sm:opacity-100 hover:opacity-100"
       >
-        <BookShelfButton :book="book" mode="square"></BookShelfButton>
+        <BookShelfButton
+          :book="book"
+          mode="square"
+          :reading-chapter="readingChapter"
+        ></BookShelfButton>
         <van-button
           icon="bars"
           square
@@ -212,14 +239,17 @@ onMounted(() => {
     </van-popup>
     <van-dialog
       v-model:show="showSettingDialog"
-      title="阅读设置"
+      titl
       closeOnClickOverlay
       :show-confirm-button="false"
-      class="setting-dialog bg-black"
+      class="setting-dialog bg-[#1f1f1f] text-white"
     >
-      <div class="flex flex-col gap-2 p-2 text-sm">
-        <div>字体和样式</div>
-        <van-cell class="bg-black">
+      <template #title>
+        <div class="text-white">界面设置</div>
+      </template>
+      <div class="flex flex-col p-2 text-sm">
+        <div class="pb-2">字体和样式</div>
+        <van-cell class="bg-[#1f1f1f]">
           <template #title>
             <span class="text-white">字体大小</span>
           </template>
@@ -227,7 +257,37 @@ onMounted(() => {
             <van-stepper v-model="bookStore.fontSize" min="10" max="40" />
           </template>
         </van-cell>
-        <van-cell class="bg-black">
+        <van-cell class="bg-[#1f1f1f]">
+          <template #title>
+            <span class="text-white">行间距</span>
+          </template>
+          <template #value>
+            <van-stepper
+              v-model="bookStore.lineHeight"
+              step="0.1"
+              :decimal-length="1"
+              min="0.5"
+              max="3"
+            />
+          </template>
+        </van-cell>
+        <van-cell class="bg-[#1f1f1f]">
+          <template #title>
+            <span class="text-white">段间距</span>
+          </template>
+          <template #value>
+            <van-stepper v-model="bookStore.readPGap" min="0" max="30" />
+          </template>
+        </van-cell>
+        <van-cell class="bg-[#1f1f1f]">
+          <template #title>
+            <span class="text-white">左右边距</span>
+          </template>
+          <template #value>
+            <van-stepper v-model="bookStore.paddingX" min="0" max="60" />
+          </template>
+        </van-cell>
+        <van-cell class="bg-[#1f1f1f]">
           <template #title>
             <span class="text-white">下划线</span>
           </template>
@@ -235,8 +295,8 @@ onMounted(() => {
             <van-switch v-model="bookStore.underline" />
           </template>
         </van-cell>
-        <div>文字颜色和背景</div>
-        <div v-horizontal-scroll class="flex gap-2 flex-nowrap overflow-x-auto">
+        <div class="pb-2">文字颜色和背景</div>
+        <div v-horizontal-scroll class="flex gap-2 overflow-x-auto">
           <div
             v-for="theme in bookStore.themes"
             :key="JSON.stringify(theme)"
@@ -262,6 +322,20 @@ onMounted(() => {
       </div>
     </van-dialog>
     <BookShelf></BookShelf>
+    <SwitchBookSourceDialog
+      v-model:show="showSwitchSourceDialog"
+      :search-result="allSourceResults || []"
+      :book="book"
+      @search="
+        () => {
+          if (book) {
+            emit('searchAllSources', book);
+          }
+        }
+      "
+      @select="(item) => emit('switchSource', item)"
+      v-if="book"
+    ></SwitchBookSourceDialog>
   </div>
 </template>
 
@@ -271,9 +345,7 @@ onMounted(() => {
     flex-direction: column;
   }
 }
-#read-content > :is(p) {
-  margin-top: 0.8em;
-}
+
 :deep(.setting-dialog .van-cell__value) {
   flex: auto;
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { PlaylistInfo } from '@/extensions/song';
 import { router } from '@/router';
-import { ref } from 'vue';
+import { PropType, ref } from 'vue';
 import { Icon } from '@iconify/vue';
 import tinycolor from 'tinycolor2';
 import { useDisplayStore, useStore } from '@/store';
@@ -9,7 +9,7 @@ import LoadImage from '../LoadImage.vue';
 
 const { playlist } = defineProps({
   playlist: {
-    type: Object as () => PlaylistInfo,
+    type: Object as PropType<PlaylistInfo>,
     required: true,
   },
 });

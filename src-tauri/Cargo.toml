@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "一款资源聚合软件"
 authors = ["moshangstudio"]
 edition = "2021"
+build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -32,17 +33,20 @@ reqwest = { version = "0.12", default-features = false, features = [
   "http2",
   "charset",
   "macos-system-configuration",
+  "trust-dns",
 ] }
+rand = "0.8"
 regex = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 url = "2.5.4"
 urlpattern = "0.3"
-tauri-plugin-fs = "2.2.0"
+tauri-plugin-fs = "2"
 tauri-plugin-os = "2"
 tauri-plugin-commands = { path = "../tauri-plugin-commands/" }
 tauri-plugin-log = "2"
 log = "0.4.25"
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"

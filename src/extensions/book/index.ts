@@ -3,6 +3,7 @@ export interface BookChapter {
   id: string;
   title: string;
   url?: string;
+  readingPage?: number;
 }
 
 export type ChapterList = BookChapter[];

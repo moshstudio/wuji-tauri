@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { SongInfo } from '@/extensions/song';
-import { computed, ref } from 'vue';
+import { computed, PropType, ref } from 'vue';
 import { useSongStore } from '@/store';
 import { joinSongArtists } from '@/utils';
 import SongCardPhoto from '@/components/photos/SongCardPhoto.vue';
@@ -8,11 +8,11 @@ import { SongShelfType } from '@/types/song';
 
 const props = defineProps({
   song: {
-    type: Object as () => SongInfo,
+    type: Object as PropType<SongInfo>,
     required: true,
   },
   type: {
-    type: Object as () => SongShelfType,
+    type: String as PropType<SongShelfType>,
     required: true,
   },
 });

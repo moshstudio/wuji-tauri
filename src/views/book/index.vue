@@ -10,6 +10,7 @@ import { debounce } from 'lodash';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { router } from '@/router';
 import { BookItem } from '@/extensions/book';
+import { showLoadingToast } from 'vant';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -17,17 +18,20 @@ const { bookSources } = storeToRefs(store);
 
 const searchValue = ref('');
 
-const recommend = createCancellableFunction(async (force: boolean = false) => {
-  await Promise.all(
-    bookSources.value.map(async (source) => {
-      if (!source.list || force) {
-        await store.bookRecommendList(source);
-      }
-    })
-  );
-});
+const recommend = createCancellableFunction(
+  async (signal: AbortSignal, force: boolean = false) => {
+    await Promise.all(
+      bookSources.value.map(async (source) => {
+        if (!source.list || force) {
+          if (signal.aborted) return;
+          await store.bookRecommendList(source);
+        }
+      })
+    );
+  }
+);
 
-const search = createCancellableFunction(async () => {
+const search = createCancellableFunction(async (signal: AbortSignal) => {
   const keyword = searchValue.value;
   const t = displayStore.showToast();
   if (!keyword) {
@@ -36,6 +40,7 @@ const search = createCancellableFunction(async () => {
   } else {
     await Promise.all(
       bookSources.value.map(async (bookSources) => {
+        if (signal.aborted) return;
         await store.bookSearch(bookSources, keyword, 1);
       })
     );
@@ -47,12 +52,24 @@ const loadType = async (source: BookSource, type?: string) => {
 };
 const loadPage = debounce(
   createCancellableFunction(
-    async (source: BookSource, pageNo?: number, type?: string) => {
+    async (
+      signal: AbortSignal,
+      source: BookSource,
+      pageNo?: number,
+      type?: string
+    ) => {
+      const toast = showLoadingToast({
+        message: '加载中',
+        duration: 0,
+        closeOnClick: true,
+        closeOnClickOverlay: false,
+      });
       if (!searchValue.value) {
         await store.bookRecommendList(source, pageNo, type);
       } else {
         await store.bookSearch(source, searchValue.value, pageNo);
       }
+      toast.close();
     }
   ),
   500

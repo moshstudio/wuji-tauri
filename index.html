@@ -19,10 +19,21 @@
         height: 100vh;
         font-size: 18px;
       }
+      /* 默认背景色（亮色主题） */
+      .loading {
+        background-color: white;
+        color: black;
+        transition:
+          background-color 0.3s,
+          color 0.3s;
+      }
 
-      .dark .loading {
-        color: #ffffff;
-        background-color: #141414;
+      /* 暗色主题 */
+      @media (prefers-color-scheme: dark) {
+        .loading {
+          background-color: black;
+          color: white;
+        }
       }
 
       .loading .loading-hint {

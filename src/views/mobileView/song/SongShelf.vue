@@ -17,7 +17,7 @@ const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
 
 const selectedShelf = defineModel('selectedShelf', {
-  type: Object as () => SongShelf,
+  type: Object as PropType<SongShelf>,
 });
 
 const shelfAnchors = defineModel('shelfAnchors', {

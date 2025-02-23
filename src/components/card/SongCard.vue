@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { SongInfo } from '@/extensions/song';
-import { ref, toRaw } from 'vue';
+import { PropType, ref, toRaw } from 'vue';
 import { useSongStore, useSongShelfStore, useDisplayStore } from '@/store';
 import { Icon } from '@iconify/vue';
 import { joinSongArtists } from '@/utils';
 
 const props = defineProps({
   song: {
-    type: Object as () => SongInfo,
+    type: Object as PropType<SongInfo>,
     required: true,
   },
   class: {

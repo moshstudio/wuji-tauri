@@ -16,17 +16,20 @@ const { photoSources } = storeToRefs(store);
 
 const searchValue = ref('');
 
-const recommend = createCancellableFunction(async (force: boolean = false) => {
-  await Promise.all(
-    photoSources.value.map(async (source) => {
-      if (!source.list || force) {
-        await store.photoRecommendList(source);
-      }
-    })
-  );
-});
+const recommend = createCancellableFunction(
+  async (signal: AbortSignal, force: boolean = false) => {
+    await Promise.all(
+      photoSources.value.map(async (source) => {
+        if (!source.list || force) {
+          if (signal.aborted) return;
+          await store.photoRecommendList(source);
+        }
+      })
+    );
+  }
+);
 
-const search = createCancellableFunction(async () => {
+const search = createCancellableFunction(async (signal: AbortSignal) => {
   const keyword = searchValue.value;
   const t = displayStore.showToast();
   if (!keyword) {
@@ -34,6 +37,7 @@ const search = createCancellableFunction(async () => {
   } else {
     await Promise.all(
       photoSources.value.map(async (source) => {
+        if (signal.aborted) return;
         await store.photoSearchList(source, keyword, 1);
       })
     );
@@ -42,20 +46,22 @@ const search = createCancellableFunction(async () => {
 });
 
 const pageChange = debounce(
-  createCancellableFunction(async (source: PhotoSource, pageNo: number) => {
-    const toast = showLoadingToast({
-      message: '加载中',
-      duration: 0,
-      closeOnClick: true,
-      closeOnClickOverlay: false,
-    });
-    if (!searchValue.value) {
-      await store.photoRecommendList(source, pageNo);
-    } else {
-      await store.photoSearchList(source, searchValue.value, pageNo);
+  createCancellableFunction(
+    async (signal: AbortSignal, source: PhotoSource, pageNo: number) => {
+      const toast = showLoadingToast({
+        message: '加载中',
+        duration: 0,
+        closeOnClick: true,
+        closeOnClickOverlay: false,
+      });
+      if (!searchValue.value) {
+        await store.photoRecommendList(source, pageNo);
+      } else {
+        await store.photoSearchList(source, searchValue.value, pageNo);
+      }
+      toast.close();
     }
-    toast.close();
-  }),
+  ),
   500
 );
 const openBaseUrl = async (source: PhotoSource) => {

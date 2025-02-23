@@ -67,11 +67,11 @@ onMounted(() => {
       : document.documentElement;
     element.value?.addEventListener('wheel', handleScroll);
     // element.value?.addEventListener("touchmove", handleScroll);
-    onUnmounted(() => {
-      element.value?.removeEventListener('wheel', handleScroll);
-      // element.value?.removeEventListener("touchmove", handleScroll);
-    });
   });
+});
+onUnmounted(() => {
+  element.value?.removeEventListener('wheel', handleScroll);
+  // element.value?.removeEventListener("touchmove", handleScroll);
 });
 </script>
 

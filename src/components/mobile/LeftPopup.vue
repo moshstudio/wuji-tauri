@@ -39,11 +39,6 @@ const options = [
   },
 ];
 
-// 处理选项点击事件
-const handleOptionClick = (option: any) => {
-  console.log('点击了:', option.name);
-  // 在这里处理选项点击后的逻辑
-};
 </script>
 
 <template>

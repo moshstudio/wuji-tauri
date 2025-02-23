@@ -33,7 +33,7 @@ function back() {
 }
 
 const loadData = retryOnFalse({ onFailed: back })(
-  createCancellableFunction(async (pageNo?: number) => {
+  createCancellableFunction(async (signal: AbortSignal, pageNo?: number) => {
     photoSource.value = undefined;
     photoItem.value = undefined;
     photoDetail.value = undefined;
@@ -51,6 +51,7 @@ const loadData = retryOnFalse({ onFailed: back })(
     }
     photoSource.value = source;
     const item = await store.getPhotoItem(source, id!);
+    if (signal.aborted) return false;
     if (!item) {
       return false;
     }

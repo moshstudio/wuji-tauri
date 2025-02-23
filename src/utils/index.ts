@@ -2,6 +2,10 @@ import { warn, debug, trace, info, error } from '@tauri-apps/plugin-log';
 import { ArtistInfo } from '@/extensions/song';
 import { ClientOptions, fetch } from '@/utils/fetch';
 import { onBeforeUnmount, onMounted } from 'vue';
+import { showToast } from 'vant';
+import _urlJoin from 'url-join';
+import * as fs from '@tauri-apps/plugin-fs';
+// import * as dialog from '@tauri-apps/plugin-dialog';
 export * from './extensionUtils';
 
 export const DEFAULT_SOURCE_URL =
@@ -78,10 +82,10 @@ export function retryOnFalse(
     maxRetries?: number;
     onSuccess?: () => void;
     onFailed?: () => void;
-  } = { waitTime: 1000, maxRetries: 3 }
+  } = { waitTime: 1200, maxRetries: 3 }
 ) {
-  options.waitTime ||= 1100;
-  options.maxRetries ||= 2;
+  options.waitTime ||= 1200;
+  options.maxRetries ||= 3;
   return function <T extends (...args: any[]) => Promise<boolean>>(fn: T): T {
     return async function (...args: any[]): Promise<boolean> {
       let retries = 0;
@@ -160,20 +164,23 @@ export async function cachedFetch(
   input: URL | Request | string,
   init?: RequestInit & ClientOptions
 ): Promise<Response> {
-  const cacheKey = input.toString();
-  const cache = await caches.open('tauri-cache');
-  const cachedResponse = await cache.match(cacheKey);
+  if ('caches' in window) {
+    const cacheKey = input.toString();
+    const cache = await caches.open('tauri-cache');
+    const cachedResponse = await cache.match(cacheKey);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    const response = await fetch(input, init);
 
-  if (cachedResponse) {
-    return cachedResponse;
+    if (response.ok) {
+      cache.put(cacheKey, response.clone());
+    }
+    return response;
+  } else {
+    const response = await fetch(input, init);
+    return response;
   }
-
-  const response = await fetch(input, init);
-
-  if (response.ok) {
-    cache.put(cacheKey, response.clone());
-  }
-  return response;
 }
 
 export function levenshteinDistance(a: string, b: string): number {
@@ -218,7 +225,7 @@ export function useElementResize(
       });
       resizeObserver.observe(element); // 开始观察
     } else {
-      console.error(`Element with selector "${elementSelector}" not found!`);
+      console.warn(`Element with selector "${elementSelector}" not found!`);
     }
   });
 
@@ -246,4 +253,160 @@ export function forwardConsoleLog() {
   forwardConsole('info', info);
   forwardConsole('warn', warn);
   forwardConsole('error', error);
+}
+
+export const urlJoin = (
+  parts: (string | null | undefined)[],
+  option?: { baseUrl: string }
+): string => {
+  const filter = parts.filter((part) => part != null && part !== undefined);
+  if (!filter.length) return '';
+  if (filter.length === 1) {
+    if (filter[0].startsWith('//')) {
+      return 'http:' + filter[0];
+    } else if (
+      !filter[0].startsWith('http://') &&
+      !filter[0].startsWith('https://')
+    ) {
+      if (option?.baseUrl) {
+        return urlJoin([option.baseUrl, filter[0]], {
+          baseUrl: option.baseUrl,
+        });
+      } else {
+        return 'http://' + filter[0];
+      }
+    } else {
+      return filter[0];
+    }
+  }
+  if (filter[1].startsWith('http')) return urlJoin(filter.slice(1));
+
+  return _urlJoin(filter);
+};
+
+export function getFileNameFromUrl(url: string, suffix?: string): string {
+  // 移除 URL 中的查询参数和哈希部分
+  const cleanUrl =
+    decodeURIComponent(url)
+      .split('http://')
+      .pop()
+      ?.split('https://')
+      .pop()
+      ?.split('?')[0]
+      .split('#')[0] || url.split('?')[0].split('#')[0];
+
+  // 尝试从 URL 中提取文件名
+  const fileName = cleanUrl.substring(cleanUrl.lastIndexOf('/') + 1);
+
+  // 如果文件名不存在或者文件名是空的（例如 URL 以 '/' 结尾）
+  if (!fileName) {
+    // 生成一个随机字符串作为文件名
+    const randomString = Math.random().toString(36).substring(2, 15);
+    return suffix ? `${randomString}.${suffix}` : randomString;
+  }
+
+  // 检查文件名是否包含后缀
+  const lastDotIndex = fileName.lastIndexOf('.');
+  if (lastDotIndex === -1) {
+    return suffix ? `${fileName}.${suffix}` : fileName;
+  }
+
+  // 返回提取到的文件名
+  return fileName;
+}
+
+async function streamToUint8Array(
+  stream: ReadableStream<Uint8Array>
+): Promise<Uint8Array> {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalLength = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    chunks.push(value);
+    totalLength += value.length;
+  }
+
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  return result;
+}
+
+export async function downloadFile(
+  url: string,
+  options?: {
+    headers?: Record<string, string>;
+    filename?: string;
+    suffix?: string;
+  }
+): Promise<boolean> {
+  try {
+    // const path = await dialog.save({
+    //   filters: [
+    //     {
+    //       name: 'My Filter',
+    //       extensions: ['png', 'jpeg'],
+    //     },
+    //   ],
+    // });
+    // console.log(path);
+    url = urlJoin([url]);
+    let response = await fetch(url, {
+      headers: options?.headers,
+      verify: false,
+    });
+
+    if (response.status === 403) {
+      if (response.url !== url) {
+        // 说明进行了url跳转
+        return await downloadFile(response.url, options);
+      }
+    }
+    if (!response.ok) {
+      console.error('文件下载失败:', response.status, response.statusText);
+      showToast(response.statusText);
+      return false;
+    }
+    const blob = await response.blob();
+    const filename =
+      options?.filename || getFileNameFromUrl(url, options?.suffix);
+
+    if (!(await fs.exists('', { baseDir: fs.BaseDirectory.Download }))) {
+      await fs.mkdir('', {
+        baseDir: fs.BaseDirectory.Download,
+        recursive: true,
+      });
+    }
+
+    let file: fs.FileHandle;
+    if (!(await fs.exists(filename, { baseDir: fs.BaseDirectory.Download }))) {
+      file = await fs.open(filename, {
+        write: true,
+        create: true,
+        baseDir: fs.BaseDirectory.Download,
+      });
+    } else {
+      file = await fs.open(filename, {
+        write: true,
+        baseDir: fs.BaseDirectory.Download,
+      });
+    }
+
+    await file.write(await streamToUint8Array(await blob.stream()));
+    await file.close();
+    return true;
+  } catch (error) {
+    console.error('文件下载失败:', error);
+    showToast('文件下载失败');
+    return false;
+  }
 }

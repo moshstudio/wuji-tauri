@@ -2,7 +2,7 @@
 import WinBookRead from '../windowsView/book/BookRead.vue';
 import MobileBookRead from '../mobileView/book/BookRead.vue';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
-import { BookChapter, BookItem } from '@/extensions/book';
+import { BookChapter, BookItem, BookList } from '@/extensions/book';
 import { router } from '@/router';
 import {
   useStore,
@@ -17,6 +17,7 @@ import { ReaderResult } from '@/utils/reader/types';
 import { showConfirmDialog, showToast } from 'vant';
 import { ref, watch, onActivated, nextTick } from 'vue';
 import _ from 'lodash';
+import { createCancellableFunction } from '@/utils/cancelableFunction';
 
 const { chapterId, bookId, sourceId, isPrev } = defineProps({
   chapterId: String,
@@ -46,6 +47,72 @@ const showChapters = ref(false);
 const showSettingDialog = ref(false);
 const showBookShelf = ref(false);
 const showNavBar = ref(true);
+
+/**
+ * 实现切换源功能
+ */
+const showSwitchSourceDialog = ref(false);
+const allSourceResults = ref<BookItem[]>([]);
+
+const searchAllSources = createCancellableFunction(
+  async (signal: AbortSignal, targetBook: BookItem) => {
+    allSourceResults.value = [];
+    await Promise.all(
+      store.bookSources.map(async (bookSource) => {
+        await store.bookSearch(bookSource, targetBook.title);
+        if (signal.aborted) return;
+        if (bookSource.list) {
+          for (const b of _.castArray<BookList>(bookSource.list)[0].list) {
+            if (b.title === targetBook.title) {
+              if (signal.aborted) return;
+              const detailedBook = await store.bookDetail(bookSource, b);
+              if (detailedBook) {
+                allSourceResults.value.push(detailedBook);
+                return;
+              }
+            }
+          }
+        }
+      })
+    );
+  }
+);
+
+const switchSource = async (newBookItem: BookItem) => {
+  if (!readingChapter.value) {
+    showToast('请重新加载章节');
+    return;
+  }
+  if (!newBookItem.chapters) {
+    showToast('章节为空');
+    return;
+  }
+  const chapter =
+    newBookItem.chapters?.find((chapter) => chapter.id === chapterId) ||
+    newBookItem.chapters?.find(
+      (chapter) => chapter.title === readingChapter.value?.title
+    ) ||
+    newBookItem.chapters?.[
+      book.value?.chapters?.findIndex((chapter) => chapter.id === chapterId) ||
+        0
+    ];
+  if (!chapter) {
+    showToast('章节不存在');
+    return;
+  }
+
+  chapter.readingPage = readingChapter.value.readingPage;
+  showSwitchSourceDialog.value = false;
+  router.replace({
+    name: 'BookRead',
+    params: {
+      chapterId: chapter.id,
+      bookId: newBookItem.id,
+      sourceId: newBookItem.sourceId,
+      isPrev: '',
+    },
+  });
+};
 
 async function back(checkShelf: boolean = false) {
   displayStore.showTabBar = true;
@@ -129,7 +196,16 @@ async function loadChapter(chapter?: BookChapter) {
       readingChapterPage.value =
         (readingPagedContent.value?.content.length || 1) - 1;
     } else {
-      readingChapterPage.value = 0;
+      if (
+        readingChapter.value?.readingPage &&
+        readingPagedContent.value &&
+        readingPagedContent.value.content.length - 1 >=
+          readingChapter.value.readingPage
+      ) {
+        readingChapterPage.value = readingChapter.value?.readingPage;
+      } else {
+        readingChapterPage.value = 0;
+      }
     }
   });
 }
@@ -143,7 +219,7 @@ function updateReadingElements() {
         readingContent.value?.split('\n').forEach((line) => {
           // 创建 <p> 元素
           const p = document.createElement('p');
-          // p.style.marginTop = "0.8em";
+          p.style.marginTop = `${bookStore.readPGap}px`;
           // 设置 <p> 的内容
           p.textContent = line;
           // 将 <p> 插入到目标 div 中
@@ -268,9 +344,21 @@ onActivated(async () => {
   }
 });
 
-watch(book, (b) => (bookStore.readingBook = b), { immediate: true });
+watch(
+  book,
+  (b) => {
+    bookStore.readingBook = b;
+    allSourceResults.value = [];
+  },
+  { immediate: true }
+);
 watch(readingChapter, (c) => (bookStore.readingChapter = c), {
   immediate: true,
+});
+watch(readingChapterPage, (page) => {
+  if (readingChapter.value) {
+    readingChapter.value.readingPage = page;
+  }
 });
 
 useElementResize(
@@ -310,12 +398,16 @@ watch(
         v-model:show-setting-dialog="showSettingDialog"
         v-model:show-book-shelf="showBookShelf"
         v-model:show-nav-bar="showNavBar"
+        v-model:all-source-results="allSourceResults"
+        v-model:show-switch-source-dialog="showSwitchSourceDialog"
         @back="back"
         @load-data="loadData"
         @to-chapter="toChapter"
         @next-chapter="nextChapter"
         @open-chapter-popup="openChapterPopup"
         @prev-chapter="prevChapter"
+        @search-all-sources="searchAllSources"
+        @switch-source="switchSource"
       ></MobileBookRead>
     </template>
     <template #windows>
@@ -330,12 +422,16 @@ watch(
         v-model:show-setting-dialog="showSettingDialog"
         v-model:show-book-shelf="showBookShelf"
         v-model:show-nav-bar="showNavBar"
+        v-model:all-source-results="allSourceResults"
+        v-model:show-switch-source-dialog="showSwitchSourceDialog"
         @back="back"
         @load-data="loadData"
         @to-chapter="toChapter"
         @next-chapter="nextChapter"
         @open-chapter-popup="openChapterPopup"
         @prev-chapter="prevChapter"
+        @search-all-sources="searchAllSources"
+        @switch-source="switchSource"
       ></WinBookRead>
     </template>
   </PlatformSwitch>

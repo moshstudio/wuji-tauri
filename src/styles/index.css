@@ -43,21 +43,6 @@ body,
   overflow: hidden;
   -ms-overflow-style: none;
 }
-::-webkit-scrollbar {
-  background-color: transparent;
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-thumb {
-  background-color: transparent;
-  border-radius: 6px;
-}
-:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(110, 110, 110, 0.2);
-}
-::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(110, 110, 110, 0.6);
-}
 
 :root:root {
   --van-search-padding: 6px 10px;

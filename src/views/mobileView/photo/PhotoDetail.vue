@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { PhotoDetail, PhotoItem } from '@/extensions/photo';
-import { PropType } from 'vue';
+import { PropType, ref } from 'vue';
 import { usePhotoShelfStore } from '@/store';
 import LoadImage from '@/components/LoadImage.vue';
 import FullPagination from '@/components/pagination/FullPagination.vue';
+import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
+import { downloadFile } from '@/utils';
+import { showNotify } from 'vant';
 
 const shelfStore = usePhotoShelfStore();
 
@@ -27,6 +30,13 @@ const emit = defineEmits<{
   (e: 'collect'): void;
   (e: 'addPhotoToShelf', shelfId: string): void;
 }>();
+
+const showMoreOptions = ref(false);
+const clickedItem = ref<string>();
+const showMoreOptionsSheet = async (url: string) => {
+  clickedItem.value = url;
+  showMoreOptions.value = true;
+};
 </script>
 
 <template>
@@ -56,6 +66,7 @@ const emit = defineEmits<{
           fit="contain"
           lazy-load
           class="rounded-lg max-w-[100%] max-h-[100%]"
+          @click="() => showMoreOptionsSheet(item)"
         />
       </van-skeleton>
     </main>
@@ -109,6 +120,32 @@ const emit = defineEmits<{
       </van-cell>
     </van-cell-group>
   </van-dialog>
+  <MoreOptionsSheet
+    v-model="showMoreOptions"
+    :actions="[
+      {
+        name: '保存图片',
+        color: '#1989fa',
+        callback: async () => {
+          if (!clickedItem) return;
+          showMoreOptions = false;
+          const res = await downloadFile(clickedItem, {
+            headers: photoDetail?.photosHeaders || undefined,
+            suffix: 'png',
+          });
+          if (!res) {
+            showNotify('保存失败');
+          } else {
+            showNotify({
+              message: '保存成功',
+              type: 'success',
+              duration: 5000,
+            });
+          }
+        },
+      },
+    ]"
+  ></MoreOptionsSheet>
 </template>
 
 <style scoped lang="less"></style>
