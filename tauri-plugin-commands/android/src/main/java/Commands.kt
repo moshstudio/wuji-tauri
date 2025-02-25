@@ -10,8 +10,8 @@ class Commands(private val activity: Activity) {
     // 关闭所有 Activity
     activity.finishAffinity()
 
-    // // 终止进程
-    // System.exit(0)
+    // 终止进程
+    System.exit(0)
   }
   fun set_status_bar(color: String): Boolean {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {

@@ -81,7 +81,7 @@ const addSongToShelf = (shelfId: string) => {
       <van-image
         width="40"
         height="40"
-        radius="8"
+        radius="4"
         fit="cover"
         lazy-load
         :src="song.picUrl"

@@ -55,7 +55,7 @@ const options = [
     <div class="p-2">
       <!-- Logo 和软件名 -->
       <div class="flex flex-col justify-center items-center mb-5">
-        <van-image width="50" height="50" :src="logo" />
+        <van-image width="50" height="50" radius="4" :src="logo" />
         <div class="text-lg font-bold text-[--van-text-color]">无极</div>
       </div>
       <van-cell-group>

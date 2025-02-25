@@ -1,5 +1,4 @@
 import CryptoJS from 'crypto-js';
-import urlJoin from 'url-join';
 import { nanoid } from 'nanoid';
 import { ClientOptions, fetch } from '@/utils/fetch';
 import {
@@ -7,9 +6,30 @@ import {
   parseAndExecuteHtml,
   toProxyUrl,
 } from '@/utils';
-import { BookChapter, BookItem } from './book';
+import { BookItem } from './book';
 import { PhotoItem } from './photo';
 import { urlJoin as myUrlJoin } from '@/utils';
+
+// 定义一个装饰器工厂函数，允许传入目标类型
+export function transformResult<T>(func: (result: T) => T) {
+  return function (target: any, key: string, descriptor: PropertyDescriptor) {
+    const originalMethod = descriptor.value;
+
+    descriptor.value = async function (...args: any[]) {
+      try {
+        // 调用原始方法
+        const result: T = await originalMethod.apply(this, args);
+        return func(result);
+      } catch (error) {
+        console.warn(`function ${key} failed`, error);
+
+        return null;
+      }
+    };
+
+    return descriptor;
+  };
+}
 
 abstract class Extension {
   cryptoJs: typeof CryptoJS;
@@ -118,7 +138,9 @@ abstract class Extension {
           element.querySelector(title)?.getAttribute('title');
         const introE = element.querySelector(intro)?.textContent;
         const authorE = element.querySelector(author)?.textContent;
-        const tagsE = element.querySelector(tags)?.textContent;
+        const tagsE = Array.from(element.querySelectorAll(tags).values())
+          .map((item) => item.textContent)
+          .filter((item): item is string => !!item);
         const statusE = element.querySelector(status)?.textContent;
         const latestChapterE =
           element.querySelector(latestChapter)?.textContent;
@@ -132,7 +154,11 @@ abstract class Extension {
           intro: introE || undefined,
           cover: coverE || undefined,
           author: authorE || undefined,
-          tags: tagsE || undefined,
+          tags: tagsE.length
+            ? tagsE.length === 1
+              ? tagsE[0]
+              : tagsE
+            : undefined,
           status: statusE || undefined,
           latestChapter: latestChapterE || undefined,
           latestUpdate: latestUpdateE || undefined,

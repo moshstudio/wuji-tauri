@@ -1,3 +1,4 @@
+import { useDisplayStore } from '@/store';
 import { Directive, DirectiveBinding, onUnmounted } from 'vue';
 
 export default <Directive<HTMLElement, string>>{
@@ -16,6 +17,8 @@ export default <Directive<HTMLElement, string>>{
         });
       }, 0);
     };
+    const displaystore = useDisplayStore();
+    if (!displaystore.isAndroid) return;
     el.addEventListener('wheel', handleWheel);
     // 移除事件监听器
     onUnmounted(() => {

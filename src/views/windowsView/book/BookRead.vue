@@ -302,7 +302,7 @@ onMounted(() => {
             :key="JSON.stringify(theme)"
             class="rounded-full text-center p-2 border-2 w-[40px] h-[40px] cursor-pointer shrink-0"
             :class="[
-              theme === bookStore.currTheme
+              theme.name === bookStore.currTheme.name
                 ? 'border-[var(--van-primary-color)]'
                 : 'border-white',
             ]"

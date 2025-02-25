@@ -240,6 +240,7 @@ onBeforeUnmount(async () => {
       <v-progress-linear
         :active="displayStore.toastActive"
         indeterminate
+        rounded
         color="teal"
         height="4"
       ></v-progress-linear>

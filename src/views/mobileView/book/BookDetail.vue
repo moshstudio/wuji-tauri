@@ -40,6 +40,7 @@ const emit = defineEmits<{
           <van-image
             width="80px"
             height="100px"
+            radius="4"
             :src="book.cover"
             class="mr-4"
             v-if="book.cover"

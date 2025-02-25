@@ -65,7 +65,10 @@ const store = useStore();
             <template #value>
               <div class="flex flex-shrink gap-2 items-center">
                 <p v-if="item.author">{{ item.author }}</p>
-                <van-icon name="success" v-if="book.id === item.id" />
+                <van-icon
+                  name="success"
+                  v-if="book.id === item.id && book.sourceId === item.sourceId"
+                />
               </div>
             </template>
           </van-cell>

@@ -140,6 +140,8 @@ export function purifyText(text: string): string {
     /章节错误，点此举报/g,
     /请继续关注后续内容/g,
     /退出阅读模式/g,
+    /（本章完）|（本章未完，请翻页）|.*书友群.*|（本章未完，请翻页）/g,
+    /為您提供精彩小說/g,
     // 可以根据需要添加更多无用文本的正则表达式
   ];
   const lines = text.split('\n');
@@ -409,4 +411,32 @@ export async function downloadFile(
     showToast('文件下载失败');
     return false;
   }
+}
+
+export function sanitizePathName(
+  folderName: string,
+  options: { removeSpaces?: boolean; maxLength?: number } = {}
+): string {
+  const { removeSpaces = true, maxLength = 255 } = options;
+
+  // 定义非法字符的正则表达式
+  const illegalChars = /[<>:"/\\|?*\x00-\x1F]/g;
+
+  // 替换非法字符为空字符串
+  let sanitizedName = folderName.replace(illegalChars, '');
+
+  // 如果选项要求去除空格，则去除所有空格
+  if (removeSpaces) {
+    sanitizedName = sanitizedName.replace(/\s+/g, '');
+  }
+
+  // 去除首尾空格和点（某些操作系统不允许文件夹以点开头或结尾）
+  sanitizedName = sanitizedName.replace(/^[\s.]+|[\s.]+$/g, '');
+
+  // 确保文件夹名称长度不超过最大长度限制
+  if (sanitizedName.length > maxLength) {
+    sanitizedName = sanitizedName.substring(0, maxLength);
+  }
+
+  return sanitizedName;
 }

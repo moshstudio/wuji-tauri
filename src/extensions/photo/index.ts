@@ -1,4 +1,4 @@
-import { Extension } from '../baseExtension';
+import { Extension, transformResult } from '../baseExtension';
 
 export interface PhotoItem {
   id: string;
@@ -48,10 +48,44 @@ abstract class PhotoExtension extends Extension {
   public constructor() {
     super();
   }
+
+  @transformResult<PhotoList | null>((r) => {
+    if (r) {
+      r.list.forEach((item) => {
+        item.id = String(item.id);
+      });
+    }
+    return r;
+  })
+  execGetRecommendList(pageNo?: number) {
+    return this.getRecommendList(pageNo);
+  }
   // 1. 首页推荐
   abstract getRecommendList(pageNo?: number): Promise<PhotoList | null>;
+
+  @transformResult<PhotoList | null>((r) => {
+    if (r) {
+      r.list.forEach((item) => {
+        item.id = String(item.id);
+      });
+    }
+    return r;
+  })
+  execSearch(keyword: string, pageNo?: number) {
+    return this.search(keyword, pageNo);
+  }
   // 2. 搜索
   abstract search(keyword: string, pageNo?: number): Promise<PhotoList | null>;
+
+  @transformResult<PhotoDetail | null>((r) => {
+    if (r) {
+      r.item.id = String(r.item.id);
+    }
+    return r;
+  })
+  execGetPhotoDetail(item: PhotoItem, pageNo?: number) {
+    return this.getPhotoDetail(item, pageNo);
+  }
   // 3. 获取图片详情
   abstract getPhotoDetail(
     item: PhotoItem,

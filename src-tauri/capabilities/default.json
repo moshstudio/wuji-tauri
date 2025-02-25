@@ -14,17 +14,6 @@
     "core:window:allow-close",
     "shell:allow-open",
     "shell:default",
-    {
-      "identifier": "http:default",
-      "allow": [
-        {
-          "url": "https://*"
-        },
-        {
-          "url": "http://*"
-        }
-      ]
-    },
     "store:allow-get",
     "store:allow-set",
     "store:allow-save",
@@ -35,11 +24,6 @@
     "store:allow-has",
     "store:allow-length",
     "store:allow-reset",
-    "sql:default",
-    "sql:allow-load",
-    "sql:allow-close",
-    "sql:allow-execute",
-    "sql:allow-select",
     "fetch-plugin:default",
     "os:default",
     "core:window:allow-set-min-size",
@@ -62,22 +46,9 @@
     "fs:allow-remove",
     "fs:scope-download-recursive",
     "fs:scope-resource-recursive",
-    {
-      "identifier": "fs:scope",
-      "allow": [
-        {
-          "path": "**"
-        },
-        {
-          "path": "$DOWNLOAD/**"
-        },
-        {
-          "path": "$PICTURE/**"
-        }
-      ],
-      "deny": [
-        "$APPDATA/db/*.stronghold"
-      ]
-    }
+    "fs:allow-appcache-read",
+    "fs:allow-appcache-write",
+    "fs:allow-appcache-read-recursive",
+    "fs:allow-appcache-write-recursive"
   ]
 }

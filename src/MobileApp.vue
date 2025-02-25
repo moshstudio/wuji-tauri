@@ -193,6 +193,8 @@ window.androidBackCallback = async () => {
     } else if (displayStore.showPlayView) {
       // 关闭播放页
       displayStore.showPlayView = false;
+    } else if (displayStore.showSongShelfDetail) {
+      displayStore.showSongShelfDetail = false;
     } else if (displayStore.showSongShelf) {
       displayStore.showSongShelf = false;
     } else {
@@ -243,6 +245,7 @@ window.androidBackCallback = async () => {
       <v-progress-linear
         :active="displayStore.toastActive"
         indeterminate
+        rounded
         color="teal"
         height="4"
       ></v-progress-linear>

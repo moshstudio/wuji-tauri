@@ -1,4 +1,5 @@
-import _ from 'lodash';
+import _, { uniqueId } from 'lodash';
+import CryptoJS from 'crypto-js';
 import { HotItem } from '@/apis/hot/apiHot';
 import {
   loadPhotoExtensionString,
@@ -42,7 +43,7 @@ import {
 } from 'vue';
 import { Store } from '@tauri-apps/plugin-store';
 import { type as osType } from '@tauri-apps/plugin-os';
-import Database from '@tauri-apps/plugin-sql';
+import * as fs from '@tauri-apps/plugin-fs';
 import { fetch } from '@/utils/fetch';
 import {
   loadSongExtensionString,
@@ -50,12 +51,17 @@ import {
   PlaylistInfo,
   SongExtension,
   SongInfo,
+  ArtistInfo,
 } from '@/extensions/song';
 import { SongPlayMode, SongShelfType } from '@/types/song';
 import { ReadTheme } from '@/types/book';
 import { watch } from 'vue';
-import { DEFAULT_SOURCE_URL, sleep, tryCatchProxy } from '@/utils';
-import * as sql from '@/utils/sqlScript';
+import {
+  DEFAULT_SOURCE_URL,
+  sanitizePathName,
+  sleep,
+  tryCatchProxy,
+} from '@/utils';
 import {
   BookChapter,
   BookExtension,
@@ -72,13 +78,15 @@ import TestSongExtension from '@/extensions/song/test';
 import TestBookExtension from '@/extensions/book/test';
 import { nanoid } from 'nanoid';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { getSongCover } from '@/utils/songCover';
 
 export const useStore = defineStore('store', () => {
   const hotItems = ref<HotItem[]>([]); // 热搜榜
 
   const subscribeSourceStore = useSubscribeSourceStore();
   const kvStorage = createKVStore();
-  const dbStore = useDBStore();
+  const bookChapterStore = useBookChapterStore();
+  const bookShelfStore = useBookShelfStore();
 
   const sourceClasses = new Map<String, Extension | null>();
   const sourceClass = async (
@@ -175,7 +183,7 @@ export const useStore = defineStore('store', () => {
     pageNo: number = 1
   ) => {
     const sc = (await sourceClass(source.item)) as PhotoExtension;
-    const res = await sc?.getRecommendList(pageNo);
+    const res = await sc?.execGetRecommendList(pageNo);
 
     if (res) {
       res.list.forEach((item) => {
@@ -197,7 +205,7 @@ export const useStore = defineStore('store', () => {
     pageNo: number = 1
   ) => {
     const sc = (await sourceClass(source.item)) as PhotoExtension;
-    const res = await sc?.search(keyword, pageNo);
+    const res = await sc?.execSearch(keyword, pageNo);
 
     if (res) {
       res.list.forEach((item) => {
@@ -219,7 +227,7 @@ export const useStore = defineStore('store', () => {
     pageNo: number = 1
   ) => {
     const sc = (await sourceClass(source.item)) as PhotoExtension;
-    const res = await sc?.getPhotoDetail(item, pageNo);
+    const res = await sc?.execGetPhotoDetail(item, pageNo);
     if (res) {
       res.sourceId = source.item.id;
       return res;
@@ -277,7 +285,7 @@ export const useStore = defineStore('store', () => {
     const fromShelf = () => {
       for (const shelf of shelfStore.photoShelf) {
         for (const item of shelf.photos) {
-          if (String(item.id) === String(itemId)) {
+          if (item.id === itemId) {
             return item;
           }
         }
@@ -285,9 +293,7 @@ export const useStore = defineStore('store', () => {
     };
     const fromSource = () => {
       if (source.list) {
-        return source.list.list.find(
-          (item) => String(item.id) === String(itemId)
-        );
+        return source.list.list.find((item) => item.id === itemId);
       }
     };
     const shelfStore = usePhotoShelfStore();
@@ -303,7 +309,7 @@ export const useStore = defineStore('store', () => {
     pageNo: number = 1
   ) => {
     const sc = (await sourceClass(source.item)) as SongExtension;
-    const res = await sc?.getRecommendPlaylists(pageNo);
+    const res = await sc?.execGetRecommendPlaylists(pageNo);
     if (res) {
       res.list.forEach((item) => {
         item.sourceId = source.item.id;
@@ -326,7 +332,7 @@ export const useStore = defineStore('store', () => {
       closeOnClickOverlay: false,
     });
     const sc = (await sourceClass(source.item)) as SongExtension;
-    const res = await sc?.getPlaylistDetail(item, pageNo);
+    const res = await sc?.execGetPlaylistDetail(item, pageNo);
     toast.close();
     if (res) {
       res.list?.list.forEach((item) => {
@@ -348,13 +354,15 @@ export const useStore = defineStore('store', () => {
     let pageNo = 1;
     while (true) {
       const sc = (await sourceClass(source.item)) as SongExtension;
-      const res = await sc?.getPlaylistDetail(
+      const res = await sc?.execGetPlaylistDetail(
         _.cloneDeep(item), // 不修改原对象
         pageNo
       );
-      res?.list?.list.forEach((item) => {
-        item.sourceId = source.item.id;
-      });
+      if (res) {
+        res?.list?.list.forEach((item) => {
+          item.sourceId = source.item.id;
+        });
+      }
 
       if (res && res.list?.list) {
         songs.push(...res.list.list);
@@ -377,7 +385,7 @@ export const useStore = defineStore('store', () => {
   };
   const songRecommendSong = async (source: SongSource, pageNo: number = 1) => {
     const sc = (await sourceClass(source.item)) as SongExtension;
-    const res = await sc?.getRecommendSongs(pageNo);
+    const res = await sc?.execGetRecommendSongs(pageNo);
     if (res) {
       res.list.forEach((item) => {
         item.sourceId = source.item.id;
@@ -394,7 +402,7 @@ export const useStore = defineStore('store', () => {
     pageNo: number = 1
   ) => {
     const sc = (await sourceClass(source.item)) as SongExtension;
-    const res = await sc?.searchSongs(keyword, pageNo);
+    const res = await sc?.execSearchSongs(keyword, pageNo);
     if (res) {
       res.list.forEach((item) => {
         item.sourceId = source.item.id;
@@ -411,7 +419,7 @@ export const useStore = defineStore('store', () => {
     pageNo: number = 1
   ) => {
     const sc = (await sourceClass(source.item)) as SongExtension;
-    const res = await sc?.searchPlaylists(keyword, pageNo);
+    const res = await sc?.execSearchPlaylists(keyword, pageNo);
     if (res) {
       res.list.forEach((item) => {
         item.sourceId = source.item.id;
@@ -426,9 +434,7 @@ export const useStore = defineStore('store', () => {
     source: SongSource,
     playlistId: string
   ): PlaylistInfo | undefined => {
-    return source.playlist?.list.find(
-      (item) => String(item.id) === String(playlistId)
-    );
+    return source.playlist?.list.find((item) => item.id === playlistId);
   };
   /**
    * 获取推荐列表
@@ -439,7 +445,7 @@ export const useStore = defineStore('store', () => {
     type?: string
   ) => {
     const sc = (await sourceClass(source.item)) as BookExtension;
-    const res = await sc?.getRecommendBooks(pageNo, type);
+    const res = await sc?.execGetRecommendBooks(pageNo, type);
 
     if (res) {
       _.castArray(res).forEach((book) => {
@@ -475,7 +481,7 @@ export const useStore = defineStore('store', () => {
     pageNo: number = 1
   ) => {
     const sc = (await sourceClass(source.item)) as BookExtension;
-    const res = await sc?.search(keyword, pageNo);
+    const res = await sc?.execSearch(keyword, pageNo);
     if (res) {
       if (!_.isArray(res) && !res.list.length) {
         source.list = undefined;
@@ -493,7 +499,7 @@ export const useStore = defineStore('store', () => {
   };
   const bookDetail = async (source: BookSource, book: BookItem) => {
     const sc = (await sourceClass(source.item)) as BookExtension;
-    const res = await sc?.getBookDetail(book);
+    const res = await sc?.execGetBookDetail(book);
     if (res) {
       res.sourceId = source.item.id;
       return res;
@@ -508,19 +514,23 @@ export const useStore = defineStore('store', () => {
     chapter: BookChapter,
     cacheMoreChapters: boolean = true
   ): Promise<string | null> => {
-    const content = await dbStore.getBookChapter(book, chapter);
+    const content = await bookChapterStore.getBookChapter(book, chapter);
     if (content) {
-      if (cacheMoreChapters) {
+      if (cacheMoreChapters && bookShelfStore.isBookInShelf(book)) {
+        // 只缓存在书架中的书
         cacheBookChapters(source, book, chapter);
       }
       return content;
     }
     const sc = (await sourceClass(source.item)) as BookExtension;
-    const res = await sc?.getContent(book, chapter);
+    const res = await sc?.execGetContent(book, chapter);
     if (res) {
-      await dbStore.saveBookChapter(book, chapter, res);
-      if (cacheMoreChapters) {
-        cacheBookChapters(source, book, chapter);
+      if (bookShelfStore.isBookInShelf(book)) {
+        // 只缓存在书架中的书
+        await bookChapterStore.saveBookChapter(book, chapter, res);
+        if (cacheMoreChapters) {
+          cacheBookChapters(source, book, chapter);
+        }
       }
     }
 
@@ -534,22 +544,16 @@ export const useStore = defineStore('store', () => {
       chapter: BookChapter
     ) => {
       if (!book.chapters) return;
-      const index = book.chapters.findIndex(
-        (item) => String(item.id) === String(chapter.id)
-      );
+      const index = book.chapters.findIndex((item) => item.id === chapter.id);
       if (index === -1) return;
       let count = 1;
       const bookStore = useBookStore();
       while (count <= bookStore.chapterCacheNum) {
-        console.log('aborted?', signal.aborted);
-
         if (signal.aborted) {
           return;
         }
         const targetChapter = book.chapters[index + count];
         if (targetChapter) {
-          console.log(`缓存章节 ${targetChapter.title}`, signal.aborted);
-
           await bookRead(source, book, targetChapter, false);
         }
         count += 1;
@@ -569,7 +573,7 @@ export const useStore = defineStore('store', () => {
     const checkFromShelf = () => {
       for (const shelf of shelfStore.bookShelf) {
         for (const book of shelf.books) {
-          if (String(book.book.id) === String(bookId)) {
+          if (book.book.id === bookId) {
             return book.book;
           }
         }
@@ -579,7 +583,7 @@ export const useStore = defineStore('store', () => {
       if (source.list) {
         for (let bookList of _.castArray(source.list)) {
           for (let bookItem of bookList.list) {
-            if (String(bookItem.id) === String(bookId)) {
+            if (bookItem.id === bookId) {
               return bookItem;
             }
           }
@@ -851,21 +855,53 @@ export const useStore = defineStore('store', () => {
       closeOnClick: true,
       closeOnClickOverlay: false,
     });
+    // 清空订阅源
     await subscribeSourceStore.clearSubscribeSources();
     loadSubscribeSources(true);
     const photoShelfStore = usePhotoShelfStore();
+    // 清空图片收藏
     photoShelfStore.clear();
     const songShelfStore = useSongShelfStore();
+    // 清空音乐收藏
     songShelfStore.clear();
     const bookShelfStore = useBookShelfStore();
+    // 清空书架
     bookShelfStore.clear();
+    // 清空章节缓存
+    bookChapterStore.clear();
+    // 清空音乐缓存
+    const songCacheStore = useSongCacheStore();
+    songCacheStore.clear();
     localStorage.clear();
+    kvStorage.storage.clear();
     loading.close();
   };
+  const clearCache = async () => {
+    const toast = showLoadingToast({
+      message: '请稍候',
+      duration: 0,
+      closeOnClick: true,
+      closeOnClickOverlay: false,
+    });
+    // 清空章节缓存
+    await bookChapterStore.clear();
+    // 清空音乐缓存
+    const songCacheStore = useSongCacheStore();
+    await songCacheStore.clear();
+    toast.close();
+    showToast('缓存已清空');
+  };
+
+  const latestUpdateSource = useStorageAsync('latestUpdateSource', 0);
 
   onBeforeMount(async () => {
     await subscribeSourceStore.init();
     if (!subscribeSourceStore.isEmpty) {
+      // 更新订阅源
+      if (Date.now() - latestUpdateSource.value > 1000 * 60 * 60 * 6) {
+        await updateSubscribeSources();
+        latestUpdateSource.value = Date.now();
+      }
       // try {
       //   const dialog = await showConfirmDialog({
       //     title: "订阅更新",
@@ -929,6 +965,7 @@ export const useStore = defineStore('store', () => {
     removeFromSource,
 
     clearData,
+    clearCache,
   };
 });
 
@@ -999,6 +1036,7 @@ export const useDisplayStore = defineStore('display', () => {
 
   const showPhotoShelf = useStorageAsync('showPhotoShelf', false);
   const showSongShelf = useStorageAsync('showSongShelf', false);
+  const showSongShelfDetail = useStorageAsync('showSongShelfDetail', false);
   const showBookShelf = useStorageAsync('showBookShelf', false);
   const showPlayView = useStorageAsync('showPlayView', false);
   const showPlayingPlaylist = useStorageAsync('showPlayingPlaylist', false);
@@ -1065,6 +1103,7 @@ export const useDisplayStore = defineStore('display', () => {
 
     showPhotoShelf,
     showSongShelf,
+    showSongShelfDetail,
     showBookShelf,
     showPlayView,
     showPlayingPlaylist,
@@ -1125,6 +1164,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
 
 export const useSongStore = defineStore('song', () => {
   const displayStore = useDisplayStore();
+  const songCacheStore = useSongCacheStore();
 
   const volumeVisible = ref<boolean>(false); // 设置音量弹窗
   const audioRef = ref<HTMLAudioElement>(); // 音频标签对象
@@ -1249,42 +1289,52 @@ export const useSongStore = defineStore('song', () => {
       audioDuration.value = 0;
       isPlaying.value = false;
 
+      if (!song.picUrl) {
+        // 获取封面
+        getSongCover(song);
+      }
+
       let src = null;
       let headers = null;
       let t: string | null = null;
 
-      // 获取歌曲URL和headers
-      if (!song.url) {
-        const store = useStore();
-        const source = store.getSongSource(song.sourceId);
-        if (!source) {
-          showToast(`${song.name} 所属源不存在或未启用`);
-          return;
-        }
-        t = displayStore.showToast();
-        const sc = (await store.sourceClass(source?.item)) as SongExtension;
-        const newUrl = await sc?.getSongUrl(song);
-        if (signal.aborted) {
-          displayStore.closeToast(t);
-          return;
-        }
+      const cached_url = await songCacheStore.getSong(song);
+      if (!cached_url) {
+        // 获取歌曲URL和headers
+        if (!song.url) {
+          const store = useStore();
+          const source = store.getSongSource(song.sourceId);
+          if (!source) {
+            showToast(`${song.name} 所属源不存在或未启用`);
+            return;
+          }
+          t = displayStore.showToast();
+          const sc = (await store.sourceClass(source?.item)) as SongExtension;
+          const newUrl = await sc?.execGetSongUrl(song);
+          if (signal.aborted) {
+            displayStore.closeToast(t);
+            return;
+          }
 
-        if (typeof newUrl === 'string') {
-          src = newUrl;
-        } else if (newUrl instanceof Object) {
-          src = newUrl['128k'] || newUrl['320k'] || newUrl.flac || '';
-          headers = newUrl.headers || null;
-          if (newUrl.lyric) {
-            song.lyric = newUrl.lyric;
+          if (typeof newUrl === 'string') {
+            src = newUrl;
+          } else if (newUrl instanceof Object) {
+            src = newUrl['128k'] || newUrl['320k'] || newUrl.flac || '';
+            headers = newUrl.headers || null;
+            if (newUrl.lyric) {
+              song.lyric = newUrl.lyric;
+            }
+          }
+        } else {
+          if (typeof song.url === 'string') {
+            src = song.url;
+          } else if (song.url instanceof Object) {
+            src = song.url['128k'] || song.url['320k'] || song.url.flac || '';
+            headers = song.url.headers || null;
           }
         }
       } else {
-        if (typeof song.url === 'string') {
-          src = song.url;
-        } else if (song.url instanceof Object) {
-          src = song.url['128k'] || song.url['320k'] || song.url.flac || '';
-          headers = song.url.headers || null;
-        }
+        src = cached_url;
       }
 
       if (!src) {
@@ -1321,8 +1371,11 @@ export const useSongStore = defineStore('song', () => {
         const source = store.getSongSource(song.sourceId);
         if (source) {
           const sc = (await store.sourceClass(source?.item)) as SongExtension;
-          song.lyric = (await sc?.getLyric(song)) || undefined;
+          song.lyric = (await sc?.execGetLyric(song)) || undefined;
         }
+      }
+      if (!cached_url) {
+        songCacheStore.saveSong(song, audioRef.value.src);
       }
     }
   );
@@ -1624,12 +1677,16 @@ const createKVStore = (name?: string) => {
 
       async setItem(key: string, value: string): Promise<void> {
         this.middleware.set(key, value);
-        store?.set(key, value);
+        await store?.set(key, value);
       }
 
       async removeItem(key: string): Promise<void> {
         this.middleware.delete(key);
-        store?.delete(key);
+        await store?.delete(key);
+      }
+      async clear(): Promise<void> {
+        this.middleware.clear();
+        await store?.clear();
       }
     }
     const storage = new KVStorage();
@@ -1672,7 +1729,17 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     }
   };
   const removeBookShelf = (shelfId: string) => {
+    const find = bookShelf.value.find((item) => item.id === shelfId);
     bookShelf.value = bookShelf.value.filter((item) => item.id !== shelfId);
+    if (find) {
+      const bookChapterStore = useBookChapterStore();
+      find.books.forEach((book) => {
+        if (!isBookInShelf(book.book)) {
+          // 确保不在其他书架中也存在
+          bookChapterStore.removeBookCache(book.book);
+        }
+      });
+    }
   };
   const isBookInShelf = (
     book: BookItem | string,
@@ -1730,6 +1797,10 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
       return;
     }
     _.remove(shelf.books, (item) => item.book.id === bookItem.id);
+    if (!isBookInShelf(bookItem)) {
+      const bookChapterStore = useBookChapterStore();
+      bookChapterStore.removeBookCache(bookItem);
+    }
   };
   const updateBookReadInfo = (bookItem: BookItem, chapter: BookChapter) => {
     if (!bookShelf.value) return;
@@ -2069,50 +2140,444 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
   };
 });
 
-export const useDBStore = defineStore('DBStore', () => {
-  const db = ref<Database>();
-  onUnmounted(() => {
-    db.value?.close();
-  });
-  const initDB = async () => {
-    if (!db.value) {
-      db.value = await Database.load('sqlite:db.db');
-      await db.value.execute(sql.CREATE_BOOK_CHAPTERS_TABLE);
+export const useBookChapterStore = defineStore('bookChapterStore', () => {
+  const baseDir = fs.BaseDirectory.AppCache;
+  const dirName = 'book_cache';
+  const baseFile = 'books.json';
+  const books = ref<
+    {
+      book_id: string;
+      book_name: string;
+      source_id: string;
+      chapter_id: string;
+      chapter_name: string;
+      cache_book_id: string;
+      cache_chapter_id: string;
+    }[]
+  >([]);
+  let inited = false;
+  watch(
+    books,
+    _.debounce(async (newValue) => {
+      if (!newValue) {
+        return;
+      }
+      if (!inited) {
+        await ensureBase();
+      }
+      await fs.writeFile(
+        `${dirName}/${baseFile}`,
+        new TextEncoder().encode(JSON.stringify(newValue)),
+        {
+          baseDir: baseDir,
+        }
+      );
+    }, 500),
+    {
+      deep: true,
     }
+  );
+
+  const ensureBase = async () => {
+    if (!(await fs.exists(dirName, { baseDir: baseDir }))) {
+      await fs.mkdir(dirName, {
+        baseDir: baseDir,
+        recursive: true,
+      });
+    }
+    if (
+      !(await fs.exists(`${dirName}/${baseFile}`, {
+        baseDir: baseDir,
+      }))
+    ) {
+      await fs.writeFile(
+        `${dirName}/${baseFile}`,
+        new TextEncoder().encode('[]'),
+        {
+          baseDir: baseDir,
+        }
+      );
+    } else {
+      books.value = JSON.parse(
+        new TextDecoder().decode(
+          await fs.readFile(`${dirName}/${baseFile}`, {
+            baseDir: baseDir,
+          })
+        )
+      );
+    }
+    inited = true;
   };
   const saveBookChapter = async (
     book: BookItem,
     chapter: BookChapter,
-    content: string
+    content: string,
+    force = false
   ) => {
-    if (!db.value) {
-      await initDB();
+    if (!inited) {
+      await ensureBase();
     }
-    await db.value?.execute(sql.ADD_BOOK_CHAPTER, [
-      String(book.id),
-      String(chapter.id),
-      String(book.sourceId),
-      JSON.stringify(chapter),
-      content,
-    ]);
+    const cache_book_id =
+      CryptoJS.MD5(`${book.sourceId}_${book.id}`).toString() +
+      sanitizePathName(book.title);
+    const cache_chapter_id =
+      CryptoJS.MD5(`${book.sourceId}_${book.id}_${chapter.id}`).toString() +
+      sanitizePathName(chapter.title);
+
+    const find = books.value.find(
+      (b) =>
+        b.cache_book_id === cache_book_id &&
+        b.cache_chapter_id === cache_chapter_id
+    );
+    if (find && !force) {
+      // 已经有了，不需要重复保存
+      return;
+    }
+    if (
+      !(await fs.exists(`${dirName}/${cache_book_id}`, { baseDir: baseDir }))
+    ) {
+      await fs.mkdir(`${dirName}/${cache_book_id}`, {
+        baseDir: baseDir,
+        recursive: true,
+      });
+    }
+    await fs.writeFile(
+      `${dirName}/${cache_book_id}/${cache_chapter_id}`,
+      new TextEncoder().encode(content),
+      {
+        baseDir: baseDir,
+      }
+    );
+    if (!find) {
+      books.value.unshift({
+        book_id: book.id,
+        book_name: book.title,
+        source_id: book.sourceId,
+        chapter_id: chapter.id,
+        chapter_name: chapter.title,
+        cache_book_id,
+        cache_chapter_id,
+      });
+    }
   };
   const getBookChapter = async (
     book: BookItem,
     chapter: BookChapter
   ): Promise<string | undefined> => {
-    if (!db.value) {
-      await initDB();
+    if (!inited) {
+      await ensureBase();
     }
-    const row = await db.value?.select<sql.DBBookChapter[]>(
-      sql.GET_BOOK_CHAPTER,
-      [String(book.id), String(chapter.id), String(book.sourceId)]
-    );
+    const cache_book_id =
+      CryptoJS.MD5(`${book.sourceId}_${book.id}`).toString() +
+      sanitizePathName(book.title);
+    const cache_chapter_id =
+      CryptoJS.MD5(`${book.sourceId}_${book.id}_${chapter.id}`).toString() +
+      sanitizePathName(chapter.title);
 
-    return row?.[0]?.content;
+    const find = books.value.find(
+      (b) =>
+        b.cache_book_id === cache_book_id &&
+        b.cache_chapter_id === cache_chapter_id
+    );
+    if (find) {
+      try {
+        return new TextDecoder().decode(
+          await fs.readFile(`${dirName}/${cache_book_id}/${cache_chapter_id}`, {
+            baseDir: baseDir,
+          })
+        );
+      } catch (error) {}
+    }
+  };
+  const removeBookCache = async (book: BookItem) => {
+    if (!inited) {
+      await ensureBase();
+    }
+    const cache_book_id =
+      CryptoJS.MD5(`${book.sourceId}_${book.id}`).toString() +
+      sanitizePathName(book.title);
+    books.value = books.value.filter((b) => b.cache_book_id !== cache_book_id);
+    if (await fs.exists(`${dirName}/${cache_book_id}`, { baseDir: baseDir })) {
+      try {
+        await fs.remove(`${dirName}/${cache_book_id}`, {
+          baseDir: baseDir,
+          recursive: true,
+        });
+      } catch (error) {
+        console.warn('删除章节缓存失败:', JSON.stringify(book));
+      }
+    }
+  };
+  const clear = async () => {
+    if (!inited) {
+      await ensureBase();
+    }
+    [...new Set(books.value.map((book) => book.cache_book_id))].forEach(
+      async (cache_book_id) => {
+        if (
+          await fs.exists(`${dirName}/${cache_book_id}`, {
+            baseDir: baseDir,
+          })
+        ) {
+          try {
+            await fs.remove(`${dirName}/${cache_book_id}`, {
+              baseDir: baseDir,
+              recursive: true,
+            });
+          } catch (error) {}
+        }
+      }
+    );
+    books.value = [];
   };
   return {
-    db,
-    saveBookChapter,
     getBookChapter,
+    saveBookChapter,
+    removeBookCache,
+    clear,
   };
+});
+
+export const useSongCacheStore = defineStore('songCacheStore', () => {
+  const baseDir = fs.BaseDirectory.AppCache;
+  const dirName = 'song_cache';
+  const baseFile = 'songs.json';
+  const songs = ref<
+    {
+      song_id: string;
+      song_name: string;
+      source_id: string;
+      update_time: number;
+      cache_song_id: string;
+    }[]
+  >([]);
+  let inited = false;
+  watch(
+    songs,
+    _.debounce(async (newValue) => {
+      if (!newValue) {
+        return;
+      }
+      if (!inited) {
+        await ensureBase();
+      }
+      await fs.writeFile(
+        `${dirName}/${baseFile}`,
+        new TextEncoder().encode(JSON.stringify(newValue)),
+        {
+          baseDir: baseDir,
+        }
+      );
+    }, 500),
+    {
+      deep: true,
+    }
+  );
+
+  const ensureBase = async () => {
+    if (!(await fs.exists(dirName, { baseDir: baseDir }))) {
+      await fs.mkdir(dirName, {
+        baseDir: baseDir,
+        recursive: true,
+      });
+    }
+    if (
+      !(await fs.exists(`${dirName}/${baseFile}`, {
+        baseDir: baseDir,
+      }))
+    ) {
+      await fs.writeFile(
+        `${dirName}/${baseFile}`,
+        new TextEncoder().encode('[]'),
+        {
+          baseDir: baseDir,
+        }
+      );
+    } else {
+      songs.value = JSON.parse(
+        new TextDecoder().decode(
+          await fs.readFile(`${dirName}/${baseFile}`, {
+            baseDir: baseDir,
+          })
+        )
+      );
+    }
+    inited = true;
+    if (songs.value.length > 100) {
+      // 1. 获取update_time最小的20首歌曲
+      const minUpdateTimeSongs = [...songs.value]
+        .sort((a, b) => a.update_time - b.update_time)
+        .slice(0, 20);
+      // 2. 更新books.value
+      songs.value = songs.value.filter(
+        (song) => !minUpdateTimeSongs.includes(song)
+      );
+      // 3. 根据cache_song_id删除文件
+      for (const song of minUpdateTimeSongs) {
+        if (
+          await fs.exists(`${dirName}/${song.cache_song_id}`, {
+            baseDir: baseDir,
+          })
+        ) {
+          try {
+            await fs.remove(`${dirName}/${song.cache_song_id}`, {
+              baseDir: baseDir,
+              recursive: true,
+            });
+          } catch (error) {
+            console.warn('删除歌曲缓存失败:', JSON.stringify(song));
+          }
+        }
+      }
+    }
+  };
+  const genCacheSongId = (song: SongInfo) => {
+    let a = '';
+    if (song.artists) {
+      if (Array.isArray(song.artists)) {
+        if (typeof song.artists[0] === 'string') {
+          // 处理 string[] 类型
+          a = '-' + song.artists.join(',');
+        } else {
+          // 处理 ArtistInfo[] 类型
+          a =
+            '-' +
+            song.artists.map((artist) => (artist as ArtistInfo).name).join(',');
+        }
+      }
+    }
+    return sanitizePathName(song.name || '') + a + nanoid(6) + '.mp3';
+  };
+  const saveSong = async (song: SongInfo, url: string, force = false) => {
+    if (!inited) {
+      await ensureBase();
+    }
+    const cache_song_id = genCacheSongId(song);
+
+    const find = songs.value.find(
+      (s) => s.song_id === song.id && s.source_id === song.sourceId
+    );
+    if (find && !force) {
+      // 已经有了，不需要重复保存
+      return;
+    }
+    let blob: Blob;
+    if (url.startsWith('blob')) {
+      blob = await (await window.fetch(url)).blob();
+    } else {
+      blob = await (await fetch(url)).blob();
+    }
+    if (blob.size === 0) return; // 获取失败
+
+    const unit: Uint8Array = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        if (reader.result instanceof ArrayBuffer) {
+          const arrayBuffer = reader.result;
+          const uint8Array = new Uint8Array(arrayBuffer);
+          resolve(uint8Array);
+        } else {
+          reject(new Error('Failed to read blob as ArrayBuffer'));
+        }
+      };
+
+      reader.onerror = () => {
+        reject(reader.error);
+      };
+
+      reader.readAsArrayBuffer(blob);
+    });
+    await fs.writeFile(`${dirName}/${cache_song_id}`, unit, {
+      baseDir: baseDir,
+    });
+    if (!find) {
+      songs.value.unshift({
+        song_id: song.id,
+        song_name: song.name || '',
+        source_id: song.sourceId,
+        update_time: Date.now(),
+        cache_song_id,
+      });
+    } else {
+      find.update_time = Date.now();
+    }
+  };
+  const getSong = async (song: SongInfo): Promise<string | undefined> => {
+    if (!inited) {
+      await ensureBase();
+    }
+
+    const find = songs.value.find(
+      (s) => s.song_id === song.id && s.source_id === song.sourceId
+    );
+    if (
+      find &&
+      (await fs.exists(`${dirName}/${find.cache_song_id}`, {
+        baseDir: baseDir,
+      }))
+    ) {
+      try {
+        const buffer = await fs.readFile(`${dirName}/${find.cache_song_id}`, {
+          baseDir: baseDir,
+        });
+        if (buffer.byteLength === 0) {
+          await removeSong(song);
+          return undefined;
+        }
+        const blobUrl = URL.createObjectURL(
+          new Blob([buffer], { type: 'audio/mpeg' })
+        );
+        return blobUrl;
+      } catch (error) {}
+    }
+  };
+  const removeSong = async (song: SongInfo) => {
+    if (!inited) {
+      await ensureBase();
+    }
+    const find = songs.value.find(
+      (s) => s.song_id === song.id && s.source_id === song.sourceId
+    );
+    if (find) {
+      if (
+        await fs.exists(`${dirName}/${find.cache_song_id}`, {
+          baseDir: baseDir,
+        })
+      ) {
+        try {
+          await fs.remove(`${dirName}/${find.cache_song_id}`, {
+            baseDir: baseDir,
+            recursive: true,
+          });
+          songs.value = songs.value.filter(
+            (s) => s.cache_song_id !== find.cache_song_id
+          );
+        } catch (error) {}
+      }
+    }
+  };
+  const clear = async () => {
+    if (!inited) {
+      await ensureBase();
+    }
+    [...songs.value.map((song) => song.cache_song_id)].forEach(
+      async (cache_song_id) => {
+        if (
+          await fs.exists(`${dirName}/${cache_song_id}`, {
+            baseDir: baseDir,
+          })
+        ) {
+          try {
+            await fs.remove(`${dirName}/${cache_song_id}`, {
+              baseDir: baseDir,
+              recursive: true,
+            });
+          } catch (error) {}
+        }
+      }
+    );
+    songs.value = [];
+  };
+  return { saveSong, getSong, clear };
 });

@@ -76,6 +76,7 @@ const changePage = (params: PickerConfirmEventParams) => {
         :columns="columns"
         @cancel="showPicker = false"
         @confirm="changePage"
+        class="text-[var(--van-text-color)]"
       />
     </van-popup>
   </div>

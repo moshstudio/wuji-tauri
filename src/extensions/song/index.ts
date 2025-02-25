@@ -1,5 +1,5 @@
 import { SongShelfType } from '@/types/song';
-import { Extension } from '../baseExtension';
+import { Extension, transformResult } from '../baseExtension';
 
 // 歌曲 信息
 export interface SongInfo {
@@ -106,30 +106,113 @@ abstract class SongExtension extends Extension {
   public constructor() {
     super();
   }
-  // 推荐歌单
-  abstract getRecommendPlaylists(pageNo?: number): Promise<PlaylistList | null>;
+
+  @transformResult<PlaylistList | null>((r) => {
+    if (r) {
+      r.list.forEach((item) => {
+        item.id = String(item.id);
+        item.list?.list.forEach((songItem) => {
+          songItem.id = String(songItem.id);
+        });
+      });
+    }
+    return r;
+  })
+  execGetRecommendPlaylists(pageNo?: number) {
+    return this.getRecommendPlaylists(pageNo);
+  }
+
+  abstract getRecommendPlaylists(pageNo?: number): Promise<PlaylistList | null>; // 推荐歌单
+
+  @transformResult<SongList | null>((r) => {
+    if (r) {
+      r.list.forEach((item) => {
+        item.id = String(item.id);
+      });
+    }
+    return r;
+  })
+  execGetRecommendSongs(pageNo?: number) {
+    return this.getRecommendSongs(pageNo);
+  }
   // 推荐歌曲
   abstract getRecommendSongs(pageNo?: number): Promise<SongList | null>;
+
+  @transformResult<PlaylistList | null>((r) => {
+    if (r) {
+      r.list.forEach((item) => {
+        item.id = String(item.id);
+        item.list?.list.forEach((songItem) => {
+          songItem.id = String(songItem.id);
+        });
+      });
+    }
+    return r;
+  })
+  execSearchPlaylists(keyword: string, pageNo?: number) {
+    return this.searchPlaylists(keyword, pageNo);
+  }
   // 搜索歌单
   abstract searchPlaylists(
     keyword: string,
     pageNo?: number
   ): Promise<PlaylistList | null>;
+
+  @transformResult<SongList | null>((r) => {
+    if (r) {
+      r.list.forEach((item) => {
+        item.id = String(item.id);
+      });
+    }
+    return r;
+  })
+  execSearchSongs(keyword: string, pageNo?: number) {
+    return this.searchSongs(keyword, pageNo);
+  }
   // 搜索歌曲
   abstract searchSongs(
     keyword: string,
     pageNo?: number
   ): Promise<SongList | null>;
+
+  @transformResult<PlaylistInfo | null>((r) => {
+    if (r) {
+      r.id = String(r.id);
+      r.list?.list.forEach((item) => {
+        item.id = String(item.id);
+      });
+      if (!r.picUrl) {
+        if (r.list?.list.length) {
+          r.picUrl = r.list.list[0].picUrl || '';
+          r.picHeaders = r.list.list[0].picHeaders || {};
+        }
+      }
+    }
+    return r;
+  })
+  execGetPlaylistDetail(item: PlaylistInfo, pageNo?: number) {
+    return this.getPlaylistDetail(item, pageNo);
+  }
   // 获取歌单详情
   abstract getPlaylistDetail(
     item: PlaylistInfo,
     pageNo?: number
   ): Promise<PlaylistInfo | null>;
 
+  @transformResult<SongUrlMap | string | null>((r) => r)
+  execGetSongUrl(item: SongInfo, size?: SongSize) {
+    return this.getSongUrl(item, size);
+  }
+
   abstract getSongUrl(
     item: SongInfo,
     size?: SongSize
   ): Promise<SongUrlMap | string | null>;
+
+  @transformResult<string | null>((r) => r)
+  execGetLyric(item: SongInfo) {
+    return this.getLyric(item);
+  }
 
   abstract getLyric(item: SongInfo): Promise<string | null>;
 }

@@ -277,6 +277,8 @@ export async function fetch(
   init?: RequestInit & ClientOptions
 ): Promise<Response> {
   try {
+    console.log('fetch', input, init);
+
     return await _fetch(input, init);
   } catch (error) {
     console.error('fetch error:', error);

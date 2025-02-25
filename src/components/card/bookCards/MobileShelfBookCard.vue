@@ -28,6 +28,7 @@ const showMoreOptions = ref(false);
       <van-image
         width="80px"
         height="100px"
+        radius="4"
         :src="shelfBook.book.cover"
         v-if="shelfBook.book.cover"
       >

@@ -4,53 +4,39 @@ class TestPhotoExtension extends PhotoExtension {
   id = 'testPhoto';
   name = 'ceshi';
   version = '0.0.1';
-  baseUrl = 'https://meirentu.cc/';
+  baseUrl = 'https://www.1y.is/';
 
   async getRecommendList(pageNo = 1) {
-    const url = `${this.baseUrl}index/${pageNo}.html`;
-    return await this.fetchImages(url, pageNo, 15);
-  }
+    const url = `${this.baseUrl}page/${pageNo}`;
+    const document = await this.fetchDom(url);
 
-  async search(keyword, pageNo = 1) {
-    const url = `${this.baseUrl}s/${keyword}-${pageNo}.html`;
-    return await this.fetchImages(url, pageNo);
-  }
-
-  async fetchImages(url, pageNo, totalPage) {
-    const body = await this.fetchDom(url, {
-      headers: { 'upgrade-insecure-requests': '1' },
-      verify: false,
-      connectTimeout: 6000,
-    });
-
-    const list = await this.queryPhotoElements(body, {
-      element: '.update_area_content li',
+    const list = await this.queryPhotoElements(document, {
+      element: '.site-main .entry-card',
+      title: '.np-entry-title a',
       cover: 'img',
-      title: '.meta-title',
-      datetime: 'meta-post span',
-      hot: '.cx_like span',
-      url: 'a',
+      desc: '.np-entry-summary p',
+      author: '.author a',
+      datetime: 'time',
+      url: '.np-entry-title a',
     });
-    list.forEach((item) => {
-      item.coverHeaders = {
-        referer: this.baseUrl,
-      };
-    });
-    if (!list.length) return null;
 
-    const pageElements = body.querySelectorAll('.page a');
+    const pageElements = document.querySelectorAll('.page-numbers-container a');
     return {
-      list,
+      list: list,
       page: pageNo,
-      totalPage: totalPage || this.maxPageNoFromElements(pageElements),
+      totalPage: this.maxPageNoFromElements(pageElements),
+      sourceId: '',
     };
   }
 
+  async search(keyword, pageNo = 1) {
+    return null;
+  }
+
   async getPhotoDetail(item, pageNo = 1) {
-    if (!item.url || item.url.length < 5) return null;
-    const url = item.url.substring(0, item.url.length - 5) + `-${pageNo}.html`;
+    const url = `${item.url}/${pageNo}`;
     const body = await this.fetchDom(url);
-    const elements = body.querySelectorAll('.content img');
+    const elements = body.querySelectorAll('.entry-content img');
     const photos = [];
     for (const element of elements) {
       const src = element.getAttribute('src');
@@ -58,13 +44,10 @@ class TestPhotoExtension extends PhotoExtension {
         photos.push(src);
       }
     }
-    const pageElements = body.querySelectorAll('.page a');
+    const pageElements = body.querySelectorAll('.page-links a > span');
     return {
       item,
       photos,
-      photosHeaders: {
-        referer: url,
-      },
       page: pageNo,
       totalPage: this.maxPageNoFromElements(pageElements),
       sourceId: '',

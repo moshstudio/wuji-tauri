@@ -53,6 +53,7 @@ onMounted(async () => {
               <template #value v-if="entity.cover">
                 <van-image
                   width="10em"
+                  radius="4"
                   fit="cover"
                   position="left"
                   :src="entity.cover"

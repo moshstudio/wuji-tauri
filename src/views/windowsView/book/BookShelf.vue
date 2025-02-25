@@ -116,7 +116,12 @@ const sourceName = (book: BookItemInShelf) => {
             :key="item.book.id"
           >
             <template #thumb>
-              <van-image width="80px" height="100px" :src="item.book.cover">
+              <van-image
+                width="80px"
+                height="100px"
+                radius="4"
+                :src="item.book.cover"
+              >
                 <template #loading>
                   <Icon icon="codicon:book" width="48" height="48" />
                 </template>

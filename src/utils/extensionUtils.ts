@@ -6,13 +6,25 @@ export function toProxyUrl(url?: string | undefined | null): string {
   // return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
 }
 export function maxPageNoFromElements(
-  elements?: NodeListOf<Element> | null
+  elements?: NodeListOf<Element> | null,
+  onlyKeepNumbers = true
 ): number | null {
   if (!elements) return null;
 
+  function keepOnlyNumbers(input: string): string {
+    // 保留数字、小数点、负号、加号、科学计数法符号
+    return input.replace(/[^\d.\-]/g, '');
+  }
+
   const res = Math.max(
     ...Array.from(elements.values())
-      .map((el) => Number(el.textContent))
+      .map((el) =>
+        Number(
+          onlyKeepNumbers
+            ? keepOnlyNumbers(el.textContent || '')
+            : el.textContent
+        )
+      )
       .filter((v) => !isNaN(v))
   );
   if (res === Infinity || res === -Infinity) return null;

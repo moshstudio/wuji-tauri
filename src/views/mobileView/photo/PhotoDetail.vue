@@ -3,7 +3,7 @@ import { PhotoDetail, PhotoItem } from '@/extensions/photo';
 import { PropType, ref } from 'vue';
 import { usePhotoShelfStore } from '@/store';
 import LoadImage from '@/components/LoadImage.vue';
-import FullPagination from '@/components/pagination/FullPagination.vue';
+import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
 import { downloadFile } from '@/utils';
 import { showNotify } from 'vant';
@@ -70,36 +70,17 @@ const showMoreOptionsSheet = async (url: string) => {
         />
       </van-skeleton>
     </main>
-    <van-row
-      justify="center"
+    <div
       v-if="photoDetail?.totalPage && photoDetail?.totalPage > 1"
-      class="w-full bg-[--van-background-2]"
+      class="flex items-center justify-center w-full py-1 bg-[--van-background-2]"
     >
-      <FullPagination
+      <SimplePagination
         v-model="currentPage"
         :page-count="Number(photoDetail.totalPage)"
-        class="p-1"
-        force-ellipses
         @change="(pageNo) => emit('toPage', pageNo)"
       >
-      </FullPagination>
-      <!-- <van-pagination
-        v-model="currentPage"
-        :page-count="Number(photoDetail.totalPage)"
-        show-page-size="4"
-        class="p-1"
-        force-ellipses
-        @change="(pageNo) => emit('toPage', pageNo)"
-      >
-        <template #prev-text>
-          <van-icon name="arrow-left" />
-        </template>
-        <template #next-text>
-          <van-icon name="arrow" />
-        </template>
-        <template #page="{ text }">{{ text }}</template>
-      </van-pagination> -->
-    </van-row>
+      </SimplePagination>
+    </div>
   </div>
   <van-dialog
     v-model:show="showAddDialog"

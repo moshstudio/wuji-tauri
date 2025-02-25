@@ -26,7 +26,6 @@ const emit = defineEmits<{
   (e: 'collect'): void;
   (e: 'addPhotoToShelf', shelfId: string): void;
 }>();
-
 </script>
 
 <template>
@@ -68,7 +67,7 @@ const emit = defineEmits<{
         v-model="currentPage"
         :page-count="Number(photoDetail.totalPage)"
         class="p-1"
-        force-ellipses
+        :show-page-size="8"
         @change="(pageNo) => emit('toPage', pageNo)"
       />
     </van-row>

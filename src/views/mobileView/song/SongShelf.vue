@@ -11,6 +11,7 @@ import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
 import { ActionSheetAction } from 'vant';
 import { SongShelfType } from '@/types/song';
 import { PlaylistInfo, SongInfo, SongShelf } from '@/extensions/song';
+import { storeToRefs } from 'pinia';
 
 const displayStore = useDisplayStore();
 const songStore = useSongStore();
@@ -49,7 +50,7 @@ const updateActions = (song: SongInfo, shelf: SongShelf) => {
   showMoreOptions.value = true;
 };
 
-const showShelfDetail = ref(false);
+const { showSongShelfDetail } = storeToRefs(displayStore);
 const offset = 0;
 const shelfDetailAnchors = ref([
   offset,
@@ -58,10 +59,10 @@ const shelfDetailAnchors = ref([
 const shelfDetailHeight = ref(0);
 const hideDetailPanel = () => {
   shelfDetailHeight.value = shelfDetailAnchors.value[0];
-  showShelfDetail.value = false;
+  showSongShelfDetail.value = false;
 };
 watch(
-  showShelfDetail,
+  showSongShelfDetail,
   (newValue) => {
     if (newValue) {
       shelfDetailHeight.value = shelfDetailAnchors.value[1];
@@ -73,7 +74,7 @@ watch(
 );
 const updateAnchors = () => {
   shelfDetailAnchors.value[1] = Math.round(window.innerHeight) + offset;
-  if (showShelfDetail.value) {
+  if (showSongShelfDetail.value) {
     shelfDetailHeight.value = shelfDetailAnchors.value[1];
   }
 };
@@ -151,7 +152,7 @@ onUnmounted(() => {
           @click="
             () => {
               selectedShelf = shelfStore.songLikeShelf;
-              showShelfDetail = true;
+              showSongShelfDetail = true;
             }
           "
         >
@@ -178,7 +179,7 @@ onUnmounted(() => {
           @click="
             () => {
               selectedShelf = shelf;
-              showShelfDetail = true;
+              showSongShelfDetail = true;
             }
           "
           v-for="shelf in shelfStore.songCreateShelf"
@@ -206,7 +207,7 @@ onUnmounted(() => {
           @click="
             () => {
               selectedShelf = shelf;
-              showShelfDetail = true;
+              showSongShelfDetail = true;
             }
           "
           v-for="shelf in shelfStore.songPlaylistShelf"
@@ -231,7 +232,7 @@ onUnmounted(() => {
     @height-change="
       (height) => {
         if (height.height === shelfDetailAnchors[0]) {
-          showShelfDetail = false;
+          showSongShelfDetail = false;
         }
       }
     "

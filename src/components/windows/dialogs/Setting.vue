@@ -25,10 +25,15 @@ const clearData = () => {
       </van-cell>
       <van-cell
         center
-        title="清空数据"
+        title="清除缓存"
         is-link
-        @click="showConfirmClearData = true"
+        @click="() => store.clearCache()"
       >
+      </van-cell>
+      <van-cell center is-link @click="showConfirmClearData = true">
+        <template #title>
+          <p class="text-red">清空数据</p>
+        </template>
       </van-cell>
     </van-cell-group>
   </van-dialog>

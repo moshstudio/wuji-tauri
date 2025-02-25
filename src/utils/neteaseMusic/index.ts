@@ -18,3 +18,15 @@ export async function lyric(id: string) {
     _nmclfl: 1,
   });
 }
+
+export async function songDetail(ids: string[]) {
+  return await createRequest(
+    '/api/v3/song/detail',
+    {
+      c: '[' + ids.map((id) => '{"id":' + id + '}').join(',') + ']',
+    },
+    {
+      crypto: CryptoType.weapi,
+    }
+  );
+}

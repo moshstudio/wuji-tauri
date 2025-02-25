@@ -1,7 +1,10 @@
 import _ from 'lodash';
 import { fetch } from '@/utils/fetch';
-import { search as neteaseSearch, lyric as neteaseLyric } from './neteaseMusic';
-import { levenshteinDistance } from '.';
+import {
+  search as neteaseSearch,
+  lyric as neteaseLyric,
+  songDetail as neteaseSongDetail,
+} from './neteaseMusic';
 
 const cache = new Map<string, Lyric>();
 
@@ -18,13 +21,14 @@ export async function getLyric(
   if (cache.has(key)) {
     return cache.get(key);
   } else {
-    const lyricFromLongZhu = async (): Promise<string> => {
+    const lyricFromLongZhu = async (): Promise<string | null> => {
       const url = `https://www.hhlqilongzhu.cn/api/dg_geci.php?msg=${songName}&n=1&type=2`;
       const response = await fetch(url);
       const text = await response.text();
+      if (!text.includes(songName)) return null;
       return text;
     };
-    const lyricFromNetease = async (): Promise<string> => {
+    const lyricFromNetease = async (): Promise<string | null> => {
       const res = await neteaseSearch(songName);
       const t = await res.text();
       const songs: { id: number; name: string; artists: string }[] = JSON.parse(
@@ -37,18 +41,18 @@ export async function getLyric(
         };
       });
       if (!songs) return '';
-      const sSong = songs[0];
-      // const sSong = _.minBy(songs, (song) =>
-      //   levenshteinDistance(key, `${song.name}-${song.artists}`)
-      // );
+      const sSong =
+        songs.find(
+          (song) =>
+            song.name === songName && song.artists.includes(singerName || '')
+        ) || songs.find((song) => song.name === songName);
 
       if (!sSong) return '';
       const l = await neteaseLyric(String(sSong.id));
       const lyricResponseText = await l.text();
-      if (!lyricResponseText) return '';
       return JSON.parse(lyricResponseText).lrc.lyric;
     };
-    const lyricText = (await lyricFromLongZhu()) || (await lyricFromNetease());
+    const lyricText =  (await lyricFromNetease()) || (await lyricFromLongZhu());
 
     if (!lyricText) return;
     const lyric = parseLyric(lyricText);

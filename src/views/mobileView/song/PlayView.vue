@@ -125,7 +125,7 @@ const addSongToShelf = (shelfId: string) => {
               />
               <van-icon
                 name="like-o"
-                color="gray"
+                class="text-gray-400"
                 size="20"
                 @click.stop="() => shelfStore.addSongToShelf(playingSong)"
                 v-else
@@ -137,9 +137,8 @@ const addSongToShelf = (shelfId: string) => {
             >
               <van-icon
                 name="ellipsis"
-                class="clickable text-[--van-text-color]"
+                class="clickable text-gray-400"
                 size="16"
-                color="gray"
               />
             </div>
           </div>
