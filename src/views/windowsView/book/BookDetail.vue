@@ -69,9 +69,13 @@ const displayStore = useDisplayStore();
             <span>{{ _.castArray(book.tags)?.join(',') }}</span>
             <span>{{ book.status }}</span>
           </p>
-          <p class="text-xs">
-            {{ book.intro }}
-          </p>
+          <van-text-ellipsis
+            :content="book.intro"
+            class="text-xs text-[--van-text-color]"
+            rows="3"
+            expand-text="展开"
+            collapse-text="收起"
+          />
           <p>
             <span class="text-sm">{{ book.latestChapter }}</span>
           </p>

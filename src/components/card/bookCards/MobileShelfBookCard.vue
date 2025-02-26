@@ -30,7 +30,6 @@ const showMoreOptions = ref(false);
         height="100px"
         radius="4"
         :src="shelfBook.book.cover"
-        v-if="shelfBook.book.cover"
       >
         <template #loading>
           <Icon icon="codicon:book" width="48" height="48" />

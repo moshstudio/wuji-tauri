@@ -20,7 +20,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 http = "1"
-tauri = { version = "2", features = ["tray-icon", "image-ico", "devtools"] }
+tauri = { version = "2", features = ["tray-icon", "image-ico"] }
 tauri-plugin-shell = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -29,7 +29,7 @@ tauri-plugin-store = "2"
 # 由于您只有一个使用 OpenSSL （ReqWest） 的依赖项，因此我建议只尝试 Rustls。为此，请禁用 reqwest 的默认功能，并启用 rustls-tls（以及除 openssl 之外的其他默认功能）。
 # 如果将来你需要 openssl 来连接一个不支持切换的 crate，你可以启用 reqwest 的 native-tls-vendored（以及它的默认功能，而不是上面）或 add openssl-sys = { version = "0.9", features = ["vendored"] } （基本上是一样的），它应该可以在 linux 和 macos 主机上工作。
 reqwest = { version = "0.12", default-features = false, features = [
-  "rustls-tls",
+  "rustls-tls-native-roots-no-provider",
   "http2",
   "charset",
   "macos-system-configuration",

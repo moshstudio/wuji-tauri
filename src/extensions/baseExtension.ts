@@ -117,6 +117,7 @@ abstract class Extension {
       }
     ) => {
       const elements = body.querySelectorAll(element);
+
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(cover);

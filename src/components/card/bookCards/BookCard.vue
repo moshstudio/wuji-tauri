@@ -16,13 +16,7 @@ const emit = defineEmits<{
     @click="() => emit('click', bookItem)"
   >
     <div class="w-[80px] h-[100px]">
-      <van-image
-        width="80px"
-        height="100px"
-        radius="4"
-        :src="bookItem.cover"
-        v-if="bookItem.cover"
-      >
+      <van-image width="80px" height="100px" radius="4" :src="bookItem.cover">
         <template #loading>
           <Icon icon="codicon:book" width="48" height="48" />
         </template>

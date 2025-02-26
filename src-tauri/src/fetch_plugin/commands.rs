@@ -221,7 +221,7 @@ pub async fn fetch<R: Runtime>(
     match scheme {
         "http" | "https" => {
             let mut builder = reqwest::ClientBuilder::new();
-            builder = builder.use_rustls_tls();
+            // builder = builder.use_native_tls();
 
             if !verify.unwrap_or(true) {
                 builder = builder.danger_accept_invalid_certs(true);
@@ -274,24 +274,23 @@ pub async fn fetch<R: Runtime>(
                     headers.append(header::USER_AGENT, HeaderValue::from_str(random_ua)?);
                 }
             }
-
             // if !headers.contains_key(header::ACCEPT) {
             //     headers.append(header::ACCEPT, HeaderValue::from_str("*/*")?);
             // }
             // if !headers.contains_key(header::ACCEPT_ENCODING) {
             //     headers.append(
             //         header::ACCEPT_ENCODING,
-            //         HeaderValue::from_str("gzip, deflate, br, zstd")?,
+            //         HeaderValue::from_str("gzip, deflate")?,
             //     );
+            // }
+            // if !headers.contains_key(header::CONNECTION) {
+            //     headers.append(header::CONNECTION, HeaderValue::from_str("keep-alive")?);
             // }
             // if !headers.contains_key(header::ACCEPT_LANGUAGE) {
             //     headers.append(
             //         header::ACCEPT_LANGUAGE,
             //         HeaderValue::from_str("zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7")?,
             //     );
-            // }
-            // if !headers.contains_key(header::CONNECTION) {
-            //     headers.append(header::CONNECTION, HeaderValue::from_str("keep-alive")?);
             // }
 
             // ensure we have an Origin header set
