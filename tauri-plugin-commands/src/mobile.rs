@@ -36,4 +36,9 @@ impl<R: Runtime> Commands<R> {
             .run_mobile_plugin("set_status_bar", payload)
             .map_err(Into::into)
     }
+    pub fn get_system_font_scale(&self, payload: EmptyRequest) -> crate::Result<NumberResponse> {
+        self.0
+            .run_mobile_plugin("getSystemFontScale", payload)
+            .map_err(Into::into)
+    }
 }

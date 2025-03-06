@@ -1,3 +1,7 @@
 [default]
 description = "Default permissions for the plugin"
-permissions = ["allow-exit-app", "allow-set-status-bar"]
+permissions = [
+  "allow-exit-app",
+  "allow-set-status-bar",
+  "allow-get-system-font-scale",
+]

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-update-playlist-order"
+description = "Enables the update_playlist_order command without any pre-configured scope."
+commands.allow = ["update_playlist_order"]
+
+[[permission]]
+identifier = "deny-update-playlist-order"
+description = "Denies the update_playlist_order command without any pre-configured scope."
+commands.deny = ["update_playlist_order"]

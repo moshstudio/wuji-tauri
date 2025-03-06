@@ -11,3 +11,12 @@ export async function set_status_bar(color: string): Promise<boolean | null> {
     },
   }).then((r) => (r.res === 'true' ? true : false));
 }
+
+export async function get_system_font_scale(): Promise<Number> {
+  return await invoke<{ value?: Number }>(
+    'plugin:commands|get_system_font_scale',
+    {
+      payload: {},
+    }
+  ).then((r) => Number(r.value));
+}

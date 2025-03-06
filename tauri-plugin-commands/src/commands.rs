@@ -16,3 +16,11 @@ pub(crate) async fn set_status_bar<R: Runtime>(
 ) -> Result<SetStatusBarResponse> {
     app.commands().set_status_bar(payload)
 }
+
+#[tauri::command]
+pub(crate) async fn get_system_font_scale<R: Runtime>(
+    app: AppHandle<R>,
+    payload: EmptyRequest,
+) -> Result<NumberResponse> {
+    app.commands().get_system_font_scale(payload)
+}

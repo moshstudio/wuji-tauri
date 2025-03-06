@@ -3,7 +3,7 @@ import { useDisplayStore } from './store';
 import WinApp from './WinApp.vue';
 import MobileApp from './MobileApp.vue';
 import { storeToRefs } from 'pinia';
-import { h, nextTick, onMounted, VNode } from 'vue';
+import { h, nextTick, onBeforeMount, onMounted, ref } from 'vue';
 import { router } from './router';
 import PlatformSwitch from './components/PlatformSwitch.vue';
 import View from './components/View.vue';
@@ -27,7 +27,7 @@ onMounted(() => {
 });
 
 // 使用 render 函数生成 <router-view> 结构
-const routerView = h(View);
+const routerView = ref(h(View));
 </script>
 
 <template>

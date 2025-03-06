@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { BookChapter, BookItem } from '@/extensions/book';
 
-import { useBookStore, useDisplayStore } from '@/store';
+import { useBookChapterStore, useBookStore, useDisplayStore } from '@/store';
 import { BookSource } from '@/types';
 import BookShelfButton from '@/components/BookShelfButton.vue';
 import BookShelf from '@/views/book/BookShelf.vue';
 import NavBar from '@/components/NavBar.vue';
+import { Icon } from '@iconify/vue';
 import { onActivated, onDeactivated, onMounted, PropType } from 'vue';
 import { useScroll } from '@vueuse/core';
 import { ReaderResult } from '@/utils/reader/types';
@@ -59,6 +60,7 @@ const emit = defineEmits<{
 }>();
 
 const bookStore = useBookStore();
+const bookCacheStore = useBookChapterStore();
 
 let savedScrollPosition = 0;
 
@@ -215,18 +217,17 @@ onMounted(() => {
     <van-popup
       v-model:show="showChapters"
       position="right"
+      class="chapter-popup"
       :style="{ width: '300px', height: '100%' }"
     >
       <van-list>
         <van-cell
           v-for="item in book?.chapters"
           :key="item.id"
-          :title="item.title"
           :class="{
             'bg-[--van-background] reading-chapter':
               readingChapter?.id === item.id,
           }"
-          :icon="readingChapter?.id === item.id ? 'eye-o' : ''"
           clickable
           @click="
             () => {
@@ -234,7 +235,25 @@ onMounted(() => {
               showChapters = false;
             }
           "
-        />
+        >
+          <div class="flex items-center gap-2 flex-nowrap">
+            <Icon
+              icon="iconamoon:eye-thin"
+              width="24"
+              height="24"
+              v-if="readingChapter?.id === item.id"
+            />
+            <span class="flex-grow flex">
+              {{ item.title }}
+            </span>
+            <Icon
+              icon="material-symbols-light:download-done-rounded"
+              width="24"
+              height="24"
+              v-if="book && bookCacheStore.chapterInCache(book, item)"
+            />
+          </div>
+        </van-cell>
       </van-list>
     </van-popup>
     <van-dialog

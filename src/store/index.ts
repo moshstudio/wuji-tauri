@@ -25,6 +25,12 @@ import {
   useStorageAsync,
   useToggle,
 } from '@vueuse/core';
+import {
+  clearInterval,
+  clearTimeout,
+  setInterval,
+  setTimeout,
+} from 'worker-timers';
 import { defineStore } from 'pinia';
 import {
   showConfirmDialog,
@@ -38,13 +44,16 @@ import {
   onMounted,
   onUnmounted,
   reactive,
+  Ref,
   ref,
   triggerRef,
 } from 'vue';
+import { Channel, invoke, PluginListener } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import { type as osType } from '@tauri-apps/plugin-os';
-import * as fs from '@tauri-apps/plugin-fs';
-import { fetch } from '@/utils/fetch';
+import * as fs from 'tauri-plugin-fs-api';
+import * as androidMedia from 'tauri-plugin-mediasession-api';
+import { ClientOptions, fetch } from '@/utils/fetch';
 import {
   loadSongExtensionString,
   SongShelf,
@@ -58,8 +67,10 @@ import { ReadTheme } from '@/types/book';
 import { watch } from 'vue';
 import {
   DEFAULT_SOURCE_URL,
+  joinSongArtists,
   sanitizePathName,
   sleep,
+  songUrlToString,
   tryCatchProxy,
 } from '@/utils';
 import {
@@ -80,10 +91,24 @@ import { nanoid } from 'nanoid';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { getSongCover } from '@/utils/songCover';
 
+async function tauriAddPluginListener<T>(
+  plugin: string,
+  event: string,
+  cb: (payload: T) => void
+) {
+  const handler = new Channel();
+  handler.onmessage = (response: unknown) => {
+    cb(response as T);
+  };
+  return invoke(`plugin:${plugin}|register_listener`, { event, handler }).then(
+    () => new PluginListener(plugin, event, handler.id)
+  );
+}
 export const useStore = defineStore('store', () => {
   const hotItems = ref<HotItem[]>([]); // 热搜榜
 
   const subscribeSourceStore = useSubscribeSourceStore();
+  const songStore = useSongStore();
   const kvStorage = createKVStore();
   const bookChapterStore = useBookChapterStore();
   const bookShelfStore = useBookShelfStore();
@@ -922,9 +947,9 @@ export const useStore = defineStore('store', () => {
         }
       } catch (error) {}
     }
-    keepTest.value = true;
+    // keepTest.value = true;
     // addTestSource(new TestSongExtension(), SourceType.Song);
-    addTestSource(new TestBookExtension(), SourceType.Book);
+    // addTestSource(new TestBookExtension(), SourceType.Book);
     // addTestSource(new TestPhotoExtension(), SourceType.Photo);
     loadSubscribeSources(true);
   });
@@ -1166,14 +1191,23 @@ export const useSongStore = defineStore('song', () => {
   const displayStore = useDisplayStore();
   const songCacheStore = useSongCacheStore();
 
+  const audioRef = ref<HTMLAudioElement>();
   const volumeVisible = ref<boolean>(false); // 设置音量弹窗
-  const audioRef = ref<HTMLAudioElement>(); // 音频标签对象
-
   const playlist = useStorageAsync<SongInfo[]>('songPlaylist', []);
   const playingPlaylist = useStorageAsync<SongInfo[]>(
     'songPlayingPlaylist',
     []
   ); // 当前播放列表
+  const audioDuration = ref(0); // 音频总时长
+  const audioCurrent = ref(0); // 音频当前播放时间
+  const audioVolume = useStorageAsync<number>('songVolume', 1); // 音频声音，范围 0-1
+  const isPlaying = ref<boolean>(false); // 音频播放状态：true 播放，false 暂停
+  const playMode = useStorageAsync<SongPlayMode>(
+    'songPlayMode',
+    SongPlayMode.list
+  );
+  const playProgress = ref(0); // 音频播放进度
+
   const playingSong = useStorageAsync<SongInfo>(
     'songPlayingSong',
     null,
@@ -1190,344 +1224,682 @@ export const useSongStore = defineStore('song', () => {
     }
   ); // 当前播放
 
-  const audioDuration = ref(0); // 音频总时长
-  const audioCurrent = ref(0); // 音频当前播放时间
-  const audioVolume = useStorageAsync<number>('songVolume', 1); // 音频声音，范围 0-1
-  const isPlaying = ref<boolean>(false); // 音频播放状态：true 播放，false 暂停
-  const playMode = useStorageAsync<SongPlayMode>(
-    'songPlayMode',
-    SongPlayMode.list
-  );
-  const playProgress = ref(0); // 音频播放进度
+  const getSongPlayUrl = async (
+    song: SongInfo
+  ): Promise<string | undefined> => {
+    console.log(`获取音乐 ${song.name}的播放地址`);
 
-  onMounted(() => {
-    audioRef.value = document.createElement('audio');
-    audioRef.value.style.width = '0px';
-    audioRef.value.style.height = '0px';
-    document.body.appendChild(audioRef.value);
-    audioRef.value.volume = audioVolume.value;
-
-    // audioRef.value.oncanplay = () => {
-    //   onPlay();
-    // };
-    audioRef.value.onplay = () => {
-      isPlaying.value = true;
-    };
-    audioRef.value.onpause = () => {
-      isPlaying.value = false;
-    };
-    audioRef.value.onloadedmetadata = () => {
-      audioDuration.value = audioRef.value!.duration;
-    };
-    audioRef.value.ondurationchange = () => {
-      audioDuration.value = audioRef.value!.duration;
-    };
-    audioRef.value.ontimeupdate = () => {
-      audioCurrent.value = audioRef.value!.currentTime;
-    };
-    audioRef.value.onended = () => {
-      if (playMode.value === SongPlayMode.single) {
-        onPlay();
-      } else {
-        nextSong();
-      }
-    };
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.setActionHandler('play', () => {
-        onPlay();
-      });
-      navigator.mediaSession.setActionHandler('pause', () => {
-        onPause();
-      });
-      navigator.mediaSession.setActionHandler('nexttrack', () => {
-        nextSong();
-      });
-      navigator.mediaSession.setActionHandler('previoustrack', () => {
-        prevSong();
-      });
-      if (playingSong.value) {
-        setMedisSession(playingSong.value, 'paused');
-      }
+    // 返回有两种类型
+    // 1. blobUrl, 前端(win)使用
+    // 2. filePath, 安卓段使用
+    const cached_url = await songCacheStore.getSong(song);
+    if (cached_url) {
+      console.log(`${song.name}返回播放地址${cached_url}`);
+      return cached_url;
     }
-  });
-
-  watch(
-    playMode,
-    (__) => {
-      // 播放模式变化时，重置播放列表索引
-      if (playMode.value === SongPlayMode.random) {
-        playingPlaylist.value = _.shuffle(playlist.value);
+    let src = null;
+    let headers = null;
+    let t: string | null = null;
+    if (!song.url) {
+      const store = useStore();
+      const source = store.getSongSource(song.sourceId);
+      if (!source) {
+        showToast(`${song.name} 所属源不存在或未启用`);
         return;
-      } else {
-        playingPlaylist.value = [...playlist.value];
       }
-    },
-    {
-      immediate: true,
-    }
-  );
-  watch(
-    audioVolume,
-    (newValue) => {
-      if (!audioRef.value) return;
-      audioRef.value.volume = newValue;
-    },
-    {
-      immediate: true,
-    }
-  );
-  const playingSongSetSrc = createCancellableFunction(
-    async (signal: AbortSignal, song: SongInfo) => {
-      if (!audioRef.value || !song) return;
-
-      // 暂停并重置音频
-      // audioRef.value.pause();
-      audioRef.value.removeAttribute('src');
-      audioRef.value.srcObject = null;
-      audioRef.value.currentTime = 0;
-      audioCurrent.value = 0;
-      audioDuration.value = 0;
-      isPlaying.value = false;
-
-      if (!song.picUrl) {
-        // 获取封面
-        getSongCover(song);
-      }
-
-      let src = null;
-      let headers = null;
-      let t: string | null = null;
-
-      const cached_url = await songCacheStore.getSong(song);
-      if (!cached_url) {
-        // 获取歌曲URL和headers
-        if (!song.url) {
-          const store = useStore();
-          const source = store.getSongSource(song.sourceId);
-          if (!source) {
-            showToast(`${song.name} 所属源不存在或未启用`);
-            return;
-          }
-          t = displayStore.showToast();
-          const sc = (await store.sourceClass(source?.item)) as SongExtension;
-          const newUrl = await sc?.execGetSongUrl(song);
-          if (signal.aborted) {
-            displayStore.closeToast(t);
-            return;
-          }
-
-          if (typeof newUrl === 'string') {
-            src = newUrl;
-          } else if (newUrl instanceof Object) {
-            src = newUrl['128k'] || newUrl['320k'] || newUrl.flac || '';
-            headers = newUrl.headers || null;
-            if (newUrl.lyric) {
-              song.lyric = newUrl.lyric;
-            }
-          }
-        } else {
-          if (typeof song.url === 'string') {
-            src = song.url;
-          } else if (song.url instanceof Object) {
-            src = song.url['128k'] || song.url['320k'] || song.url.flac || '';
-            headers = song.url.headers || null;
-          }
+      t = displayStore.showToast();
+      const sc = (await store.sourceClass(source?.item)) as SongExtension;
+      const newUrl = await sc?.execGetSongUrl(song);
+      if (typeof newUrl === 'string') {
+        src = newUrl;
+      } else if (newUrl instanceof Object) {
+        src = newUrl['128k'] || newUrl['320k'] || newUrl.flac || '';
+        headers = newUrl.headers || null;
+        if (newUrl.lyric) {
+          song.lyric = newUrl.lyric;
         }
-      } else {
-        src = cached_url;
       }
-
-      if (!src) {
-        showNotify(`歌曲 ${song.name} 无法播放`);
-        onPause();
-        if (t) displayStore.closeToast(t);
-        return;
+    } else {
+      if (typeof song.url === 'string') {
+        src = song.url;
+      } else if (song.url instanceof Object) {
+        src = songUrlToString(song.url);
+        headers = song.url.headers || null;
       }
-
-      try {
-        if (headers) {
-          const response = await fetch(src, { headers, verify: false });
-          const blob = await response.blob();
-          const blobUrl = URL.createObjectURL(
-            new Blob([blob], { type: blob.type || 'audio/mpeg' })
-          );
-          audioRef.value.src = blobUrl;
-        } else {
-          audioRef.value.src = src;
-        }
-        playProgress.value = 0;
-      } catch (error) {
-        console.error('加载歌曲失败:', error);
-        showNotify(`歌曲 ${song.name} 加载失败`);
-        onPause();
-      }
-      if (signal.aborted) {
-        displayStore.closeToast();
-        return;
-      }
+    }
+    if (!src) {
+      showNotify(`歌曲 ${song.name} 无法播放`);
       if (t) displayStore.closeToast(t);
-      if (!song.lyric) {
-        const store = useStore();
-        const source = store.getSongSource(song.sourceId);
-        if (source) {
-          const sc = (await store.sourceClass(source?.item)) as SongExtension;
-          song.lyric = (await sc?.execGetLyric(song)) || undefined;
-        }
-      }
-      if (!cached_url) {
-        songCacheStore.saveSong(song, audioRef.value.src);
-      }
+      return;
     }
-  );
-  const setPlayingList = async (list: SongInfo[], firstSong: SongInfo) => {
-    if (list != playlist.value) {
-      playlist.value = list;
-      if (playMode.value === SongPlayMode.random) {
-        playingPlaylist.value = _.shuffle(list);
-        return;
-      } else {
-        playingPlaylist.value = [...list];
-      }
+    try {
+      await songCacheStore.saveSongv2(song, src, {
+        headers: headers || undefined,
+        verify: false,
+      });
+      // if (headers) {
+      //   const response = await fetch(src, { headers, verify: false });
+      //   const blob = await response.blob();
+      //   const blobUrl = URL.createObjectURL(
+      //     new Blob([blob], { type: blob.type || 'audio/mpeg' })
+      //   );
+      //   await songCacheStore.saveSong(song, blobUrl);
+      // } else {
+      //   await songCacheStore.saveSong(song, src);
+      // }
+    } catch (error) {
+      console.error('加载歌曲失败:', error);
+      return;
+    } finally {
+      if (t) displayStore.closeToast(t);
     }
 
-    if (firstSong.id !== playingSong.value?.id) {
-      if (audioRef.value) {
-        audioRef.value.pause();
+    const ret = await songCacheStore.getSong(song);
+    console.log(`${song.name}返回播放地址${ret}`);
+    return ret;
+  };
+  abstract class BaseHelper {
+    constructor() {
+      this.onMounted = this.onMounted.bind(this);
+      this.watch = this.watch.bind(this);
+      this.setPlaylist = this.setPlaylist.bind(this);
+      this.onPlay = this.onPlay.bind(this);
+      this.onPause = this.onPause.bind(this);
+      this.prevSong = this.prevSong.bind(this);
+      this.nextSong = this.nextSong.bind(this);
+      this.onSetVolume = this.onSetVolume.bind(this);
+      this.seek = this.seek.bind(this);
+    }
+    abstract onMounted(): Promise<void> | void;
+    abstract watch(): Promise<void> | void;
+    abstract setPlaylist(
+      list: SongInfo[],
+      firstSong: SongInfo
+    ): Promise<void> | void;
+    abstract onPlay(): Promise<void> | void;
+    abstract onPause(): Promise<void> | void;
+    abstract prevSong(): Promise<void> | void;
+    abstract nextSong(): Promise<void> | void;
+    abstract onSetVolume(value: number): Promise<void> | void;
+    abstract seek(value: number): Promise<void> | void;
+  }
+
+  class WinSongHelper extends BaseHelper {
+    constructor() {
+      super();
+    }
+    onMounted() {
+      onMounted(() => {
+        audioRef.value = document.createElement('audio');
+        audioRef.value.style.width = '0px';
+        audioRef.value.style.height = '0px';
+        document.body.appendChild(audioRef.value);
+        audioRef.value.volume = audioVolume.value;
+
+        // audioRef.value.oncanplay = () => {
+        //   onPlay();
+        // };
+        audioRef.value.onplay = () => {
+          isPlaying.value = true;
+        };
+        audioRef.value.onpause = () => {
+          isPlaying.value = false;
+        };
+        audioRef.value.onloadedmetadata = () => {
+          audioDuration.value = audioRef.value!.duration;
+        };
+        audioRef.value.ondurationchange = () => {
+          audioDuration.value = audioRef.value!.duration;
+        };
+        audioRef.value.ontimeupdate = () => {
+          audioCurrent.value = audioRef.value!.currentTime;
+        };
+        audioRef.value.onended = () => {
+          if (playMode.value === SongPlayMode.single) {
+            this.onPlay();
+          } else {
+            this.nextSong();
+          }
+        };
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.setActionHandler('play', () => {
+            this.onPlay();
+          });
+          navigator.mediaSession.setActionHandler('pause', () => {
+            this.onPause();
+          });
+          navigator.mediaSession.setActionHandler('nexttrack', () => {
+            this.nextSong();
+          });
+          navigator.mediaSession.setActionHandler('previoustrack', () => {
+            this.prevSong();
+          });
+          if (playingSong.value) {
+            this.setMedisSession(playingSong.value, 'paused');
+          }
+        }
+      });
+    }
+    watch() {
+      watch(
+        playMode,
+        (__) => {
+          // 播放模式变化时，重置播放列表索引
+          if (playMode.value === SongPlayMode.random) {
+            playingPlaylist.value = _.shuffle([...playlist.value]);
+            return;
+          } else {
+            playingPlaylist.value = [...playlist.value];
+          }
+        },
+        {
+          immediate: true,
+        }
+      );
+      watch(
+        audioVolume,
+        (newValue) => {
+          if (!audioRef.value) return;
+          audioRef.value.volume = newValue;
+        },
+        {
+          immediate: true,
+        }
+      );
+    }
+    async setPlaylist(list: SongInfo[], firstSong: SongInfo): Promise<void> {
+      if (list != playlist.value) {
+        playlist.value = list;
+        if (playMode.value === SongPlayMode.random) {
+          playingPlaylist.value = _.shuffle(list);
+        } else {
+          playingPlaylist.value = [...list];
+        }
+      }
+
+      if (firstSong.id !== playingSong.value?.id) {
+        if (audioRef.value) {
+          // audioRef.value.pause();
+          audioRef.value.removeAttribute('src');
+          audioRef.value.srcObject = null;
+          audioRef.value.currentTime = 0;
+        }
+        playingSong.value = firstSong;
+        audioCurrent.value = 0;
+        audioDuration.value = 0;
+        isPlaying.value = false;
+      }
+      await this.onPlay();
+    }
+    async onPlay() {
+      if (!audioRef.value) return;
+      if (!playingSong.value.picUrl) {
+        // 获取封面
+        getSongCover(playingSong.value);
+      }
+      if (!audioRef.value.src && !audioRef.value.srcObject) {
+        // 暂停并重置音频
         audioRef.value.removeAttribute('src');
         audioRef.value.srcObject = null;
         audioRef.value.currentTime = 0;
+        audioCurrent.value = 0;
+        audioDuration.value = 0;
+        isPlaying.value = false;
+        const url = await getSongPlayUrl(playingSong.value);
+
+        if (!url) {
+          showToast('歌曲无法播放');
+          return;
+        } else {
+          audioRef.value.src = url;
+          const song = playingSong.value;
+          if (!song.lyric) {
+            const store = useStore();
+            const source = store.getSongSource(song.sourceId);
+            if (source) {
+              const sc = (await store.sourceClass(
+                source?.item
+              )) as SongExtension;
+              sc?.execGetLyric(song).then((lyric) => {
+                song.lyric = lyric || undefined;
+              });
+            }
+          }
+        }
+      }
+      await audioRef.value.play();
+      if (playingSong.value && 'mediaSession' in navigator) {
+        this.setMedisSession(playingSong.value, 'playing');
+      }
+    }
+    onPause(): Promise<void> | void {
+      if (!audioRef.value) return;
+      audioRef.value.pause();
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'paused';
+      }
+    }
+    async prevSong(): Promise<void> {
+      if (!playingPlaylist.value) return;
+      const index = playingPlaylist.value.findIndex(
+        (item) => item.id === playingSong.value?.id
+      );
+      if (index === -1) return;
+      let prevIndex;
+      if (index === 0) {
+        prevIndex = playingPlaylist.value.length - 1;
+      } else {
+        prevIndex = index - 1;
+      }
+      await setPlaylist(playlist.value, playingPlaylist.value[prevIndex]);
+    }
+    async nextSong(): Promise<void> {
+      if (!playingPlaylist.value) return;
+      const index = playingPlaylist.value.findIndex(
+        (item) => item.id === playingSong.value?.id
+      );
+      if (index === -1) return;
+      let nextIndex;
+      if (index + 1 === playingPlaylist.value.length) {
+        nextIndex = 0;
+      } else {
+        nextIndex = index + 1;
+      }
+      await setPlaylist(playlist.value, playingPlaylist.value[nextIndex]);
+    }
+    onSetVolume(value: number): Promise<void> | void {
+      if (!audioRef.value) return;
+      audioRef.value.volume = value;
+      audioVolume.value = value;
+    }
+    seek(value: number): Promise<void> | void {
+      if (!audioRef.value) return;
+      audioRef.value.currentTime = value;
+    }
+    setMedisSession = async (
+      song: SongInfo,
+      playbackState?: MediaSessionPlaybackState
+    ) => {
+      try {
+        const artwork = [];
+        if (song.picUrl) {
+          if (song.picHeaders) {
+            const response = await fetch(song.picUrl, {
+              headers: song.picHeaders,
+              verify: false,
+            });
+            const blob = new Blob([await response.blob()], {
+              type: 'image/png',
+            });
+
+            const b64: string = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                // reader.result 是一个包含 Base64 编码的字符串
+                const base64String = reader.result as string;
+                resolve(base64String);
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+            artwork.push({
+              src: b64,
+              type: 'image/png',
+            });
+          } else {
+            artwork.push({
+              src: song.picUrl,
+            });
+          }
+        }
+        const metaData = new MediaMetadata({
+          // 媒体标题
+          title: song.name,
+          // 媒体类型
+          artist: song.artists?.join(','),
+          // 媒体封面
+          artwork: artwork,
+        });
+        // 设置媒体元数据
+        navigator.mediaSession.metadata = metaData;
+        if (playbackState) {
+          navigator.mediaSession.playbackState = playbackState;
+        }
+      } catch (error) {}
+    };
+  }
+  class AndroidSongHelper extends BaseHelper {
+    constructor() {
+      super();
+    }
+    androidPlugins: PluginListener[] = [];
+    getUrlPlugin: PluginListener | undefined = undefined;
+    getUrlTasks: androidMedia.MusicItem[] = [];
+    onMounted() {
+      onMounted(async () => {
+        // const refreshPlugin = async () => {
+        //   const newPlugin = await tauriAddPluginListener(
+        //     'mediasession',
+        //     'getUrl',
+        //     async (payload: any) => {
+        //       // 将要播放的歌曲获取url
+        //       const musicItem: androidMedia.MusicItem = JSON.parse(
+        //         payload.value
+        //       );
+        //       this.getUrlTasks.push(musicItem);
+        //     }
+        //   );
+        //   if (this.getUrlPlugin) {
+        //     this.getUrlPlugin.unregister();
+        //   }
+        //   this.getUrlPlugin = newPlugin;
+        //   setTimeout(refreshPlugin, 5000);
+        // };
+        // setTimeout(refreshPlugin, 5000);
+
+        // const handleGetUrl = async () => {
+        //   console.log('handleGetUrl');
+        //   while (this.getUrlTasks.length > 0) {
+        //     const musicItem = this.getUrlTasks.shift();
+        //     if (!musicItem) return;
+        //     const song: SongInfo = JSON.parse(musicItem?.extra as string);
+        //     if (!playingSong.value.picUrl) {
+        //       // 获取封面
+        //       await getSongCover(song);
+        //     }
+        //     musicItem.iconUri = song.picUrl;
+        //     const newItem = _.cloneDeep(musicItem);
+        //     const url = await getSongPlayUrl(song);
+        //     if (url) {
+        //       newItem.uri = url;
+        //     }
+        //     const coverUrl = await songCacheStore.getCover(song);
+        //     console.log(`cover url is ${coverUrl}`);
+
+        //     if (coverUrl) {
+        //       newItem.iconUri = coverUrl;
+        //     }
+        //     await androidMedia.update_music_item(musicItem, newItem);
+        //   }
+        //   setTimeout(handleGetUrl, 1000);
+        // }
+        // setTimeout(handleGetUrl, 1000);
+
+        tauriAddPluginListener(
+          'mediasession',
+          'getUrl',
+          async (payload: any) => {
+            // 将要播放的歌曲获取url
+            const musicItem: androidMedia.MusicItem = JSON.parse(payload.value);
+            let song: SongInfo = JSON.parse(musicItem.extra as string);
+            if (playingSong.value && playingSong.value.id === song.id) {
+              song = playingSong.value;
+            }
+            if (!playingSong.value.picUrl) {
+              // 获取封面
+              await getSongCover(song);
+            }
+            musicItem.iconUri = song.picUrl;
+            const newItem = _.cloneDeep(musicItem);
+            const url = await getSongPlayUrl(song);
+            if (url) {
+              newItem.uri = url;
+            } else {
+              showToast(`${song.name} 播放地址失败`);
+            }
+            const coverUrl = await songCacheStore.getCover(song);
+
+            if (coverUrl) {
+              newItem.iconUri = coverUrl;
+            }
+            await androidMedia.update_music_item(musicItem, newItem);
+          }
+        ).then((listener) => {
+          this.androidPlugins.push(listener);
+        });
+        tauriAddPluginListener('mediasession', 'play', async (payload: any) => {
+          isPlaying.value = true;
+        }).then((listener) => {
+          this.androidPlugins.push(listener);
+        });
+        tauriAddPluginListener(
+          'mediasession',
+          'progress',
+          async (payload: any) => {
+            const progress = Number(payload.progress);
+            const duration = Number(payload.duration);
+            audioDuration.value = duration;
+            audioCurrent.value = progress;
+          }
+        ).then((listener) => {
+          this.androidPlugins.push(listener);
+        });
+        tauriAddPluginListener(
+          'mediasession',
+          'pause',
+          async (payload: any) => {
+            isPlaying.value = false;
+          }
+        ).then((listener) => {
+          this.androidPlugins.push(listener);
+        });
+        tauriAddPluginListener('mediasession', 'stop', async (payload: any) => {
+          isPlaying.value = false;
+        }).then((listener) => {
+          this.androidPlugins.push(listener);
+        });
+
+        tauriAddPluginListener(
+          'mediasession',
+          'playingMusicItemChanged',
+          async (payload: any) => {
+            const item = payload.musicItem;
+            if (item) {
+              const musicItem: androidMedia.MusicItem = JSON.parse(
+                payload.musicItem
+              );
+              playingSong.value = playingPlaylist.value.find(
+                (item) => item.id === musicItem.id
+              );
+            }
+          }
+        ).then((listener) => {
+          this.androidPlugins.push(listener);
+        });
+        tauriAddPluginListener(
+          'mediasession',
+          'volumeChanged',
+          async (payload: any) => {
+            audioVolume.value = Math.min(Number(payload.volume), 100);
+          }
+        ).then((listener) => {
+          this.androidPlugins.push(listener);
+        });
+        tauriAddPluginListener(
+          'mediasession',
+          'seekComplete',
+          async (payload: any) => {
+            const progress = Number(payload.progress);
+            // const updateTime = Number(payload.updateTime);
+            audioCurrent.value = progress;
+          }
+        );
+        setTimeout(() => {
+          // playlist初始同步
+          if (playingPlaylist.value.length) {
+            // android播放列表初始化
+            androidMedia.set_playlist(
+              this.playlistToAndroidMusics(
+                playingPlaylist.value,
+                Math.max(
+                  playingPlaylist.value.findIndex(
+                    (s) => s.id === playingSong.value.id
+                  ),
+                  0
+                ),
+                false
+              )
+            );
+          }
+        }, 1000);
+      });
+
+      onUnmounted(() => {
+        for (const plugin of this.androidPlugins) {
+          plugin.unregister();
+        }
+        this.androidPlugins.length = 0;
+      });
+    }
+    watch() {
+      watch(
+        playMode,
+        (newMode, oldMode) => {
+          // 播放模式变化时，重置播放列表索引
+          if (playMode.value === SongPlayMode.random) {
+            playingPlaylist.value = _.shuffle(playlist.value);
+            return;
+          } else {
+            playingPlaylist.value = [...playlist.value];
+          }
+          if (
+            newMode === SongPlayMode.random ||
+            oldMode === SongPlayMode.random
+          ) {
+            // 随机播放模式之间切换, 播放列表发生改变
+            androidMedia.update_playlist_order(
+              this.playlistToAndroidMusics(playingPlaylist.value)
+            );
+          }
+        },
+        {
+          immediate: true,
+        }
+      );
+      watch(
+        audioCurrent,
+        (newValue) => {
+          // 向安卓发送修改进度的请求
+        },
+        {
+          immediate: true,
+        }
+      );
+    }
+    async setPlaylist(list: SongInfo[], firstSong: SongInfo): Promise<void> {
+      if (list != playlist.value) {
+        // 新的播放列表
+        playlist.value = list;
+        if (playMode.value === SongPlayMode.random) {
+          playingPlaylist.value = _.shuffle(list);
+          return;
+        } else {
+          playingPlaylist.value = [...list];
+        }
+        const index = playingPlaylist.value.findIndex(
+          (item) => item.id === firstSong.id
+        );
+
+        const res = await androidMedia.set_playlist(
+          this.playlistToAndroidMusics(playingPlaylist.value, index)
+        );
+        console.log('set_playlist res', res);
+      } else {
+        // 当前播放列表切换歌曲
+        androidMedia.play_target_music(this.musicToAndroidMusic(firstSong));
       }
       playingSong.value = firstSong;
       audioCurrent.value = 0;
       audioDuration.value = 0;
       isPlaying.value = false;
     }
-    await onPlay();
-  };
-
-  const onPlay = async () => {
-    if (!audioRef.value) return;
-    if (!audioRef.value.src && !audioRef.value.srcObject) {
-      await playingSongSetSrc(playingSong.value);
+    musicToAndroidMusic(song: SongInfo): androidMedia.MusicItem {
+      return {
+        id: song.id,
+        title: song.name || '未知歌曲',
+        artist: joinSongArtists(song.artists),
+        album: song.album?.name,
+        duration: song.duration,
+        uri: songUrlToString(song.url),
+        iconUri: song.picUrl,
+        extra: JSON.stringify(song),
+      };
+    }
+    playlistToAndroidMusics(
+      songs: SongInfo[],
+      position?: number,
+      playImmediately?: boolean
+    ): androidMedia.Playlist {
+      return {
+        name: '播放列表',
+        musics: songs.map((item) => this.musicToAndroidMusic(item)),
+        position: position,
+        playImmediately: playImmediately,
+      };
     }
 
-    if (!audioRef.value.src && !audioRef.value.srcObject) {
-      // 经过上步的playingSongSetSrc，还是没有，就说明这首歌无法播放
-      showToast('歌曲无法播放');
-      return;
+    async onPlay(): Promise<void> {
+      await androidMedia.play();
     }
-    if (playingSong.value && 'mediaSession' in navigator) {
-      setMedisSession(playingSong.value, 'playing');
+    async onPause(): Promise<void> {
+      await androidMedia.pause();
     }
-
-    await audioRef.value.play();
-  };
-  const setMedisSession = async (
-    song: SongInfo,
-    playbackState?: MediaSessionPlaybackState
-  ) => {
-    try {
-      const artwork = [];
-      if (song.picUrl) {
-        if (song.picHeaders) {
-          const response = await fetch(song.picUrl, {
-            headers: song.picHeaders,
-            verify: false,
-          });
-          const blob = new Blob([await response.blob()], {
-            type: 'image/png',
-          });
-
-          const b64: string = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              // reader.result 是一个包含 Base64 编码的字符串
-              const base64String = reader.result as string;
-              resolve(base64String);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          artwork.push({
-            src: b64,
-            type: 'image/png',
-          });
+    async prevSong(): Promise<void> {
+      const currIndex = playingPlaylist.value.findIndex(
+        (item) => item.id === playingSong.value.id
+      );
+      let prevIndex = 0;
+      if (!playingPlaylist.value.length) return;
+      if (currIndex !== -1) {
+        if (currIndex === 0) {
+          prevIndex = playingPlaylist.value.length - 2;
         } else {
-          artwork.push({
-            src: song.picUrl,
-          });
+          prevIndex = currIndex - 1;
         }
       }
-      const metaData = new MediaMetadata({
-        // 媒体标题
-        title: song.name,
-        // 媒体类型
-        artist: song.artists?.join(','),
-        // 媒体封面
-        artwork: artwork,
-      });
-      // 设置媒体元数据
-      navigator.mediaSession.metadata = metaData;
-      if (playbackState) {
-        navigator.mediaSession.playbackState = playbackState;
+      await androidMedia.play_target_music(
+        this.musicToAndroidMusic(playingPlaylist.value[prevIndex])
+      );
+    }
+    async nextSong(): Promise<void> {
+      const currIndex = playingPlaylist.value.findIndex(
+        (item) => item.id === playingSong.value.id
+      );
+      let nextIndex = 0;
+      if (!playingPlaylist.value.length) return;
+      if (currIndex !== -1) {
+        if (currIndex === playingPlaylist.value.length - 1) {
+          nextIndex = 0;
+        } else {
+          nextIndex = currIndex + 1;
+        }
       }
-    } catch (error) {}
-  };
-  const onPause = () => {
-    if (!audioRef.value) return;
-    audioRef.value.pause();
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.playbackState = 'paused';
+      await androidMedia.play_target_music(
+        this.musicToAndroidMusic(playingPlaylist.value[nextIndex])
+      );
     }
-  };
+    async onSetVolume(value: number): Promise<void> {
+      await androidMedia.set_volume(value);
+      throw new Error('Method not implemented.');
+    }
+    async seek(value: number): Promise<void> {
+      await androidMedia.seek_to(value * 1000);
+    }
+  }
 
-  const nextSong = createCancellableFunction(async (signal: AbortSignal) => {
-    // 下一首
-    if (!playingPlaylist.value) return;
-    const index = playingPlaylist.value.findIndex(
-      (item) => item.id === playingSong.value?.id
-    );
-    if (index === -1) return;
-    if (index + 1 === playingPlaylist.value.length) {
-      playingSong.value = playingPlaylist.value[0];
-    } else {
-      playingSong.value = playingPlaylist.value[index + 1];
-    }
-    await playingSongSetSrc(playingSong.value);
-    if (signal.aborted) return;
-    await onPlay();
-  });
-  const prevSong = createCancellableFunction(async (signal: AbortSignal) => {
-    // 上一首
-    if (!playingPlaylist.value) return;
-    const index = playingPlaylist.value.findIndex(
-      (item) => item.id === playingSong.value?.id
-    );
-    if (index === -1) return;
-    if (index === 0) {
-      playingSong.value =
-        playingPlaylist.value[playingPlaylist.value.length - 1];
-    } else {
-      playingSong.value = playingPlaylist.value[index - 1];
-    }
-    await playingSongSetSrc(playingSong.value);
-    if (signal.aborted) return;
-    await onPlay();
-  });
-  // 设置音量
-  const onSetVolume = (value: number) => {
-    if (!audioRef.value) return;
-    audioRef.value.volume = value;
-    audioVolume.value = value;
-  };
-  const seek = (value: number) => {
-    if (!audioRef.value) return;
-    audioRef.value.currentTime = value;
-  };
+  let helper: BaseHelper;
+  if (displayStore.isAndroid) {
+    helper = new AndroidSongHelper();
+  } else {
+    helper = new WinSongHelper();
+  }
+
+  const setPlaylist = helper.setPlaylist;
+  helper.onMounted();
+  helper.watch();
 
   return {
     volumeVisible,
-    audioRef,
     playlist,
     playingPlaylist,
     playingSong,
@@ -1537,13 +1909,13 @@ export const useSongStore = defineStore('song', () => {
     isPlaying,
     playMode,
     playProgress,
-    onPlay,
-    onPause,
-    nextSong,
-    prevSong,
-    onSetVolume,
-    setPlayingList,
-    seek,
+    onPlay: helper.onPlay,
+    onPause: helper.onPause,
+    nextSong: helper.nextSong,
+    prevSong: helper.prevSong,
+    onSetVolume: helper.onSetVolume,
+    setPlayingList: helper.setPlaylist,
+    seek: helper.seek,
   };
 });
 
@@ -2208,6 +2580,18 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     }
     inited = true;
   };
+  const genBookCacheId = (book: BookItem) => {
+    return (
+      CryptoJS.MD5(`${book.sourceId}_${book.id}`).toString() +
+      sanitizePathName(book.title)
+    );
+  };
+  const genChapterCacheId = (book: BookItem, chapter: BookChapter) => {
+    return (
+      CryptoJS.MD5(`${book.sourceId}_${book.id}_${chapter.id}`).toString() +
+      sanitizePathName(chapter.title)
+    );
+  };
   const saveBookChapter = async (
     book: BookItem,
     chapter: BookChapter,
@@ -2217,12 +2601,8 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     if (!inited) {
       await ensureBase();
     }
-    const cache_book_id =
-      CryptoJS.MD5(`${book.sourceId}_${book.id}`).toString() +
-      sanitizePathName(book.title);
-    const cache_chapter_id =
-      CryptoJS.MD5(`${book.sourceId}_${book.id}_${chapter.id}`).toString() +
-      sanitizePathName(chapter.title);
+    const cache_book_id = genBookCacheId(book);
+    const cache_chapter_id = genChapterCacheId(book, chapter);
 
     const find = books.value.find(
       (b) =>
@@ -2267,12 +2647,8 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     if (!inited) {
       await ensureBase();
     }
-    const cache_book_id =
-      CryptoJS.MD5(`${book.sourceId}_${book.id}`).toString() +
-      sanitizePathName(book.title);
-    const cache_chapter_id =
-      CryptoJS.MD5(`${book.sourceId}_${book.id}_${chapter.id}`).toString() +
-      sanitizePathName(chapter.title);
+    const cache_book_id = genBookCacheId(book);
+    const cache_chapter_id = genChapterCacheId(book, chapter);
 
     const find = books.value.find(
       (b) =>
@@ -2293,9 +2669,7 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     if (!inited) {
       await ensureBase();
     }
-    const cache_book_id =
-      CryptoJS.MD5(`${book.sourceId}_${book.id}`).toString() +
-      sanitizePathName(book.title);
+    const cache_book_id = genBookCacheId(book);
     books.value = books.value.filter((b) => b.cache_book_id !== cache_book_id);
     if (await fs.exists(`${dirName}/${cache_book_id}`, { baseDir: baseDir })) {
       try {
@@ -2330,15 +2704,29 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     );
     books.value = [];
   };
+
+  const chapterInCache = (book: BookItem, chapter: BookChapter) => {
+    const cache_book_id = genBookCacheId(book);
+    const cache_chapter_id = genChapterCacheId(book, chapter);
+
+    const find = books.value.find(
+      (b) =>
+        b.cache_book_id === cache_book_id &&
+        b.cache_chapter_id === cache_chapter_id
+    );
+    return !!find;
+  };
   return {
     getBookChapter,
     saveBookChapter,
     removeBookCache,
     clear,
+    chapterInCache,
   };
 });
 
 export const useSongCacheStore = defineStore('songCacheStore', () => {
+  const displayStore = useDisplayStore();
   const baseDir = fs.BaseDirectory.AppCache;
   const dirName = 'song_cache';
   const baseFile = 'songs.json';
@@ -2403,7 +2791,7 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
       );
     }
     inited = true;
-    if (songs.value.length > 100) {
+    if (songs.value.length > 200) {
       // 1. 获取update_time最小的20首歌曲
       const minUpdateTimeSongs = [...songs.value]
         .sort((a, b) => a.update_time - b.update_time)
@@ -2428,6 +2816,21 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
             console.warn('删除歌曲缓存失败:', JSON.stringify(song));
           }
         }
+        const cover_id = songIdToCoverId(song.cache_song_id);
+        if (
+          await fs.exists(`${dirName}/${cover_id}`, {
+            baseDir: baseDir,
+          })
+        ) {
+          try {
+            await fs.remove(`${dirName}/${cover_id}`, {
+              baseDir: baseDir,
+              recursive: true,
+            });
+          } catch (error) {
+            console.warn('删除封面缓存失败:', JSON.stringify(song));
+          }
+        }
       }
     }
   };
@@ -2448,7 +2851,14 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
     }
     return sanitizePathName(song.name || '') + a + nanoid(6) + '.mp3';
   };
-  const saveSong = async (song: SongInfo, url: string, force = false) => {
+  const songIdToCoverId = (songId: string) => {
+    return `${songId}.png`;
+  };
+  const saveSong = async (
+    song: SongInfo,
+    url: string,
+    force = false
+  ): Promise<boolean> => {
     if (!inited) {
       await ensureBase();
     }
@@ -2459,48 +2869,150 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
     );
     if (find && !force) {
       // 已经有了，不需要重复保存
-      return;
+      return true;
     }
     let blob: Blob;
-    if (url.startsWith('blob')) {
-      blob = await (await window.fetch(url)).blob();
-    } else {
-      blob = await (await fetch(url)).blob();
-    }
-    if (blob.size === 0) return; // 获取失败
+    const t = displayStore.showToast();
+    try {
+      if (url.startsWith('blob')) {
+        blob = await (await window.fetch(url)).blob();
+      } else {
+        blob = await (await fetch(url)).blob();
+      }
+      if (blob.size === 0) return false; // 获取失败
 
-    const unit: Uint8Array = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
+      const unit: Uint8Array = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
 
-      reader.onload = () => {
-        if (reader.result instanceof ArrayBuffer) {
-          const arrayBuffer = reader.result;
-          const uint8Array = new Uint8Array(arrayBuffer);
-          resolve(uint8Array);
-        } else {
-          reject(new Error('Failed to read blob as ArrayBuffer'));
-        }
-      };
+        reader.onload = () => {
+          if (reader.result instanceof ArrayBuffer) {
+            const arrayBuffer = reader.result;
+            const uint8Array = new Uint8Array(arrayBuffer);
+            resolve(uint8Array);
+          } else {
+            reject(new Error('Failed to read blob as ArrayBuffer'));
+          }
+        };
 
-      reader.onerror = () => {
-        reject(reader.error);
-      };
-
-      reader.readAsArrayBuffer(blob);
-    });
-    await fs.writeFile(`${dirName}/${cache_song_id}`, unit, {
-      baseDir: baseDir,
-    });
-    if (!find) {
-      songs.value.unshift({
-        song_id: song.id,
-        song_name: song.name || '',
-        source_id: song.sourceId,
-        update_time: Date.now(),
-        cache_song_id,
+        reader.onerror = () => {
+          reject(reader.error);
+        };
+        reader.readAsArrayBuffer(blob);
       });
-    } else {
-      find.update_time = Date.now();
+      await fs.writeFile(`${dirName}/${cache_song_id}`, unit, {
+        baseDir: baseDir,
+      });
+      if (!find) {
+        songs.value.unshift({
+          song_id: song.id,
+          song_name: song.name || '',
+          source_id: song.sourceId,
+          update_time: Date.now(),
+          cache_song_id,
+        });
+      } else {
+        find.update_time = Date.now();
+      }
+    } catch (error) {
+      console.warn('saveSong:', error);
+    }
+    await saveCover(song, cache_song_id);
+    displayStore.closeToast(t);
+    return true;
+  };
+
+  const saveSongv2 = async (
+    song: SongInfo,
+    url: string,
+    options: RequestInit & ClientOptions,
+    force = false
+  ) => {
+    if (!inited) {
+      await ensureBase();
+    }
+    const cache_song_id = genCacheSongId(song);
+
+    const find = songs.value.find(
+      (s) => s.song_id === song.id && s.source_id === song.sourceId
+    );
+    if (find && !force) {
+      // 已经有了，不需要重复保存
+      return true;
+    }
+    const t = displayStore.showToast();
+    try {
+      const option = {
+        ...options,
+        baseDir: baseDir,
+        path: `${dirName}/${cache_song_id}`,
+      };
+      const ret = await fs.fetchAndSave(url, option);
+      if (!ret) {
+        throw Error('fetchAndSave 失败');
+      }
+      await saveCover(song, cache_song_id);
+      displayStore.closeToast(t);
+
+      if (!find) {
+        songs.value.unshift({
+          song_id: song.id,
+          song_name: song.name || '',
+          source_id: song.sourceId,
+          update_time: Date.now(),
+          cache_song_id,
+        });
+      } else {
+        find.update_time = Date.now();
+      }
+      return true;
+    } catch (error) {
+      console.warn('saveSongv2:', error);
+    }
+    await saveCover(song, cache_song_id);
+    displayStore.closeToast(t);
+    return true;
+  };
+
+  const saveCover = async (song: SongInfo, cache_song_id: string) => {
+    if (!inited) {
+      await ensureBase();
+    }
+    const cover_id = songIdToCoverId(cache_song_id);
+    if (await fs.exists(`${dirName}/${cover_id}`, { baseDir: baseDir })) {
+      if (
+        (await fs.stat(`${dirName}/${cover_id}`, { baseDir: baseDir })).size > 0
+      ) {
+        return;
+      }
+    }
+    if (song.picUrl) {
+      try {
+        const response = await fetch(song.picUrl, { headers: song.picHeaders });
+        const blob = await response.blob();
+        if (blob.size === 0) return;
+        const unit: Uint8Array = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+
+          reader.onload = () => {
+            if (reader.result instanceof ArrayBuffer) {
+              const arrayBuffer = reader.result;
+              const uint8Array = new Uint8Array(arrayBuffer);
+              resolve(uint8Array);
+            } else {
+              reject(new Error('Failed to read blob as ArrayBuffer'));
+            }
+          };
+
+          reader.onerror = () => {
+            reject(reader.error);
+          };
+
+          reader.readAsArrayBuffer(blob);
+        });
+        await fs.writeFile(`${dirName}/${cover_id}`, unit, {
+          baseDir: baseDir,
+        });
+      } catch (error) {}
     }
   };
   const getSong = async (song: SongInfo): Promise<string | undefined> => {
@@ -2518,6 +3030,10 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
       }))
     ) {
       try {
+        if (displayStore.isAndroid) {
+          return `file://${dirName}/${find.cache_song_id}`;
+        }
+
         const buffer = await fs.readFile(`${dirName}/${find.cache_song_id}`, {
           baseDir: baseDir,
         });
@@ -2530,6 +3046,40 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
         );
         return blobUrl;
       } catch (error) {}
+    }
+  };
+  const getCover = async (song: SongInfo): Promise<string | undefined> => {
+    if (!inited) {
+      await ensureBase();
+    }
+    const find = songs.value.find(
+      (s) => s.song_id === song.id && s.source_id === song.sourceId
+    );
+    if (find) {
+      const cover_id = songIdToCoverId(find.cache_song_id);
+      if (
+        await fs.exists(`${dirName}/${cover_id}`, {
+          baseDir: baseDir,
+        })
+      ) {
+        try {
+          if (displayStore.isAndroid) {
+            return `file://${dirName}/${cover_id}`;
+          }
+
+          const buffer = await fs.readFile(`${dirName}/${cover_id}`, {
+            baseDir: baseDir,
+          });
+          if (buffer.byteLength === 0) {
+            await removeCover(song);
+            return undefined;
+          }
+          const blobUrl = URL.createObjectURL(
+            new Blob([buffer], { type: 'image/png' })
+          );
+          return blobUrl;
+        } catch (error) {}
+      }
     }
   };
   const removeSong = async (song: SongInfo) => {
@@ -2556,7 +3106,33 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
         } catch (error) {}
       }
     }
+    removeCover(song);
   };
+
+  const removeCover = async (song: SongInfo) => {
+    if (!inited) {
+      await ensureBase();
+    }
+    const find = songs.value.find(
+      (s) => s.song_id === song.id && s.source_id === song.sourceId
+    );
+    if (find) {
+      const cover_id = songIdToCoverId(find.cache_song_id);
+      if (
+        await fs.exists(`${dirName}/${cover_id}`, {
+          baseDir: baseDir,
+        })
+      ) {
+        try {
+          await fs.remove(`${dirName}/${cover_id}`, {
+            baseDir: baseDir,
+            recursive: true,
+          });
+        } catch (error) {}
+      }
+    }
+  };
+
   const clear = async () => {
     if (!inited) {
       await ensureBase();
@@ -2575,9 +3151,32 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
             });
           } catch (error) {}
         }
+        const cover_id = songIdToCoverId(cache_song_id);
+        if (
+          await fs.exists(`${dirName}/${cover_id}`, {
+            baseDir: baseDir,
+          })
+        ) {
+          try {
+            await fs.remove(`${dirName}/${cover_id}`, {
+              baseDir: baseDir,
+              recursive: true,
+            });
+          } catch (error) {}
+        }
       }
     );
     songs.value = [];
   };
-  return { saveSong, getSong, clear };
+  return {
+    songs,
+    saveSong,
+    saveSongv2,
+    saveCover,
+    getSong,
+    getCover,
+    removeSong,
+    removeCover,
+    clear,
+  };
 });

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="snow_error_no_error">No error</string>
+    <string name="snow_error_unknown_error">Unknown error</string>
+    <string name="snow_error_only_wifi_network">Only WiFi network</string>
+    <string name="snow_error_player_error">Player error</string>
+    <string name="snow_error_network_error">Network error</string>
+    <string name="snow_error_file_not_found">File not found</string>
+    <string name="snow_error_data_load_failed">Data load failed</string>
+    <string name="snow_error_get_url_failed">Get url failed</string>
+    <string name="snow_error_out_of_memory">Out of memory</string>
+    <string name="snow_error_prepare_music_item_failed">Prepare music item failed</string>
+    <string name="snow_error_play_position_out_of_bounds">Play position out of bounds</string>
+
+    <string name="snow_waiting_to_play">Waiting to play…</string>
+    <string name="snow_preparing">Preparing…</string>
+    <string name="snow_buffering">Buffering…</string>
+
+    <string name="snow_music_item_unknown_title">Unknown Title</string>
+    <string name="snow_music_item_unknown_artist">Unknown Artist</string>
+    <string name="snow_music_item_unknown_album">Unknown Album</string>
+
+    <string name="snow_notification_channel_name">Player Controller</string>
+
+</resources>

@@ -1,10 +1,10 @@
 import { warn, debug, trace, info, error } from '@tauri-apps/plugin-log';
-import { ArtistInfo } from '@/extensions/song';
+import { ArtistInfo, SongUrlMap } from '@/extensions/song';
 import { ClientOptions, fetch } from '@/utils/fetch';
 import { onBeforeUnmount, onMounted } from 'vue';
 import { showToast } from 'vant';
 import _urlJoin from 'url-join';
-import * as fs from '@tauri-apps/plugin-fs';
+import * as fs from 'tauri-plugin-fs-api';
 // import * as dialog from '@tauri-apps/plugin-dialog';
 export * from './extensionUtils';
 
@@ -54,6 +54,17 @@ export function joinSongArtists(
       return artist.name;
     })
     .join(',');
+}
+
+export function songUrlToString(url: string | SongUrlMap | undefined): string {
+  if (!url) return '';
+  if (typeof url === 'string') {
+    return url;
+  } else {
+    return (
+      url.flac || url['320k'] || url['128k'] || url['320'] || url['128'] || ''
+    );
+  }
 }
 
 export function keepCNAndEN(str: string): string {

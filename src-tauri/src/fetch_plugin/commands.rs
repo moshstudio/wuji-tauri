@@ -188,14 +188,10 @@ fn attach_proxy(
     Ok(builder)
 }
 
-#[tauri::command]
-pub async fn fetch<R: Runtime>(
-    webview: Webview<R>,
-    state: State<'_, Http>,
+fn build_request(
+    mut builder: reqwest::ClientBuilder,
     client_config: ClientConfig,
-    _command_scope: CommandScope<Entry>,
-    _global_scope: GlobalScope<Entry>,
-) -> crate::fetch_plugin::Result<ResourceId> {
+) -> crate::fetch_plugin::Result<reqwest::RequestBuilder> {
     let ClientConfig {
         method,
         url,
@@ -206,22 +202,18 @@ pub async fn fetch<R: Runtime>(
         proxy,
         verify,
     } = client_config;
-    // 克隆 url 以避免移动问题
     let url_clone = url.clone();
-
     let scheme = url_clone.scheme();
-    let method = Method::from_bytes(method.as_bytes())?;
-
-    let mut headers = HeaderMap::new();
-    for (h, v) in headers_raw {
-        let name = HeaderName::from_str(&h)?;
-        headers.append(name, HeaderValue::from_str(&v)?);
-    }
-
     match scheme {
         "http" | "https" => {
-            let mut builder = reqwest::ClientBuilder::new();
-            // builder = builder.use_native_tls();
+            let method = Method::from_bytes(method.as_bytes())?;
+
+            let mut headers = HeaderMap::new();
+            for (h, v) in headers_raw {
+                let name = HeaderName::from_str(&h)?;
+                headers.append(name, HeaderValue::from_str(&v)?);
+            }
+            builder = builder.use_rustls_tls();
 
             if !verify.unwrap_or(true) {
                 builder = builder.danger_accept_invalid_certs(true);
@@ -274,24 +266,6 @@ pub async fn fetch<R: Runtime>(
                     headers.append(header::USER_AGENT, HeaderValue::from_str(random_ua)?);
                 }
             }
-            // if !headers.contains_key(header::ACCEPT) {
-            //     headers.append(header::ACCEPT, HeaderValue::from_str("*/*")?);
-            // }
-            // if !headers.contains_key(header::ACCEPT_ENCODING) {
-            //     headers.append(
-            //         header::ACCEPT_ENCODING,
-            //         HeaderValue::from_str("gzip, deflate")?,
-            //     );
-            // }
-            // if !headers.contains_key(header::CONNECTION) {
-            //     headers.append(header::CONNECTION, HeaderValue::from_str("keep-alive")?);
-            // }
-            // if !headers.contains_key(header::ACCEPT_LANGUAGE) {
-            //     headers.append(
-            //         header::ACCEPT_LANGUAGE,
-            //         HeaderValue::from_str("zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7")?,
-            //     );
-            // }
 
             // ensure we have an Origin header set
             // if !headers.contains_key(header::ORIGIN) {
@@ -312,6 +286,44 @@ pub async fn fetch<R: Runtime>(
             }
 
             request = request.headers(headers);
+            Ok(request)
+        }
+        "data" => {
+            // let data_url =
+            //     data_url::DataUrl::process(url.as_str()).map_err(|_| Error::DataUrlError)?;
+            // let (body, _) = data_url
+            //     .decode_to_vec()
+            //     .map_err(|_| Error::DataUrlDecodeError)?;
+
+            // let response = http::Response::builder()
+            //     .status(StatusCode::OK)
+            //     .header(header::CONTENT_TYPE, data_url.mime_type().to_string())
+            //     .body(reqwest::Body::from(body))?;
+
+            // let fut = async move { Ok(reqwest::Response::from(response)) };
+            // let mut resources_table = webview.resources_table();
+            // let rid = resources_table.add_request(Box::pin(fut));
+            // Ok(rid)
+            Err(Error::SchemeNotSupport(scheme.to_string()))
+        }
+        _ => Err(Error::SchemeNotSupport(scheme.to_string())),
+    }
+}
+
+#[tauri::command]
+pub async fn fetch<R: Runtime>(
+    webview: Webview<R>,
+    state: State<'_, Http>,
+    client_config: ClientConfig,
+    _command_scope: CommandScope<Entry>,
+    _global_scope: GlobalScope<Entry>,
+) -> crate::fetch_plugin::Result<ResourceId> {
+    let url_clone = client_config.url.clone();
+    let scheme = url_clone.scheme();
+    match scheme {
+        "http" | "https" => {
+            let builder = reqwest::ClientBuilder::new();
+            let request = build_request(builder, client_config)?;
 
             // let fut = async move {
             //     let mut redirect_history = Vec::new();

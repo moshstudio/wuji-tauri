@@ -32,7 +32,7 @@ pub enum Error {
     #[error("Request canceled")]
     RequestCanceled,
     #[error(transparent)]
-    FsError(#[from] tauri_plugin_fs::Error),
+    FsError(#[from] tauri_plugin_fs2::Error),
     #[error("failed to process data url")]
     DataUrlError,
     #[error("failed to decode data url into bytes")]

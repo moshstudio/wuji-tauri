@@ -1,0 +1,58 @@
+[package]
+name = "tauri-plugin-fs2"
+version = "2.2.0"
+description = "Access the file system."
+authors = ["You"]
+edition = "2021"
+rust-version = "1.77.2"
+exclude = ["/examples", "/webview-dist", "/webview-src", "/node_modules"]
+links = "tauri-plugin-fs2"
+
+[package.metadata.docs.rs]
+rustc-args = ["--cfg", "docsrs"]
+rustdoc-args = ["--cfg", "docsrs"]
+
+[package.metadata.platforms.support]
+windows = { level = "full", notes = "Apps installed via MSI or NSIS in `perMachine` and `both` mode require admin permissions for write acces in `$RESOURCES` folder" }
+linux = { level = "full", notes = "No write access to `$RESOURCES` folder" }
+macos = { level = "full", notes = "No write access to `$RESOURCES` folder" }
+android = { level = "partial", notes = "Access is restricted to Application folder by default" }
+ios = { level = "partial", notes = "Access is restricted to Application folder by default" }
+
+[build-dependencies]
+tauri-plugin = { version = "2.0.2", features = ["build"] }
+schemars = "0.8"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+tauri-utils = { version = "2", features = ["build"] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_repr = "0.1"
+tauri = { version = "2", default-features = false }
+thiserror = "2"
+tokio = { version = "1.43.0", features = ["full"] }
+url = "2"
+anyhow = "1"
+uuid = { version = "1", features = ["v4"] }
+glob = "0.3"
+# TODO: Remove `serialization-compat-6` in v3
+notify = { version = "8", optional = true, features = [
+  "serde",
+  "serialization-compat-6",
+] }
+notify-debouncer-full = { version = "0.5", optional = true }
+dunce = "1"
+percent-encoding = "2"
+http = "1"
+rand = "0.8"
+reqwest = { version = "0.12", default-features = false, features = [
+  "rustls-tls-webpki-roots-no-provider",
+  "http2",
+  "charset",
+  "macos-system-configuration",
+] }
+
+[features]
+watch = ["notify", "notify-debouncer-full"]

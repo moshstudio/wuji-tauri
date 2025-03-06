@@ -13,7 +13,7 @@ fn greet(name: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default()
-        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_fs2::init())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
@@ -32,6 +32,7 @@ pub fn run() {
             Ok(())
         })
         .plugin(tauri_plugin_commands::init())
+        .plugin(tauri_plugin_mediasession::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init());
@@ -39,7 +40,6 @@ pub fn run() {
     // 仅在桌面端添加
     #[cfg(desktop)]
     {
-        println!("Only Desktop");
         fn show_window(app: &AppHandle) {
             let windows = app.webview_windows();
             windows

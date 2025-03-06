@@ -2,16 +2,7 @@
 import { storeToRefs } from 'pinia';
 import { exit_app, set_status_bar } from 'tauri-plugin-commands-api';
 import { useBookShelfStore, useBookStore, useDisplayStore } from './store';
-import {
-  nextTick,
-  onBeforeMount,
-  onMounted,
-  ref,
-  RendererElement,
-  RendererNode,
-  VNode,
-  watch,
-} from 'vue';
+import { nextTick, onMounted, ref, VNode, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { router } from './router';
 import { showConfirmDialog, showToast } from 'vant';
@@ -194,6 +185,7 @@ window.androidBackCallback = async () => {
       // 关闭播放页
       displayStore.showPlayView = false;
     } else if (displayStore.showSongShelfDetail) {
+      // 收藏的歌单的详情
       displayStore.showSongShelfDetail = false;
     } else if (displayStore.showSongShelf) {
       displayStore.showSongShelf = false;
@@ -248,6 +240,7 @@ window.androidBackCallback = async () => {
         rounded
         color="teal"
         height="4"
+        @click="() => displayStore.closeToast()"
       ></v-progress-linear>
     </div>
   </div>

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-play-audio"
+description = "Enables the play_audio command without any pre-configured scope."
+commands.allow = ["play_audio"]
+
+[[permission]]
+identifier = "deny-play-audio"
+description = "Denies the play_audio command without any pre-configured scope."
+commands.deny = ["play_audio"]

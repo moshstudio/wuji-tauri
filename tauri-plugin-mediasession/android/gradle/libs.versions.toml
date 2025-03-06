@@ -1,0 +1,71 @@
+[versions]
+agp = "8.0.2"
+appcompatVersion = "1.7.0"
+constraintlayoutVersion = "2.1.4"
+multidexVersion = "1.0.3"
+junit = "4.13.2"
+junitVersion = "1.2.1"
+espressoCore = "3.6.1"
+objectboxVersion = "4.0.2"
+guavaVersion = "33.0.0-android"
+rxjavaVersion = "2.2.19"
+rxandroidVersion = "2.1.1"
+mediaHelperVersion = "1.1"
+mmkvVersion = "1.2.12"
+glideVersion = "4.11.0"
+recyclerviewVersion = "1.3.2"
+rvhelperVersion = "1.2.2"
+pinyinComparatorVersion = "1.0.3"
+permissionxVersion = "1.6.1"
+media3ExoPlayer = "1.4.1"
+exoplayerLegacyVersion = "2.16.1"
+materialVersion = "1.12.0"
+mediaVersion = "1.7.0"
+lifecycleExtensionsVersion = "2.2.0"
+lifecycleRuntimeVersion = "2.8.6"
+channelHelperVersion = "1.2.8"
+mpAndroidChartVersion = "v3.1.0"
+verticalseekbarVersion = "1.0.0"
+crollerVersion = "1.0.3"
+
+[libraries]
+appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompatVersion" }
+constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayoutVersion" }
+androidx-media = { group = "androidx.media", name = "media", version.ref = "mediaVersion" }
+lifecycle-extensions = { group = "androidx.lifecycle", name = "lifecycle-extensions", version.ref = "lifecycleExtensionsVersion" }
+lifecycle-runtime = { group = "androidx.lifecycle", name = "lifecycle-runtime", version.ref = "lifecycleRuntimeVersion" }
+multidex = { group = "com.android.support", name = "multidex", version.ref = "multidexVersion" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+objectbox-gradle-plugin = { module = "io.objectbox:objectbox-gradle-plugin", version.ref = "objectboxVersion" }
+objectbox-test-linux = { group = "io.objectbox", name = "objectbox-linux", version.ref = "objectboxVersion" }
+objectbox-test-macos = { group = "io.objectbox", name = "objectbox-macos", version.ref = "objectboxVersion" }
+objectbox-test-windows = { group = "io.objectbox", name = "objectbox-windows", version.ref = "objectboxVersion" }
+guava = { group = "com.google.guava", name = "guava", version.ref = "guavaVersion" }
+rxjava = { group = "io.reactivex.rxjava2", name = "rxjava", version.ref = "rxjavaVersion" }
+rxandroid = { group = "io.reactivex.rxjava2", name = "rxandroid", version.ref = "rxandroidVersion" }
+mediaHelper = { group = "com.github.jrfeng", name = "media-helper", version.ref = "mediaHelperVersion" }
+mmkv = { group = "com.tencent", name = "mmkv-static", version.ref = "mmkvVersion" }
+glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glideVersion" }
+glide-compiler = { group = "com.github.bumptech.glide", name = "compiler", version.ref = "glideVersion" }
+recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerviewVersion" }
+rvhelper = { group = "com.github.jrfeng", name = "rv-helper", version.ref = "rvhelperVersion" }
+pinyinComparator = { group = "com.github.jrfeng", name = "pinyin-comparator", version.ref = "pinyinComparatorVersion" }
+permissionx = { group = "com.guolindev.permissionx", name = "permissionx", version.ref = "permissionxVersion" }
+media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3ExoPlayer" }
+media3-exoplayer-dash = { group = "androidx.media3", name = "media3-exoplayer-dash", version.ref = "media3ExoPlayer" }
+exoplayer-core-legacy = { group = "com.google.android.exoplayer", name = "exoplayer-core", version.ref = "exoplayerLegacyVersion" }
+exoplayer-extension-okhttp-legacy = { group = "com.google.android.exoplayer", name = "extension-okhttp", version.ref = "exoplayerLegacyVersion" }
+material = { group = "com.google.android.material", name = "material", version.ref = "materialVersion" }
+channel-helper = { group = "com.github.jrfeng.channel-helper", name = "helper", version.ref = "channelHelperVersion" }
+channel-helper-pip = { group = "com.github.jrfeng.channel-helper", name = "pipe", version.ref = "channelHelperVersion" }
+channel-helper-processor = { group = "com.github.jrfeng.channel-helper", name = "processor", version.ref = "channelHelperVersion" }
+mpAndroidChart = { group = "com.github.PhilJay", name = "MPAndroidChart", version.ref = "mpAndroidChartVersion" }
+verticalseekbar = { group = "com.h6ah4i.android.widget.verticalseekbar", name = "verticalseekbar", version.ref = "verticalseekbarVersion" }
+croller = { group = "com.github.Lundez", name = "Croller", version.ref = "crollerVersion" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+

@@ -14,7 +14,7 @@ import LoadImage from '../LoadImage.vue';
 const songStore = useSongStore();
 const displayStore = useDisplayStore();
 const shelfStore = useSongShelfStore();
-const { audioRef, playingSong, audioVolume } = storeToRefs(songStore);
+const { playingSong, audioVolume } = storeToRefs(songStore);
 const { showPlayingPlaylist } = storeToRefs(displayStore);
 </script>
 

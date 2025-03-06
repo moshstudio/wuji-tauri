@@ -243,6 +243,7 @@ onBeforeUnmount(async () => {
         rounded
         color="teal"
         height="4"
+        @click="() => displayStore.closeToast()"
       ></v-progress-linear>
     </div>
   </div>

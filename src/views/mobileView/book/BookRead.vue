@@ -11,7 +11,7 @@ import { showToast } from 'vant';
 import { Icon } from '@iconify/vue';
 import { BookChapter, BookItem } from '@/extensions/book';
 
-import { useBookStore, useDisplayStore } from '@/store';
+import { useBookChapterStore, useBookStore, useDisplayStore } from '@/store';
 import { BookSource } from '@/types';
 import { PropType } from 'vue';
 import { ReaderResult, type LineData } from '@/utils/reader/types';
@@ -75,6 +75,7 @@ const emit = defineEmits<{
 
 const displayStore = useDisplayStore();
 const bookStore = useBookStore();
+const bookCacheStore = useBookChapterStore();
 
 /** 显示菜单 */
 const showMenu = ref(false);
@@ -714,7 +715,6 @@ onBeforeUnmount(function () {
         <van-cell
           v-for="item in book?.chapters"
           :key="item.id"
-          :title="item.title"
           :title-style="{
             color:
               readingChapter?.id === item.id
@@ -725,7 +725,6 @@ onBeforeUnmount(function () {
             'bg-[#1f1f1f] text-white': true,
             'reading-chapter': readingChapter?.id === item.id,
           }"
-          :icon="readingChapter?.id === item.id ? 'eye-o' : ''"
           clickable
           @click="
             () => {
@@ -733,7 +732,25 @@ onBeforeUnmount(function () {
               showChapters = false;
             }
           "
-        />
+        >
+          <div class="flex items-center gap-2 flex-nowrap">
+            <Icon
+              icon="iconamoon:eye-thin"
+              width="24"
+              height="24"
+              v-if="readingChapter?.id === item.id"
+            />
+            <span class="flex-grow flex">
+              {{ item.title }}
+            </span>
+            <Icon
+              icon="material-symbols-light:download-done-rounded"
+              width="24"
+              height="24"
+              v-if="book && bookCacheStore.chapterInCache(book, item)"
+            />
+          </div>
+        </van-cell>
       </van-list>
     </van-popup>
     <van-dialog
@@ -821,11 +838,13 @@ onBeforeUnmount(function () {
     </van-dialog>
     <van-dialog
       v-model:show="showReadSettingDialog"
-      title="阅读设置"
       closeOnClickOverlay
       :show-confirm-button="false"
       class="setting-dialog bg-[#1f1f1f]"
     >
+      <template #title>
+        <div class="text-white">阅读设置</div>
+      </template>
       <div class="flex flex-col gap-2 p-2 text-sm">
         <van-cell class="bg-[#1f1f1f]">
           <template #title>

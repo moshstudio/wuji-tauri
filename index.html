@@ -36,6 +36,10 @@
         }
       }
 
+      .loading .logo {
+        transform: translateY(-50px);
+      }
+
       .loading .loading-hint {
         position: absolute;
         bottom: 10%;
@@ -74,7 +78,7 @@
   <body>
     <div id="app">
       <div class="loading">
-        <img src="./src/assets/wuji.svg" alt="logo" />
+        <img class="logo" src="./src/assets/wuji.svg" alt="logo" />
         <div class="loading-hint">
           <strong>无极</strong>
           <p class="txt">欢迎使用</p>

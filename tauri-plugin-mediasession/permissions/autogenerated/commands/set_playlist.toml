@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-set-playlist"
+description = "Enables the set_playlist command without any pre-configured scope."
+commands.allow = ["set_playlist"]
+
+[[permission]]
+identifier = "deny-set-playlist"
+description = "Denies the set_playlist command without any pre-configured scope."
+commands.deny = ["set_playlist"]

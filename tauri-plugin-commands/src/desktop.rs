@@ -1,5 +1,5 @@
 use serde::de::DeserializeOwned;
-use tauri::{plugin::PluginApi, AppHandle, Runtime};
+use tauri::{plugin::PluginApi, utils::acl::Number, AppHandle, Runtime};
 
 use crate::models::*;
 
@@ -22,5 +22,8 @@ impl<R: Runtime> Commands<R> {
         payload: SetStatusBarRequest,
     ) -> crate::Result<SetStatusBarResponse> {
         Ok(SetStatusBarResponse { res: Some(true) })
+    }
+    pub fn get_system_font_scale(&self, payload: EmptyRequest) -> crate::Result<NumberResponse> {
+        Ok(NumberResponse { value: 1.0 })
     }
 }

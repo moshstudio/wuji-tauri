@@ -4,6 +4,7 @@ Default permissions for the plugin
 
 - `allow-exit-app`
 - `allow-set-status-bar`
+- `allow-get-system-font-scale`
 
 ## Permission Table
 
@@ -36,6 +37,32 @@ Enables the exit_app command without any pre-configured scope.
 <td>
 
 Denies the exit_app command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:allow-get-system-font-scale`
+
+</td>
+<td>
+
+Enables the get_system_font_scale command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:deny-get-system-font-scale`
+
+</td>
+<td>
+
+Denies the get_system_font_scale command without any pre-configured scope.
 
 </td>
 </tr>

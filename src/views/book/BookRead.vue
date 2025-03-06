@@ -16,6 +16,7 @@ import Reader from '@/utils/reader/reader-layout';
 import { ReaderResult } from '@/utils/reader/types';
 import { showConfirmDialog, showToast } from 'vant';
 import { ref, watch, onActivated, nextTick } from 'vue';
+import { get_system_font_scale } from 'tauri-plugin-commands-api';
 import _ from 'lodash';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 
@@ -163,6 +164,8 @@ const loadData = retryOnFalse({ onFailed: back })(async () => {
   return true;
 });
 async function loadChapter(chapter?: BookChapter) {
+  console.log('load chapter');
+
   if (!book.value) {
     showToast('书籍不存在');
     back();
@@ -190,8 +193,8 @@ async function loadChapter(chapter?: BookChapter) {
   if (!readingContent.value) {
     showToast('本章内容为空');
   }
-  nextTick(() => {
-    updateReadingElements();
+  nextTick(async () => {
+    await updateReadingElements();
     if (isPrev === 'true') {
       readingChapterPage.value =
         (readingPagedContent.value?.content.length || 1) - 1;
@@ -210,7 +213,7 @@ async function loadChapter(chapter?: BookChapter) {
   });
 }
 
-function updateReadingElements() {
+async function updateReadingElements() {
   const content = document.querySelector('#read-content');
   if (content) {
     switch (bookStore.readMode) {
@@ -234,15 +237,24 @@ function updateReadingElements() {
         readingPagedContent.value = undefined;
         break;
       case 'slide':
-        updateReadingPagedContent();
+        await updateReadingPagedContent();
         break;
     }
   }
 }
 
-const updateReadingPagedContent = () => {
+const updateReadingPagedContent = async () => {
   const content = document.querySelector('#read-content');
   if (content) {
+    let scale = 1;
+    try {
+      if (displayStore.isMobile) {
+        scale = (await get_system_font_scale()) as number;
+      }
+    } catch (error) {
+      console.log(error);
+    }
+
     const list = Reader(readingContent.value || '', {
       platform: 'browser', // 平台
       id: '', // canvas 对象
@@ -250,11 +262,11 @@ const updateReadingPagedContent = () => {
       width: content.clientWidth - bookStore.paddingX * 2, // 容器宽度
       height:
         content.clientHeight - bookStore.paddingTop - bookStore.paddingBottom, // 容器高度
-      fontSize: bookStore.fontSize, // 段落字体大小
+      fontSize: bookStore.fontSize * scale, // 段落字体大小
       lineHeight: bookStore.lineHeight, // 段落文字行高
       pGap: bookStore.readPGap, // 段落间距
       title: readingChapter.value?.title, // 标题
-      titleSize: bookStore.fontSize * 1.3, // 标题字体大小
+      titleSize: bookStore.fontSize * 1.3 * scale, // 标题字体大小
       titleHeight: bookStore.lineHeight * 1.3, // 标题文字行高
       titleWeight: 'normal', // 标题文字字重
       titleGap: bookStore.readPGap * 1.3, // 标题距离段落的间距
@@ -361,12 +373,7 @@ watch(readingChapterPage, (page) => {
   }
 });
 
-useElementResize(
-  '#read-content',
-  _.debounce((width, height) => {
-    updateReadingPagedContent();
-  }, 500)
-);
+useElementResize('#read-content', _.debounce(updateReadingPagedContent, 500));
 watch(
   [
     () => bookStore.fontSize,
@@ -377,8 +384,8 @@ watch(
     () => bookStore.paddingTop,
     () => bookStore.paddingBottom,
   ],
-  () => {
-    updateReadingElements();
+  async () => {
+    await updateReadingElements();
   }
 );
 </script>

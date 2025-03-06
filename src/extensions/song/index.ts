@@ -89,7 +89,7 @@ export type SongSize = '128k' | '320k' | 'flac' | '';
 // 歌曲 url，pic 和 bigPic 表示图片和大图
 export type SongUrlMap = {
   '128k'?: string;
-  '120'?: string;
+  '128'?: string;
   '320k'?: string;
   '320'?: string;
   flac?: string;

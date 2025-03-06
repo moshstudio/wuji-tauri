@@ -36,7 +36,7 @@ watch(showPlayView, (value) => {
         <div
           class="flex-grow flex flex-nowrap h-[58px] items-center justify-between px-2 z-[1002]"
         >
-          <div class="flex gap-4 max-w-[calc(100%-50px)]">
+          <div class="flex gap-4 max-w-[calc(100%-60px)]">
             <div class="w-[30px] h-[30px]">
               <LoadImage
                 :width="30"
@@ -73,7 +73,7 @@ watch(showPlayView, (value) => {
               </span>
             </div>
           </div>
-          <div class="right-buttons flex gap-2">
+          <div class="right-buttons flex gap-3">
             <div label="playButton">
               <transition name="transform" mode="out-in">
                 <Icon

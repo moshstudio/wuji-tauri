@@ -1,0 +1,17 @@
+[default]
+description = "Default permissions for the plugin"
+permissions = [
+  "allow-update-music-item",
+  "allow-update-playlist-order",
+  "allow-play-target-music",
+  "allow-seek-to",
+  "allow-set-volume",
+  "allow-set-playlist",
+  "allow-play",
+  "allow-pause",
+  "allow-stop",
+  "allow-register-listener",
+  "allow-remove-listener",
+  "allow-check-permissions",
+  "allow-request-permissions",
+]

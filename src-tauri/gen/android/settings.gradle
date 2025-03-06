@@ -1,3 +1,5 @@
 include ':app'
-
+// 需要将plugin需求的module添加到此
+include ':player'
+project(':player').projectDir = new File("C:\\Users\\14438\\Documents\\GitHub\\wuji-tauri\\tauri-plugin-mediasession\\android\\player")
 apply from: 'tauri.settings.gradle'
