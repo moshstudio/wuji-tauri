@@ -55,6 +55,11 @@
     "fs2:allow-appcache-write",
     "fs2:allow-appcache-read-recursive",
     "fs2:allow-appcache-write-recursive",
-    "fs2:allow-fetch-and-save"
+    "fs2:allow-fetch-and-save",
+    {
+      "identifier": "fs2:scope",
+      "allow": [{ "path": "**" }]
+    },
+    "dialog:default"
   ]
 }

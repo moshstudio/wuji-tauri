@@ -9,6 +9,7 @@ import _ from 'lodash';
 import { SongSource } from '@/types';
 import { SongInfo } from '@/extensions/song';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { showToast } from 'vant';
 
 const store = useStore();
 const displayStore = useDisplayStore();

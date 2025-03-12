@@ -21,8 +21,10 @@ import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import snow.player.PlayMode
 import snow.player.Player
 import snow.player.PlayerClient
@@ -260,7 +262,7 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
     @Command
     public fun setPlaylist(invoke: Invoke) {
         // 创建一个 Playlist 对象，并开始播放
-        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.Main.immediate).launch {
             if (!checkConnected()) {
                 val ret = JSObject()
                 ret.put("value", false)
@@ -269,19 +271,13 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
             }
             try {
                 val args = invoke.parseArgs(PlaylistArgs::class.java)
-                Log.e(
-                    "MediaSessionPlugin",
-                    "setPlaylist ${args.position} ${args.extra} ${args.playImmediately}"
-                )
                 var builder = Playlist.Builder()
                 builder = builder.setName(args.name)
                 val bundle = Bundle()
                 bundle.putString("extra", args.extra)
                 builder = builder.setExtra(bundle)
                 builder = builder.setEditable(true)
-                Log.e("MediaSessionPlugin", "musics ${args.musics}")
                 for (item in args.musics) {
-                    Log.e("MediaSessionPlugin", MusicItemToJSON(generateMusicItem(item)).toString())
                     builder = builder.append(generateMusicItem(item))
                 }
                 val playlist = builder.build()
@@ -305,7 +301,7 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
 
     @Command
     fun updatePlaylistOrder(invoke: Invoke) {
-        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.Main.immediate).launch {
             if (!checkConnected()) {
                 val ret = JSObject()
                 ret.put("value", false)
@@ -335,7 +331,7 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
 
     @Command
     fun playTargetMusic(invoke: Invoke) {
-        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.Main.immediate).launch {
             if (!checkConnected()) {
                 val ret = JSObject()
                 ret.put("value", false)
@@ -343,22 +339,29 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
                 return@launch
             }
             val musicItem = invoke.parseArgs(PlayMusicItem::class.java)
-            playerClient.getPlaylist { playlist ->
-                val position = playlist.allMusicItem.indexOfFirst { it.musicId == musicItem.id }
-                if (position >= 0) {
-                    playerClient.skipToPosition(position)
-                } else {
-                    // 播放失败
+            val playingItem = playerClient.playingMusicItem
+            if (playingItem != null && playingItem.musicId == musicItem.id) {
+                Log.e("MediaSessionPlugin", "play")
+                withContext(Dispatchers.IO) { playerClient.playPause() }
+            } else {
+                Log.e("MediaSessionPlugin", "playPositionMusic")
+                playerClient.getPlaylist { playlist ->
+                    val position = playlist.allMusicItem.indexOfFirst { it.musicId == musicItem.id }
+                    if (position >= 0) {
+                        playerClient.skipToPosition(position)
+                    } else {
+                        // 播放失败
+                    }
                 }
             }
+            invoke.resolve(JSObject().apply { put("value", true) })
         }
-
     }
 
     @Command
     fun updateMusicItem(invoke: Invoke) {
         // 更新item的播放信息
-        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.Main.immediate).launch {
             if (!checkConnected()) {
                 val ret = JSObject()
                 ret.put("value", false)
@@ -376,7 +379,6 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
                 }
                 LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
             }
-
             val ret = JSObject()
             ret.put("value", true)
             invoke.resolve(ret)
@@ -387,14 +389,14 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
 
     @Command
     fun play(invoke: Invoke) {
-        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.Main.immediate).launch {
             if (!checkConnected()) {
                 val ret = JSObject()
                 ret.put("value", false)
                 invoke.resolve(ret)
                 return@launch
             }
-            playerClient.play()
+            playerClient.playPause()
             val ret = JSObject()
             ret.put("value", true)
             invoke.resolve(ret)
@@ -404,14 +406,14 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
 
     @Command
     fun pause(invoke: Invoke) {
-        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.Main.immediate).launch {
             if (!checkConnected()) {
                 val ret = JSObject()
                 ret.put("value", false)
                 invoke.resolve(ret)
                 return@launch
             }
-            playerClient.pause()
+            playerClient.playPause()
             val ret = JSObject()
             ret.put("value", true)
             invoke.resolve(ret)
@@ -421,7 +423,7 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
 
     @Command
     fun stop(invoke: Invoke) {
-        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.Main.immediate).launch {
             if (!checkConnected()) {
                 val ret = JSObject()
                 ret.put("value", false)
@@ -435,7 +437,7 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
 
     @Command
     fun setVolume(invoke: Invoke) {
-        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.Main.immediate).launch {
             if (!checkConnected()) {
                 val ret = JSObject()
                 ret.put("value", false)
@@ -453,7 +455,7 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
 
     @Command
     fun seekTo(invoke: Invoke) {
-        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.Main.immediate).launch {
             if (!checkConnected()) {
                 val ret = JSObject()
                 ret.put("value", false)

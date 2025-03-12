@@ -24,16 +24,19 @@ const pages = ref([
   {
     name: 'Photo',
     icon: 'photo-o',
+    selectedIcon: 'photo',
     to: photoPath,
   },
   {
     name: 'Song',
     icon: 'music-o',
+    selectedIcon: 'music',
     to: songPath,
   },
   {
     name: 'Book',
     icon: 'bookmark-o',
+    selectedIcon: 'bookmark',
     to: bookPath,
   },
 ]);
@@ -231,6 +234,10 @@ window.androidBackCallback = async () => {
         :icon="page.icon"
         :to="page.to"
       >
+        <template #icon>
+          <van-icon :name="page.selectedIcon" v-if="activeKey == index" />
+          <van-icon :name="page.icon" v-else />
+        </template>
       </van-tabbar-item>
     </van-tabbar>
     <div class="absolute top-0 w-screen z-[999999999]">

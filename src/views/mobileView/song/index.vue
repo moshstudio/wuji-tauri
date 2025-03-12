@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useDisplayStore, useStore } from '@/store';
+import { useDisplayStore, useSongStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import _ from 'lodash';
 import PlaylistCard from '@/components/card/PlaylistCard.vue';
@@ -78,7 +78,7 @@ const onRefresh = async () => {
       >
         <van-tab
           v-for="item in songSources.filter((s) => s.playlist || s.songList)"
-          :key="item.item.id"
+          :key="'tab' + item.item.id"
           :title="item.item.name"
           class="p-2"
         >
@@ -104,7 +104,7 @@ const onRefresh = async () => {
             <HorizonList>
               <div
                 v-for="p in item.playlist?.list"
-                :key="p.id"
+                :key="'playlist' + p.id"
                 class="relative"
               >
                 <PlaylistCard :playlist="p"></PlaylistCard>
@@ -129,7 +129,7 @@ const onRefresh = async () => {
               />
             </van-row>
             <div class="grid grid-cols-2 gap-2 pt-2">
-              <template v-for="p in item.songList?.list" :key="p.id">
+              <template v-for="p in item.songList?.list" :key="'song' + p.id">
                 <MobileSongCard
                   :song="p"
                   @play="() => playSong(item, p)"

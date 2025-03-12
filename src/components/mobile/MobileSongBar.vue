@@ -30,9 +30,19 @@ watch(showPlayView, (value) => {
   <transition name="fade">
     <div v-if="playingSong" class="flex flex-col select-none h-[60px]">
       <div
-        class="grow flex flex-col z-[1002] border-t-[1px] bg-[--van-background]"
+        class="grow flex flex-col z-[1002] bg-[--van-background]"
         @click="() => (showPlayView = !showPlayView)"
       >
+        <div class="w-full h-[6px] z-[1003]">
+          <van-slider
+            v-model="songStore.audioCurrent"
+            :min="0"
+            :max="songStore.audioDuration"
+            button-size="10px"
+            class="z-[1002]"
+            @change="(value) => songStore.seek(value)"
+          />
+        </div>
         <div
           class="flex-grow flex flex-nowrap h-[58px] items-center justify-between px-2 z-[1002]"
         >
@@ -102,16 +112,6 @@ watch(showPlayView, (value) => {
               @click.stop="() => (showPlayingPlaylist = !showPlayingPlaylist)"
             />
           </div>
-        </div>
-        <div class="w-full h-[6px] z-[1002]">
-          <van-slider
-            v-model="songStore.audioCurrent"
-            :min="0"
-            :max="songStore.audioDuration"
-            button-size="10px"
-            class="z-[1002]"
-            @change="(value) => songStore.seek(value)"
-          />
         </div>
       </div>
     </div>

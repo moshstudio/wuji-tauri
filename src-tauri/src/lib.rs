@@ -13,7 +13,7 @@ fn greet(name: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default()
-        .plugin(tauri_plugin_fs2::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
@@ -31,6 +31,7 @@ pub fn run() {
             handle.plugin(fetch_plugin::init())?;
             Ok(())
         })
+        .plugin(tauri_plugin_fs2::init())
         .plugin(tauri_plugin_commands::init())
         .plugin(tauri_plugin_mediasession::init())
         .plugin(tauri_plugin_store::Builder::new().build())

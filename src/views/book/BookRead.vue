@@ -14,7 +14,7 @@ import { BookSource } from '@/types';
 import { purifyText, retryOnFalse, sleep, useElementResize } from '@/utils';
 import Reader from '@/utils/reader/reader-layout';
 import { ReaderResult } from '@/utils/reader/types';
-import { showConfirmDialog, showToast } from 'vant';
+import { showConfirmDialog, showNotify, showToast } from 'vant';
 import { ref, watch, onActivated, nextTick } from 'vue';
 import { get_system_font_scale } from 'tauri-plugin-commands-api';
 import _ from 'lodash';
@@ -104,13 +104,13 @@ const switchSource = async (newBookItem: BookItem) => {
 
   chapter.readingPage = readingChapter.value.readingPage;
   showSwitchSourceDialog.value = false;
-  router.replace({
+  router.push({
     name: 'BookRead',
     params: {
       chapterId: chapter.id,
       bookId: newBookItem.id,
       sourceId: newBookItem.sourceId,
-      isPrev: '',
+      isPrev: 'false',
     },
   });
 };
@@ -142,6 +142,7 @@ const loadData = retryOnFalse({ onFailed: back })(async () => {
   chapterList.value = [];
   readingChapter.value = undefined;
   readingContent.value = undefined;
+  readingChapterPage.value = 0;
   readingPagedContent.value = undefined;
 
   if (!bookId || !sourceId || !chapterId) {
@@ -164,8 +165,6 @@ const loadData = retryOnFalse({ onFailed: back })(async () => {
   return true;
 });
 async function loadChapter(chapter?: BookChapter) {
-  console.log('load chapter');
-
   if (!book.value) {
     showToast('书籍不存在');
     back();
@@ -202,7 +201,7 @@ async function loadChapter(chapter?: BookChapter) {
       if (
         readingChapter.value?.readingPage &&
         readingPagedContent.value &&
-        readingPagedContent.value.content.length - 1 >=
+        readingPagedContent.value.content.length >
           readingChapter.value.readingPage
       ) {
         readingChapterPage.value = readingChapter.value?.readingPage;
@@ -248,9 +247,7 @@ const updateReadingPagedContent = async () => {
   if (content) {
     let scale = 1;
     try {
-      if (displayStore.isMobile) {
-        scale = (await get_system_font_scale()) as number;
-      }
+      scale = (await get_system_font_scale()) as number;
     } catch (error) {
       console.log(error);
     }
@@ -289,6 +286,9 @@ function prevChapter(toLast: boolean = false) {
     return;
   }
   if (index > 0) {
+    if (!toLast) {
+      chapterList.value[index - 1].readingPage = undefined;
+    }
     router.push({
       name: 'BookRead',
       params: {
@@ -311,12 +311,14 @@ function nextChapter() {
     return;
   }
   if (index < chapterList.value.length - 1) {
+    chapterList.value[index + 1].readingPage = undefined;
     router.push({
       name: 'BookRead',
       params: {
         chapterId: chapterList.value[index + 1].id,
         bookId: book.value?.id,
         sourceId: book.value?.sourceId,
+        isPrev: 'false',
       },
     });
   } else {
@@ -324,6 +326,8 @@ function nextChapter() {
   }
 }
 function toChapter(chapter: BookChapter) {
+  chapter.readingPage = undefined;
+
   router.push({
     name: 'BookRead',
     params: {
@@ -373,7 +377,7 @@ watch(readingChapterPage, (page) => {
   }
 });
 
-useElementResize('#read-content', _.debounce(updateReadingPagedContent, 500));
+useElementResize('#read-content', _.debounce(updateReadingElements, 500));
 watch(
   [
     () => bookStore.fontSize,
@@ -384,9 +388,7 @@ watch(
     () => bookStore.paddingTop,
     () => bookStore.paddingBottom,
   ],
-  async () => {
-    await updateReadingElements();
-  }
+  _.debounce(updateReadingElements, 500)
 );
 </script>
 

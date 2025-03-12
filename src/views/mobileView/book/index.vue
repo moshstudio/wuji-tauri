@@ -69,7 +69,10 @@ const setContainerRef = (
           :key="item.item.id"
           :ref="(el) => setContainerRef(el, index)"
         >
-          <van-collapse-item :name="item.item.name" v-if="item.list">
+          <van-collapse-item
+            :name="item.item.name"
+            v-if="item.list && !(!Array.isArray(item.list) && !item.list?.list)"
+          >
             <template #title>
               <van-sticky offset-top="50" :container="containers[index]">
                 <span class="rounded-br-lg px-2 py-1">

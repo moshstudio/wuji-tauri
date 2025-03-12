@@ -1,3 +1,4 @@
+import { showNotify } from 'vant';
 import { Extension, transformResult } from '../baseExtension';
 
 export interface PhotoItem {
@@ -102,6 +103,10 @@ function loadPhotoExtensionString(
     return new extensionclass();
   } catch (error) {
     console.error('Error executing code:\n', error);
+    // showNotify({
+    //   type: 'danger',
+    //   message: String(error),
+    // });
   }
 }
 

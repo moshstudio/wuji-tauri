@@ -2,6 +2,9 @@
 import { ref, reactive } from 'vue';
 import { useStore, useDisplayStore } from '@/store';
 import { storeToRefs } from 'pinia';
+import { Icon } from '@iconify/vue';
+import * as dialog from '@tauri-apps/plugin-dialog';
+import * as fs from 'tauri-plugin-fs-api';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -13,6 +16,25 @@ function addSubscribe() {
   if (!value.value) return;
   store.addSubscribeSource(value.value);
 }
+
+async function selectLocalFile() {
+  const file = await dialog.open({
+    title: '选择本地文件',
+    filters: !displayStore.isAndroid
+      ? [
+          {
+            name: '订阅源',
+            extensions: ['js'],
+          },
+        ]
+      : [],
+    multiple: false,
+    directory: false,
+  });
+  if (!file) return;
+  store.addLocalSubscribeSource(file);
+  showAddSubscribeDialog.value = false;
+}
 </script>
 
 <template>
@@ -23,7 +45,16 @@ function addSubscribe() {
     @confirm="addSubscribe"
   >
     <van-cell-group inset>
-      <van-field v-model="value" placeholder="请输入地址" autofocus />
+      <div class="flex justify-between items-center gap-2">
+        <van-field v-model="value" placeholder="请输入地址" autofocus />
+        <Icon
+          icon="hugeicons:file-import"
+          width="24"
+          height="24"
+          class="van-haptics-feedback"
+          @click="selectLocalFile"
+        />
+      </div>
     </van-cell-group>
   </van-dialog>
 </template>

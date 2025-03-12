@@ -249,8 +249,8 @@ fn build_request(
         max_redirections,
         proxy,
         verify,
-        path,
-        base_dir,
+        path: _,
+        base_dir: __,
     } = client_config;
     let url_clone = url.clone();
     let scheme = url_clone.scheme();

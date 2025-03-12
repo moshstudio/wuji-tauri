@@ -18,14 +18,14 @@
     <!-- 加载中占位图 -->
     <div v-if="isLoading" class="loading-placeholder text-gray-400">
       <slot name="loading">
-        <van-loading type="spinner" size="30" />
+        <van-loading type="spinner" size="30" class="p-4" />
       </slot>
     </div>
 
     <!-- 加载失败占位图 -->
     <div v-if="isError" class="error-placeholder text-gray-400">
       <slot name="error">
-        <van-icon name="photo-failed" size="30" />
+        <van-icon name="photo-fail" size="30" class="p-4" />
       </slot>
     </div>
   </div>
@@ -120,10 +120,23 @@ const loadImage = async () => {
 
     // 如果有 headers，则通过 fetch 获取图片
     if (props.headers != null && props.headers != undefined) {
-      const response = await cachedFetch(props.src, {
-        headers: props.headers,
-        verify: false,
-      });
+      let response: Response;
+      try {
+        response = await cachedFetch(props.src, {
+          headers: props.headers,
+          verify: false,
+          maxRedirections: 0,
+        });
+        if (!response.ok) {
+          throw new Error('maxRedirections == 0 failed');
+        }
+      } catch (error) {
+        response = await cachedFetch(props.src, {
+          headers: props.headers,
+          verify: false,
+        });
+      }
+
       const blob = await response.blob();
       if (blob.size === 0) {
         throw new Error('图片加载失败');

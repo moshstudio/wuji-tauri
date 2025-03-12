@@ -243,7 +243,7 @@ onMounted(() => {
               height="24"
               v-if="readingChapter?.id === item.id"
             />
-            <span class="flex-grow flex">
+            <span class="flex-grow flex text-left">
               {{ item.title }}
             </span>
             <Icon

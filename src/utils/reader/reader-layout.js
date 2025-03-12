@@ -31,7 +31,7 @@ let options = {
   type: 'page', // page-获取页数组 line-获取行数组
   width: 0, // 容器宽度-必传
   height: 0, // 容器高度-必传
-  fontFamily: 'sans-serif', // 字体
+  fontFamily: 'alipuhui', // 字体
   fontSize: 0, // 字号大小-章节内容-必传
   lineHeight: 1.4, // 行高-章节内容
   pGap: 0, // 段落首行和上一段落间距
@@ -77,7 +77,6 @@ const trimAll = (str) => {
  * @return {Array} [] 输出转化好的行数组
  */
 function Reader(content, option) {
-
   const { type, width, height, fontFamily, fontSize, title, titleSize } =
     option;
   if (!content) {

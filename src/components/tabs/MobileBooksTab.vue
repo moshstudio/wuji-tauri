@@ -77,7 +77,7 @@ watch(
             @change="(page: number) => changePage(index, page)"
           ></SimplePagination>
         </van-row>
-        <!-- <van-loading class="p-2" v-if="!item.list.length" /> -->
+        <van-loading class="p-2" v-if="!item.list.length" />
         <div class="flex flex-col">
           <template v-for="book in item.list" :key="book.id">
             <BookCard :book-item="book" @click="toDetail"> </BookCard>

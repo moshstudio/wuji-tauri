@@ -18,6 +18,7 @@ export interface SongInfo {
   flac?: string;
   duration?: number;
   sourceId: string;
+  extra?: Record<string, string>;
 }
 
 export interface SongList {

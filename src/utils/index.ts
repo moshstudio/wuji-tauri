@@ -149,6 +149,7 @@ export function purifyText(text: string): string {
     /.*本章未完.*/g,
     /.*最新章节.*/g,
     /.*广告内容.*/g,
+    /.*点击下一页继续阅读.*/g,
     /章节错误，点此举报/g,
     /请继续关注后续内容/g,
     /退出阅读模式/g,

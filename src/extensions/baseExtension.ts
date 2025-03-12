@@ -1,4 +1,6 @@
 import CryptoJS from 'crypto-js';
+import forge from 'node-forge';
+import _ from 'lodash';
 import { nanoid } from 'nanoid';
 import { ClientOptions, fetch } from '@/utils/fetch';
 import {
@@ -33,7 +35,9 @@ export function transformResult<T>(func: (result: T) => T) {
 
 abstract class Extension {
   cryptoJs: typeof CryptoJS;
+  forge: typeof forge;
   fetch: typeof fetch;
+  _: typeof _;
   fetchDom: (
     input: URL | Request | string,
     init?: RequestInit & ClientOptions,
@@ -82,6 +86,8 @@ abstract class Extension {
 
   protected constructor() {
     this.cryptoJs = CryptoJS;
+    this.forge = forge;
+    this._ = _;
     this.fetch = fetch;
     this.fetchDom = async (
       input: URL | Request | string,
@@ -147,7 +153,9 @@ abstract class Extension {
           element.querySelector(latestChapter)?.textContent;
         const latestUpdateE = element.querySelector(latestUpdate)?.textContent;
 
-        const urlE = element.querySelector(url)?.getAttribute('href');
+        const urlE =
+          element.querySelector(url)?.getAttribute('href') ||
+          element.querySelector(title)?.getAttribute('href');
         if (!titleE) continue;
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
@@ -193,7 +201,8 @@ abstract class Extension {
           img?.getAttribute('src');
         const titleE =
           element.querySelector(title)?.textContent ||
-          element.querySelector(title)?.getAttribute('title');
+          element.querySelector(title)?.getAttribute('title') ||
+          element.querySelector(title)?.getAttribute('alt');
         const descE = element.querySelector(desc)?.textContent;
         const authorE = element.querySelector(author)?.textContent;
         const datetimeE = element.querySelector(datetime)?.textContent;

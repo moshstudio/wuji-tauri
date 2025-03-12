@@ -38,14 +38,15 @@ rand = "0.8"
 regex = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
-url = "2.5.4"
+url = { version = "2.5.4", features = ["serde"] }
 urlpattern = "0.3"
-tauri-plugin-fs2 = { path = "../tauri-plugin-fs/" }
 tauri-plugin-os = "2"
+tauri-plugin-fs2 = { path = "../tauri-plugin-fs/" }
 tauri-plugin-commands = { path = "../tauri-plugin-commands/" }
 tauri-plugin-mediasession = { path = "../tauri-plugin-mediasession/" }
 tauri-plugin-log = "2"
 log = "0.4.25"
+tauri-plugin-dialog = "2"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"

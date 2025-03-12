@@ -277,7 +277,15 @@ export async function fetch(
   init?: RequestInit & ClientOptions
 ): Promise<Response> {
   try {
-    return await _fetch(input, init);
+    let response = await _fetch(input, init);
+    if (response.status === 302) {
+      if (Array.from(response.headers.keys()).includes('location')) {
+        response = await fetch(response.headers.get('location')!, {
+          verify: false,
+        });
+      }
+    }
+    return response;
   } catch (error) {
     console.error('fetch error:', error);
     return Response.error();

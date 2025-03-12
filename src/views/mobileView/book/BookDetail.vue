@@ -88,7 +88,7 @@ const emit = defineEmits<{
           <p class="font-bold ml-6">共有{{ book.chapters.length }} 章</p>
           <div class="flex gap-2 items-center">
             <BookShelfButton :book="book"></BookShelfButton>
-            <p>
+            <!-- <p>
               <van-button
                 :icon="isAscending ? 'ascending' : 'descending'"
                 size="small"
@@ -96,22 +96,31 @@ const emit = defineEmits<{
               >
                 {{ isAscending ? '正序' : '倒序' }}
               </van-button>
-            </p>
+            </p> -->
           </div>
         </van-row>
-        <ResponsiveGrid>
-          <li
-            v-for="chapter in isAscending
-              ? book.chapters
-              : [...book.chapters].reverse()"
-            :key="chapter.id"
-            @click="() => emit('toChapter', chapter)"
-            class="text-sm p-2 h-9 hover:bg-[--van-background] hover:shadow-md rounded-lg cursor-pointer select-none truncate van-haptics-feedback"
+        <van-tabs shrink>
+          <van-tab
+            :title="`${index * 200 + 1}-${Math.min(book.chapters.length, (index + 1) * 200)}`"
+            v-for="index of Array(Math.ceil(book.chapters.length / 200)).keys()"
           >
-            {{ chapter.title }}
-          </li>
-        </ResponsiveGrid>
+            <ResponsiveGrid>
+              <li
+                v-for="chapter in book.chapters.slice(
+                  index * 200,
+                  Math.min(book.chapters.length, (index + 1) * 200 - 1)
+                )"
+                :key="chapter.id"
+                @click="() => emit('toChapter', chapter)"
+                class="text-sm p-2 h-9 hover:bg-[--van-background] hover:shadow-md rounded-lg cursor-pointer select-none truncate van-haptics-feedback"
+              >
+                {{ chapter.title }}
+              </li>
+            </ResponsiveGrid>
+          </van-tab>
+        </van-tabs>
       </div>
+      <van-back-top bottom="60" right="10" />
     </main>
     <BookShelf></BookShelf>
   </div>

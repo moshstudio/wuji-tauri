@@ -117,7 +117,7 @@ export const useStore = defineStore('store', () => {
   const sourceClass = async (
     item: SubscribeItem
   ): Promise<Extension | null | undefined> => {
-    if (sourceClasses.has(item.id)) {
+    if (item.id && sourceClasses.has(item.id)) {
       return sourceClasses.get(item.id);
     }
     // for test
@@ -689,6 +689,82 @@ export const useStore = defineStore('store', () => {
       displayStore.closeToast(t);
     }
   };
+
+  const localSourceId = 'localSource-wuji';
+
+  const addLocalSubscribeSource = async (path: string) => {
+    let content: String;
+    try {
+      content = await fs.readTextFile(path);
+    } catch (error) {
+      showNotify(`读取文件失败:${String(error)}`);
+      return;
+    }
+    const oldSource = subscribeSourceStore.getSubscribeSource(localSourceId);
+    const source: SubscribeSource = {
+      url: '',
+      detail: {
+        id: localSourceId,
+        name: '本地源',
+        version: 1,
+        urls: oldSource?.detail.urls || [],
+      },
+      disable: oldSource?.disable || false,
+    };
+    try {
+      let sourceType: SourceType | undefined;
+      let extensionClass:
+        | PhotoExtension
+        | SongExtension
+        | BookExtension
+        | undefined;
+      for (const [t, f] of [
+        [SourceType.Photo, loadPhotoExtensionString],
+        [SourceType.Book, loadBookExtensionString],
+        [SourceType.Song, loadSongExtensionString],
+      ] as const) {
+        const c = f(String(content));
+        if (c) {
+          sourceType = t;
+          extensionClass = c;
+          break;
+        }
+      }
+      if (!sourceType || !extensionClass) {
+        showNotify('导入失败，不支持的订阅源');
+        return;
+      }
+      const item = {
+        id: extensionClass.id,
+        name: extensionClass.name,
+        type: sourceType,
+        url: path,
+        code: String(content),
+      };
+      const sc = await sourceClass(item);
+      if (!sc) {
+        showToast(`添加 ${item.name} 源失败`);
+        return;
+      }
+      for (let existSource of subscribeSourceStore.subscribeSources) {
+        if (existSource.detail.urls.find((item) => item.id === sc.id)) {
+          showNotify(`${sc.name} 在 ${existSource.detail.name} 已存在`);
+          return;
+        }
+      }
+      addToSource(
+        {
+          item,
+        },
+        true
+      );
+      source.detail.urls.push(item);
+      subscribeSourceStore.addSubscribeSource(source); //保存
+    } catch (error) {
+      showToast('添加订阅源失败');
+      return;
+    }
+  };
   const updateSubscribeSources = async () => {
     if (!subscribeSourceStore.subscribeSources.length) {
       const dialog = await showConfirmDialog({
@@ -706,7 +782,11 @@ export const useStore = defineStore('store', () => {
     for (const source of subscribeSourceStore.subscribeSources) {
       const url = source.url;
       try {
-        await addSubscribeSource(url, true);
+        if (source.detail.id === localSourceId) {
+          await addLocalSubscribeSource(url);
+        } else {
+          await addSubscribeSource(url, true);
+        }
       } catch (error) {
         console.log(error);
         failed.push(source.detail.name);
@@ -913,6 +993,13 @@ export const useStore = defineStore('store', () => {
     // 清空音乐缓存
     const songCacheStore = useSongCacheStore();
     await songCacheStore.clear();
+    if ('caches' in window) {
+      const cache = await caches.open('tauri-cache');
+      for (const key of await cache.keys()) {
+        await cache.delete(key);
+      }
+      cache.delete('*');
+    }
     toast.close();
     showToast('缓存已清空');
   };
@@ -947,8 +1034,8 @@ export const useStore = defineStore('store', () => {
         }
       } catch (error) {}
     }
-    // keepTest.value = true;
-    // addTestSource(new TestSongExtension(), SourceType.Song);
+    keepTest.value = true;
+    addTestSource(new TestSongExtension(), SourceType.Song);
     // addTestSource(new TestBookExtension(), SourceType.Book);
     // addTestSource(new TestPhotoExtension(), SourceType.Photo);
     loadSubscribeSources(true);
@@ -985,6 +1072,7 @@ export const useStore = defineStore('store', () => {
     getBookItem,
 
     addSubscribeSource,
+    addLocalSubscribeSource,
     loadSubscribeSources,
     updateSubscribeSources,
     removeFromSource,
@@ -1792,7 +1880,6 @@ export const useSongStore = defineStore('song', () => {
         playlist.value = list;
         if (playMode.value === SongPlayMode.random) {
           playingPlaylist.value = _.shuffle(list);
-          return;
         } else {
           playingPlaylist.value = [...list];
         }
@@ -1803,7 +1890,6 @@ export const useSongStore = defineStore('song', () => {
         const res = await androidMedia.set_playlist(
           this.playlistToAndroidMusics(playingPlaylist.value, index)
         );
-        console.log('set_playlist res', res);
       } else {
         // 当前播放列表切换歌曲
         androidMedia.play_target_music(this.musicToAndroidMusic(firstSong));
@@ -1836,6 +1922,13 @@ export const useSongStore = defineStore('song', () => {
         position: position,
         playImmediately: playImmediately,
       };
+    }
+    async cache_playlist(songs: SongInfo[]) {
+      await Promise.all(
+        songs.map(async (song) => {
+          await getSongPlayUrl(song);
+        })
+      );
     }
 
     async onPlay(): Promise<void> {
@@ -2686,23 +2779,29 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     if (!inited) {
       await ensureBase();
     }
-    [...new Set(books.value.map((book) => book.cache_book_id))].forEach(
-      async (cache_book_id) => {
-        if (
-          await fs.exists(`${dirName}/${cache_book_id}`, {
-            baseDir: baseDir,
-          })
-        ) {
-          try {
-            await fs.remove(`${dirName}/${cache_book_id}`, {
-              baseDir: baseDir,
-              recursive: true,
-            });
-          } catch (error) {}
-        }
-      }
-    );
+    await fs.remove(dirName, {
+      baseDir: baseDir,
+      recursive: true,
+    });
     books.value = [];
+    inited = false;
+
+    // [...new Set(books.value.map((book) => book.cache_book_id))].forEach(
+    //   async (cache_book_id) => {
+    //     if (
+    //       await fs.exists(`${dirName}/${cache_book_id}`, {
+    //         baseDir: baseDir,
+    //       })
+    //     ) {
+    //       try {
+    //         await fs.remove(`${dirName}/${cache_book_id}`, {
+    //           baseDir: baseDir,
+    //           recursive: true,
+    //         });
+    //       } catch (error) {}
+    //     }
+    //   }
+    // );
   };
 
   const chapterInCache = (book: BookItem, chapter: BookChapter) => {
@@ -2849,7 +2948,12 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
         }
       }
     }
-    return sanitizePathName(song.name || '') + a + nanoid(6) + '.mp3';
+    return (
+      sanitizePathName(song.name || '') +
+      a +
+      sanitizePathName(song.sourceId) +
+      '.mp3'
+    );
   };
   const songIdToCoverId = (songId: string) => {
     return `${songId}.png`;
@@ -3137,36 +3241,46 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
     if (!inited) {
       await ensureBase();
     }
-    [...songs.value.map((song) => song.cache_song_id)].forEach(
-      async (cache_song_id) => {
-        if (
-          await fs.exists(`${dirName}/${cache_song_id}`, {
-            baseDir: baseDir,
-          })
-        ) {
-          try {
-            await fs.remove(`${dirName}/${cache_song_id}`, {
-              baseDir: baseDir,
-              recursive: true,
-            });
-          } catch (error) {}
-        }
-        const cover_id = songIdToCoverId(cache_song_id);
-        if (
-          await fs.exists(`${dirName}/${cover_id}`, {
-            baseDir: baseDir,
-          })
-        ) {
-          try {
-            await fs.remove(`${dirName}/${cover_id}`, {
-              baseDir: baseDir,
-              recursive: true,
-            });
-          } catch (error) {}
-        }
-      }
-    );
+    try {
+      await fs.remove(`${dirName}`, {
+        baseDir: baseDir,
+        recursive: true,
+      });
+    } catch (error) {
+      console.warn('clear song cache:', error);
+    }
+
     songs.value = [];
+    inited = false;
+    // [...songs.value.map((song) => song.cache_song_id)].forEach(
+    //   async (cache_song_id) => {
+    //     if (
+    //       await fs.exists(`${dirName}/${cache_song_id}`, {
+    //         baseDir: baseDir,
+    //       })
+    //     ) {
+    //       try {
+    //         await fs.remove(`${dirName}/${cache_song_id}`, {
+    //           baseDir: baseDir,
+    //           recursive: true,
+    //         });
+    //       } catch (error) {}
+    //     }
+    //     const cover_id = songIdToCoverId(cache_song_id);
+    //     if (
+    //       await fs.exists(`${dirName}/${cover_id}`, {
+    //         baseDir: baseDir,
+    //       })
+    //     ) {
+    //       try {
+    //         await fs.remove(`${dirName}/${cover_id}`, {
+    //           baseDir: baseDir,
+    //           recursive: true,
+    //         });
+    //       } catch (error) {}
+    //     }
+    //   }
+    // );
   };
   return {
     songs,

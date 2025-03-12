@@ -12,6 +12,10 @@ const activeNames = ref([]);
 const checked = ref([]);
 const showClearPopover = ref(false);
 
+function isDisable(item: SubscribeSource) {
+  return item.detail?.urls.every((url) => url.disable === true) || false;
+}
+
 function sourceSwitch(item: SubscribeSource, value: boolean) {
   // 启用时，value是false；禁用时，value是true
   // value=true时，disable应为true；value=false时，disable应为false
@@ -96,13 +100,13 @@ function clearSources() {
                 </template>
               </van-popover>
               <van-switch
-                v-model="item.disable"
+                :model-value="isDisable(item)"
                 @click.stop
                 :active-value="false"
                 :inactive-value="true"
                 size="18px"
                 class="mx-[10px]"
-                @change="(value) => sourceSwitch(item, value)"
+                @update:model-value="(value) => sourceSwitch(item, value)"
               />
             </van-row>
           </template>
@@ -114,12 +118,12 @@ function clearSources() {
           >
             <template #value>
               <van-switch
-                v-model="cell.disable"
+                :model-value="cell.disable || false"
                 @click.stop
                 :active-value="false"
                 :inactive-value="true"
                 size="16px"
-                @change="(value) => urlSwitch(item, cell, value)"
+                @update:model-value="(value) => urlSwitch(item, cell, value)"
               />
             </template>
           </van-cell>

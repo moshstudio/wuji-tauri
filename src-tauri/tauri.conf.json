@@ -35,6 +35,10 @@
       "nsis": {
         "languages": ["SimpChinese"],
         "displayLanguageSelector": false
+      },
+      "webviewInstallMode": {
+        "silent": true,
+        "type": "embedBootstrapper"
       }
     },
     "icon": [
