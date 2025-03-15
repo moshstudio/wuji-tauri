@@ -53,27 +53,31 @@ onMounted(() => {
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
   >
-    <template v-if="typeof item.cover === 'string'">
-      <LoadImage
-        :width="!displayStore.isMobile ? 160 : undefined"
-        :height="!displayStore.isMobile ? 200 : undefined"
-        fit="cover"
-        lazy-load
-        :src="item.cover!"
-        :headers="item.coverHeaders || undefined"
-        :class="item.title ? 'rounded-t-lg' : 'rounded-lg'"
-      />
-    </template>
-    <template v-else>
-      <van-image
-        width="160"
-        height="200"
-        fit="cover"
-        lazy-load
-        :src="item.cover[0]"
-        class="rounded-t-lg"
-      />
-    </template>
+    <div class="flex-grow">
+      <template v-if="typeof item.cover === 'string'">
+        <LoadImage
+          :width="!displayStore.isMobile ? 160 : undefined"
+          :height="!displayStore.isMobile ? 200 : undefined"
+          fit="cover"
+          lazy-load
+          :src="item.cover!"
+          :headers="item.coverHeaders || undefined"
+          class="h-full"
+          :class="item.title ? 'rounded-t-lg' : 'rounded-lg'"
+        />
+      </template>
+      <template v-else>
+        <van-image
+          width="160"
+          height="200"
+          fit="cover"
+          lazy-load
+          :src="item.cover[0]"
+          class="rounded-t-lg h-full"
+        />
+      </template>
+    </div>
+
     <van-text-ellipsis
       rows="2"
       :content="item.title"

@@ -12,7 +12,7 @@ const emit = defineEmits<{
 
 <template>
   <div
-    class="flex gap-2 m-2 p-2 bg-[--van-background] rounded-lg shadow transform transition-all duration-100 hover:-translate-y-1 hover:shadow-md cursor-pointer select-none active:bg-[--van-background-2]"
+    class="flex gap-2 m-2 p-2 min-w-[max(10%,260px)] max-w-[280px] bg-[--van-background] rounded-lg shadow transform transition-all duration-100 hover:-translate-y-1 hover:shadow-md cursor-pointer select-none active:bg-[--van-background-2]"
     @click="() => emit('click', bookItem)"
   >
     <div class="w-[80px] h-[100px]">
@@ -27,7 +27,7 @@ const emit = defineEmits<{
     </div>
 
     <div
-      class="flex flex-col gap-1 justify-start text-sm text-[--van-text-color] min-w-[180px] max-w-[200px]"
+      class="flex flex-col gap-1 justify-start text-sm text-[--van-text-color]"
     >
       <p class="text-base font-bold h-6 line-clamp-1">
         {{ bookItem.title }}

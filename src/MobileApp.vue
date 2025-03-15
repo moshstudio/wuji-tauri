@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import { exit_app, set_status_bar } from 'tauri-plugin-commands-api';
-import { useBookShelfStore, useBookStore, useDisplayStore } from './store';
+import {
+  useBookShelfStore,
+  useBookStore,
+  useComicShelfStore,
+  useComicStore,
+  useDisplayStore,
+} from './store';
 import { nextTick, onMounted, ref, VNode, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { router } from './router';
@@ -13,12 +19,14 @@ const { routerView } = defineProps<{
 
 const displayStore = useDisplayStore();
 const bookStore = useBookStore();
+const comicStore = useComicStore();
 const bookShelfStore = useBookShelfStore();
+const comicShelfStore = useComicShelfStore();
 
 const activeKey = ref(0);
 const route = useRoute();
 
-const { photoPath, songPath, bookPath } = storeToRefs(displayStore);
+const { photoPath, songPath, bookPath, comicPath } = storeToRefs(displayStore);
 
 const pages = ref([
   {
@@ -39,6 +47,12 @@ const pages = ref([
     selectedIcon: 'bookmark',
     to: bookPath,
   },
+  {
+    name: 'Comic',
+    icon: 'comment-circle-o',
+    selectedIcon: 'comment-circle',
+    to: comicPath,
+  },
 ]);
 
 // 记录上一次的页面路径
@@ -58,6 +72,9 @@ watch(
     } else if (newPath.startsWith('/book')) {
       bookPath.value = newPath;
       activeKey.value = 2;
+    } else if (newPath.startsWith('/comic')) {
+      comicPath.value = newPath;
+      activeKey.value = 3;
     } else {
     }
   }
@@ -174,6 +191,35 @@ window.androidBackCallback = async () => {
     }
     displayStore.showTabBar = true;
     router.push({ name: 'Book' });
+  } else if (path === 'ComicDetail') {
+    if (displayStore.showComicShelf) {
+      // 关闭书架
+      displayStore.showComicShelf = false;
+    } else {
+      router.push({ name: 'Comic' });
+    }
+  } else if (path === 'ComicRead') {
+    if (comicStore.readingComic) {
+      if (!comicShelfStore.isComicInShelf(comicStore.readingComic)) {
+        try {
+          const d = await showConfirmDialog({
+            title: '放入书架',
+            message: `是否将《${comicStore.readingComic.title}》放入书架？`,
+          });
+          if (d == 'confirm') {
+            comicShelfStore.addToComicSelf(comicStore.readingComic);
+            if (comicStore.readingComic && comicStore.readingChapter) {
+              comicShelfStore.updateComicReadInfo(
+                comicStore.readingComic,
+                comicStore.readingChapter
+              );
+            }
+          }
+        } catch (error) {}
+      }
+    }
+    displayStore.showTabBar = true;
+    router.push({ name: 'Comic' });
   } else if (path === 'Photo') {
     if (displayStore.showPhotoShelf) {
       displayStore.showPhotoShelf = false;
@@ -198,6 +244,12 @@ window.androidBackCallback = async () => {
   } else if (path === 'Book') {
     if (displayStore.showBookShelf) {
       displayStore.showBookShelf = false;
+    } else {
+      await checkBack();
+    }
+  } else if (path === 'Comic') {
+    if (displayStore.showComicShelf) {
+      displayStore.showComicShelf = false;
     } else {
       await checkBack();
     }

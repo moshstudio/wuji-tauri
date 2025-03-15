@@ -108,6 +108,7 @@ pub struct ClientConfig {
     max_redirections: Option<usize>,
     proxy: Option<Proxy>,
     verify: Option<bool>,
+    no_proxy: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -201,7 +202,9 @@ fn build_request(
         max_redirections,
         proxy,
         verify,
+        no_proxy,
     } = client_config;
+
     let url_clone = url.clone();
     let scheme = url_clone.scheme();
     match scheme {
@@ -234,9 +237,12 @@ fn build_request(
             } else {
                 builder = builder.redirect(Policy::limited(10));
             }
-
-            if let Some(proxy_config) = proxy {
-                builder = attach_proxy(proxy_config, builder)?;
+            if no_proxy.unwrap_or(false) {
+                builder = builder.no_proxy();
+            } else {
+                if let Some(proxy_config) = proxy {
+                    builder = attach_proxy(proxy_config, builder)?;
+                }
             }
 
             // #[cfg(feature = "cookies")]

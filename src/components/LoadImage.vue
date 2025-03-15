@@ -1,213 +1,92 @@
 <template>
-  <div
-    ref="target"
-    class="custom-image flex justify-center items-center"
-    :style="imageStyle"
-  >
-    <!-- 图片容器 -->
-    <img
-      v-if="imageSrc && !isError && !isLoading"
-      :src="imageSrc"
-      class="w-full h-full"
-      :class="props.class"
-      :style="imageStyle"
-      @load="handleLoad"
-      @error="handleError"
-    />
-
-    <!-- 加载中占位图 -->
-    <div v-if="isLoading" class="loading-placeholder text-gray-400">
-      <slot name="loading">
-        <van-loading type="spinner" size="30" class="p-4" />
-      </slot>
-    </div>
-
-    <!-- 加载失败占位图 -->
-    <div v-if="isError" class="error-placeholder text-gray-400">
-      <slot name="error">
-        <van-icon name="photo-fail" size="30" class="p-4" />
-      </slot>
-    </div>
-  </div>
+  <van-image :src="processedSrc" v-bind="restProps" v-on="listeners">
+    <template #loading>
+      <div class="h-[40px] w-[40px]">
+        <van-loading type="spinner" class="p-4" />
+      </div>
+    </template>
+  </van-image>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, CSSProperties, PropType, watch } from 'vue';
-import { useIntersectionObserver } from '@vueuse/core'; // 用于懒加载
+import { ref, watch, onMounted, useAttrs, PropType } from 'vue';
+import { Image as VanImage } from 'vant';
 import { cachedFetch } from '@/utils';
 
+// 定义 props
 const props = defineProps({
   src: {
     type: String,
-    required: true,
+    default: '',
   },
   headers: {
     type: Object as PropType<Record<string, string> | null | undefined>,
-    default: null,
-    required: false,
-  },
-  width: {
-    type: [String, Number],
-    default: '100%',
-    required: false,
-  },
-  height: {
-    type: [String, Number],
-    default: '100%',
-    required: false,
-  },
-  radius: {
-    type: [String, Number],
-    default: '0',
-    required: false,
-  },
-  fit: {
-    type: String as PropType<CSSProperties['objectFit']>,
-    default: 'cover',
-    required: false,
-  },
-  lazyLoad: {
-    type: Boolean,
-    default: false,
-    required: false,
-  },
-  class: {
-    type: String,
-    default: '',
-    required: false,
+    default: null, // 默认值为空对象
   },
 });
 
-const emit = defineEmits(['load', 'error', 'beforeLoad']);
+// 获取父组件传递的其他属性（除了 src 和 srcHeaders）
+const attrs = useAttrs();
+const { headers, ...restProps } = attrs;
+if (!restProps.fit) {
+  restProps.fit = 'cover';
+}
 
-const imageSrc = ref(''); // 图片地址
-const isLoading = ref(false); // 是否正在加载
-const isError = ref(false); // 是否加载失败
+// 获取事件监听器
+const listeners = {
+  click: attrs.onClick, // 手动绑定 click 事件
+  load: attrs.onLoad, // 手动绑定 load 事件
+  error: attrs.onError, // 其他事件可以根据需要添加
+};
 
-// 图片样式
-const imageStyle = computed(() => {
-  return {
-    width:
-      typeof props.width === 'number'
-        ? `${props.width}px`
-        : props.width || '100%',
-    height:
-      typeof props.height === 'number'
-        ? `${props.height}px`
-        : props.height || '100%',
-    'object-fit': props.fit,
-    borderRadius:
-      typeof props.radius === 'number'
-        ? `${props.radius}px`
-        : props.radius || '0',
-  };
-});
+// 定义 processedSrc
+const processedSrc = ref('');
 
-// 加载图片
-const loadImage = async () => {
-  if (!props.src) {
-    isError.value = true;
-    isLoading.value = false;
-    return;
-  }
-
-  // 触发 beforeLoad 事件
-  emit('beforeLoad');
-
+// 异步处理 src 的函数
+const processSrc = async (
+  src: string,
+  headers?: Record<string, string>
+): Promise<string> => {
+  if (!headers) return src;
+  let response: Response;
   try {
-    isLoading.value = true;
-    isError.value = false;
-
-    // 如果有 headers，则通过 fetch 获取图片
-    if (props.headers != null && props.headers != undefined) {
-      let response: Response;
-      try {
-        response = await cachedFetch(props.src, {
-          headers: props.headers,
-          verify: false,
-          maxRedirections: 0,
-        });
-        if (!response.ok) {
-          throw new Error('maxRedirections == 0 failed');
-        }
-      } catch (error) {
-        response = await cachedFetch(props.src, {
-          headers: props.headers,
-          verify: false,
-        });
-      }
-
-      const blob = await response.blob();
-      if (blob.size === 0) {
-        throw new Error('图片加载失败');
-      }
-      imageSrc.value = URL.createObjectURL(
-        new Blob([blob], { type: blob.type || 'image/png' })
-      ); // 将二进制数据转换为 URL
-    } else {
-      imageSrc.value = props.src; // 直接使用 src
+    response = await cachedFetch(props.src, {
+      headers: headers,
+      verify: false,
+      maxRedirections: 0,
+    });
+    if (!response.ok) {
+      throw new Error('maxRedirections == 0 failed');
     }
   } catch (error) {
-    console.error('图片加载失败:', error);
-    isError.value = true;
-    emit('error', error);
-  } finally {
-    isLoading.value = false;
+    response = await cachedFetch(props.src, {
+      headers: headers,
+      verify: false,
+    });
   }
+
+  const blob = await response.blob();
+  if (blob.size === 0) {
+    return src;
+  }
+  return URL.createObjectURL(
+    new Blob([blob], { type: blob.type || 'image/png' })
+  ); // 将二进制数据转换为 URL
 };
 
-// 图片加载成功
-const handleLoad = () => {
-  emit('load');
-};
+// // 监听 src 的变化
+// watch(
+//   () => props.src,
+//   async (newSrc) => {
+//     processedSrc.value = await processSrc(newSrc, props.srcHeaders);
+//   },
+//   { immediate: true } // 立即执行一次
+// );
 
-// 图片加载失败
-const handleError = () => {
-  isError.value = true;
-  emit('error');
-};
-
-// 懒加载逻辑
-const target = ref(null);
-const stopFunc = ref<() => void>();
-
-watch(
-  () => props.src,
-  async () => {
-    stopFunc.value?.();
-    imageSrc.value = '';
-    isLoading.value = false;
-    isError.value = false;
-    if (props.lazyLoad) {
-      const { stop } = useIntersectionObserver(
-        target,
-        ([{ isIntersecting }]) => {
-          if (isIntersecting) {
-            loadImage();
-            stop(); // 停止监听
-          }
-        }
-      );
-      stopFunc.value = stop;
-    } else {
-      loadImage();
-    }
-  },
-  { immediate: true }
-);
+// 或者可以在 onMounted 中初始化
+onMounted(async () => {
+  processedSrc.value = await processSrc(props.src, props.headers || undefined);
+});
 </script>
 
-<style scoped>
-.loading-placeholder,
-.error-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/**
-.error-placeholder {
-  color: #ee0a24;
-}
-*/
-</style>
+<style scoped></style>

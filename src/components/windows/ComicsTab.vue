@@ -1,26 +1,26 @@
 <script setup lang="ts">
-import { BookItem, BookList, BooksList } from '@/extensions/book';
-import BookCard from '@/components/card/bookCards/BookCard.vue';
+import { ComicItem, ComicList, ComicsList } from '@/extensions/comic';
+import ComicCard from '@/components/card/comicCards/ComicCard.vue';
 import HorizonList from '@/components/HorizonList.vue';
 import SimplePagination from '../pagination/SimplePagination.vue';
-import { BookSource } from '@/types';
+import { ComicSource } from '@/types';
 import { onMounted, ref, watch } from 'vue';
 import { debounce } from 'lodash';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { nanoid } from 'nanoid';
 const { source } = defineProps<{
-  source: BookSource;
+  source: ComicSource;
 }>();
 const emit = defineEmits<{
-  (e: 'onLoad', source: BookSource, type?: string): void;
-  (e: 'loadPage', source: BookSource, pageNo?: number, type?: string): void;
-  (e: 'onDetail', source: BookSource, item: BookItem): void;
+  (e: 'onLoad', source: ComicSource, type?: string): void;
+  (e: 'loadPage', source: ComicSource, pageNo?: number, type?: string): void;
+  (e: 'onDetail', source: ComicSource, item: ComicItem): void;
 }>();
 const active = ref(0);
 const tabKey = ref(nanoid()); // 修改此值来重新渲染组件
 const load = (index: number) => {
   if (!source.list) return;
-  let t: BookList;
+  let t: ComicList;
   if (source.list instanceof Array) {
     t = source.list[index];
   } else {
@@ -31,7 +31,7 @@ const load = (index: number) => {
 
 const changePage = (index: number, pageNo?: number) => {
   if (!source.list) return;
-  let t: BookList;
+  let t: ComicList;
   if (source.list instanceof Array) {
     t = source.list[index];
   } else {
@@ -40,7 +40,7 @@ const changePage = (index: number, pageNo?: number) => {
   emit('loadPage', source, pageNo, t.type);
 };
 
-const toDetail = (item: BookItem) => {
+const toDetail = (item: ComicItem) => {
   emit('onDetail', source, item);
 };
 
@@ -51,7 +51,7 @@ onMounted(() => {
 });
 watch(
   () => source.list,
-  debounce((list: BooksList | undefined) => {
+  debounce((list: ComicsList | undefined) => {
     if (list && Array.isArray(list)) {
       tabKey.value = nanoid();
     }
@@ -83,8 +83,8 @@ watch(
         </div>
         <van-loading class="p-2" v-if="!item.list.length" />
         <HorizonList>
-          <template v-for="book in item.list" :key="book.id">
-            <BookCard :book-item="book" @click="toDetail"> </BookCard>
+          <template v-for="comic in item.list" :key="comic.id">
+            <ComicCard :comic-item="comic" @click="toDetail"> </ComicCard>
           </template>
         </HorizonList>
       </van-tab>
@@ -102,8 +102,8 @@ watch(
       ></SimplePagination>
     </div>
     <HorizonList>
-      <template v-for="book in source.list.list" :key="book.id">
-        <BookCard :book-item="book" @click="toDetail"> </BookCard>
+      <template v-for="comic in source.list.list" :key="comic.id">
+        <ComicCard :comic-item="comic" @click="toDetail"> </ComicCard>
       </template>
     </HorizonList>
   </template>

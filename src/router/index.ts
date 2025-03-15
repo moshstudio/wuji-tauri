@@ -7,6 +7,9 @@ import PlaylistDetail from '@/views/song/PlaylistDetail.vue';
 import Book from '@/views/book/index.vue';
 import BookDetail from '@/views/book/BookDetail.vue';
 import BookRead from '@/views/book/BookRead.vue';
+import Comic from '@/views/comic/index.vue';
+import ComicDetail from '@/views/comic/ComicDetail.vue';
+import ComicRead from '@/views/comic/ComicRead.vue';
 import { type as osType } from '@tauri-apps/plugin-os';
 
 export const routes: RouteRecordRaw[] = [
@@ -58,6 +61,24 @@ export const routes: RouteRecordRaw[] = [
     path: '/book/read/:sourceId/:bookId/:chapterId/:isPrev?',
     name: 'BookRead',
     component: BookRead,
+    props: true,
+  },
+  {
+    path: '/comic',
+    name: 'Comic',
+    component: Comic,
+    children: [],
+  },
+  {
+    path: '/comic/detail/:sourceId/:comicId',
+    name: 'ComicDetail',
+    component: ComicDetail,
+    props: true,
+  },
+  {
+    path: '/comic/read/:sourceId/:comicId/:chapterId',
+    name: 'ComicRead',
+    component: ComicRead,
     props: true,
   },
 ];

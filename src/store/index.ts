@@ -16,12 +16,11 @@ import {
   SubscribeSource,
   SubscribeItem,
   BookSource,
+  ComicSource,
 } from '@/types';
 import {
   StorageLikeAsync,
-  useBase64,
   useDark,
-  useStorage,
   useStorageAsync,
   useToggle,
 } from '@vueuse/core';
@@ -90,6 +89,15 @@ import TestBookExtension from '@/extensions/book/test';
 import { nanoid } from 'nanoid';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { getSongCover } from '@/utils/songCover';
+import TestComicExtension from '@/extensions/comic/test';
+import {
+  ComicChapter,
+  ComicContent,
+  ComicExtension,
+  ComicItem,
+  ComicShelf,
+  loadComicExtensionString,
+} from '@/extensions/comic';
 
 async function tauriAddPluginListener<T>(
   plugin: string,
@@ -132,6 +140,9 @@ export const useStore = defineStore('store', () => {
         case SourceType.Book:
           sourceClasses.set(item.id, new TestBookExtension());
           break;
+        case SourceType.Comic:
+          sourceClasses.set(item.id, new TestComicExtension());
+          break;
         default:
           break;
       }
@@ -150,6 +161,7 @@ export const useStore = defineStore('store', () => {
       | PhotoExtension
       | SongExtension
       | BookExtension
+      | ComicExtension
       | undefined;
     switch (item.type) {
       case SourceType.Photo:
@@ -160,6 +172,9 @@ export const useStore = defineStore('store', () => {
         break;
       case SourceType.Book:
         extensionClass = loadBookExtensionString(item.code);
+        break;
+      case SourceType.Comic:
+        extensionClass = loadComicExtensionString(item.code);
         break;
       default:
         extensionClass = undefined;
@@ -184,22 +199,27 @@ export const useStore = defineStore('store', () => {
     [],
     kvStorage.storage
   );
-  // const photoSources = ref<PhotoSource[]>([]);
+
   const songSources = useStorageAsync<SongSource[]>(
     'songSources',
     [],
     kvStorage.storage
   );
-  // const songSources = ref<SongSource[]>([]);
+
   const bookSources = useStorageAsync<BookSource[]>(
     'bookSources',
     [],
     kvStorage.storage
   );
+
+  const comicSources = useStorageAsync<ComicSource[]>(
+    'comicSources',
+    [],
+    kvStorage.storage
+  );
   const keepTest = ref(false);
 
-  // const bookSources = ref<BookSource[]>([]);
-
+  const __split__0 = () => {};
   /**
    * 获取推荐列表
    */
@@ -261,44 +281,9 @@ export const useStore = defineStore('store', () => {
       return null;
     }
   };
-  /**
-   * 根据名称获取源
-   */
-  const getSource = (item: SubscribeItem): Source | undefined => {
-    switch (item.type) {
-      case SourceType.Photo:
-        return getPhotoSource(item.id);
-      case SourceType.Song:
-        return getSongSource(item.id);
-      case SourceType.Book:
-        return getBookSource(item.id);
-      default:
-        return undefined;
-    }
-  };
-  const removeSource = (item: SubscribeItem) => {
-    switch (item.type) {
-      case SourceType.Photo:
-        _.remove(photoSources.value, (p) => p.item.id === item.id);
-        triggerRef(photoSources);
-        break;
-      case SourceType.Song:
-        _.remove(songSources.value, (p) => p.item.id === item.id);
-        triggerRef(songSources);
-        break;
-      case SourceType.Book:
-        _.remove(bookSources.value, (p) => p.item.id === item.id);
-        triggerRef(bookSources);
-        break;
-      default:
-        return undefined;
-    }
-  };
+
   const getPhotoSource = (sourceId: string): PhotoSource | undefined => {
     return photoSources.value.find((item) => item.item.id === sourceId);
-  };
-  const getSongSource = (sourceId: string): SongSource | undefined => {
-    return songSources.value.find((source) => source.item.id === sourceId);
   };
   /**
    * 根据id获取图片
@@ -328,6 +313,7 @@ export const useStore = defineStore('store', () => {
       return fromSource();
     }
   };
+  const __split__1 = () => {};
   // 音乐
   const songRecommendPlayist = async (
     source: SongSource,
@@ -461,6 +447,11 @@ export const useStore = defineStore('store', () => {
   ): PlaylistInfo | undefined => {
     return source.playlist?.list.find((item) => item.id === playlistId);
   };
+  const getSongSource = (sourceId: string): SongSource | undefined => {
+    return songSources.value.find((source) => source.item.id === sourceId);
+  };
+  const __split__2 = () => {};
+
   /**
    * 获取推荐列表
    */
@@ -624,6 +615,162 @@ export const useStore = defineStore('store', () => {
       return fromSource();
     }
   };
+  const __split__3 = () => {};
+
+  const comicRecommendList = async (
+    source: ComicSource,
+    pageNo: number = 1,
+    type?: string
+  ) => {
+    const sc = (await sourceClass(source.item)) as ComicExtension;
+    const res = await sc?.execGetRecommendComics(pageNo, type);
+
+    if (res) {
+      _.castArray(res).forEach((book) => {
+        book.list.forEach((item) => {
+          item.sourceId = source.item.id;
+        });
+      });
+
+      if (!type) {
+        // 1. 获取的不是指定type类型的数据，直接赋值
+        source.list = res;
+      } else {
+        // 2. 获取的是指定type类型的数据，判断是否已经存在，不存在则添加
+        const find = _.castArray(source.list).find(
+          (item) => item.type === type
+        );
+        if (find) {
+          _.assign(find, res);
+        } else {
+          source.list = [..._.castArray(source.list), ..._.castArray(res)];
+        }
+      }
+    } else {
+      if (!type) {
+        source.list = undefined;
+      }
+    }
+    triggerRef(bookSources);
+  };
+  const comicSearch = async (
+    source: ComicSource,
+    keyword: string,
+    pageNo: number = 1
+  ) => {
+    const sc = (await sourceClass(source.item)) as ComicExtension;
+    const res = await sc?.execSearch(keyword, pageNo);
+    if (res) {
+      if (!_.isArray(res) && !res.list.length) {
+        source.list = undefined;
+        return;
+      }
+      _.castArray(res).forEach((book) => {
+        book.list.forEach((item) => {
+          item.sourceId = source.item.id;
+        });
+      });
+      source.list = res;
+    } else {
+      source.list = undefined;
+    }
+  };
+  const comicDetail = async (source: ComicSource, comic: ComicItem) => {
+    const sc = (await sourceClass(source.item)) as ComicExtension;
+    const res = await sc?.execGetComicDetail(comic);
+    if (res) {
+      res.sourceId = source.item.id;
+      return res;
+    } else {
+      showNotify(`${source.item.name} 获取内容失败`);
+      return null;
+    }
+  };
+  const comicRead = async (
+    source: ComicSource,
+    comic: ComicItem,
+    chapter: ComicChapter
+  ): Promise<ComicContent | null> => {
+    const sc = (await sourceClass(source.item)) as ComicExtension;
+    const res = await sc?.execGetContent(comic, chapter);
+    return res;
+  };
+  const getComicSource = (sourceId: string): ComicSource | undefined => {
+    return comicSources.value.find((item) => item.item.id === sourceId);
+  };
+  const getComicItem = (
+    source: ComicSource,
+    comicId: string
+  ): ComicItem | undefined => {
+    const checkFromShelf = () => {
+      for (const shelf of shelfStore.comicShelf) {
+        for (const comic of shelf.comics) {
+          if (comic.comic.id === comicId) {
+            return comic.comic;
+          }
+        }
+      }
+    };
+    const fromSource = () => {
+      if (source.list) {
+        for (let comicList of _.castArray(source.list)) {
+          for (let comicItem of comicList.list) {
+            if (comicItem.id === comicId) {
+              return comicItem;
+            }
+          }
+        }
+      }
+    };
+
+    const shelfStore = useComicShelfStore();
+    // 优先从书架中获取
+    if (shelfStore.isComicInShelf(comicId)) {
+      return checkFromShelf();
+    } else {
+      return fromSource();
+    }
+  };
+
+  /**
+   * 根据名称获取源
+   */
+  const getSource = (item: SubscribeItem): Source | undefined => {
+    switch (item.type) {
+      case SourceType.Photo:
+        return getPhotoSource(item.id);
+      case SourceType.Song:
+        return getSongSource(item.id);
+      case SourceType.Book:
+        return getBookSource(item.id);
+      case SourceType.Comic:
+        return getComicSource(item.id);
+      default:
+        return undefined;
+    }
+  };
+  const removeSource = (item: SubscribeItem) => {
+    switch (item.type) {
+      case SourceType.Photo:
+        _.remove(photoSources.value, (p) => p.item.id === item.id);
+        triggerRef(photoSources);
+        break;
+      case SourceType.Song:
+        _.remove(songSources.value, (p) => p.item.id === item.id);
+        triggerRef(songSources);
+        break;
+      case SourceType.Book:
+        _.remove(bookSources.value, (p) => p.item.id === item.id);
+        triggerRef(bookSources);
+        break;
+      case SourceType.Comic:
+        _.remove(comicSources.value, (p) => p.item.id === item.id);
+        triggerRef(comicSources);
+        break;
+      default:
+        return undefined;
+    }
+  };
 
   /**
    * 添加订阅源
@@ -717,11 +864,13 @@ export const useStore = defineStore('store', () => {
         | PhotoExtension
         | SongExtension
         | BookExtension
+        | ComicExtension
         | undefined;
       for (const [t, f] of [
         [SourceType.Photo, loadPhotoExtensionString],
         [SourceType.Book, loadBookExtensionString],
         [SourceType.Song, loadSongExtensionString],
+        [SourceType.Comic, loadComicExtensionString],
       ] as const) {
         const c = f(String(content));
         if (c) {
@@ -856,6 +1005,17 @@ export const useStore = defineStore('store', () => {
           bookRecommendList(source);
         }
         break;
+      case SourceType.Comic:
+        index = comicSources.value.findIndex(
+          (item) => item.item.id === source.item.id
+        );
+        if (index != -1) {
+          comicSources.value[index].item = source.item;
+        } else {
+          comicSources.value.push(source as ComicSource);
+        }
+        triggerRef(comicSources);
+        break;
       default:
         console.log('暂未实现', source);
         break;
@@ -874,6 +1034,9 @@ export const useStore = defineStore('store', () => {
         break;
       case SourceType.Book:
         _.remove(bookSources.value, (source) => source.item.id === itemId);
+        break;
+      case SourceType.Comic:
+        _.remove(comicSources.value, (source) => source.item.id === itemId);
         break;
       default:
         console.log('暂未实现 removeFromSource', sourceType);
@@ -913,6 +1076,7 @@ export const useStore = defineStore('store', () => {
       ...photoSources.value,
       ...songSources.value,
       ...bookSources.value,
+      ...comicSources.value,
     ]) {
       if (!added.includes(source.item.id)) {
         if (source.item.id.includes('test') && keepTest.value) {
@@ -941,6 +1105,9 @@ export const useStore = defineStore('store', () => {
       case SourceType.Book:
         item.type = SourceType.Book;
         break;
+      case SourceType.Comic:
+        item.type = SourceType.Comic;
+        break;
       default:
         break;
     }
@@ -963,15 +1130,16 @@ export const useStore = defineStore('store', () => {
     // 清空订阅源
     await subscribeSourceStore.clearSubscribeSources();
     loadSubscribeSources(true);
+
     const photoShelfStore = usePhotoShelfStore();
-    // 清空图片收藏
-    photoShelfStore.clear();
+    photoShelfStore.clear(); // 清空图片收藏
     const songShelfStore = useSongShelfStore();
-    // 清空音乐收藏
-    songShelfStore.clear();
+    songShelfStore.clear(); // 清空音乐收藏
     const bookShelfStore = useBookShelfStore();
-    // 清空书架
-    bookShelfStore.clear();
+    bookShelfStore.clear(); // 清空书架
+    const comicShelfStore = useComicShelfStore();
+    comicShelfStore.clear(); // 清空漫画收藏
+
     // 清空章节缓存
     bookChapterStore.clear();
     // 清空音乐缓存
@@ -1034,10 +1202,11 @@ export const useStore = defineStore('store', () => {
         }
       } catch (error) {}
     }
-    keepTest.value = true;
-    addTestSource(new TestSongExtension(), SourceType.Song);
+    // keepTest.value = true;
+    // addTestSource(new TestSongExtension(), SourceType.Song);
     // addTestSource(new TestBookExtension(), SourceType.Book);
     // addTestSource(new TestPhotoExtension(), SourceType.Photo);
+    // addTestSource(new TestComicExtension(), SourceType.Comic);
     loadSubscribeSources(true);
   });
   return {
@@ -1070,6 +1239,14 @@ export const useStore = defineStore('store', () => {
     bookRead,
     getBookSource,
     getBookItem,
+
+    comicSources,
+    comicRecommendList,
+    comicSearch,
+    comicDetail,
+    comicRead,
+    getComicSource,
+    getComicItem,
 
     addSubscribeSource,
     addLocalSubscribeSource,
@@ -1128,6 +1305,9 @@ export const useDisplayStore = defineStore('display', () => {
   const showAddPhotoShelfDialog = ref(false);
   const showRemovePhotoShelfDialog = ref(false);
 
+  const showAddComicShelfDialog = ref(false);
+  const showRemoveComicShelfDialog = ref(false);
+
   const showAboutDialog = ref(false);
 
   const showSettingDialog = ref(false);
@@ -1141,16 +1321,19 @@ export const useDisplayStore = defineStore('display', () => {
   const photoCollapse = useStorageAsync('photoCollapse', []);
   const songCollapse = useStorageAsync('songCollapse', []);
   const bookCollapse = useStorageAsync('bookCollapse', []);
+  const comicCollapse = useStorageAsync('comicCollapse', []);
 
   const routerCurrPath = useStorageAsync('routerCurrPath', '/');
   const photoPath = useStorageAsync('photoPath', '/photo');
   const songPath = useStorageAsync('songPath', '/song');
   const bookPath = useStorageAsync('bookPath', '/book');
+  const comicPath = useStorageAsync('comicPath', '/comic');
 
   const showPhotoShelf = useStorageAsync('showPhotoShelf', false);
   const showSongShelf = useStorageAsync('showSongShelf', false);
   const showSongShelfDetail = useStorageAsync('showSongShelfDetail', false);
   const showBookShelf = useStorageAsync('showBookShelf', false);
+  const showComicShelf = useStorageAsync('showComicShelf', false);
   const showPlayView = useStorageAsync('showPlayView', false);
   const showPlayingPlaylist = useStorageAsync('showPlayingPlaylist', false);
 
@@ -1195,6 +1378,9 @@ export const useDisplayStore = defineStore('display', () => {
     showAddPhotoShelfDialog,
     showRemovePhotoShelfDialog,
 
+    showAddComicShelfDialog,
+    showRemoveComicShelfDialog,
+
     showAboutDialog,
 
     showSettingDialog,
@@ -1208,16 +1394,19 @@ export const useDisplayStore = defineStore('display', () => {
     photoCollapse,
     songCollapse,
     bookCollapse,
+    comicCollapse,
 
     routerCurrPath,
     photoPath,
     songPath,
     bookPath,
+    comicPath,
 
     showPhotoShelf,
     showSongShelf,
     showSongShelfDetail,
     showBookShelf,
+    showComicShelf,
     showPlayView,
     showPlayingPlaylist,
   };
@@ -2114,6 +2303,15 @@ export const useBookStore = defineStore('book', () => {
   };
 });
 
+export const useComicStore = defineStore('comic', () => {
+  const readingComic = ref<ComicItem>();
+  const readingChapter = ref<ComicChapter>();
+  return {
+    readingComic,
+    readingChapter,
+  };
+});
+
 // 定义一个工厂函数来创建 store // 注意：此函数没有优化成单例函数，注意重复定义出错
 const createKVStore = (name?: string) => {
   return defineStore(`KVStore${name}`, () => {
@@ -2601,6 +2799,161 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
     createShelf,
     removePhotoFromShelf,
     removeShelf,
+    clear,
+  };
+});
+
+export const useComicShelfStore = defineStore('comicShelfStore', () => {
+  const kvStorage = createKVStore('comicShelfStore');
+
+  // 漫画书架⬇️
+  const comicShelf = useStorageAsync<ComicShelf[]>(
+    'comicShelf',
+    [
+      {
+        id: nanoid(),
+        name: '默认书架',
+        comics: [],
+        createTime: Date.now(),
+      },
+    ],
+    kvStorage.storage
+  );
+  const comicChapterRefreshing = ref(false);
+
+  const createComicShelf = (name: string) => {
+    if (comicShelf.value.some((item) => item.name === name)) {
+      // 书架已存在
+      return;
+    } else {
+      comicShelf.value.push({
+        id: nanoid(),
+        name,
+        comics: [],
+        createTime: Date.now(),
+      });
+    }
+  };
+  const removeComicShelf = (shelfId: string) => {
+    const find = comicShelf.value.find((item) => item.id === shelfId);
+    comicShelf.value = comicShelf.value.filter((item) => item.id !== shelfId);
+  };
+  const isComicInShelf = (
+    comic: ComicItem | string,
+    shelfId?: string
+  ): boolean => {
+    let id: string;
+    if (typeof comic === 'string') {
+      id = comic;
+    } else {
+      id = comic.id;
+    }
+    if (shelfId) {
+      return !!comicShelf.value
+        .find((shelf) => shelf.id === shelfId)
+        ?.comics.find((b) => b.comic.id === id);
+    } else {
+      for (const shelf of comicShelf.value) {
+        const find = shelf.comics.find((b) => b.comic.id === id);
+        if (find) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+  const addToComicSelf = (comicItem: ComicItem, shelfId?: string) => {
+    if (!comicShelf.value.length) {
+      showToast('书架为空，请先创建书架');
+      return;
+    }
+    if (!shelfId) shelfId = comicShelf.value[0].id;
+    const shelf = comicShelf.value.find((item) => item.id === shelfId);
+    if (!shelf) {
+      showToast('书架不存在');
+      return;
+    }
+    if (shelf.comics.find((item) => item.comic.id === comicItem.id)) {
+      showToast('书架中已存在此书');
+      return;
+    }
+    shelf.comics.push({
+      comic: comicItem,
+      createTime: Date.now(),
+    });
+  };
+  const removeComicFromShelf = (comicItem: ComicItem, shelfId?: string) => {
+    if (!comicShelf.value.length) {
+      showToast('书架为空');
+      return;
+    }
+    if (!shelfId) shelfId = comicShelf.value[0].id;
+    const shelf = comicShelf.value.find((item) => item.id === shelfId);
+    if (!shelf) {
+      showToast('书架不存在');
+      return;
+    }
+    _.remove(shelf.comics, (item) => item.comic.id === comicItem.id);
+  };
+  const updateComicReadInfo = (comicItem: ComicItem, chapter: ComicChapter) => {
+    if (!comicShelf.value) return;
+    for (let shelf of comicShelf.value) {
+      for (let comic of shelf.comics) {
+        if (comic.comic.id === comicItem.id) {
+          if (comic.comic.chapters?.find((item) => item.id === chapter.id)) {
+            comic.lastReadChapter = chapter;
+            comic.lastReadTime = Date.now();
+          }
+        }
+      }
+    }
+  };
+  const deleteComicFromShelf = (comicItem: ComicItem, shelfId: string) => {
+    const shelf = comicShelf.value.find((item) => item.id === shelfId);
+    if (!shelf) return;
+    _.remove(shelf.comics, (item) => item.comic.id === comicItem.id);
+  };
+  const comicRefreshChapters = async () => {
+    if (comicChapterRefreshing.value) return;
+    comicChapterRefreshing.value = true;
+    const store = useStore();
+    await Promise.all(
+      comicShelf.value.map(async (shelf) => {
+        await Promise.all(
+          shelf.comics.map(async (comic) => {
+            const source = store.getComicSource(comic.comic.sourceId);
+            if (source) {
+              await store.comicDetail(source, comic.comic);
+            }
+          })
+        );
+      })
+    );
+    comicChapterRefreshing.value = false;
+    showToast('刷新章节完成');
+  };
+  const clear = () => {
+    comicShelf.value = [
+      {
+        id: nanoid(),
+        name: '默认书架',
+        comics: [],
+        createTime: Date.now(),
+      },
+    ];
+  };
+
+  return {
+    comicShelf,
+    comicChapterRefreshing,
+    createComicShelf,
+    removeComicShelf,
+    isComicInShelf,
+    addToComicSelf,
+    removeComicFromShelf,
+    updateComicReadInfo,
+    deleteComicFromShelf,
+    comicRefreshChapters,
     clear,
   };
 });

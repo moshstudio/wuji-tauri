@@ -111,6 +111,8 @@ export interface ClientOptions {
    * 是否验证证书
    */
   verify?: boolean;
+
+  noProxy?: boolean;
 }
 
 const ERROR_REQUEST_CANCELLED = 'Request canceled';
@@ -148,6 +150,7 @@ export async function _fetch(
     delete init.maxRedirections;
     delete init.connectTimeout;
     delete init.proxy;
+
   }
 
   const headers = init?.headers
@@ -202,10 +205,11 @@ export async function _fetch(
       url: req.url,
       headers: mappedHeaders,
       data,
-      maxRedirections,
-      connectTimeout,
+      max_directions: maxRedirections,
+      connect_timeout: connectTimeout,
       proxy,
       verify: init?.verify,
+      no_proxy: init?.noProxy,
     },
   });
 

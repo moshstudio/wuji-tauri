@@ -68,29 +68,30 @@ const emit = defineEmits<{
             class="relative animate-spin-slow w-[200px] h-[200px] sm:w-[250px] sm:h-[250px] md:w-[300px] md:h-[300px] lg:w-[350px] lg:h-[350px]"
             :class="{ 'pause-spin': !isPlaying }"
           >
-            <LoadImage
-              width="100%"
-              height="100%"
-              :radius="9999"
-              :src="playingSong.picUrl"
-              :headers="playingSong.picHeaders"
-              class="p-5"
-            >
-              <template #loading>
-                <Icon
-                  icon="pepicons-pop:music-note-double"
-                  width="min(15vh, 15vw)"
-                  height="min(15vh, 15vw)"
-                />
-              </template>
-              <template #error>
-                <Icon
-                  icon="pepicons-pop:music-note-double"
-                  width="min(15vh, 15vw)"
-                  height="min(15vh, 15vw)"
-                />
-              </template>
-            </LoadImage>
+            <div class="border-box p-5">
+              <LoadImage
+                round
+                :src="playingSong.picUrl"
+                :headers="playingSong.picHeaders"
+                class="p-5"
+              >
+                <template #loading>
+                  <Icon
+                    icon="pepicons-pop:music-note-double"
+                    width="min(15vh, 15vw)"
+                    height="min(15vh, 15vw)"
+                  />
+                </template>
+                <template #error>
+                  <Icon
+                    icon="pepicons-pop:music-note-double"
+                    width="min(15vh, 15vw)"
+                    height="min(15vh, 15vw)"
+                  />
+                </template>
+              </LoadImage>
+            </div>
+
             <span
               class="mask absolute top-0 left-0 w-full h-full bg-cover"
             ></span>

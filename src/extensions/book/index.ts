@@ -99,6 +99,9 @@ abstract class BookExtension extends Extension {
   @transformResult<BookItem | null>((r) => {
     if (r) {
       r.id = String(r.id);
+      r.chapters?.forEach((chapter) => {
+        chapter.id = String(chapter.id);
+      });
     }
     return r;
   })

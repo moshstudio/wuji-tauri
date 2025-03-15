@@ -58,6 +58,21 @@ abstract class Extension {
       latestUpdate?: string;
     }
   ) => Promise<BookItem[]>;
+  queryComicElements: (
+    body: Document,
+    tags: {
+      element?: string;
+      cover?: string;
+      title?: string;
+      intro?: string;
+      author?: string;
+      tags?: string;
+      status?: string;
+      url?: string;
+      latestChapter?: string;
+      latestUpdate?: string;
+    }
+  ) => Promise<BookItem[]>;
   queryPhotoElements: (
     body: Document,
     tags: {
@@ -72,6 +87,12 @@ abstract class Extension {
       url?: string;
     }
   ) => Promise<PhotoItem[]>;
+  queryChapters: (
+    body: Document,
+    tags: {
+      element?: string;
+    }
+  ) => Promise<{ id: string; title: string; url?: string }[]>;
   nanoid: typeof nanoid;
   urlJoin: (...parts: (string | null | undefined)[]) => string;
   maxPageNoFromElements: typeof maxPageNoFromElements;
@@ -130,7 +151,8 @@ abstract class Extension {
         let coverE =
           img?.getAttribute('data-original') ||
           img?.getAttribute('data-src') ||
-          img?.getAttribute('src');
+          img?.getAttribute('src') ||
+          img?.getAttribute('data-setbg');
         if (coverE) {
           if (!coverE.startsWith('http')) {
             if (coverE.startsWith('//')) {
@@ -154,6 +176,7 @@ abstract class Extension {
         const latestUpdateE = element.querySelector(latestUpdate)?.textContent;
 
         const urlE =
+          (!url ? element.getAttribute('href') : null) ||
           element.querySelector(url)?.getAttribute('href') ||
           element.querySelector(title)?.getAttribute('href');
         if (!titleE) continue;
@@ -161,7 +184,7 @@ abstract class Extension {
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           title: titleE,
           intro: introE || undefined,
-          cover: coverE || undefined,
+          cover: coverE ? this.urlJoin(this.baseUrl, coverE) : undefined,
           author: authorE || undefined,
           tags: tagsE.length
             ? tagsE.length === 1
@@ -177,6 +200,7 @@ abstract class Extension {
       }
       return list;
     };
+    this.queryComicElements = this.queryBookElements;
     this.queryPhotoElements = async (
       body: Document,
       {
@@ -214,7 +238,7 @@ abstract class Extension {
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           title: titleE?.trim() || '',
           desc: descE?.trim() || undefined,
-          cover: coverE?.trim() || '',
+          cover: coverE ? this.urlJoin(this.baseUrl, coverE) : '',
           author: authorE?.trim() || undefined,
           datetime: datetimeE?.trim() || undefined,
           hot: hotE?.trim() || undefined,
@@ -222,6 +246,26 @@ abstract class Extension {
           url: this.urlJoin(this.baseUrl, urlE || null),
           sourceId: '',
         });
+      }
+      return list;
+    };
+    this.queryChapters = async (
+      body: Document,
+      { element = '.chapter_list a' }
+    ) => {
+      const elements = body.querySelectorAll(element);
+      const list = [];
+      for (let element of elements) {
+        const href = element.getAttribute('href');
+        const title =
+          element.textContent?.trim() || element.getAttribute('title');
+        if (href) {
+          list.push({
+            id: this.urlJoin(this.baseUrl, href),
+            title: title || '',
+            url: this.urlJoin(this.baseUrl, href),
+          });
+        }
       }
       return list;
     };

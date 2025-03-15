@@ -1,30 +1,30 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
-import WinBook from '../windowsView/book/index.vue';
-import MobileBook from '../mobileView/book/index.vue';
+import WinComic from '../windowsView/comic/index.vue';
+import MobileComic from '../mobileView/comic/index.vue';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
 import { ref, triggerRef } from 'vue';
 import { useDisplayStore, useStore } from '@/store';
-import { BookSource } from '@/types';
+import { ComicSource } from '@/types';
 import { debounce } from 'lodash';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { router } from '@/router';
-import { BookItem } from '@/extensions/book';
+import { ComicItem } from '@/extensions/comic';
 import { showLoadingToast } from 'vant';
 
 const store = useStore();
 const displayStore = useDisplayStore();
-const { bookSources } = storeToRefs(store);
+const { comicSources } = storeToRefs(store);
 
 const searchValue = ref('');
 
 const recommend = createCancellableFunction(
   async (signal: AbortSignal, force: boolean = false) => {
     await Promise.all(
-      bookSources.value.map(async (source) => {
+      comicSources.value.map(async (source) => {
         if (!source.list || force) {
           if (signal.aborted) return;
-          await store.bookRecommendList(source);
+          await store.comicRecommendList(source);
         }
       })
     );
@@ -36,25 +36,25 @@ const search = createCancellableFunction(async (signal: AbortSignal) => {
   const t = displayStore.showToast();
   if (!keyword) {
     await recommend(true);
-    triggerRef(bookSources);
+    triggerRef(comicSources);
   } else {
     await Promise.all(
-      bookSources.value.map(async (bookSources) => {
+      comicSources.value.map(async (comicSources) => {
         if (signal.aborted) return;
-        await store.bookSearch(bookSources, keyword, 1);
+        await store.comicSearch(comicSources, keyword, 1);
       })
     );
   }
   displayStore.closeToast(t);
 });
-const loadType = async (source: BookSource, type?: string) => {
-  await store.bookRecommendList(source, 1, type);
+const loadType = async (source: ComicSource, type?: string) => {
+  await store.comicRecommendList(source, 1, type);
 };
 const loadPage = debounce(
   createCancellableFunction(
     async (
       signal: AbortSignal,
-      source: BookSource,
+      source: ComicSource,
       pageNo?: number,
       type?: string
     ) => {
@@ -65,26 +65,26 @@ const loadPage = debounce(
         closeOnClickOverlay: false,
       });
       if (!searchValue.value) {
-        await store.bookRecommendList(source, pageNo, type);
+        await store.comicRecommendList(source, pageNo, type);
       } else {
-        await store.bookSearch(source, searchValue.value, pageNo);
+        await store.comicSearch(source, searchValue.value, pageNo);
       }
       toast.close();
     }
   ),
   500
 );
-const toDetail = (source: BookSource, item: BookItem) => {
+const toDetail = (source: ComicSource, item: ComicItem) => {
   router.push({
-    name: 'BookDetail',
+    name: 'ComicDetail',
     params: {
-      bookId: item.id,
+      comicId: item.id,
       sourceId: source.item.id,
     },
   });
 };
 
-const openBaseUrl = async (source: BookSource) => {
+const openBaseUrl = async (source: ComicSource) => {
   const sc = await store.sourceClass(source.item);
   if (sc && sc.baseUrl) {
     // open(sc.baseUrl);
@@ -95,7 +95,7 @@ const openBaseUrl = async (source: BookSource) => {
 <template>
   <PlatformSwitch>
     <template #mobile>
-      <MobileBook
+      <MobileComic
         v-model:search-value="searchValue"
         @search="search"
         @load-type="loadType"
@@ -103,10 +103,10 @@ const openBaseUrl = async (source: BookSource) => {
         @to-detail="toDetail"
         @open-base-url="openBaseUrl"
         @recommend="recommend"
-      ></MobileBook>
+      ></MobileComic>
     </template>
     <template #windows>
-      <WinBook
+      <WinComic
         v-model:search-value="searchValue"
         @search="search"
         @load-type="loadType"
@@ -114,7 +114,7 @@ const openBaseUrl = async (source: BookSource) => {
         @to-detail="toDetail"
         @open-base-url="openBaseUrl"
         @recommend="recommend"
-      ></WinBook>
+      ></WinComic>
     </template>
   </PlatformSwitch>
 </template>

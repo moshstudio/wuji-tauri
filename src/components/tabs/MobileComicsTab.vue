@@ -1,26 +1,25 @@
 <script setup lang="ts">
-import { BookItem, BookList, BooksList } from '@/extensions/book';
-import BookCard from '@/components/card/bookCards/BookCard.vue';
-import HorizonList from '@/components/HorizonList.vue';
+import _ from 'lodash';
+import { ComicItem, ComicList, ComicsList } from '@/extensions/comic';
+import ComicCard from '@/components/card/comicCards/ComicCard.vue';
 import SimplePagination from '../pagination/SimplePagination.vue';
-import { BookSource } from '@/types';
+import { ComicSource } from '@/types';
 import { onMounted, ref, watch } from 'vue';
 import { debounce } from 'lodash';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { nanoid } from 'nanoid';
 const { source } = defineProps<{
-  source: BookSource;
+  source: ComicSource;
 }>();
 const emit = defineEmits<{
-  (e: 'onLoad', source: BookSource, type?: string): void;
-  (e: 'loadPage', source: BookSource, pageNo?: number, type?: string): void;
-  (e: 'onDetail', source: BookSource, item: BookItem): void;
+  (e: 'onLoad', source: ComicSource, type?: string): void;
+  (e: 'loadPage', source: ComicSource, pageNo?: number, type?: string): void;
+  (e: 'onDetail', source: ComicSource, item: ComicItem): void;
 }>();
 const active = ref(0);
 const tabKey = ref(nanoid()); // 修改此值来重新渲染组件
 const load = (index: number) => {
   if (!source.list) return;
-  let t: BookList;
+  let t: ComicList;
   if (source.list instanceof Array) {
     t = source.list[index];
   } else {
@@ -31,7 +30,7 @@ const load = (index: number) => {
 
 const changePage = (index: number, pageNo?: number) => {
   if (!source.list) return;
-  let t: BookList;
+  let t: ComicList;
   if (source.list instanceof Array) {
     t = source.list[index];
   } else {
@@ -40,18 +39,13 @@ const changePage = (index: number, pageNo?: number) => {
   emit('loadPage', source, pageNo, t.type);
 };
 
-const toDetail = (item: BookItem) => {
+const toDetail = (item: ComicItem) => {
   emit('onDetail', source, item);
 };
 
-onMounted(() => {
-  if (source.list && !Array.isArray(source.list)) {
-    load(active.value);
-  }
-});
 watch(
   () => source.list,
-  debounce((list: BooksList | undefined) => {
+  debounce((list: ComicsList | undefined) => {
     if (list && Array.isArray(list)) {
       tabKey.value = nanoid();
     }
@@ -60,7 +54,7 @@ watch(
 </script>
 
 <template>
-  <template v-if="!source.list"> </template>
+  <template v-if="!source.list"></template>
   <template v-else-if="Array.isArray(source.list)">
     <van-tabs
       v-model:active="active"
@@ -73,39 +67,43 @@ watch(
         v-for="(item, index) in source.list"
         :key="index"
       >
-        <div class="pl-2 pt-1">
+        <van-row
+          v-if="item.page && item.totalPage && item.totalPage > 1"
+          class="px-4 py-1"
+        >
           <SimplePagination
             v-model="item.page"
             :page-count="item.totalPage"
             @change="(page: number) => changePage(index, page)"
-            v-if="item.page && item.totalPage && item.totalPage > 1"
           ></SimplePagination>
-        </div>
+        </van-row>
         <van-loading class="p-2" v-if="!item.list.length" />
-        <HorizonList>
-          <template v-for="book in item.list" :key="book.id">
-            <BookCard :book-item="book" @click="toDetail"> </BookCard>
+        <div class="flex flex-col">
+          <template v-for="comic in item.list" :key="comic.id">
+            <ComicCard :comic-item="comic" @click="toDetail"> </ComicCard>
           </template>
-        </HorizonList>
+        </div>
       </van-tab>
     </van-tabs>
   </template>
   <template v-else>
-    <div class="flex pl-2 pt-1">
+    <van-row
+      v-if="
+        source.list.page && source.list.totalPage && source.list.totalPage > 1
+      "
+    >
       <SimplePagination
         v-model="source.list.page"
         :page-count="source.list.totalPage"
         @change="(page: number) => changePage(0, page)"
-        v-if="
-          source.list.page && source.list.totalPage && source.list.totalPage > 1
-        "
       ></SimplePagination>
-    </div>
-    <HorizonList>
-      <template v-for="book in source.list.list" :key="book.id">
-        <BookCard :book-item="book" @click="toDetail"> </BookCard>
+    </van-row>
+    <van-loading class="p-2" v-if="!source.list.list.length" />
+    <div class="flex flex-col">
+      <template v-for="comic in source.list.list" :key="comic.id">
+        <ComicCard :comic-item="comic" @click="toDetail"> </ComicCard>
       </template>
-    </HorizonList>
+    </div>
   </template>
 </template>
 

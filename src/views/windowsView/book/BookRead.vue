@@ -221,39 +221,39 @@ onMounted(() => {
       :style="{ width: '300px', height: '100%' }"
     >
       <van-list>
-        <van-cell
-          v-for="item in book?.chapters"
-          :key="item.id"
-          :class="{
-            'bg-[--van-background] reading-chapter':
-              readingChapter?.id === item.id,
-          }"
-          clickable
-          @click="
-            () => {
-              emit('toChapter', item);
-              showChapters = false;
-            }
-          "
-        >
-          <div class="flex items-center gap-2 flex-nowrap">
+        <template v-for="item in book?.chapters" :key="item.id">
+          <div
+            class="flex justify-start items-center text-sm text-[--van-text-color-2] gap-2 p-2 flex-nowrap select-none van-haptics-feedback"
+            :class="{
+              'bg-[--van-background] reading-chapter':
+                readingChapter?.id === item.id,
+            }"
+            @click="
+              () => {
+                emit('toChapter', item);
+                showChapters = false;
+              }
+            "
+          >
             <Icon
               icon="iconamoon:eye-thin"
               width="24"
               height="24"
               v-if="readingChapter?.id === item.id"
             />
-            <span class="flex-grow flex text-left">
+            <span
+              class="flex-grow text-left overflow-hidden text-nowrap text-ellipsis"
+            >
               {{ item.title }}
             </span>
             <Icon
               icon="material-symbols-light:download-done-rounded"
-              width="24"
-              height="24"
+              width="20"
+              height="20"
               v-if="book && bookCacheStore.chapterInCache(book, item)"
             />
           </div>
-        </van-cell>
+        </template>
       </van-list>
     </van-popup>
     <van-dialog
