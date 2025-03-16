@@ -4,28 +4,92 @@ class TestComicExtension extends ComicExtension {
   id = 'testComic';
   name = 'testComic';
   version = '0.0.1';
-  baseUrl = 'https://kxmanhua.com/';
+  baseUrl = 'https://www.wxzhm.top/';
   async getRecommendComics(pageNo, type) {
     let items = [
       {
-        name: '3D漫画',
-        type: 1,
+        name: '青春',
+        tag: '青春',
       },
       {
-        name: '韩漫',
-        type: 2,
+        name: '性感',
+        tag: '性感',
       },
       {
-        name: '日漫',
-        type: 3,
+        name: '长腿',
+        tag: '长腿',
       },
       {
-        name: '真人',
-        type: 4,
+        name: '多人',
+        tag: '多人',
       },
       {
-        name: '耽美',
-        type: 5,
+        name: '御姐',
+        tag: '御姐',
+      },
+      {
+        name: '巨乳',
+        tag: '巨乳',
+      },
+      {
+        name: '新婚',
+        tag: '新婚',
+      },
+      {
+        name: '媳妇',
+        tag: '媳妇',
+      },
+      {
+        name: '暧昧',
+        tag: '暧昧',
+      },
+      {
+        name: '清纯',
+        tag: '清纯',
+      },
+      {
+        name: '调教',
+        tag: '调教',
+      },
+      {
+        name: '少妇',
+        tag: '少妇',
+      },
+      {
+        name: '风骚',
+        tag: '风骚',
+      },
+      {
+        name: '同居',
+        tag: '同居',
+      },
+      {
+        name: '好友',
+        tag: '好友',
+      },
+      {
+        name: '女神',
+        tag: '女神',
+      },
+      {
+        name: '诱惑',
+        tag: '诱惑',
+      },
+      {
+        name: '偷情',
+        tag: '偷情',
+      },
+      {
+        name: '出轨',
+        tag: '出轨',
+      },
+      {
+        name: '正妹',
+        tag: '正妹',
+      },
+      {
+        name: '家教',
+        tag: '家教',
       },
     ];
     if (!type) {
@@ -40,15 +104,16 @@ class TestComicExtension extends ComicExtension {
     const item = items.find((item) => item.name === type);
     if (!item) return null;
     pageNo = pageNo || 1;
-    const url = `${this.baseUrl}manga/library?type=${item.type}&complete=1&page=${pageNo}&orderby=1`;
+    const url = `${this.baseUrl}booklist?tag=${item.tag}&area=-1&end=-1`;
     const body = await this.fetchDom(url, {
       verify: false,
     });
     const list = await this.queryComicElements(body, {
-      element: '.container .product__item',
-      cover: '.product__item__pic',
-      title: 'h6 a',
-      url: 'h6 a',
+      element: '.mh-list li',
+      cover: '.mh-cover',
+      title: 'h2 a',
+      url: 'h2 a',
+      intro: '.chapter',
     });
 
     const pageElements = body.querySelectorAll('.product__pagination a');
@@ -61,34 +126,32 @@ class TestComicExtension extends ComicExtension {
 
   async search(keyword, pageNo) {
     pageNo ||= 1;
-    const url = `${this.baseUrl}manga/search?keyword=${keyword}`;
+    const url = `${this.baseUrl}search?keyword=${keyword}`;
     const body = await this.fetchDom(url, {
       verify: false,
     });
     const list = await this.queryComicElements(body, {
-      element: '.container .product__item',
-      cover: '.product__item__pic',
-      title: 'h6 a',
-      url: 'h6 a',
+      element: '.mh-list li',
+      cover: '.mh-cover',
+      title: 'h2 a',
+      url: 'h2 a',
+      intro: '.chapter',
     });
+
+    const pageElements = body.querySelectorAll('.product__pagination a');
     return {
       list,
       page: pageNo,
-      totalPage: 1,
+      totalPage: this.maxPageNoFromElements(pageElements),
     };
   }
 
   async getComicDetail(item, pageNo) {
     pageNo ||= 1;
     const body = await this.fetchDom(item.url);
-    item.author = body.querySelector(
-      '.anime__details__title span'
-    )?.textContent;
-    item.intro = body.querySelector(
-      '.anime__details__text p:nth-child(4)'
-    )?.textContent;
+    item.intro = body.querySelector('.info .content')?.textContent?.trim();
     const chapters = await this.queryChapters(body, {
-      element: '.chapter_list a',
+      element: '#chapterlistload ul a',
     });
     console.log(chapters);
     item.chapters = chapters;
@@ -97,10 +160,10 @@ class TestComicExtension extends ComicExtension {
 
   async getContent(item, chapter) {
     const body = await this.fetchDom(chapter.url);
-    const images = body.querySelectorAll('.blog__details__content img');
+    const images = body.querySelectorAll('.comicpage img');
     const photos = [];
     images.forEach((item) => {
-      photos.push(item.getAttribute('src'));
+      photos.push(item.getAttribute('data-original'));
     });
 
     return {

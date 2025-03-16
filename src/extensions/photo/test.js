@@ -4,89 +4,60 @@ class TestPhotoExtension extends PhotoExtension {
   id = 'testPhoto';
   name = 'ceshi';
   version = '0.0.1';
-  baseUrl = 'https://www.hotgirl2024.com/';
+  baseUrl = 'http://www.weibomn.com/';
 
   async getRecommendList(pageNo) {
     pageNo ||= 1;
-    let url = `${this.baseUrl}?page=${pageNo}`;
-    try {
-      const document = await this.fetchDom(url, {
-        headers: { 'Upgrade-Insecure-Requests': '1', Referer: this.baseUrl },
-      });
-      const list = await this.queryPhotoElements(document, {
-        element: '.articles-grid__content',
-        cover: 'img',
-        title: '.articles-grid__title',
-        datetime: '.articles-grid__publish-date',
-        hot: '.articles-grid__views',
-        url: 'a',
-      });
-      console.log(list);
-      const pageItems = document?.querySelectorAll('.pagination__item');
+    let url = `${this.baseUrl}database.php?page=${pageNo}`;
+    const response = await this.fetch(url, {
+      headers: {
+        refererr: this.baseUrl,
+        'x-requested-with': 'XMLHttpRequest',
+      },
+      verify: false,
+      noProxy: true,
+    });
+    const json = await response.json();
+    const list = json.data.map((item) => {
+      const url = `${this.baseUrl}/girl${item.createtime}.html`;
+      const cover = this.urlJoin(this.baseUrl, item.image);
       return {
-        list,
-        page: pageNo,
-        totalPage: this.maxPageNoFromElements(pageItems),
+        id: url,
+        title: '',
+        url,
+        cover,
+        sourceId: '',
       };
-    } catch (error) {
-      console.log(error);
-      return null;
-    }
+    });
+    return {
+      list,
+      page: pageNo,
+      totalPage: 74,
+    };
   }
 
   async search(keyword, pageNo) {
-    pageNo ||= 1;
-    let url = `${this.baseUrl}search.html/?page=${pageNo}&q=${keyword}`;
-    try {
-      const document = await this.fetchDom(url, {
-        headers: { 'Upgrade-Insecure-Requests': '1', Referer: this.baseUrl },
-      });
-      const list = await this.queryPhotoElements(document, {
-        element: '.articles-grid__content',
-        cover: 'img',
-        title: '.articles-grid__title',
-        datetime: '.articles-grid__publish-date',
-        hot: '.articles-grid__views',
-        url: 'a',
-      });
-
-      const pageItems = document?.querySelectorAll('.pagination__item');
-      return {
-        list,
-        page: pageNo,
-        totalPage: this.maxPageNoFromElements(pageItems),
-      };
-    } catch (error) {
-      console.log(error);
-      return null;
-    }
+    return null;
   }
   async getPhotoDetail(item, pageNo) {
     try {
-      const url = item.url + `/?page=${pageNo}`;
-      const document = await this.fetchDom(url, {
-        headers: { 'Upgrade-Insecure-Requests': '1', Referer: this.baseUrl },
+      const document = await this.fetchDom(item.url, {
+        headers: {
+          'upgrade-insecure-requests': '1',
+        },
+        verify: false,
+        noProxy: true,
       });
-      const list = document
-        ?.querySelector('.article__image-list')
-        ?.querySelectorAll('img');
-
-      const imgItems = [];
-      list?.forEach((item) => {
-        const img = item;
-        const cover = img?.getAttribute('data-src') || '';
-        imgItems.push(cover ? this.urlJoin(this.baseUrl, cover) : '');
-      });
-      const pageElement = document?.querySelector('.pagination__item--active');
-      const page = Number(pageElement?.textContent?.trim()) || pageNo || 1;
-      const totalPage = this.maxPageNoFromElements(
-        document?.querySelectorAll('.pagination__total')
+      const imgs = document.querySelectorAll('.post-content img');
+      const imgItems = Array.from(imgs).map((img) =>
+        this.urlJoin(this.baseUrl, img.getAttribute('src'))
       );
       return {
         item,
         photos: imgItems,
-        page,
-        totalPage,
+        photosHeaders: { 'upgrade-insecure-requests': '1' },
+        page: 1,
+        totalPage: 1,
       };
     } catch (error) {
       console.log(error);

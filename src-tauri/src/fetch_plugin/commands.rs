@@ -227,7 +227,6 @@ fn build_request(
             if let Some(timeout) = connect_timeout {
                 builder = builder.connect_timeout(Duration::from_millis(timeout));
             }
-
             if let Some(max_redirections) = max_redirections {
                 builder = builder.redirect(if max_redirections == 0 {
                     Policy::none()
@@ -237,6 +236,7 @@ fn build_request(
             } else {
                 builder = builder.redirect(Policy::limited(10));
             }
+
             if no_proxy.unwrap_or(false) {
                 builder = builder.no_proxy();
             } else {

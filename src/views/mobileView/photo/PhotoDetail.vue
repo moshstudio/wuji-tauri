@@ -52,15 +52,12 @@ const showMoreOptionsSheet = async (url: string) => {
       ref="content"
       class="grow flex flex-col overflow-y-auto p-2 bg-[--van-background-3] select-none"
     >
-      <van-skeleton :loading="!photoDetail">
-        <template #template>
-          <div class="flex justify-center items-center mt-2 w-full">
-            <van-skeleton-image />
-          </div>
-        </template>
+      <div
+        class="w-full text-center"
+        v-for="(item, index) in photoDetail?.photos"
+        :key="index"
+      >
         <LoadImage
-          v-for="(item, index) in photoDetail!.photos"
-          :key="index"
           :src="item"
           :headers="photoDetail?.photosHeaders"
           fit="contain"
@@ -68,7 +65,7 @@ const showMoreOptionsSheet = async (url: string) => {
           class="rounded-lg max-w-[100%] max-h-[100%]"
           @click="() => showMoreOptionsSheet(item)"
         />
-      </van-skeleton>
+      </div>
     </main>
     <div
       v-if="photoDetail?.totalPage && photoDetail?.totalPage > 1"

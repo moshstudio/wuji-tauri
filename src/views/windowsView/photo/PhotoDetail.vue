@@ -41,22 +41,19 @@ const emit = defineEmits<{
       ref="content"
       class="grow flex flex-col overflow-y-auto p-4 bg-[--van-background-3] select-none"
     >
-      <van-skeleton :loading="!photoDetail">
-        <template #template>
-          <div class="flex justify-center items-center mt-2 w-full">
-            <van-skeleton-image />
-          </div>
-        </template>
+      <div
+        class="w-full text-center"
+        v-for="(item, index) in photoDetail?.photos"
+        :key="index"
+      >
         <LoadImage
-          v-for="(item, index) in photoDetail!.photos"
-          :key="index"
           :src="item"
           :headers="photoDetail?.photosHeaders"
           fit="contain"
           lazy-load
           class="rounded-lg max-w-[100%] max-h-[100%]"
         />
-      </van-skeleton>
+      </div>
     </main>
     <van-row
       justify="center"

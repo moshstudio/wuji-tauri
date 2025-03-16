@@ -152,7 +152,12 @@ abstract class Extension {
           img?.getAttribute('data-original') ||
           img?.getAttribute('data-src') ||
           img?.getAttribute('src') ||
-          img?.getAttribute('data-setbg');
+          img?.getAttribute('data-setbg') ||
+          (img as HTMLElement)?.style.backgroundImage?.replace(
+            /url\(["']?(.*?)["']?\)/,
+            '$1'
+          );
+
         if (coverE) {
           if (!coverE.startsWith('http')) {
             if (coverE.startsWith('//')) {
@@ -182,7 +187,7 @@ abstract class Extension {
         if (!titleE) continue;
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
-          title: titleE,
+          title: titleE.trim(),
           intro: introE || undefined,
           cover: coverE ? this.urlJoin(this.baseUrl, coverE) : undefined,
           author: authorE || undefined,

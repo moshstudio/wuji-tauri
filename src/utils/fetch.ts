@@ -150,7 +150,6 @@ export async function _fetch(
     delete init.maxRedirections;
     delete init.connectTimeout;
     delete init.proxy;
-
   }
 
   const headers = init?.headers
@@ -205,11 +204,11 @@ export async function _fetch(
       url: req.url,
       headers: mappedHeaders,
       data,
-      max_directions: maxRedirections,
-      connect_timeout: connectTimeout,
+      maxRedirections,
+      connectTimeout,
       proxy,
       verify: init?.verify,
-      no_proxy: init?.noProxy,
+      noProxy: init?.noProxy,
     },
   });
 
@@ -282,7 +281,11 @@ export async function fetch(
 ): Promise<Response> {
   try {
     let response = await _fetch(input, init);
+    console.log(response.status);
+
     if (response.status === 302) {
+      console.log(Array.from(response.headers.keys()));
+
       if (Array.from(response.headers.keys()).includes('location')) {
         response = await fetch(response.headers.get('location')!, {
           verify: false,

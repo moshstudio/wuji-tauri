@@ -1,9 +1,10 @@
 <template>
   <van-image :src="processedSrc" v-bind="restProps" v-on="listeners">
-    <template #loading>
-      <div class="h-[40px] w-[40px]">
-        <van-loading type="spinner" class="p-4" />
-      </div>
+    <slot></slot>
+
+    <!-- 传递具名插槽 -->
+    <template v-for="(_, name) in $slots" #[name]>
+      <slot :name="name"></slot>
     </template>
   </van-image>
 </template>
@@ -55,6 +56,7 @@ const processSrc = async (
       verify: false,
       maxRedirections: 0,
     });
+
     if (!response.ok) {
       throw new Error('maxRedirections == 0 failed');
     }
@@ -74,19 +76,22 @@ const processSrc = async (
   ); // 将二进制数据转换为 URL
 };
 
-// // 监听 src 的变化
-// watch(
-//   () => props.src,
-//   async (newSrc) => {
-//     processedSrc.value = await processSrc(newSrc, props.srcHeaders);
-//   },
-//   { immediate: true } // 立即执行一次
-// );
+// 监听 src 的变化
+watch(
+  () => props.src,
+  async (newSrc) => {
+    processedSrc.value = await processSrc(
+      props.src,
+      props.headers || undefined
+    );
+  },
+  { immediate: true } // 立即执行一次
+);
 
 // 或者可以在 onMounted 中初始化
-onMounted(async () => {
-  processedSrc.value = await processSrc(props.src, props.headers || undefined);
-});
+// onMounted(async () => {
+//   processedSrc.value = await processSrc(props.src, props.headers || undefined);
+// });
 </script>
 
 <style scoped></style>

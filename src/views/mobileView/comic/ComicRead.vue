@@ -162,16 +162,14 @@ const showMenu = ref(false);
         </div>
       </div>
     </div>
-    <div
-      class="scroll-container flex h-full overflow-y-auto w-[95%] sm:w-[90%] md:w-[75%] lg:w-[60%]"
-    >
+    <div class="scroll-container flex h-full overflow-y-auto w-full">
       <div
         id="comic-read-content"
         class="w-full relative overflow-y-auto p-4 text-justify leading-[1.8] text-[--van-text-color]"
         @click="() => (showMenu = !showMenu)"
         v-if="readingContent"
       >
-        <div class="w-full flex items-center justify-between gap-[10px]">
+        <div class="w-full flex items-center justify-between">
           <div
             class="text-sm w-[50px] van-haptics-feedback"
             @click.stop="chapterPrev"
@@ -186,15 +184,20 @@ const showMenu = ref(false);
             下一章
           </div>
         </div>
-        <LoadImage
+        <div
           v-for="(item, index) in readingContent.photos"
           :key="index"
-          :src="item"
-          :headers="readingContent.photosHeaders"
-          fit="contain"
-          lazy-load
-          class="rounded-lg max-w-[100%] max-h-[100%]"
-        />
+          class="w-full text-center"
+        >
+          <LoadImage
+            :src="item"
+            :headers="readingContent.photosHeaders"
+            fit="contain"
+            lazy-load
+            class="rounded-lg max-w-[100%] max-h-[100%]"
+          />
+        </div>
+
         <div class="w-full flex items-center justify-between gap-[10px]">
           <div
             class="text-sm w-[50px] van-haptics-feedback"

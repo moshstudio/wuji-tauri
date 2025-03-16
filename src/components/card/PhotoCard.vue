@@ -53,7 +53,7 @@ onMounted(() => {
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
   >
-    <div class="flex-grow">
+    <div class="flex-grow w-full text-center">
       <template v-if="typeof item.cover === 'string'">
         <LoadImage
           :width="!displayStore.isMobile ? 160 : undefined"
