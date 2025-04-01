@@ -281,11 +281,7 @@ export async function fetch(
 ): Promise<Response> {
   try {
     let response = await _fetch(input, init);
-    console.log(response.status);
-
     if (response.status === 302) {
-      console.log(Array.from(response.headers.keys()));
-
       if (Array.from(response.headers.keys()).includes('location')) {
         response = await fetch(response.headers.get('location')!, {
           verify: false,

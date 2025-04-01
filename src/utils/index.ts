@@ -296,6 +296,12 @@ export const urlJoin = (
     }
   }
   if (filter[1].startsWith('http')) return urlJoin(filter.slice(1));
+  if (filter[1].startsWith('../')) {
+    // 适配，返回一级
+    filter[0] = filter[0].split('/').slice(0, -1).join('/');
+    filter[1] = filter[1].substring(2);
+    return urlJoin(filter);
+  }
 
   return _urlJoin(filter);
 };

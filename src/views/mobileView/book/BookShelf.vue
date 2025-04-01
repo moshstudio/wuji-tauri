@@ -106,11 +106,11 @@ const sourceName = (book: BookItemInShelf) => {
       ></van-button>
     </div>
 
-    <van-tabs shrink class="pb-[50px]">
+    <van-tabs shrink animated class="pb-[50px]">
       <van-tab :title="shelf.name" v-for="shelf in bookShelf" :key="shelf.id">
         <transition name="list" tag="ul">
           <van-list class="p-2">
-            <ul
+            <template
               v-for="item in _.orderBy(
                 shelf.books,
                 [(book) => book.lastReadTime || 0, (book) => book.createTime],
@@ -124,7 +124,7 @@ const sourceName = (book: BookItemInShelf) => {
                 @click="(book, chapterId) => emit('toBook', book, chapterId)"
                 @remove="(book) => emit('removeBookFromShelf', book, shelf.id)"
               ></MobileShelfBookCard>
-            </ul>
+            </template>
           </van-list>
         </transition>
       </van-tab>

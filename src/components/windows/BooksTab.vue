@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BookItem, BookList, BooksList } from '@/extensions/book';
-import BookCard from '@/components/card/bookCards/BookCard.vue';
+import WinBookCard from '../card/bookCards/WinBookCard.vue';
 import HorizonList from '@/components/HorizonList.vue';
 import SimplePagination from '../pagination/SimplePagination.vue';
 import { BookSource } from '@/types';
@@ -66,6 +66,7 @@ watch(
       v-model:active="active"
       @rendered="(index) => load(index)"
       shrink
+      animated
       :key="tabKey"
     >
       <van-tab
@@ -84,7 +85,7 @@ watch(
         <van-loading class="p-2" v-if="!item.list.length" />
         <HorizonList>
           <template v-for="book in item.list" :key="book.id">
-            <BookCard :book-item="book" @click="toDetail"> </BookCard>
+            <WinBookCard :book-item="book" @click="toDetail"> </WinBookCard>
           </template>
         </HorizonList>
       </van-tab>
@@ -103,7 +104,7 @@ watch(
     </div>
     <HorizonList>
       <template v-for="book in source.list.list" :key="book.id">
-        <BookCard :book-item="book" @click="toDetail"> </BookCard>
+        <WinBookCard :book-item="book" @click="toDetail"> </WinBookCard>
       </template>
     </HorizonList>
   </template>

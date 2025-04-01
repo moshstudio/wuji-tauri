@@ -117,7 +117,10 @@ onMounted(() => {
       </template>
     </NavBar>
     <div
-      class="scroll-container flex-grow flex flex-col items-center overflow-y-auto min-w-[400px] w-[95%] sm:w-[90%] md:w-[85%] lg:w-[75%]"
+      class="scroll-container flex-grow flex flex-col gap-0 items-center overflow-y-auto min-w-[400px] w-[95%] sm:w-[90%] md:w-[85%] lg:w-[75%] focus:outline-none focus:border-none"
+      @keydown.right.stop="() => emit('nextChapter')"
+      @keydown.left.stop="() => emit('prevChapter')"
+      tabindex="0"
     >
       <div class="min-h-[80px]"></div>
       <template
@@ -125,14 +128,15 @@ onMounted(() => {
         v-for="item in readingContent.photos"
         :key="item.id"
       >
-        <LoadImage
-          :src="item"
-          :headers="readingContent.photosHeaders"
-          fit="contain"
-          lazy-load
-          class="rounded-lg w-full h-auto"
-        >
-        </LoadImage>
+        <div class="w-full text-center leading-none">
+          <LoadImage
+            :src="item"
+            :headers="readingContent.photosHeaders"
+            fit="contain"
+            lazy-load
+          >
+          </LoadImage>
+        </div>
       </template>
       <div
         class="read-sidebar absolute right-[8px] bottom-[8px] flex flex-col gap-1 opacity-80 sm:opacity-100 hover:opacity-100"
@@ -200,7 +204,8 @@ onMounted(() => {
       v-model:show="showChapters"
       position="right"
       class="chapter-popup"
-      :style="{ width: '300px', height: '100%' }"
+      :style="{ width: '260px', height: '100%' }"
+      @wheel.stop
     >
       <van-list>
         <van-cell
@@ -223,9 +228,17 @@ onMounted(() => {
               icon="iconamoon:eye-thin"
               width="24"
               height="24"
+              color="var(--van-primary-color)"
               v-if="readingChapter?.id === item.id"
             />
-            <span class="flex-grow flex text-left">
+            <span
+              class="flex-grow flex text-left"
+              :class="
+                readingChapter?.id === item.id
+                  ? 'text-[var(--van-primary-color)]'
+                  : 'text-[var(--van-text-color)]'
+              "
+            >
               {{ item.title }}
             </span>
           </div>

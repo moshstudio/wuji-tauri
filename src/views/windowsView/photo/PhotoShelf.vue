@@ -1,23 +1,21 @@
 <script setup lang="ts">
 import _ from 'lodash';
 import { usePhotoShelfStore, useDisplayStore } from '@/store';
-import { PropType, watch } from 'vue';
+import { PropType } from 'vue';
 import AddPhotoShelfDialog from '@/components/windows/dialogs/AddPhotoShelf.vue';
 import removePhotoShelfDialog from '@/components/windows/dialogs/removePhotoShelf.vue';
-import { PhotoShelf } from '@/extensions/photo';
-import PhotoCard from '@/components/card/PhotoCard.vue';
+import WinShelfPhotoCard from '@/components/card/photoCards/WinShelfPhotoCard.vue';
+import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
+import { storeToRefs } from 'pinia';
 
 const displayStore = useDisplayStore();
 const shelfStore = usePhotoShelfStore();
+const { photoShelf } = storeToRefs(shelfStore);
 
 const activeIndex = defineModel('activeIndex', { type: Number, default: 0 });
 const selecteMode = defineModel('selecteMode', {
   type: Boolean,
   default: false,
-});
-const selectedItems = defineModel('selectedItems', {
-  type: Array as PropType<PhotoShelf[]>,
-  default: [],
 });
 const shelfAnchors = defineModel('shelfAnchors', {
   type: Array as PropType<number[]>,
@@ -28,21 +26,6 @@ const emit = defineEmits<{
   (e: 'deleteSelected'): void;
   (e: 'hidePanel'): void;
 }>();
-
-watch(selecteMode, (mode) => {
-  if (mode == true) {
-    const clone = _.cloneDeep(shelfStore.photoShelf);
-    clone.forEach((shelf) => {
-      shelf.photos.forEach((photo) => {
-        photo.extra ||= {};
-        photo.extra.selected = false;
-      });
-    });
-    selectedItems.value = clone;
-  } else {
-    selectedItems.value = [];
-  }
-});
 </script>
 
 <template>
@@ -122,36 +105,17 @@ watch(selecteMode, (mode) => {
         删除所选
       </van-button>
     </div>
-    <van-tabs shrink :active="activeIndex">
-      <van-tab
-        :title="shelf.name"
-        v-for="shelf in shelfStore.photoShelf"
-        :key="shelf.id"
-        v-if="!selecteMode"
-      >
-        <div class="flex flex-wrap gap-2 p-4">
-          <PhotoCard
+    <van-tabs shrink animated :active="activeIndex">
+      <van-tab :title="shelf.name" v-for="shelf in photoShelf" :key="shelf.id">
+        <ResponsiveGrid :base-cols="2" class="p-2">
+          <WinShelfPhotoCard
             :item="photo"
-            v-for="photo in shelf.photos"
-            :key="photo.id"
-            :selecteMode="selecteMode"
-          ></PhotoCard>
-        </div>
-      </van-tab>
-      <van-tab
-        :title="shelf.name"
-        v-for="shelf in selectedItems"
-        :key="shelf.id"
-      >
-        <div class="flex flex-wrap gap-2">
-          <PhotoCard
             v-model:selected="photo.extra.selected"
-            :item="photo"
             v-for="photo in shelf.photos"
             :key="photo.id"
             :selecteMode="selecteMode"
-          ></PhotoCard>
-        </div>
+          ></WinShelfPhotoCard>
+        </ResponsiveGrid>
       </van-tab>
     </van-tabs>
   </van-floating-panel>

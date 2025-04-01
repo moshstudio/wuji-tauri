@@ -27,6 +27,7 @@ import { router } from './router';
 import { createPinia } from 'pinia';
 import '@vant/touch-emulator';
 import '@/styles/index.css';
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 import RememberScrollDirective from './utils/directives/rememberScroll';
 import HorizontalScrollDirective from './utils/directives/horizontalScroll';
 

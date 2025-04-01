@@ -1,5 +1,6 @@
 import { showNotify } from 'vant';
 import { Extension, transformResult } from '../baseExtension';
+import _ from 'lodash';
 
 export interface PhotoItem {
   id: string;
@@ -58,8 +59,12 @@ abstract class PhotoExtension extends Extension {
     }
     return r;
   })
-  execGetRecommendList(pageNo?: number) {
-    return this.getRecommendList(pageNo);
+  async execGetRecommendList(pageNo?: number) {
+    const ret = await this.getRecommendList(pageNo);
+    ret?.list.forEach((item) => {
+      item.sourceId = String(this.id);
+    });
+    return ret;
   }
   // 1. 首页推荐
   abstract getRecommendList(pageNo?: number): Promise<PhotoList | null>;
@@ -72,8 +77,12 @@ abstract class PhotoExtension extends Extension {
     }
     return r;
   })
-  execSearch(keyword: string, pageNo?: number) {
-    return this.search(keyword, pageNo);
+  async execSearch(keyword: string, pageNo?: number) {
+    const ret = await this.search(keyword, pageNo);
+    ret?.list.forEach((item) => {
+      item.sourceId = String(this.id);
+    });
+    return ret;
   }
   // 2. 搜索
   abstract search(keyword: string, pageNo?: number): Promise<PhotoList | null>;
@@ -84,8 +93,13 @@ abstract class PhotoExtension extends Extension {
     }
     return r;
   })
-  execGetPhotoDetail(item: PhotoItem, pageNo?: number) {
-    return this.getPhotoDetail(item, pageNo);
+  async execGetPhotoDetail(item: PhotoItem, pageNo?: number) {
+    const ret = await this.getPhotoDetail(_.cloneDeep(item), pageNo);
+    if (ret) {
+      ret.item.sourceId = String(this.id);
+      Object.assign(item, ret);
+    }
+    return ret;
   }
   // 3. 获取图片详情
   abstract getPhotoDetail(

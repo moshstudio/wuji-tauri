@@ -2,7 +2,7 @@
 import { useSongShelfStore, useSongStore, useStore } from '@/store';
 import { ref, reactive, watch, onMounted, triggerRef, PropType } from 'vue';
 import SongPlaylistPhoto from './photos/SongPlaylistPhoto.vue';
-import ResponsiveGrid from './ResponsiveGrid.vue';
+import ResponsiveGrid2 from './ResponsiveGrid2.vue';
 import SimplePagination from './pagination/SimplePagination.vue';
 import WinShelfSongCard from './card/songCards/WinShelfSongCard.vue';
 import { PlaylistInfo, SongShelf } from '@/extensions/song';
@@ -23,7 +23,7 @@ const c =
 </script>
 
 <template>
-  <div class="flex">
+  <div class="flex w-full h-full">
     <div
       class="song-shelf-side flex flex-col w-[150px] text-[12px] p-1 gap-1 rounded overflow-x-hidden overflow-y-auto"
     >
@@ -46,31 +46,34 @@ const c =
           {{ shelfStore.songLikeShelf.playlist.name }}
         </span>
       </div>
-
       <p class="text-gray-400">
         创建的歌单({{ shelfStore.songCreateShelf.length }})
       </p>
-      <p
-        :class="c"
-        :style="{
-          borderBottomColor:
-            selectedShelf?.playlist.id === shelf.playlist.id
-              ? '#1989fa'
-              : 'transparent',
-        }"
+      <template
         v-for="shelf in shelfStore.songCreateShelf"
         :key="shelf.playlist.id"
-        @click="selectedShelf = shelf"
       >
-        <SongPlaylistPhoto
-          :url="shelf.playlist.picUrl"
-          :width="30"
-          :height="30"
-        ></SongPlaylistPhoto>
-        <span>
-          {{ shelf.playlist.name }}
-        </span>
-      </p>
+        <p
+          :class="c"
+          :style="{
+            borderBottomColor:
+              selectedShelf?.playlist.id === shelf.playlist.id
+                ? '#1989fa'
+                : 'transparent',
+          }"
+          @click="selectedShelf = shelf"
+        >
+          <SongPlaylistPhoto
+            :url="shelf.playlist.picUrl"
+            :width="30"
+            :height="30"
+          ></SongPlaylistPhoto>
+          <span class="text-justify truncate">
+            {{ shelf.playlist.name }}
+          </span>
+        </p>
+      </template>
+
       <p class="text-gray-400">
         收藏的歌单({{ shelfStore.songPlaylistShelf.length }})
       </p>
@@ -91,14 +94,14 @@ const c =
           :width="30"
           :height="30"
         ></SongPlaylistPhoto>
-        <span>
+        <span class="text-justify truncate">
           {{ shelf.playlist.name }}
         </span>
       </p>
     </div>
     <van-divider vertical class="h-full" />
     <div
-      class="song-shelf-main w-full h-full overflow-x-hidden overflow-y-auto"
+      class="song-shelf-main w-full overflow-x-hidden overflow-y-auto mb-[80px]"
     >
       <div
         class="flex gap-2"
@@ -124,7 +127,7 @@ const c =
           "
         ></SimplePagination>
       </div>
-      <ResponsiveGrid>
+      <ResponsiveGrid2>
         <div
           v-for="song in selectedShelf.playlist.list?.list"
           :key="song.id"
@@ -142,7 +145,7 @@ const c =
             "
           ></WinShelfSongCard>
         </div>
-      </ResponsiveGrid>
+      </ResponsiveGrid2>
     </div>
   </div>
 </template>

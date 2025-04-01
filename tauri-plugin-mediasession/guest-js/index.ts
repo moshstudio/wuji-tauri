@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { MusicItem, Playlist } from './types';
+import { MusicItem, Playlist, PlayMode } from './types';
 export * from './types';
 
 export async function set_playlist(value: Playlist): Promise<Boolean | null> {
@@ -76,4 +76,15 @@ export async function seek_to(value: number): Promise<Boolean | null> {
       milliseconds: value,
     },
   }).then((r) => (r.value ? r.value : null));
+}
+
+export async function set_play_mode(playMode: PlayMode): Promise<Boolean | null> {
+  return await invoke<{ value?: boolean }>(
+    'plugin:mediasession|set_play_mode',
+    {
+      payload: {
+        mode: playMode,
+      },
+    }
+  ).then((r) => (r.value ? r.value : null));
 }

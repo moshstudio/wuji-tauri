@@ -55,7 +55,8 @@ const onDbClick = () => {
 
 <template>
   <div
-    class="relative flex items-center max-w-[400px] p-1 hover:bg-[--van-background] rounded-lg select-none"
+    class="relative flex items-center p-1 hover:bg-[--van-background] rounded-lg select-none"
+    :class="isPlayingSong ? 'bg-[var(--van-background)]' : ''"
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
     @dblclick="onDbClick"
@@ -74,7 +75,14 @@ const onDbClick = () => {
     <div
       class="grow flex flex-col pl-2 text-xs min-w-[10px] justify-around truncate"
     >
-      <span class="text-[--van-text-color] font-bold">
+      <span
+        class="font-bold"
+        :class="
+          isPlayingSong && songStore.isPlaying
+            ? 'text-[var(--van-primary-color)]'
+            : 'text-[--van-text-color]'
+        "
+      >
         {{ song.name }}
       </span>
       <span class="text-[gray]">

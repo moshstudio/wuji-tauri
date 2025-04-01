@@ -2,7 +2,7 @@
 import { useDisplayStore, useSongStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import _ from 'lodash';
-import PlaylistCard from '@/components/card/PlaylistCard.vue';
+import MobilePlaylistCard from '@/components/card/songCards/MobilePlaylistCard.vue';
 import MobileSongCard from '@/components/card/songCards/MobileSongCard.vue';
 import HorizonList from '@/components/HorizonList.vue';
 import SimplePagination from '@/components/pagination/SimplePagination.vue';
@@ -11,8 +11,7 @@ import { SongInfo } from '@/extensions/song';
 import SongShelf from '@/views/song/SongShelf.vue';
 import MobileHeader from '@/components/mobile/MobileHeader.vue';
 import MobileSongBar from '@/components/mobile/MobileSongBar.vue';
-import SearchButton from '@/components/mobile/Search2.vue';
-import LeftPopup from '@/components/mobile/LeftPopup.vue';
+import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
 import { ref } from 'vue';
 import { sleep } from '@/utils';
 
@@ -72,6 +71,7 @@ const onRefresh = async () => {
       <van-tabs
         v-model:active="activeTabIndex"
         shrink
+        animated
         sticky
         swipeable
         offset-top="50px"
@@ -107,7 +107,7 @@ const onRefresh = async () => {
                 :key="'playlist' + p.id"
                 class="relative"
               >
-                <PlaylistCard :playlist="p"></PlaylistCard>
+                <MobilePlaylistCard :playlist="p"></MobilePlaylistCard>
               </div>
             </HorizonList>
             <div class="h-4"></div>
@@ -128,7 +128,7 @@ const onRefresh = async () => {
                 @change="(page) => emit('songToPage', item, page)"
               />
             </van-row>
-            <div class="grid grid-cols-2 gap-2 pt-2">
+            <ResponsiveGrid class="p-[10px]">
               <template v-for="p in item.songList?.list" :key="'song' + p.id">
                 <MobileSongCard
                   :song="p"
@@ -136,7 +136,7 @@ const onRefresh = async () => {
                   class="max-w-[250px]"
                 ></MobileSongCard>
               </template>
-            </div>
+            </ResponsiveGrid>
           </div>
         </van-tab>
       </van-tabs>

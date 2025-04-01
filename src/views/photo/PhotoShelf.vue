@@ -11,18 +11,17 @@ import { storeToRefs } from 'pinia';
 const displayStore = useDisplayStore();
 const shelfStore = usePhotoShelfStore();
 const { showPhotoShelf } = storeToRefs(displayStore);
+const { photoShelf } = storeToRefs(shelfStore);
 
 const activeIndex = ref(0);
 const selecteMode = ref(false);
-const selectedItems = ref<PhotoShelf[]>([]);
 
 const deleteSelected = () => {
-  for (const shelf of selectedItems.value) {
-    for (const item of _.cloneDeep(shelf.photos)) {
+  for (const shelf of photoShelf.value) {
+    for (const item of shelf.photos) {
       if (item.extra.selected) {
-        _.remove(shelf.photos, item);
-        triggerRef(selectedItems);
         removePhotoFromShelf(item, shelf);
+        triggerRef(photoShelf);
       }
     }
   }
@@ -37,7 +36,6 @@ const shelfAnchors = ref([0, Math.round(window.innerHeight)]);
 const shelfHeight = ref(0);
 const hidePanel = () => {
   shelfHeight.value = shelfAnchors.value[0];
-
   showPhotoShelf.value = false;
 };
 watch(
@@ -70,7 +68,6 @@ onUnmounted(() => {
     <template #mobile>
       <MobilePhotoShelf
         v-model:selecte-mode="selecteMode"
-        v-model:selected-items="selectedItems"
         @delete-selected="deleteSelected"
         v-model:shelf-anchors="shelfAnchors"
         v-model:shelf-height="shelfHeight"
@@ -81,7 +78,6 @@ onUnmounted(() => {
       <WinPhotoShelf
         v-model:active-index="activeIndex"
         v-model:selecte-mode="selecteMode"
-        v-model:selected-items="selectedItems"
         @delete-selected="deleteSelected"
         v-model:shelf-anchors="shelfAnchors"
         v-model:shelf-height="shelfHeight"

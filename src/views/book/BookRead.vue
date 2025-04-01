@@ -15,10 +15,11 @@ import { purifyText, retryOnFalse, sleep, useElementResize } from '@/utils';
 import Reader from '@/utils/reader/reader-layout';
 import { ReaderResult } from '@/utils/reader/types';
 import { showConfirmDialog, showNotify, showToast } from 'vant';
-import { ref, watch, onActivated, nextTick } from 'vue';
+import { ref, watch, onActivated, nextTick, onDeactivated } from 'vue';
 import { get_system_font_scale } from 'tauri-plugin-commands-api';
 import _ from 'lodash';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 
 const { chapterId, bookId, sourceId, isPrev } = defineProps({
   chapterId: String,
@@ -390,6 +391,17 @@ watch(
   ],
   _.debounce(updateReadingElements, 500)
 );
+
+onActivated(() => {
+  if (displayStore.isAndroid && displayStore.bookKeepScreenOn) {
+    keepScreenOn(true);
+  }
+});
+onDeactivated(() => {
+  if (displayStore.isAndroid && displayStore.bookKeepScreenOn) {
+    keepScreenOn(false);
+  }
+});
 </script>
 
 <template>

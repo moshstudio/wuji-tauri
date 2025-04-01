@@ -7,6 +7,8 @@ import { Icon } from '@iconify/vue';
 import { computed, PropType } from 'vue';
 import AddBookShelfDialog from '@/components/windows/dialogs/AddBookShelf.vue';
 import DeleteBookShelfDialog from '@/components/windows/dialogs/RemoveBookShelf.vue';
+import WinShelfBookCard from '@/components/card/bookCards/WinShelfBookCard.vue';
+import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
 
 const shelfAnchors = defineModel('shelfAnchors', {
   type: Array as PropType<number[]>,
@@ -101,13 +103,10 @@ const sourceName = (book: BookItemInShelf) => {
       </van-button>
     </div>
 
-    <van-tabs shrink>
+    <van-tabs shrink animated>
       <van-tab :title="shelf.name" v-for="shelf in bookShelf" :key="shelf.id">
-        <van-list class="p-2">
-          <van-card
-            :desc="item.book.intro"
-            centered
-            lazy-load
+        <ResponsiveGrid2>
+          <template
             v-for="item in _.orderBy(
               shelf.books,
               [(book) => book.lastReadTime || 0, (book) => book.createTime],
@@ -115,72 +114,14 @@ const sourceName = (book: BookItemInShelf) => {
             )"
             :key="item.book.id"
           >
-            <template #thumb>
-              <van-image
-                width="80px"
-                height="100px"
-                radius="4"
-                :src="item.book.cover"
-              >
-                <template #loading>
-                  <Icon icon="codicon:book" width="48" height="48" />
-                </template>
-                <template #error>
-                  <Icon icon="codicon:book" width="48" height="48" />
-                </template>
-              </van-image>
-            </template>
-            <template #title>
-              <van-row align="center" class="gap-4">
-                <h1
-                  class="text-button-2 text-base font-bold"
-                  @click="() => emit('toBook', item)"
-                >
-                  {{ item.book.title }}
-                </h1>
-                <span class="text-gray-400">{{ sourceName(item) }}</span>
-              </van-row>
-            </template>
-            <template #tags>
-              <p
-                class="text-button-2 text-[var(--van-card-desc-color)] font-normal pt-1"
-                @click="() => emit('toBook', item, lastChapter(item)?.id)"
-              >
-                {{
-                  item.book.chapters?.length
-                    ? '最新章节:' + lastChapter(item)?.title
-                    : ''
-                }}
-              </p>
-            </template>
-            <template #price>
-              <van-badge
-                :content="unreadCount(item)"
-                color="#1989fa"
-                :offset="[18, 13.8]"
-              >
-                <p
-                  class="text-button-2 text-[var(--van-card-desc-color)] pt-1"
-                  @click="() => emit('toBook', item, item.lastReadChapter?.id)"
-                >
-                  {{
-                    item.lastReadChapter
-                      ? '最近阅读:' + item.lastReadChapter.title
-                      : undefined
-                  }}
-                </p>
-              </van-badge>
-            </template>
-            <template #footer>
-              <van-button
-                size="mini"
-                @click="() => emit('removeBookFromShelf', item, shelf.id)"
-              >
-                移除
-              </van-button>
-            </template>
-          </van-card>
-        </van-list>
+            <WinShelfBookCard
+              :shelf-book="item"
+              :unread="unreadCount(item)"
+              @click="(book, chapterId) => emit('toBook', book, chapterId)"
+              @remove="(book) => emit('removeBookFromShelf', book, shelf.id)"
+            ></WinShelfBookCard>
+          </template>
+        </ResponsiveGrid2>
       </van-tab>
     </van-tabs>
   </van-floating-panel>

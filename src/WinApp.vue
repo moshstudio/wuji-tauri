@@ -35,7 +35,8 @@ const store = useStore();
 const displayStore = useDisplayStore();
 
 const homePath = ref('/home');
-const { photoPath, songPath, bookPath, comicPath } = storeToRefs(displayStore);
+const { photoPath, songPath, bookPath, comicPath, videoPath } =
+  storeToRefs(displayStore);
 const pages = ref<PageItem[]>([
   {
     name: 'Home',
@@ -66,6 +67,12 @@ const pages = ref<PageItem[]>([
     icon: 'comment-circle-o',
     selectedIcon: 'comment-circle',
     to: comicPath,
+  },
+  {
+    name: 'Video',
+    icon: 'video-o',
+    selectedIcon: 'video',
+    to: videoPath,
   },
 ]);
 
@@ -130,6 +137,9 @@ watch(
     } else if (newPath.startsWith('/comic')) {
       comicPath.value = newPath;
       activeKey.value = '4';
+    } else if (newPath.startsWith('/video')) {
+      videoPath.value = newPath;
+      activeKey.value = '5';
     } else {
     }
   }

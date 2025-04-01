@@ -7,6 +7,7 @@ import {
   useComicShelfStore,
   useComicStore,
   useDisplayStore,
+  useVideoShelfStore,
 } from './store';
 import { nextTick, onMounted, ref, VNode, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -22,11 +23,13 @@ const bookStore = useBookStore();
 const comicStore = useComicStore();
 const bookShelfStore = useBookShelfStore();
 const comicShelfStore = useComicShelfStore();
+const videoShelfStore = useVideoShelfStore();
 
 const activeKey = ref(0);
 const route = useRoute();
 
-const { photoPath, songPath, bookPath, comicPath } = storeToRefs(displayStore);
+const { photoPath, songPath, bookPath, comicPath, videoPath } =
+  storeToRefs(displayStore);
 
 const pages = ref([
   {
@@ -53,12 +56,22 @@ const pages = ref([
     selectedIcon: 'comment-circle',
     to: comicPath,
   },
+  {
+    name: 'Video',
+    icon: 'video-o',
+    selectedIcon: 'video',
+    to: videoPath,
+  },
 ]);
 
 // 记录上一次的页面路径
 watch(
   () => route.path,
   (newPath) => {
+    if (newPath.startsWith('/home')) {
+      router.push('/photo');
+      return;
+    }
     displayStore.routerCurrPath = newPath;
     if (!newPath.startsWith('/book/read/')) {
       displayStore.showTabBar = true;
@@ -75,6 +88,9 @@ watch(
     } else if (newPath.startsWith('/comic')) {
       comicPath.value = newPath;
       activeKey.value = 3;
+    } else if (newPath.startsWith('/video')) {
+      videoPath.value = newPath;
+      activeKey.value = 4;
     } else {
     }
   }
@@ -85,12 +101,12 @@ watch(
   () => {
     const path = route.name;
     if (path === 'BookRead') {
-      set_status_bar('#000000');
+      set_status_bar('#000000', 'light');
     } else {
       if (displayStore.isDark) {
-        set_status_bar('#000000');
+        set_status_bar('#000000', 'light');
       } else {
-        set_status_bar('#80424242');
+        set_status_bar('#ffffff', 'dark');
       }
     }
   },
@@ -120,24 +136,15 @@ onMounted(() => {
   }, 500);
 });
 // 更新showtabbar
-const showTabBar = ref(true);
-onMounted(() => {
-  setTimeout(() => {
-    watch(
-      () => displayStore.showTabBar,
-      (show) => {
-        showTabBar.value = show;
-      },
-      {
-        immediate: true,
-      }
-    );
-  }, 1000);
-});
+const { showTabBar } = storeToRefs(displayStore);
 
 // 安卓返回的回调
 const backTs = ref(Date.now());
 window.androidBackCallback = async () => {
+  if (displayStore.fullScreenMode) {
+    displayStore.fullScreenMode = false;
+    return;
+  }
   const checkBack = async () => {
     const now = Date.now();
     if (now - backTs.value > 1000) {
@@ -220,6 +227,13 @@ window.androidBackCallback = async () => {
     }
     displayStore.showTabBar = true;
     router.push({ name: 'Comic' });
+  } else if (path === 'VideoDetail') {
+    if (displayStore.showVideoShelf) {
+      // 关闭收藏
+      displayStore.showVideoShelf = false;
+    } else {
+      router.push({ name: 'Video' });
+    }
   } else if (path === 'Photo') {
     if (displayStore.showPhotoShelf) {
       displayStore.showPhotoShelf = false;
@@ -253,6 +267,12 @@ window.androidBackCallback = async () => {
     } else {
       await checkBack();
     }
+  } else if (path === 'Video') {
+    if (displayStore.showVideoShelf) {
+      displayStore.showVideoShelf = false;
+    } else {
+      await checkBack();
+    }
   } else if (!path || path === 'Home') {
     await checkBack();
   } else {
@@ -274,24 +294,35 @@ window.androidBackCallback = async () => {
         </router-view> -->
       </div>
     </transition>
-    <van-tabbar
-      v-model="activeKey"
-      placeholder
-      class="z-[1002]"
-      v-show="showTabBar"
+    <transition
+      enter-active-class="transition-all duration-300 ease-out"
+      enter-from-class="opacity-0 scale-95"
+      enter-to-class="opacity-100 scale-100"
+      leave-active-class="transition-all duration-300 ease-in"
+      leave-from-class="opacity-100 scale-100"
+      leave-to-class="opacity-0 scale-95"
     >
-      <van-tabbar-item
-        v-for="(page, index) in pages"
-        :key="index"
-        :icon="page.icon"
-        :to="page.to"
+      <van-tabbar
+        v-model="activeKey"
+        placeholder
+        class="z-[1002]"
+        active-color="var(--van-text-color)"
+        v-show="showTabBar"
       >
-        <template #icon>
-          <van-icon :name="page.selectedIcon" v-if="activeKey == index" />
-          <van-icon :name="page.icon" v-else />
-        </template>
-      </van-tabbar-item>
-    </van-tabbar>
+        <van-tabbar-item
+          v-for="(page, index) in pages"
+          :key="index"
+          :icon="page.icon"
+          :to="page.to"
+        >
+          <template #icon>
+            <van-icon :name="page.selectedIcon" v-if="activeKey == index" />
+            <van-icon :name="page.icon" v-else />
+          </template>
+        </van-tabbar-item>
+      </van-tabbar>
+    </transition>
+
     <div class="absolute top-0 w-screen z-[999999999]">
       <v-progress-linear
         :active="displayStore.toastActive"
@@ -305,4 +336,7 @@ window.androidBackCallback = async () => {
   </div>
 </template>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+:deep(.van-collapse-item__content) {
+}
+</style>

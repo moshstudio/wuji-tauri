@@ -157,7 +157,6 @@ const createRequest = async (
       : 'api'
     : options.crypto;
   const csrfToken = cookie['__csrf'] || '';
-
   switch (crypto) {
     case 'weapi':
       headers.set('Referer', APP_CONF.domain);

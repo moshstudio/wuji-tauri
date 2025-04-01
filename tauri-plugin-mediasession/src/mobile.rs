@@ -25,7 +25,6 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
 pub struct Mediasession<R: Runtime>(PluginHandle<R>);
 
 impl<R: Runtime> Mediasession<R> {
-
     pub fn set_playlist(&self, payload: SetPlaylistRequest) -> crate::Result<BooleanResponse> {
         self.0
             .run_mobile_plugin("setPlaylist", payload)
@@ -79,6 +78,11 @@ impl<R: Runtime> Mediasession<R> {
     pub fn seek_to(&self, payload: SeekToRequest) -> crate::Result<BooleanResponse> {
         self.0
             .run_mobile_plugin("seekTo", payload)
+            .map_err(Into::into)
+    }
+    pub fn set_play_mode(&self, payload: PlayModeRequest) -> crate::Result<BooleanResponse> {
+        self.0
+            .run_mobile_plugin("setPlayMode", payload)
             .map_err(Into::into)
     }
 }

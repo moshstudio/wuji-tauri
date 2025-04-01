@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ActionSheetAction } from 'vant';
 const show = defineModel<boolean>();
-const emit = defineEmits(['OnAddToShelf']);
 const { actions } = defineProps<{
   actions: ActionSheetAction[];
 }>();

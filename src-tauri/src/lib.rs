@@ -13,6 +13,7 @@ fn greet(name: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -36,7 +37,8 @@ pub fn run() {
         .plugin(tauri_plugin_mediasession::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_shell::init());
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_keep_screen_on::init());
 
     // 仅在桌面端添加
     #[cfg(desktop)]
@@ -64,6 +66,7 @@ pub fn run() {
             let _ = show_window(app);
             let _ = constraint_window_size(app);
         }));
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     }
 
     builder

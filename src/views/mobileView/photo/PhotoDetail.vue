@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { PhotoDetail, PhotoItem } from '@/extensions/photo';
-import { PropType, ref } from 'vue';
+import { PropType, ref, watch } from 'vue';
 import { usePhotoShelfStore } from '@/store';
 import LoadImage from '@/components/LoadImage.vue';
 import SimplePagination from '@/components/pagination/SimplePagination.vue';
@@ -37,6 +37,16 @@ const showMoreOptionsSheet = async (url: string) => {
   clickedItem.value = url;
   showMoreOptions.value = true;
 };
+const bubbleOffset = ref({
+  x: document.querySelector('body')!.clientWidth - 130,
+  y: document.querySelector('body')!.clientHeight - 100,
+});
+watch(bubbleOffset, (offset) => {
+  const ch = document.querySelector('body')!.clientHeight;
+  if (offset.y > ch - 90) {
+    offset.y = ch - 90;
+  }
+});
 </script>
 
 <template>
@@ -50,34 +60,33 @@ const showMoreOptionsSheet = async (url: string) => {
     />
     <main
       ref="content"
-      class="grow flex flex-col overflow-y-auto p-2 bg-[--van-background-3] select-none"
+      class="photo-detail grow flex flex-col overflow-y-auto bg-[--van-background-3] select-none"
     >
-      <div
-        class="w-full text-center"
-        v-for="(item, index) in photoDetail?.photos"
-        :key="index"
-      >
+      <template v-for="(item, index) in photoDetail?.photos" :key="index">
         <LoadImage
           :src="item"
           :headers="photoDetail?.photosHeaders"
           fit="contain"
           lazy-load
-          class="rounded-lg max-w-[100%] max-h-[100%]"
           @click="() => showMoreOptionsSheet(item)"
         />
-      </div>
-    </main>
-    <div
-      v-if="photoDetail?.totalPage && photoDetail?.totalPage > 1"
-      class="flex items-center justify-center w-full py-1 bg-[--van-background-2]"
-    >
-      <SimplePagination
-        v-model="currentPage"
-        :page-count="Number(photoDetail.totalPage)"
-        @change="(pageNo) => emit('toPage', pageNo)"
+      </template>
+      <van-floating-bubble
+        v-model:offset="bubbleOffset"
+        axis="xy"
+        magnetic="x"
+        :gap="6"
+        teleport=".photo-detail"
+        v-if="photoDetail?.totalPage && photoDetail?.totalPage > 1"
       >
-      </SimplePagination>
-    </div>
+        <SimplePagination
+          v-model="currentPage"
+          :page-count="Number(photoDetail.totalPage)"
+          @change="(pageNo) => emit('toPage', pageNo)"
+        >
+        </SimplePagination>
+      </van-floating-bubble>
+    </main>
   </div>
   <van-dialog
     v-model:show="showAddDialog"
@@ -126,4 +135,15 @@ const showMoreOptionsSheet = async (url: string) => {
   ></MoreOptionsSheet>
 </template>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+:deep(.van-floating-bubble) {
+  height: 40px;
+  width: 120px;
+  border: none;
+  border-radius: 4px;
+  background-color: rgb(from var(--van-background) r g b / 50%);
+}
+:deep(.van-floating-bubble:active) {
+  opacity: 1;
+}
+</style>

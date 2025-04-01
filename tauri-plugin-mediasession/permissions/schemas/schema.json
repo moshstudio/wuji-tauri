@@ -395,6 +395,16 @@
           "const": "deny-seek-to"
         },
         {
+          "description": "Enables the set_play_mode command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-play-mode"
+        },
+        {
+          "description": "Denies the set_play_mode command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-play-mode"
+        },
+        {
           "description": "Enables the set_playlist command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-playlist"

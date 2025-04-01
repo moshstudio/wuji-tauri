@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import _ from 'lodash';
 import { BookItem, BookList, BooksList } from '@/extensions/book';
-import BookCard from '@/components/card/bookCards/BookCard.vue';
+import MobileBookCard from '../card/bookCards/MobileBookCard.vue';
 import SimplePagination from '../pagination/SimplePagination.vue';
 import { BookSource } from '@/types';
 import { onMounted, ref, watch } from 'vue';
@@ -60,6 +60,7 @@ watch(
       v-model:active="active"
       @rendered="(index) => load(index)"
       shrink
+      animated
       :key="tabKey"
     >
       <van-tab
@@ -69,7 +70,7 @@ watch(
       >
         <van-row
           v-if="item.page && item.totalPage && item.totalPage > 1"
-          class="px-4 py-1"
+          class="px-2 py-1"
         >
           <SimplePagination
             v-model="item.page"
@@ -80,7 +81,8 @@ watch(
         <van-loading class="p-2" v-if="!item.list.length" />
         <div class="flex flex-col">
           <template v-for="book in item.list" :key="book.id">
-            <BookCard :book-item="book" @click="toDetail"> </BookCard>
+            <MobileBookCard :book-item="book" @click="toDetail">
+            </MobileBookCard>
           </template>
         </div>
       </van-tab>
@@ -101,7 +103,7 @@ watch(
     <van-loading class="p-2" v-if="!source.list.list.length" />
     <div class="flex flex-col">
       <template v-for="book in source.list.list" :key="book.id">
-        <BookCard :book-item="book" @click="toDetail"> </BookCard>
+        <MobileBookCard :book-item="book" @click="toDetail"> </MobileBookCard>
       </template>
     </div>
   </template>

@@ -7,6 +7,7 @@ import { joinSongArtists } from '@/utils';
 import SongCardPhoto from '@/components/photos/SongCardPhoto.vue';
 import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
 import SongToFavoriteButton from '@/components/buttons/SongToFavoriteButton.vue';
+import { SongShelfType } from '@/types/song';
 
 const props = defineProps({
   song: {
@@ -57,7 +58,8 @@ const onDbClick = () => {
 
 <template>
   <div
-    class="relative flex items-center max-w-[400px] p-1 hover:bg-[--van-background] rounded-lg select-none"
+    class="relative flex items-center p-1 hover:bg-[--van-background] rounded-lg select-none"
+    :class="isPlayingSong ? 'bg-[var(--van-background)]' : ''"
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
     @dblclick="onDbClick"
@@ -93,6 +95,7 @@ const onDbClick = () => {
         class="clickable text-[--van-text-color]"
         size="16"
         @click="() => (showMoreOptions = true)"
+        v-if="shelf.type !== SongShelfType.playlist"
       />
     </div>
     <MoreOptionsSheet
@@ -100,6 +103,7 @@ const onDbClick = () => {
       :actions="[
         {
           name: '从当前收藏夹移除',
+          subname: song.name,
           color: '#1989fa',
           callback: () => {
             showMoreOptions = false;

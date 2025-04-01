@@ -2,9 +2,9 @@
 import { ref, CSSProperties, PropType } from 'vue';
 import { useSongStore } from '@/store';
 import { storeToRefs } from 'pinia';
-import { Icon } from '@iconify/vue';
 import { Lyric } from '@/utils/lyric';
 import LoadImage from '@/components/LoadImage.vue';
+import CDSVG from '@/assets/cd.svg';
 
 const songStore = useSongStore();
 const { playingSong, isPlaying } = storeToRefs(songStore);
@@ -68,26 +68,24 @@ const emit = defineEmits<{
             class="relative animate-spin-slow w-[200px] h-[200px] sm:w-[250px] sm:h-[250px] md:w-[300px] md:h-[300px] lg:w-[350px] lg:h-[350px]"
             :class="{ 'pause-spin': !isPlaying }"
           >
-            <div class="border-box p-5">
+            <div class="absolute top-0 right-0 w-full h-full border-box p-3">
               <LoadImage
                 round
                 :src="playingSong.picUrl"
                 :headers="playingSong.picHeaders"
-                class="p-5"
+                class="w-full h-full"
               >
                 <template #loading>
-                  <Icon
-                    icon="pepicons-pop:music-note-double"
-                    width="min(15vh, 15vw)"
-                    height="min(15vh, 15vw)"
-                  />
+                  <van-image fit="cover" :src="CDSVG" class="w-full h-full" />
                 </template>
                 <template #error>
-                  <Icon
+                  <van-image fit="cover" :src="CDSVG" class="w-full h-full" />
+                  <!-- <Icon
                     icon="pepicons-pop:music-note-double"
+                    class="min-w-[min(15vh, 15vw)] min-h-[min(15vh, 15vw)]"
                     width="min(15vh, 15vw)"
                     height="min(15vh, 15vw)"
-                  />
+                  /> -->
                 </template>
               </LoadImage>
             </div>
@@ -161,9 +159,22 @@ const emit = defineEmits<{
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* 变暗效果，0.5表示50%的透明度 */
+  background: linear-gradient(
+    135deg,
+    #4b6cb7 0%,
+    #182848 100%
+  ); /* 变暗效果，0.5表示50%的透明度 */
+  opacity: 0.5;
   z-index: -1; /* 确保伪元素在内容下方 */
 }
+.dark .playing-bg::after {
+  background: linear-gradient(
+    135deg,
+    #1e3c72 0%,
+    #2a5298 100%
+  ); /* 变暗效果，0.5表示50%的透明度 */
+}
+
 @media screen and (max-width: 640px) {
   .cover-area {
     display: none;

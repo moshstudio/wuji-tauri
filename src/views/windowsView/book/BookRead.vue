@@ -219,6 +219,7 @@ onMounted(() => {
       position="right"
       class="chapter-popup"
       :style="{ width: '300px', height: '100%' }"
+      @wheel.stop
     >
       <van-list>
         <template v-for="item in book?.chapters" :key="item.id">
@@ -239,10 +240,16 @@ onMounted(() => {
               icon="iconamoon:eye-thin"
               width="24"
               height="24"
+              color="var(--van-primary-color)"
               v-if="readingChapter?.id === item.id"
             />
             <span
               class="flex-grow text-left overflow-hidden text-nowrap text-ellipsis"
+              :class="
+                readingChapter?.id === item.id
+                  ? 'text-[var(--van-primary-color)]'
+                  : 'text-[var(--van-text-color)]'
+              "
             >
               {{ item.title }}
             </span>
@@ -315,7 +322,7 @@ onMounted(() => {
           </template>
         </van-cell>
         <div class="pb-2">文字颜色和背景</div>
-        <div v-horizontal-scroll class="flex gap-2 overflow-x-auto">
+        <div v-horizontal-scroll class="flex gap-2 overflow-x-auto" @wheel.stop>
           <div
             v-for="theme in bookStore.themes"
             :key="JSON.stringify(theme)"

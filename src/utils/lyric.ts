@@ -22,7 +22,7 @@ export async function getLyric(
     return cache.get(key);
   } else {
     const lyricFromLongZhu = async (): Promise<string | null> => {
-      const url = `https://www.hhlqilongzhu.cn/api/dg_geci.php?msg=${songName}&n=1&type=2`;
+      const url = `https://www.hhlqilongzhu.cn/api/dg_geci.php?msg=${key}&n=1&type=2`;
       const response = await fetch(url);
       const text = await response.text();
       if (!text.includes(songName)) return null;
@@ -45,7 +45,7 @@ export async function getLyric(
         songs.find(
           (song) =>
             song.name === songName && song.artists.includes(singerName || '')
-        ) || songs.find((song) => song.name === songName);
+        );
 
       if (!sSong) return '';
       const l = await neteaseLyric(String(sSong.id));

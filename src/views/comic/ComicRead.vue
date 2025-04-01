@@ -16,14 +16,12 @@ import {
   useComicStore,
 } from '@/store';
 import { ComicSource } from '@/types';
-import { purifyText, retryOnFalse, sleep, useElementResize } from '@/utils';
-import Reader from '@/utils/reader/reader-layout';
-import { ReaderResult } from '@/utils/reader/types';
+import { retryOnFalse, sleep, useElementResize } from '@/utils';
 import { showConfirmDialog, showNotify, showToast } from 'vant';
-import { ref, watch, onActivated, nextTick } from 'vue';
-import { get_system_font_scale } from 'tauri-plugin-commands-api';
+import { ref, watch, onActivated, nextTick, onDeactivated } from 'vue';
 import _ from 'lodash';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 
 const { chapterId, comicId, sourceId } = defineProps({
   chapterId: String,
@@ -169,8 +167,6 @@ async function loadChapter(chapter?: ComicChapter) {
   if (!chapter) {
     chapter = comic.value.chapters?.find((chapter) => chapter.id === chapterId);
   }
-  console.log(chapterId);
-  console.log(comic.value);
 
   if (!chapter) {
     showToast('章节不存在');
@@ -282,6 +278,17 @@ watch(
 );
 watch(readingChapter, (c) => (comicStore.readingChapter = c), {
   immediate: true,
+});
+
+onActivated(() => {
+  if (displayStore.isAndroid && displayStore.comicKeepScreenOn) {
+    keepScreenOn(true);
+  }
+});
+onDeactivated(() => {
+  if (displayStore.isAndroid && displayStore.comicKeepScreenOn) {
+    keepScreenOn(false);
+  }
 });
 </script>
 

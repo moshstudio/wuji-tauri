@@ -1,6 +1,7 @@
 import CryptoJS from 'crypto-js';
 import forge from 'node-forge';
 import _ from 'lodash';
+import * as iconv from 'iconv-lite';
 import { nanoid } from 'nanoid';
 import { ClientOptions, fetch } from '@/utils/fetch';
 import {
@@ -37,11 +38,13 @@ abstract class Extension {
   cryptoJs: typeof CryptoJS;
   forge: typeof forge;
   fetch: typeof fetch;
+  iconv: typeof iconv;
   _: typeof _;
   fetchDom: (
     input: URL | Request | string,
     init?: RequestInit & ClientOptions,
-    domType?: DOMParserSupportedType
+    domType?: DOMParserSupportedType,
+    encoding?: 'utf8' | 'gbk'
   ) => Promise<Document>;
   queryBookElements: (
     body: Document,
@@ -73,6 +76,24 @@ abstract class Extension {
       latestUpdate?: string;
     }
   ) => Promise<BookItem[]>;
+  queryVideoElements: (
+    body: Document,
+    tags: {
+      element?: string;
+      cover?: string;
+      title?: string;
+      intro?: string;
+      releaseDate?: string;
+      country?: string;
+      duration?: string;
+      director?: string;
+      cast?: string;
+      tags?: string;
+      status?: string;
+      url?: string;
+      latestUpdate?: string;
+    }
+  ) => Promise<BookItem[]>;
   queryPhotoElements: (
     body: Document,
     tags: {
@@ -93,6 +114,7 @@ abstract class Extension {
       element?: string;
     }
   ) => Promise<{ id: string; title: string; url?: string }[]>;
+  getContentText: (element?: HTMLElement) => string | null;
   nanoid: typeof nanoid;
   urlJoin: (...parts: (string | null | undefined)[]) => string;
   maxPageNoFromElements: typeof maxPageNoFromElements;
@@ -108,17 +130,21 @@ abstract class Extension {
   protected constructor() {
     this.cryptoJs = CryptoJS;
     this.forge = forge;
+    this.iconv = iconv;
     this._ = _;
     this.fetch = fetch;
     this.fetchDom = async (
       input: URL | Request | string,
       init?: RequestInit & ClientOptions,
-      domType: DOMParserSupportedType = 'text/html'
+      domType?: DOMParserSupportedType,
+      encoding?: 'utf8' | 'gbk'
     ) => {
       const response = await this.fetch(input, init);
-      const text = await response.text();
+      response.text;
+      const buffer = await response.arrayBuffer();
+      let text = new TextDecoder(encoding || 'utf8').decode(buffer);
 
-      return new DOMParser().parseFromString(text, domType);
+      return new DOMParser().parseFromString(text, domType || 'text/html');
     };
     this.nanoid = nanoid;
 
@@ -168,6 +194,9 @@ abstract class Extension {
           }
         }
         const titleE =
+          (!title
+            ? element.textContent || element.getAttribute('title')
+            : null) ||
           element.querySelector(title)?.textContent ||
           element.querySelector(title)?.getAttribute('title');
         const introE = element.querySelector(intro)?.textContent;
@@ -188,17 +217,17 @@ abstract class Extension {
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           title: titleE.trim(),
-          intro: introE || undefined,
+          intro: introE?.trim() || undefined,
           cover: coverE ? this.urlJoin(this.baseUrl, coverE) : undefined,
-          author: authorE || undefined,
+          author: authorE?.trim() || undefined,
           tags: tagsE.length
             ? tagsE.length === 1
               ? tagsE[0]
               : tagsE
             : undefined,
-          status: statusE || undefined,
-          latestChapter: latestChapterE || undefined,
-          latestUpdate: latestUpdateE || undefined,
+          status: statusE?.trim() || undefined,
+          latestChapter: latestChapterE?.trim() || undefined,
+          latestUpdate: latestUpdateE?.trim() || undefined,
           url: this.urlJoin(this.baseUrl, urlE || null),
           sourceId: '',
         });
@@ -206,6 +235,107 @@ abstract class Extension {
       return list;
     };
     this.queryComicElements = this.queryBookElements;
+    this.queryVideoElements = async (
+      body: Document,
+      {
+        // element?: string;
+      // cover?: string;
+      // title?: string;
+      // intro?: string;
+      // releaseDate?: string;
+      // country?: string;
+      // duration?: string;
+      // director?: string;
+      // cast?: string;
+      // tags?: string;
+      // status?: string;
+      // url?: string;
+      // latestUpdate?: string;
+        element = '.bookbox',
+        cover = 'img',
+        title = 'h3 a',
+        intro = '.intro',
+        releaseDate = '.year',
+        country = '.area',
+        duration = '.time',
+        director = '.director',
+        cast = '.actor',
+        tags = '.tags',
+        status = '.status',
+        url = 'a',
+        latestUpdate = '.update',
+      }
+    ) => {
+      const elements = body.querySelectorAll(element);
+
+      const list = [];
+      for (const element of elements) {
+        const img = element.querySelector(cover);
+        let coverE =
+          img?.getAttribute('data-original') ||
+          img?.getAttribute('data-src') ||
+          img?.getAttribute('src') ||
+          img?.getAttribute('data-setbg') ||
+          (img as HTMLElement)?.style.backgroundImage?.replace(
+            /url\(["']?(.*?)["']?\)/,
+            '$1'
+          );
+
+        if (coverE) {
+          if (!coverE.startsWith('http')) {
+            if (coverE.startsWith('//')) {
+              coverE = `https:${coverE}`;
+            } else {
+              coverE = this.urlJoin(this.baseUrl, coverE);
+            }
+          }
+        }
+        const titleE =
+          (!title
+            ? element.textContent || element.getAttribute('title')
+            : null) ||
+          element.querySelector(title)?.textContent ||
+          element.querySelector(title)?.getAttribute('title');
+        const introE = element.querySelector(intro)?.textContent;
+        const releaseDateE = element.querySelector(releaseDate)?.textContent;
+        const countryE = element.querySelector(country)?.textContent;
+        const durationE = element.querySelector(duration)?.textContent;
+        const directorE = element.querySelector(director)?.textContent;
+        const castE = element.querySelector(cast)?.textContent;
+        const tagsE = Array.from(element.querySelectorAll(tags).values())
+          .map((item) => item.textContent)
+          .filter((item): item is string => !!item);
+        const statusE = element.querySelector(status)?.textContent;
+        const latestUpdateE = element.querySelector(latestUpdate)?.textContent;
+
+        const urlE =
+          (!url ? element.getAttribute('href') : null) ||
+          element.querySelector(url)?.getAttribute('href') ||
+          element.querySelector(title)?.getAttribute('href');
+        if (!titleE) continue;
+        list.push({
+          id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
+          title: titleE.trim(),
+          intro: introE?.trim() || undefined,
+          cover: coverE ? this.urlJoin(this.baseUrl, coverE) : undefined,
+          releaseDate: releaseDateE?.trim() || undefined,
+          country: countryE?.trim() || undefined,
+          duration: durationE?.trim() || undefined,
+          director: directorE?.trim() || undefined,
+          cast: castE?.trim() || undefined,
+          tags: tagsE.length
+            ? tagsE.length === 1
+              ? tagsE[0]
+              : tagsE
+            : undefined,
+          status: statusE?.trim() || undefined,
+          latestUpdate: latestUpdateE?.trim() || undefined,
+          url: this.urlJoin(this.baseUrl, urlE || null),
+          sourceId: '',
+        });
+      }
+      return list;
+    };
     this.queryPhotoElements = async (
       body: Document,
       {
@@ -273,6 +403,18 @@ abstract class Extension {
         }
       }
       return list;
+    };
+    this.getContentText = (element?: HTMLElement) => {
+      if (!element) return '';
+      let text = '';
+      for (const child of element.childNodes) {
+        if (child.nodeType === Node.TEXT_NODE) {
+          text += child.textContent + '\n';
+        } else if (child.nodeType === Node.ELEMENT_NODE) {
+          text += this.getContentText(child as HTMLElement) + '\n';
+        }
+      }
+      return text.trim();
     };
   }
 

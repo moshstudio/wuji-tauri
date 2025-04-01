@@ -106,7 +106,7 @@ const sourceName = (comic: ComicItemInShelf) => {
       ></van-button>
     </div>
 
-    <van-tabs shrink class="pb-[50px]">
+    <van-tabs shrink animated class="pb-[50px]">
       <van-tab :title="shelf.name" v-for="shelf in comicShelf" :key="shelf.id">
         <transition name="list" tag="ul">
           <van-list class="p-2">

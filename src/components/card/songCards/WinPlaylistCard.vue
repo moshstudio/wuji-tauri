@@ -5,7 +5,7 @@ import { PropType, ref } from 'vue';
 import { Icon } from '@iconify/vue';
 import tinycolor from 'tinycolor2';
 import { useDisplayStore, useStore } from '@/store';
-import LoadImage from '../LoadImage.vue';
+import LoadImage from '@/components/LoadImage.vue';
 
 const { playlist } = defineProps({
   playlist: {
@@ -35,15 +35,14 @@ const onClick = () => {
 
 <template>
   <div
-    class="bg-[--van-background] rounded-lg shadow transform transition-all duration-100 hover:-translate-y-1 hover:shadow-md cursor-pointer select-none active:bg-[--van-background-2]"
-    :class="displayStore.isMobile ? 'w-[100px]' : 'w-[160px]'"
+    class="w-[160px] flex flex-col gap-2 rounded-lg transform transition-all duration-100 cursor-pointer select-none active:bg-[--van-background]"
     @click="onClick"
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
   >
     <LoadImage
-      :width="displayStore.isMobile ? 100 : 160"
-      :height="displayStore.isMobile ? 120 : 200"
+      :width="160"
+      :height="200"
       fit="cover"
       lazy-load
       :src="playlist.picUrl"
@@ -59,13 +58,13 @@ const onClick = () => {
         <Icon icon="mdi:playlist-music" width="60" height="60" />
       </template>
     </LoadImage>
-    <div
+    <p
       :rows="1"
-      class="text-xs p-2 text-[--van-text-color] h-[32px] truncate"
+      class="text-xs text-center text-[--van-text-color] truncate"
       v-if="playlist.name"
     >
       {{ playlist.name }}
-    </div>
+    </p>
   </div>
 </template>
 

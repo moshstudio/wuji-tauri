@@ -15,6 +15,7 @@ export interface BookItem {
   title: string;
   intro?: string;
   cover?: string;
+  coverHeaders?: Record<string, string>;
   author?: string;
   tags?: string[] | string;
   status?: string;
@@ -70,8 +71,16 @@ abstract class BookExtension extends Extension {
     }
     return r;
   })
-  execGetRecommendBooks(pageNo?: number, type?: string) {
-    return this.getRecommendBooks(pageNo, type);
+  async execGetRecommendBooks(pageNo?: number, type?: string) {
+    const ret = await this.getRecommendBooks(pageNo, type);
+    if (ret) {
+      _.castArray(ret).forEach((bookList) => {
+        bookList.list.forEach((bookItem) => {
+          bookItem.sourceId = String(this.id);
+        });
+      });
+    }
+    return ret;
   }
   // 1. 首页推荐
   abstract getRecommendBooks(
@@ -90,8 +99,16 @@ abstract class BookExtension extends Extension {
     }
     return r;
   })
-  execSearch(keyword: string, pageNo?: number) {
-    return this.search(keyword, pageNo);
+  async execSearch(keyword: string, pageNo?: number) {
+    const ret = await this.search(keyword, pageNo);
+    if (ret) {
+      _.castArray(ret).forEach((bookList) => {
+        bookList.list.forEach((bookItem) => {
+          bookItem.sourceId = String(this.id);
+        });
+      });
+    }
+    return ret;
   }
   // 2. 搜索
   abstract search(keyword: string, pageNo?: number): Promise<BooksList | null>;
@@ -100,13 +117,18 @@ abstract class BookExtension extends Extension {
     if (r) {
       r.id = String(r.id);
       r.chapters?.forEach((chapter) => {
-        chapter.id = String(chapter.id);
+        chapter.id = String(chapter.id || chapter.url || nanoid());
       });
     }
     return r;
   })
-  execGetBookDetail(item: BookItem) {
-    return this.getBookDetail(item);
+  async execGetBookDetail(item: BookItem) {
+    const ret = await this.getBookDetail(_.cloneDeep(item));
+    if (ret) {
+      ret.sourceId = String(this.id);
+      Object.assign(item, ret);
+    }
+    return ret;
   }
   // 3. 获取章节
   abstract getBookDetail(item: BookItem): Promise<BookItem | null>;
@@ -115,7 +137,7 @@ abstract class BookExtension extends Extension {
     return r;
   })
   execGetContent(item: BookItem, chapter: BookChapter) {
-    return this.getContent(item, chapter).then((r) =>
+    return this.getContent(_.cloneDeep(item), chapter).then((r) =>
       r ? purifyText(r) : null
     );
   }

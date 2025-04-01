@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useDisplayStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
-import PhotoCard from '@/components/card/PhotoCard.vue';
+import MobilePhotoCard from '@/components/card/photoCards/MobilePhotoCard.vue';
 import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import PhotoShelf from '@/views/photo/PhotoShelf.vue';
 import { PhotoSource } from '@/types';
 import MobileHeader from '@/components/mobile/MobileHeader.vue';
+import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
 import { ComponentPublicInstance, onBeforeUpdate, ref, watch } from 'vue';
 import { sleep } from '@/utils';
 
@@ -77,25 +78,22 @@ const setContainerRef = (
                 </span>
               </van-sticky>
             </template>
-            <van-row justify="end" class="flex-nowrap mb-2">
+            <div class="flex flex-nowrap px-2">
               <SimplePagination
                 v-model="item.list.page"
                 :page-count="item.list.totalPage"
                 @change="(page) => emit('pageChange', item, page)"
                 v-if="item.list && item.list.totalPage"
               />
-            </van-row>
-            <div class="grid grid-cols-2 gap-2">
-              <p
-                v-if="!item.list?.list.length"
-                class="m-2 text-xs text-gray-600"
-              >
-                内容为空
-              </p>
-              <template v-for="photo in item.list?.list" :key="photo" v-else>
-                <PhotoCard :item="photo"></PhotoCard>
-              </template>
             </div>
+            <p v-if="!item.list?.list.length" class="m-2 text-xs text-gray-600">
+              内容为空
+            </p>
+            <ResponsiveGrid :base-cols="2" :gap="2" v-else>
+              <template v-for="photo in item.list?.list" :key="photo">
+                <MobilePhotoCard :item="photo"></MobilePhotoCard>
+              </template>
+            </ResponsiveGrid>
           </van-collapse-item>
         </div>
       </van-collapse>

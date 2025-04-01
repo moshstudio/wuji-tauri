@@ -21,7 +21,7 @@ const showMoreOptions = ref(false);
 
 <template>
   <div
-    class="flex gap-2 m-2 p-2 bg-[--van-background] rounded-lg shadow transform transition-all duration-100 hover:-translate-y-1 hover:shadow-md cursor-pointer select-none active:bg-[--van-background-2]"
+    class="flex gap-2 p-2 rounded-lg transform transition-all duration-100 cursor-pointer select-none active:bg-[--van-background]"
     @click="() => emit('click', shelfComic, shelfComic.lastReadChapter?.id)"
   >
     <div class="w-[80px] h-[100px]">
@@ -44,16 +44,18 @@ const showMoreOptions = ref(false);
       class="grow flex flex-col gap-1 justify-around text-sm text-[--van-text-color]"
     >
       <div class="flex gap-2 items-center">
-        <p class="text-base font-bold h-6 line-clamp-1">
+        <p class="text-base font-bold h-6 line-clamp-2">
           {{ shelfComic.comic.title }}
         </p>
-        <p class="text-xs text-gray-400">
+        <p class="text-xs text-gray-400 truncate">
           {{ store.getComicSource(shelfComic.comic.sourceId)?.item.name }}
         </p>
       </div>
 
-      <p class="text-xs line-clamp-1 flex gap-2">
-        <span v-if="shelfComic.comic.author">{{ shelfComic.comic.author }}</span>
+      <p class="text-xs truncate flex gap-2">
+        <span v-if="shelfComic.comic.author">{{
+          shelfComic.comic.author
+        }}</span>
         <span v-if="unread"> {{ unread }}章未读 </span>
       </p>
       <p class="text-xs line-clamp-1">

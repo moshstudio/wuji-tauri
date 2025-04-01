@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { SongInfo } from '@/extensions/song';
+import { SongInfo, SongShelf } from '@/extensions/song';
 import { computed, PropType, ref } from 'vue';
-import { useSongStore } from '@/store';
+import { useSongShelfStore, useSongStore } from '@/store';
 import { joinSongArtists } from '@/utils';
 import SongCardPhoto from '@/components/photos/SongCardPhoto.vue';
+import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
 import { SongShelfType } from '@/types/song';
 
 const props = defineProps({
@@ -11,16 +12,18 @@ const props = defineProps({
     type: Object as PropType<SongInfo>,
     required: true,
   },
-  type: {
-    type: String as PropType<SongShelfType>,
+  shelf: {
+    type: Object as PropType<SongShelf>,
     required: true,
   },
 });
 const song = props.song;
-const emit = defineEmits(['play', 'showMoreOptions']);
+const emit = defineEmits(['play']);
 
 const songStore = useSongStore();
+const shelfStore = useSongShelfStore();
 
+const showMoreOptions = ref(false);
 const playButtonVisible = ref(false);
 const isPlayingSong = computed(() => {
   return songStore.playingSong?.id === song.id;
@@ -36,7 +39,8 @@ const onPause = () => {
 
 <template>
   <div
-    class="relative flex items-center max-w-[400px] p-1 active:bg-[--van-background] rounded-lg select-none"
+    class="relative flex items-center p-1 active:scale-[0.98] rounded-lg select-none"
+    :class="isPlayingSong ? 'bg-[var(--van-background)]' : ''"
     @click="onPlay"
   >
     <SongCardPhoto
@@ -60,14 +64,28 @@ const onPause = () => {
         {{ joinSongArtists(song.artists) }}
       </span>
     </div>
-    <div v-if="type !== SongShelfType.playlist">
+    <div v-if="shelf.type !== SongShelfType.playlist">
       <van-icon
         name="ellipsis"
         class="clickable text-[--van-text-color]"
         size="16"
-        @click.stop="() => emit('showMoreOptions')"
+        @click.stop="() => (showMoreOptions = !showMoreOptions)"
       />
     </div>
+    <MoreOptionsSheet
+      v-model="showMoreOptions"
+      :actions="[
+        {
+          name: '从当前收藏夹移除',
+          subname: song.name,
+          color: '#1989fa',
+          callback: () => {
+            showMoreOptions = false;
+            shelfStore.removeSongFromShelf(song, shelf.playlist.id);
+          },
+        },
+      ]"
+    ></MoreOptionsSheet>
   </div>
 </template>
 

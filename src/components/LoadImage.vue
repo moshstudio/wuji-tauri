@@ -1,5 +1,10 @@
 <template>
-  <van-image :src="processedSrc" v-bind="restProps" v-on="listeners">
+  <van-image
+    :src="processedSrc"
+    v-bind="restProps"
+    v-on="listeners"
+    :class="attrs.class"
+  >
     <slot></slot>
 
     <!-- 传递具名插槽 -->

@@ -40,7 +40,11 @@ const displayStore = useDisplayStore();
       class="grow flex flex-col items-center overflow-y-auto p-4 bg-[--van-background-3] select-none"
       v-if="book"
     >
-      <van-row justify="center" align="center" class="p-2 shadow-md w-[80%]">
+      <van-row
+        justify="center"
+        align="center"
+        class="p-2 rounded shadow-md w-[80%]"
+      >
         <van-image
           width="80px"
           height="100px"
@@ -76,13 +80,10 @@ const displayStore = useDisplayStore();
             expand-text="展开"
             collapse-text="收起"
           />
-          <p>
-            <span class="text-sm">{{ book.latestChapter }}</span>
-          </p>
         </div>
       </van-row>
       <div
-        class="p-2 mt-4 shadow-md text-[--van-text-color] w-[80%]"
+        class="p-2 mt-4 shadow-md rounded text-[--van-text-color] lg:w-[80%]"
         v-if="book.chapters"
       >
         <div class="w-full flex justify-between gap-2 items-center">
@@ -101,16 +102,16 @@ const displayStore = useDisplayStore();
           </div>
         </div>
         <ResponsiveGrid>
-          <li
+          <div
             v-for="chapter in isAscending
               ? book.chapters
               : [...book.chapters].reverse()"
             :key="chapter.id"
             @click="() => emit('toChapter', chapter)"
-            class="text-sm p-2 h-9 hover:bg-[--van-background] hover:shadow-md rounded-lg cursor-pointer select-none truncate van-haptics-feedback"
+            class="text-sm p-2 hover:bg-[--van-background] rounded-lg cursor-pointer select-none truncate van-haptics-feedback"
           >
             {{ chapter.title }}
-          </li>
+          </div>
         </ResponsiveGrid>
       </div>
     </main>

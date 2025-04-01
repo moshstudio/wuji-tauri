@@ -2,7 +2,7 @@
 import { useSongStore } from '@/store';
 import { SongPlayMode } from '@/types/song';
 import { Icon } from '@iconify/vue';
-import { ref, watch } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 import MobileSongCard from '../card/songCards/MobileSongCard.vue';
 import { SongInfo } from '@/extensions/song';
 
@@ -40,7 +40,6 @@ watch(height, (h) => {
   <van-overlay :show="show" @click="show = false" class="z-[1001]">
     <van-floating-panel
       v-model:height="height"
-      title="播放列表"
       :anchors="anchors"
       :content-draggable="true"
       teleport="body"
@@ -48,8 +47,8 @@ watch(height, (h) => {
       @click.stop
       @touchmove.stop
     >
-      <div class="flex flex-col px-4 overflow-auto">
-        <div class="flex select-none pb-2">
+      <div class="flex flex-col h-full px-2 overflow-hidden">
+        <div class="flex select-none pb-2 pl-2">
           <div class="playMode">
             <div
               class="flex gap-1 items-center text-sm cursor-pointer van-haptics-feedback text-gray-400 hover:text-[--van-text-color]"
@@ -77,11 +76,20 @@ watch(height, (h) => {
             </div>
           </div>
         </div>
-        <div v-for="song in songStore.playingPlaylist" :key="song.id">
-          <MobileSongCard
-            :song="song"
-            @play="() => onPlay(song)"
-          ></MobileSongCard>
+        <div
+          class="flex flex-col flex-grow overflow-y-auto pl-2"
+          @click.stop
+          @touchmove.stop
+        >
+          <div v-for="song in songStore.playingPlaylist" :key="song.id">
+            <MobileSongCard
+              :song="song"
+              @play="() => onPlay(song)"
+              :class="
+                song.id === songStore.playingSong?.id ? 'playing-song' : ''
+              "
+            ></MobileSongCard>
+          </div>
         </div>
       </div>
     </van-floating-panel>

@@ -66,6 +66,17 @@ const emit = defineEmits<{
 const displayStore = useDisplayStore();
 const comicStore = useComicStore();
 
+const bubbleOffset = ref({
+  x: document.querySelector('body')!.clientWidth - 50,
+  y: document.querySelector('body')!.clientHeight - 160,
+});
+watch(bubbleOffset, (offset) => {
+  const ch = document.querySelector('body')!.clientHeight;
+  if (offset.y > ch - 140) {
+    offset.y = ch - 140;
+  }
+});
+
 function goBack() {
   // uni.navigateBack();
   emit('back', true);
@@ -165,54 +176,56 @@ const showMenu = ref(false);
     <div class="scroll-container flex h-full overflow-y-auto w-full">
       <div
         id="comic-read-content"
-        class="w-full relative overflow-y-auto p-4 text-justify leading-[1.8] text-[--van-text-color]"
+        class="w-full relative overflow-y-auto text-justify py-2 leading-[0] text-[--van-text-color]"
         @click="() => (showMenu = !showMenu)"
         v-if="readingContent"
       >
-        <div class="w-full flex items-center justify-between">
-          <div
-            class="text-sm w-[50px] van-haptics-feedback"
-            @click.stop="chapterPrev"
-          >
-            上一章
-          </div>
-
-          <div
-            class="text-sm w-[50px] van-haptics-feedback"
-            @click.stop="chapterNext"
-          >
-            下一章
-          </div>
-        </div>
-        <div
-          v-for="(item, index) in readingContent.photos"
-          :key="index"
-          class="w-full text-center"
+        <template
+          v-if="readingContent"
+          v-for="item in readingContent.photos"
+          :key="item.id"
         >
-          <LoadImage
-            :src="item"
-            :headers="readingContent.photosHeaders"
-            fit="contain"
-            lazy-load
-            class="rounded-lg max-w-[100%] max-h-[100%]"
-          />
-        </div>
-
-        <div class="w-full flex items-center justify-between gap-[10px]">
-          <div
-            class="text-sm w-[50px] van-haptics-feedback"
-            @click.stop="chapterPrev"
-          >
-            上一章
+          <div class="w-full min-h-[50px] text-center leading-[0]">
+            <LoadImage
+              :src="item"
+              :headers="readingContent.photosHeaders"
+              fit="contain"
+              lazy-load
+            >
+            </LoadImage>
           </div>
+        </template>
 
+        <van-floating-bubble
+          v-model:offset="bubbleOffset"
+          axis="xy"
+          magnetic="x"
+          :gap="6"
+          teleport=".scroll-container"
+        >
           <div
-            class="text-sm w-[50px] van-haptics-feedback"
-            @click.stop="chapterNext"
+            class="flex flex-col h-[90px] gap-[0px] items-center leading-[0]"
           >
-            下一章
+            <van-button
+              icon="arrow-up"
+              square
+              hairline
+              size="small"
+              class="w-[40px] h-[45px]"
+              @click="() => emit('prevChapter')"
+            >
+            </van-button>
+            <van-button
+              icon="arrow-down"
+              square
+              hairline
+              size="small"
+              class="w-[40px] h-[45px]"
+              @click="() => emit('nextChapter')"
+            >
+            </van-button>
           </div>
-        </div>
+        </van-floating-bubble>
       </div>
     </div>
     <!-- 底部菜单 -->
@@ -258,7 +271,7 @@ const showMenu = ref(false);
       <van-list>
         <template v-for="item in comic?.chapters" :key="item.id">
           <div
-            class="flex justify-start items-center text-sm text-[--van-text-color-2] gap-2 p-2 flex-nowrap select-none van-haptics-feedback"
+            class="flex justify-start items-center text-sm gap-2 p-2 flex-nowrap select-none van-haptics-feedback"
             :class="{
               'bg-black reading-chapter': readingChapter?.id === item.id,
             }"
@@ -273,10 +286,16 @@ const showMenu = ref(false);
               icon="iconamoon:eye-thin"
               width="24"
               height="24"
+              color="var(--van-primary-color)"
               v-if="readingChapter?.id === item.id"
             />
             <span
               class="flex-grow text-left overflow-hidden text-nowrap text-ellipsis"
+              :class="
+                readingChapter?.id === item.id
+                  ? 'text-[var(--van-primary-color)]'
+                  : 'text-[#f5f5f5]'
+              "
             >
               {{ item.title }}
             </span>
@@ -295,7 +314,14 @@ const showMenu = ref(false);
         <div class="text-white">界面设置</div>
       </template>
       <div class="flex flex-col p-2 text-sm">
-        <div class="pb-2">暂无设置</div>
+        <van-cell class="bg-[#1f1f1f]" v-if="displayStore.isAndroid">
+          <template #title>
+            <span class="text-white">保持屏幕常亮</span>
+          </template>
+          <template #value>
+            <van-switch v-model="displayStore.comicKeepScreenOn" />
+          </template>
+        </van-cell>
       </div>
     </van-dialog>
     <ComicShelf></ComicShelf>
@@ -324,5 +350,14 @@ const showMenu = ref(false);
   .bottom {
     transform: translateY(100%);
   }
+}
+:deep(.van-floating-bubble) {
+  height: 90px;
+  width: 40px;
+  border: 1px solid var(--van-border-color);
+  background-color: rgb(from var(--van-background) r g b / 50%);
+}
+:deep(.van-floating-bubble:active) {
+  opacity: 1;
 }
 </style>

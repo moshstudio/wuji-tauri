@@ -39,10 +39,10 @@ const emit = defineEmits<{
     />
     <main
       ref="content"
-      class="grow flex flex-col overflow-y-auto p-4 bg-[--van-background-3] select-none"
+      class="grow flex flex-col overflow-y-auto bg-[--van-background-3] select-none"
     >
       <div
-        class="w-full text-center"
+        class="w-full text-center leading-none"
         v-for="(item, index) in photoDetail?.photos"
         :key="index"
       >
@@ -51,7 +51,6 @@ const emit = defineEmits<{
           :headers="photoDetail?.photosHeaders"
           fit="contain"
           lazy-load
-          class="rounded-lg max-w-[100%] max-h-[100%]"
         />
       </div>
     </main>

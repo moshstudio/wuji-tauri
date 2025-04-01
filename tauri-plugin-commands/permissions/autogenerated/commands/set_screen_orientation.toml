@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-set-screen-orientation"
+description = "Enables the set_screen_orientation command without any pre-configured scope."
+commands.allow = ["set_screen_orientation"]
+
+[[permission]]
+identifier = "deny-set-screen-orientation"
+description = "Denies the set_screen_orientation command without any pre-configured scope."
+commands.deny = ["set_screen_orientation"]

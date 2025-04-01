@@ -34,6 +34,8 @@
     "core:window:allow-destroy",
     "core:window:allow-hide",
     "core:window:allow-get-all-windows",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-is-fullscreen",
     "commands:default",
     "mediasession:default",
     "log:allow-log",
@@ -60,6 +62,7 @@
       "identifier": "fs2:scope",
       "allow": [{ "path": "**" }]
     },
-    "dialog:default"
+    "dialog:default",
+    "keep-screen-on:default"
   ]
 }

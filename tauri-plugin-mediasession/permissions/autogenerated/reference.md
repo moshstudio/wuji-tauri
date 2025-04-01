@@ -6,6 +6,7 @@ Default permissions for the plugin
 - `allow-update-playlist-order`
 - `allow-play-target-music`
 - `allow-seek-to`
+- `allow-set-play-mode`
 - `allow-set-volume`
 - `allow-set-playlist`
 - `allow-play`
@@ -281,6 +282,32 @@ Enables the seek_to command without any pre-configured scope.
 <td>
 
 Denies the seek_to command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`mediasession:allow-set-play-mode`
+
+</td>
+<td>
+
+Enables the set_play_mode command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`mediasession:deny-set-play-mode`
+
+</td>
+<td>
+
+Denies the set_play_mode command without any pre-configured scope.
 
 </td>
 </tr>

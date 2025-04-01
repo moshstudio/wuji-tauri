@@ -3,6 +3,7 @@ import { SongExtension, SongList, PlaylistList } from '@/extensions/song';
 import { PhotoExtension, PhotoList } from '@/extensions/photo';
 import { BookExtension, BooksList } from '@/extensions/book';
 import { ComicsList } from '@/extensions/comic';
+import { VideosList } from '@/extensions/video';
 
 export interface Source {
   item: SubscribeItem;
@@ -29,6 +30,9 @@ export interface BookSource extends Source {
 }
 export interface ComicSource extends Source {
   list?: ComicsList;
+}
+export interface VideoSource extends Source {
+  list?: VideosList;
 }
 
 export interface SubscribeItem {

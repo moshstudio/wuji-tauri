@@ -31,7 +31,8 @@ const onPause = () => {
 
 <template>
   <div
-    class="relative flex items-center max-w-[400px] p-1 active:bg-[--van-background] rounded-lg select-none"
+    class="relative flex items-center p-1 active:scale-[0.98] rounded-lg select-none"
+    :class="isPlayingSong ? 'bg-[var(--van-background)]' : ''"
     @click="onPlay"
   >
     <SongCardPhoto
@@ -48,7 +49,14 @@ const onPause = () => {
     <div
       class="grow flex flex-col pl-2 text-xs min-w-[10px] justify-around truncate"
     >
-      <span class="text-[--van-text-color] font-bold">
+      <span
+        class="font-bold"
+        :class="
+          isPlayingSong && songStore.isPlaying
+            ? 'text-[var(--van-primary-color)]'
+            : 'text-[--van-text-color]'
+        "
+      >
         {{ song.name }}
       </span>
       <span class="text-[gray]">

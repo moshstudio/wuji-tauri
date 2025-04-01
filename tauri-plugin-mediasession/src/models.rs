@@ -54,7 +54,6 @@ pub struct PauseRequest {}
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct StopRequest {}
 
-
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct SetVolumeRequest {
     volume: f64,
@@ -63,4 +62,9 @@ pub struct SetVolumeRequest {
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct SeekToRequest {
     milliseconds: i32,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct PlayModeRequest {
+    mode: i32,
 }

@@ -17,13 +17,19 @@ impl<R: Runtime> Mediasession<R> {
     pub fn set_playlist(&self, payload: SetPlaylistRequest) -> crate::Result<BooleanResponse> {
         Ok(BooleanResponse { value: Some(true) })
     }
-    pub fn update_playlist_order(&self, payload: UpdatePlaylistOrderRequest) -> crate::Result<BooleanResponse> {
+    pub fn update_playlist_order(
+        &self,
+        payload: UpdatePlaylistOrderRequest,
+    ) -> crate::Result<BooleanResponse> {
         Ok(BooleanResponse { value: Some(true) })
     }
     pub fn play_target_music(&self, payload: PlayMusicItem) -> crate::Result<BooleanResponse> {
         Ok(BooleanResponse { value: Some(true) })
     }
-    pub fn update_music_item(&self, payload: UpdateMusicItemRequest) -> crate::Result<BooleanResponse> {
+    pub fn update_music_item(
+        &self,
+        payload: UpdateMusicItemRequest,
+    ) -> crate::Result<BooleanResponse> {
         Ok(BooleanResponse { value: Some(true) })
     }
     pub fn play(&self, payload: PlayRequest) -> crate::Result<BooleanResponse> {
@@ -39,6 +45,9 @@ impl<R: Runtime> Mediasession<R> {
         Ok(BooleanResponse { value: Some(true) })
     }
     pub fn seek_to(&self, payload: SeekToRequest) -> crate::Result<BooleanResponse> {
+        Ok(BooleanResponse { value: Some(true) })
+    }
+    pub fn set_play_mode(&self, payload: PlayModeRequest) -> crate::Result<BooleanResponse> {
         Ok(BooleanResponse { value: Some(true) })
     }
 }

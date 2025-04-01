@@ -1,4 +1,4 @@
-import _, { uniqueId } from 'lodash';
+import _ from 'lodash';
 import CryptoJS from 'crypto-js';
 import { HotItem } from '@/apis/hot/apiHot';
 import {
@@ -17,6 +17,7 @@ import {
   SubscribeItem,
   BookSource,
   ComicSource,
+  VideoSource,
 } from '@/types';
 import {
   StorageLikeAsync,
@@ -39,6 +40,7 @@ import {
 } from 'vant';
 import {
   computed,
+  nextTick,
   onBeforeMount,
   onMounted,
   onUnmounted,
@@ -52,6 +54,7 @@ import { Store } from '@tauri-apps/plugin-store';
 import { type as osType } from '@tauri-apps/plugin-os';
 import * as fs from 'tauri-plugin-fs-api';
 import * as androidMedia from 'tauri-plugin-mediasession-api';
+import * as commands from 'tauri-plugin-commands-api';
 import { ClientOptions, fetch } from '@/utils/fetch';
 import {
   loadSongExtensionString,
@@ -86,10 +89,12 @@ import { Extension } from '@/extensions/baseExtension';
 import TestPhotoExtension from '@/extensions/photo/test';
 import TestSongExtension from '@/extensions/song/test';
 import TestBookExtension from '@/extensions/book/test';
+import TestComicExtension from '@/extensions/comic/test';
+import TestVideoExtension from '@/extensions/video/test';
 import { nanoid } from 'nanoid';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { getSongCover } from '@/utils/songCover';
-import TestComicExtension from '@/extensions/comic/test';
+
 import {
   ComicChapter,
   ComicContent,
@@ -98,6 +103,17 @@ import {
   ComicShelf,
   loadComicExtensionString,
 } from '@/extensions/comic';
+import {
+  loadVideoExtensionString,
+  VideoEpisode,
+  VideoExtension,
+  VideoItem,
+  VideoItemInShelf,
+  VideoResource,
+  VideoShelf,
+  VideoUrlMap,
+} from '@/extensions/video';
+import HeartSVG from '@/assets/heart-fill.svg';
 
 async function tauriAddPluginListener<T>(
   plugin: string,
@@ -143,6 +159,9 @@ export const useStore = defineStore('store', () => {
         case SourceType.Comic:
           sourceClasses.set(item.id, new TestComicExtension());
           break;
+        case SourceType.Video:
+          sourceClasses.set(item.id, new TestVideoExtension());
+          break;
         default:
           break;
       }
@@ -162,6 +181,7 @@ export const useStore = defineStore('store', () => {
       | SongExtension
       | BookExtension
       | ComicExtension
+      | VideoExtension
       | undefined;
     switch (item.type) {
       case SourceType.Photo:
@@ -175,6 +195,9 @@ export const useStore = defineStore('store', () => {
         break;
       case SourceType.Comic:
         extensionClass = loadComicExtensionString(item.code);
+        break;
+      case SourceType.Video:
+        extensionClass = loadVideoExtensionString(item.code);
         break;
       default:
         extensionClass = undefined;
@@ -217,6 +240,11 @@ export const useStore = defineStore('store', () => {
     [],
     kvStorage.storage
   );
+  const videoSources = useStorageAsync<VideoSource[]>(
+    'videoSources',
+    [],
+    kvStorage.storage
+  );
   const keepTest = ref(false);
 
   const __split__0 = () => {};
@@ -231,9 +259,6 @@ export const useStore = defineStore('store', () => {
     const res = await sc?.execGetRecommendList(pageNo);
 
     if (res) {
-      res.list.forEach((item) => {
-        item.sourceId = source.item.id;
-      });
       source.list = res;
     } else {
       showToast(`${source.item.name} 推荐结果为空`);
@@ -253,9 +278,6 @@ export const useStore = defineStore('store', () => {
     const res = await sc?.execSearch(keyword, pageNo);
 
     if (res) {
-      res.list.forEach((item) => {
-        item.sourceId = source.item.id;
-      });
       source.list = res;
     } else {
       showToast(`${source.item.name} 搜索结果为空`);
@@ -274,7 +296,6 @@ export const useStore = defineStore('store', () => {
     const sc = (await sourceClass(source.item)) as PhotoExtension;
     const res = await sc?.execGetPhotoDetail(item, pageNo);
     if (res) {
-      res.sourceId = source.item.id;
       return res;
     } else {
       showNotify(`${source.item.name} 获取内容失败`);
@@ -322,9 +343,6 @@ export const useStore = defineStore('store', () => {
     const sc = (await sourceClass(source.item)) as SongExtension;
     const res = await sc?.execGetRecommendPlaylists(pageNo);
     if (res) {
-      res.list.forEach((item) => {
-        item.sourceId = source.item.id;
-      });
       source.playlist = res;
     } else {
       source.playlist = undefined;
@@ -346,9 +364,6 @@ export const useStore = defineStore('store', () => {
     const res = await sc?.execGetPlaylistDetail(item, pageNo);
     toast.close();
     if (res) {
-      res.list?.list.forEach((item) => {
-        item.sourceId = source.item.id;
-      });
       return res;
     } else {
       showNotify(`${source.item.name} 获取内容失败`);
@@ -369,11 +384,6 @@ export const useStore = defineStore('store', () => {
         _.cloneDeep(item), // 不修改原对象
         pageNo
       );
-      if (res) {
-        res?.list?.list.forEach((item) => {
-          item.sourceId = source.item.id;
-        });
-      }
 
       if (res && res.list?.list) {
         songs.push(...res.list.list);
@@ -398,9 +408,6 @@ export const useStore = defineStore('store', () => {
     const sc = (await sourceClass(source.item)) as SongExtension;
     const res = await sc?.execGetRecommendSongs(pageNo);
     if (res) {
-      res.list.forEach((item) => {
-        item.sourceId = source.item.id;
-      });
       source.songList = res;
     } else {
       source.songList = undefined;
@@ -415,9 +422,6 @@ export const useStore = defineStore('store', () => {
     const sc = (await sourceClass(source.item)) as SongExtension;
     const res = await sc?.execSearchSongs(keyword, pageNo);
     if (res) {
-      res.list.forEach((item) => {
-        item.sourceId = source.item.id;
-      });
       source.songList = res;
     } else {
       source.songList = undefined;
@@ -432,9 +436,6 @@ export const useStore = defineStore('store', () => {
     const sc = (await sourceClass(source.item)) as SongExtension;
     const res = await sc?.execSearchPlaylists(keyword, pageNo);
     if (res) {
-      res.list.forEach((item) => {
-        item.sourceId = source.item.id;
-      });
       source.playlist = res;
     } else {
       source.playlist = undefined;
@@ -464,12 +465,6 @@ export const useStore = defineStore('store', () => {
     const res = await sc?.execGetRecommendBooks(pageNo, type);
 
     if (res) {
-      _.castArray(res).forEach((book) => {
-        book.list.forEach((item) => {
-          item.sourceId = source.item.id;
-        });
-      });
-
       if (!type) {
         // 1. 获取的不是指定type类型的数据，直接赋值
         source.list = res;
@@ -503,11 +498,6 @@ export const useStore = defineStore('store', () => {
         source.list = undefined;
         return;
       }
-      _.castArray(res).forEach((book) => {
-        book.list.forEach((item) => {
-          item.sourceId = source.item.id;
-        });
-      });
       source.list = res;
     } else {
       source.list = undefined;
@@ -517,7 +507,6 @@ export const useStore = defineStore('store', () => {
     const sc = (await sourceClass(source.item)) as BookExtension;
     const res = await sc?.execGetBookDetail(book);
     if (res) {
-      res.sourceId = source.item.id;
       return res;
     } else {
       showNotify(`${source.item.name} 获取内容失败`);
@@ -626,12 +615,6 @@ export const useStore = defineStore('store', () => {
     const res = await sc?.execGetRecommendComics(pageNo, type);
 
     if (res) {
-      _.castArray(res).forEach((book) => {
-        book.list.forEach((item) => {
-          item.sourceId = source.item.id;
-        });
-      });
-
       if (!type) {
         // 1. 获取的不是指定type类型的数据，直接赋值
         source.list = res;
@@ -651,7 +634,7 @@ export const useStore = defineStore('store', () => {
         source.list = undefined;
       }
     }
-    triggerRef(bookSources);
+    triggerRef(comicSources);
   };
   const comicSearch = async (
     source: ComicSource,
@@ -665,11 +648,6 @@ export const useStore = defineStore('store', () => {
         source.list = undefined;
         return;
       }
-      _.castArray(res).forEach((book) => {
-        book.list.forEach((item) => {
-          item.sourceId = source.item.id;
-        });
-      });
       source.list = res;
     } else {
       source.list = undefined;
@@ -679,7 +657,6 @@ export const useStore = defineStore('store', () => {
     const sc = (await sourceClass(source.item)) as ComicExtension;
     const res = await sc?.execGetComicDetail(comic);
     if (res) {
-      res.sourceId = source.item.id;
       return res;
     } else {
       showNotify(`${source.item.name} 获取内容失败`);
@@ -732,6 +709,114 @@ export const useStore = defineStore('store', () => {
     }
   };
 
+  const __split__4 = () => {};
+
+  const videoRecommendList = async (
+    source: VideoSource,
+    pageNo: number = 1,
+    type?: string
+  ) => {
+    const sc = (await sourceClass(source.item)) as VideoExtension;
+    const res = await sc?.execGetRecommendVideos(pageNo, type);
+
+    if (res) {
+      if (!type) {
+        // 1. 获取的不是指定type类型的数据，直接赋值
+        source.list = res;
+      } else {
+        // 2. 获取的是指定type类型的数据，判断是否已经存在，不存在则添加
+        const find = _.castArray(source.list).find(
+          (item) => item.type === type
+        );
+        if (find) {
+          _.assign(find, res);
+        } else {
+          source.list = [..._.castArray(source.list), ..._.castArray(res)];
+        }
+      }
+    } else {
+      if (!type) {
+        source.list = undefined;
+      }
+    }
+    triggerRef(videoSources);
+  };
+  const videoSearch = async (
+    source: VideoSource,
+    keyword: string,
+    pageNo: number = 1
+  ) => {
+    const sc = (await sourceClass(source.item)) as VideoExtension;
+    const res = await sc?.execSearch(keyword, pageNo);
+    if (res) {
+      if (!_.isArray(res) && !res.list?.length) {
+        source.list = undefined;
+        return;
+      }
+      source.list = res;
+    } else {
+      source.list = undefined;
+    }
+  };
+  const videoDetail = async (source: VideoSource, video: VideoItem) => {
+    const sc = (await sourceClass(source.item)) as VideoExtension;
+    const res = await sc?.execGetVideoDetail(video);
+    if (res) {
+      return res;
+    } else {
+      showNotify(`${source.item.name} 获取内容失败`);
+      return null;
+    }
+  };
+  const videoPlay = async (
+    source: VideoSource,
+    video: VideoItem,
+    resource: VideoResource,
+    episode: VideoEpisode
+  ): Promise<VideoUrlMap | null> => {
+    const sc = (await sourceClass(source.item)) as VideoExtension;
+    const res = await sc?.execGetPlayUrl(video, resource, episode);
+    return res;
+  };
+  const getVideoSource = (sourceId: string): VideoSource | undefined => {
+    return videoSources.value.find((item) => item.item.id === sourceId);
+  };
+  const getVideoItem = (
+    source: VideoSource,
+    videoId: string
+  ): ComicItem | undefined => {
+    const checkFromShelf = () => {
+      for (const shelf of shelfStore.videoShelf) {
+        for (const video of shelf.videos) {
+          if (video.video.id === videoId) {
+            return video.video;
+          }
+        }
+      }
+    };
+    const fromSource = () => {
+      if (source.list) {
+        for (let videoList of _.castArray(source.list)) {
+          if (videoList.list) {
+            for (let videoItem of videoList.list) {
+              if (videoItem.id === videoId) {
+                return videoItem;
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const shelfStore = useVideoShelfStore();
+    // 优先从书架中获取
+    if (shelfStore.isVideoInShelf(videoId)) {
+      return checkFromShelf();
+    } else {
+      return fromSource();
+    }
+  };
+
   /**
    * 根据名称获取源
    */
@@ -766,6 +851,10 @@ export const useStore = defineStore('store', () => {
       case SourceType.Comic:
         _.remove(comicSources.value, (p) => p.item.id === item.id);
         triggerRef(comicSources);
+        break;
+      case SourceType.Video:
+        _.remove(videoSources.value, (p) => p.item.id === item.id);
+        triggerRef(videoSources);
         break;
       default:
         return undefined;
@@ -865,12 +954,14 @@ export const useStore = defineStore('store', () => {
         | SongExtension
         | BookExtension
         | ComicExtension
+        | VideoExtension
         | undefined;
       for (const [t, f] of [
         [SourceType.Photo, loadPhotoExtensionString],
         [SourceType.Book, loadBookExtensionString],
         [SourceType.Song, loadSongExtensionString],
         [SourceType.Comic, loadComicExtensionString],
+        [SourceType.Video, loadVideoExtensionString],
       ] as const) {
         const c = f(String(content));
         if (c) {
@@ -1016,6 +1107,17 @@ export const useStore = defineStore('store', () => {
         }
         triggerRef(comicSources);
         break;
+      case SourceType.Video:
+        index = videoSources.value.findIndex(
+          (item) => item.item.id === source.item.id
+        );
+        if (index != -1) {
+          videoSources.value[index].item = source.item;
+        } else {
+          videoSources.value.push(source as VideoSource);
+        }
+        triggerRef(videoSources);
+        break;
       default:
         console.log('暂未实现', source);
         break;
@@ -1037,6 +1139,9 @@ export const useStore = defineStore('store', () => {
         break;
       case SourceType.Comic:
         _.remove(comicSources.value, (source) => source.item.id === itemId);
+        break;
+      case SourceType.Video:
+        _.remove(videoSources.value, (source) => source.item.id === itemId);
         break;
       default:
         console.log('暂未实现 removeFromSource', sourceType);
@@ -1077,6 +1182,7 @@ export const useStore = defineStore('store', () => {
       ...songSources.value,
       ...bookSources.value,
       ...comicSources.value,
+      ...videoSources.value,
     ]) {
       if (!added.includes(source.item.id)) {
         if (source.item.id.includes('test') && keepTest.value) {
@@ -1107,6 +1213,9 @@ export const useStore = defineStore('store', () => {
         break;
       case SourceType.Comic:
         item.type = SourceType.Comic;
+        break;
+      case SourceType.Video:
+        item.type = SourceType.Video;
         break;
       default:
         break;
@@ -1139,6 +1248,8 @@ export const useStore = defineStore('store', () => {
     bookShelfStore.clear(); // 清空书架
     const comicShelfStore = useComicShelfStore();
     comicShelfStore.clear(); // 清空漫画收藏
+    const videoShelfStore = useVideoShelfStore();
+    videoShelfStore.clear(); // 清空视频收藏
 
     // 清空章节缓存
     bookChapterStore.clear();
@@ -1178,7 +1289,7 @@ export const useStore = defineStore('store', () => {
     await subscribeSourceStore.init();
     if (!subscribeSourceStore.isEmpty) {
       // 更新订阅源
-      if (Date.now() - latestUpdateSource.value > 1000 * 60 * 60 * 6) {
+      if (Date.now() - latestUpdateSource.value > 1000 * 60 * 60 * 24) {
         await updateSubscribeSources();
         latestUpdateSource.value = Date.now();
       }
@@ -1202,11 +1313,13 @@ export const useStore = defineStore('store', () => {
         }
       } catch (error) {}
     }
-    // keepTest.value = true;
+    keepTest.value = true;
     // addTestSource(new TestSongExtension(), SourceType.Song);
     // addTestSource(new TestBookExtension(), SourceType.Book);
     // addTestSource(new TestPhotoExtension(), SourceType.Photo);
     // addTestSource(new TestComicExtension(), SourceType.Comic);
+    addTestSource(new TestVideoExtension(), SourceType.Video);
+
     loadSubscribeSources(true);
   });
   return {
@@ -1248,6 +1361,14 @@ export const useStore = defineStore('store', () => {
     getComicSource,
     getComicItem,
 
+    videoSources,
+    videoRecommendList,
+    videoSearch,
+    videoDetail,
+    videoPlay,
+    getVideoSource,
+    getVideoItem,
+
     addSubscribeSource,
     addLocalSubscribeSource,
     loadSubscribeSources,
@@ -1260,17 +1381,36 @@ export const useStore = defineStore('store', () => {
 });
 
 export const useDisplayStore = defineStore('display', () => {
+  const showTabBar = ref(true);
+  const fullScreenMode = ref(false);
+  watch(
+    fullScreenMode,
+    async (newValue) => {
+      //android 全屏播放时，自动隐藏状态栏
+      if (newValue) {
+        showTabBar.value = false;
+        await commands.set_screen_orientation('landscape');
+      } else {
+        showTabBar.value = true;
+        await commands.set_screen_orientation('portrait');
+      }
+    },
+    { immediate: true }
+  );
   // 检测是否为手机尺寸
   const mobileMediaQuery = window.matchMedia('(max-width: 420px)');
   // 检测是否为横屏
   const landscapeMediaQuery = window.matchMedia('(orientation: landscape)');
 
-  const isMobile = ref(osType() == 'android' || mobileMediaQuery.matches);
+  const isMobileView = ref(osType() == 'android' || mobileMediaQuery.matches);
+  const isWindows = ref(osType() == 'windows');
   const isAndroid = ref(osType() == 'android');
   const isLandscape = ref(landscapeMediaQuery.matches);
 
   const checkMobile = (event: MediaQueryListEvent) => {
-    isMobile.value = osType() == 'android' || event.matches;
+    // 全屏状态下就不刷新`isMobile`了
+    if (fullScreenMode.value) return;
+    isMobileView.value = osType() == 'android' || event.matches;
   };
   const checklanscape = (event: MediaQueryListEvent) => {
     isLandscape.value = event.matches;
@@ -1291,7 +1431,6 @@ export const useDisplayStore = defineStore('display', () => {
 
   const isDark = useDark();
   const toggleDark = useToggle(isDark);
-  const showTabBar = ref(true);
 
   const showAddSubscribeDialog = ref(false);
   const showManageSubscribeDialog = ref(false);
@@ -1308,10 +1447,17 @@ export const useDisplayStore = defineStore('display', () => {
   const showAddComicShelfDialog = ref(false);
   const showRemoveComicShelfDialog = ref(false);
 
+  const showAddVideoShelfDialog = ref(false);
+  const showRemoveVideoShelfDialog = ref(false);
+
   const showAboutDialog = ref(false);
 
   const showSettingDialog = ref(false);
   const showLeftPopup = ref(false);
+
+  // 仅移动端有效
+  const bookKeepScreenOn = useStorageAsync('bookKeepScreenOn', false);
+  const comicKeepScreenOn = useStorageAsync('comicKeepScreenOn', false);
 
   const trayId = ref('');
 
@@ -1322,20 +1468,60 @@ export const useDisplayStore = defineStore('display', () => {
   const songCollapse = useStorageAsync('songCollapse', []);
   const bookCollapse = useStorageAsync('bookCollapse', []);
   const comicCollapse = useStorageAsync('comicCollapse', []);
+  const videoCollapse = useStorageAsync('videoCollapse', []);
 
   const routerCurrPath = useStorageAsync('routerCurrPath', '/');
   const photoPath = useStorageAsync('photoPath', '/photo');
   const songPath = useStorageAsync('songPath', '/song');
   const bookPath = useStorageAsync('bookPath', '/book');
   const comicPath = useStorageAsync('comicPath', '/comic');
+  const videoPath = useStorageAsync('videoPath', '/video');
 
   const showPhotoShelf = useStorageAsync('showPhotoShelf', false);
   const showSongShelf = useStorageAsync('showSongShelf', false);
   const showSongShelfDetail = useStorageAsync('showSongShelfDetail', false);
+  const selectedSongShelf = useStorageAsync<SongShelf | undefined>(
+    'selectedSongShelf',
+    undefined,
+    undefined,
+    {
+      serializer: {
+        read: async (raw: string) => {
+          if (!raw) return undefined;
+          return JSON.parse(raw);
+        },
+        write: async (value: SongShelf | undefined) => {
+          if (!value) return '';
+          return JSON.stringify(value);
+        },
+      },
+    }
+  );
+  const showImportPlaylistDialog = useStorageAsync(
+    'showImportPlaylistDialog',
+    false
+  );
   const showBookShelf = useStorageAsync('showBookShelf', false);
   const showComicShelf = useStorageAsync('showComicShelf', false);
+  const showVideoShelf = useStorageAsync('showVideoShelf', false);
   const showPlayView = useStorageAsync('showPlayView', false);
   const showPlayingPlaylist = useStorageAsync('showPlayingPlaylist', false);
+
+  watch(
+    showPlayingPlaylist,
+    (val) => {
+      if (val) {
+        nextTick(() => {
+          document
+            .querySelector('.playing-song')
+            ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        });
+      }
+    },
+    {
+      immediate: true,
+    }
+  );
 
   const showToast = () => {
     toastActive.value = true;
@@ -1359,8 +1545,10 @@ export const useDisplayStore = defineStore('display', () => {
   };
 
   return {
-    isMobile,
+    fullScreenMode,
+    isMobileView,
     isAndroid,
+    isWindows,
 
     taichiAnimateRandomized,
     isDark,
@@ -1374,6 +1562,7 @@ export const useDisplayStore = defineStore('display', () => {
 
     showAddSongShelfDialog,
     showRemoveSongShelfDialog,
+    showImportPlaylistDialog,
 
     showAddPhotoShelfDialog,
     showRemovePhotoShelfDialog,
@@ -1381,10 +1570,16 @@ export const useDisplayStore = defineStore('display', () => {
     showAddComicShelfDialog,
     showRemoveComicShelfDialog,
 
+    showAddVideoShelfDialog,
+    showRemoveVideoShelfDialog,
+
     showAboutDialog,
 
     showSettingDialog,
     showLeftPopup,
+
+    bookKeepScreenOn,
+    comicKeepScreenOn,
 
     trayId,
     toastActive,
@@ -1395,18 +1590,22 @@ export const useDisplayStore = defineStore('display', () => {
     songCollapse,
     bookCollapse,
     comicCollapse,
+    videoCollapse,
 
     routerCurrPath,
     photoPath,
     songPath,
     bookPath,
     comicPath,
+    videoPath,
 
     showPhotoShelf,
     showSongShelf,
     showSongShelfDetail,
+    selectedSongShelf,
     showBookShelf,
     showComicShelf,
+    showVideoShelf,
     showPlayView,
     showPlayingPlaylist,
   };
@@ -1501,11 +1700,33 @@ export const useSongStore = defineStore('song', () => {
     }
   ); // 当前播放
 
-  const getSongPlayUrl = async (
+  const switchSongSource = async function* (
     song: SongInfo
-  ): Promise<string | undefined> => {
-    console.log(`获取音乐 ${song.name}的播放地址`);
+  ): AsyncIterableIterator<SongInfo> {
+    const store = useStore();
+    for (const source of store.songSources) {
+      const songName = song.name;
+      if (!songName) continue;
+      const singer = joinSongArtists(song.artists);
+      try {
+        const sc = (await store.sourceClass(source.item)) as SongExtension;
+        const songList = await sc?.execSearchSongs(songName);
+        if (!songList) continue;
+        for (const s of songList.list) {
+          if (s.name === songName && joinSongArtists(s.artists) === singer) {
+            // 当前歌曲满足条件
+            yield s;
+            break;
+          }
+        }
+      } catch (error) {}
+    }
+  };
 
+  const getSongPlayUrl = async (
+    song: SongInfo,
+    switchSource: Boolean = true
+  ): Promise<string | undefined> => {
     // 返回有两种类型
     // 1. blobUrl, 前端(win)使用
     // 2. filePath, 安卓段使用
@@ -1517,23 +1738,25 @@ export const useSongStore = defineStore('song', () => {
     let src = null;
     let headers = null;
     let t: string | null = null;
+    t = displayStore.showToast();
     if (!song.url) {
       const store = useStore();
       const source = store.getSongSource(song.sourceId);
-      if (!source) {
-        showToast(`${song.name} 所属源不存在或未启用`);
-        return;
-      }
-      t = displayStore.showToast();
-      const sc = (await store.sourceClass(source?.item)) as SongExtension;
-      const newUrl = await sc?.execGetSongUrl(song);
-      if (typeof newUrl === 'string') {
-        src = newUrl;
-      } else if (newUrl instanceof Object) {
-        src = newUrl['128k'] || newUrl['320k'] || newUrl.flac || '';
-        headers = newUrl.headers || null;
-        if (newUrl.lyric) {
-          song.lyric = newUrl.lyric;
+      // if (!source) {
+      //   showToast(`${song.name} 所属源不存在或未启用`);
+      //   return;
+      // }
+      if (source) {
+        const sc = (await store.sourceClass(source.item)) as SongExtension;
+        const newUrl = await sc?.execGetSongUrl(song);
+        if (typeof newUrl === 'string') {
+          src = newUrl;
+        } else if (newUrl instanceof Object) {
+          src = newUrl['128k'] || newUrl['320k'] || newUrl.flac || '';
+          headers = newUrl.headers || null;
+          if (newUrl.lyric) {
+            song.lyric = newUrl.lyric;
+          }
         }
       }
     } else {
@@ -1545,31 +1768,32 @@ export const useSongStore = defineStore('song', () => {
       }
     }
     if (!src) {
-      showNotify(`歌曲 ${song.name} 无法播放`);
-      if (t) displayStore.closeToast(t);
-      return;
+      // 使用其他源的播放地址
+      if (switchSource) {
+        let newSrc: string | undefined;
+        for await (const s of switchSongSource(song)) {
+          console.log(`${song.name} 使用其他源播放地址`, JSON.stringify(s));
+          newSrc = await getSongPlayUrl(s, false);
+
+          if (newSrc) {
+            await songCacheStore.replaceSongSrc(song, s);
+            break;
+          }
+        }
+        if (!newSrc) {
+          showNotify(`歌曲 ${song.name} 无法播放`);
+        }
+      }
     }
     try {
-      await songCacheStore.saveSongv2(song, src, {
-        headers: headers || undefined,
-        verify: false,
-      });
-      // if (headers) {
-      //   const response = await fetch(src, { headers, verify: false });
-      //   const blob = await response.blob();
-      //   const blobUrl = URL.createObjectURL(
-      //     new Blob([blob], { type: blob.type || 'audio/mpeg' })
-      //   );
-      //   await songCacheStore.saveSong(song, blobUrl);
-      // } else {
-      //   await songCacheStore.saveSong(song, src);
-      // }
-    } catch (error) {
-      console.error('加载歌曲失败:', error);
-      return;
-    } finally {
-      if (t) displayStore.closeToast(t);
-    }
+      if (src) {
+        await songCacheStore.saveSongv2(song, src, {
+          headers: headers || undefined,
+          verify: false,
+        });
+      }
+    } catch (error) {}
+    if (t) displayStore.closeToast(t);
 
     const ret = await songCacheStore.getSong(song);
     console.log(`${song.name}返回播放地址${ret}`);
@@ -1833,7 +2057,7 @@ export const useSongStore = defineStore('song', () => {
           // 媒体标题
           title: song.name,
           // 媒体类型
-          artist: song.artists?.join(','),
+          artist: joinSongArtists(song.artists),
           // 媒体封面
           artwork: artwork,
         });
@@ -1854,54 +2078,6 @@ export const useSongStore = defineStore('song', () => {
     getUrlTasks: androidMedia.MusicItem[] = [];
     onMounted() {
       onMounted(async () => {
-        // const refreshPlugin = async () => {
-        //   const newPlugin = await tauriAddPluginListener(
-        //     'mediasession',
-        //     'getUrl',
-        //     async (payload: any) => {
-        //       // 将要播放的歌曲获取url
-        //       const musicItem: androidMedia.MusicItem = JSON.parse(
-        //         payload.value
-        //       );
-        //       this.getUrlTasks.push(musicItem);
-        //     }
-        //   );
-        //   if (this.getUrlPlugin) {
-        //     this.getUrlPlugin.unregister();
-        //   }
-        //   this.getUrlPlugin = newPlugin;
-        //   setTimeout(refreshPlugin, 5000);
-        // };
-        // setTimeout(refreshPlugin, 5000);
-
-        // const handleGetUrl = async () => {
-        //   console.log('handleGetUrl');
-        //   while (this.getUrlTasks.length > 0) {
-        //     const musicItem = this.getUrlTasks.shift();
-        //     if (!musicItem) return;
-        //     const song: SongInfo = JSON.parse(musicItem?.extra as string);
-        //     if (!playingSong.value.picUrl) {
-        //       // 获取封面
-        //       await getSongCover(song);
-        //     }
-        //     musicItem.iconUri = song.picUrl;
-        //     const newItem = _.cloneDeep(musicItem);
-        //     const url = await getSongPlayUrl(song);
-        //     if (url) {
-        //       newItem.uri = url;
-        //     }
-        //     const coverUrl = await songCacheStore.getCover(song);
-        //     console.log(`cover url is ${coverUrl}`);
-
-        //     if (coverUrl) {
-        //       newItem.iconUri = coverUrl;
-        //     }
-        //     await androidMedia.update_music_item(musicItem, newItem);
-        //   }
-        //   setTimeout(handleGetUrl, 1000);
-        // }
-        // setTimeout(handleGetUrl, 1000);
-
         tauriAddPluginListener(
           'mediasession',
           'getUrl',
@@ -2033,30 +2209,79 @@ export const useSongStore = defineStore('song', () => {
         playMode,
         (newMode, oldMode) => {
           // 播放模式变化时，重置播放列表索引
-          if (playMode.value === SongPlayMode.random) {
-            playingPlaylist.value = _.shuffle(playlist.value);
-            return;
-          } else {
-            playingPlaylist.value = [...playlist.value];
+          switch (oldMode) {
+            case SongPlayMode.single:
+              switch (newMode) {
+                case SongPlayMode.list:
+                  androidMedia.set_play_mode(
+                    androidMedia.PlayMode.playlistLoop
+                  );
+                  break;
+                case SongPlayMode.random:
+                  playingPlaylist.value = _.shuffle(playlist.value);
+                  androidMedia.update_playlist_order(
+                    this.playlistToAndroidMusics(playingPlaylist.value)
+                  );
+                  androidMedia.set_play_mode(
+                    androidMedia.PlayMode.playlistLoop
+                  );
+                  break;
+                case SongPlayMode.single:
+                  break;
+              }
+              break;
+            case SongPlayMode.list:
+              switch (newMode) {
+                case SongPlayMode.list:
+                  break;
+                case SongPlayMode.random:
+                  playingPlaylist.value = _.shuffle(playlist.value);
+                  androidMedia.update_playlist_order(
+                    this.playlistToAndroidMusics(playingPlaylist.value)
+                  );
+                  break;
+                case SongPlayMode.single:
+                  androidMedia.set_play_mode(androidMedia.PlayMode.loop);
+                  break;
+              }
+              break;
+            case SongPlayMode.random:
+              switch (newMode) {
+                case SongPlayMode.list:
+                  playingPlaylist.value = [...playlist.value];
+                  androidMedia.update_playlist_order(
+                    this.playlistToAndroidMusics(playingPlaylist.value)
+                  );
+                  break;
+                case SongPlayMode.random:
+                  break;
+                case SongPlayMode.single:
+                  androidMedia.set_play_mode(androidMedia.PlayMode.loop);
+                  break;
+              }
+              break;
+            case undefined:
+              switch (newMode) {
+                case SongPlayMode.list:
+                  androidMedia.update_playlist_order(
+                    this.playlistToAndroidMusics(playingPlaylist.value)
+                  );
+                  break;
+                case SongPlayMode.random:
+                  androidMedia.update_playlist_order(
+                    this.playlistToAndroidMusics(playingPlaylist.value)
+                  );
+                  break;
+                case SongPlayMode.single:
+                  playingPlaylist.value = [playingSong.value];
+                  androidMedia.update_playlist_order(
+                    this.playlistToAndroidMusics(playingPlaylist.value)
+                  );
+                  androidMedia.set_play_mode(androidMedia.PlayMode.loop);
+                  break;
+              }
+              break;
           }
-          if (
-            newMode === SongPlayMode.random ||
-            oldMode === SongPlayMode.random
-          ) {
-            // 随机播放模式之间切换, 播放列表发生改变
-            androidMedia.update_playlist_order(
-              this.playlistToAndroidMusics(playingPlaylist.value)
-            );
-          }
-        },
-        {
-          immediate: true,
-        }
-      );
-      watch(
-        audioCurrent,
-        (newValue) => {
-          // 向安卓发送修改进度的请求
         },
         {
           immediate: true,
@@ -2064,6 +2289,7 @@ export const useSongStore = defineStore('song', () => {
       );
     }
     async setPlaylist(list: SongInfo[], firstSong: SongInfo): Promise<void> {
+      if (!list.length) return;
       if (list != playlist.value) {
         // 新的播放列表
         playlist.value = list;
@@ -2107,7 +2333,9 @@ export const useSongStore = defineStore('song', () => {
     ): androidMedia.Playlist {
       return {
         name: '播放列表',
-        musics: songs.map((item) => this.musicToAndroidMusic(item)),
+        musics: songs
+          .filter((item) => !!item)
+          .map((item) => this.musicToAndroidMusic(item)),
         position: position,
         playImmediately: playImmediately,
       };
@@ -2204,12 +2432,12 @@ export const useSongStore = defineStore('song', () => {
 export const useBookStore = defineStore('book', () => {
   const displayStore = useDisplayStore();
   const readMode = ref<'slide' | 'scroll'>(
-    displayStore.isMobile ? 'slide' : 'scroll'
+    displayStore.isMobileView ? 'slide' : 'scroll'
   );
   watch(
-    () => displayStore.isMobile,
+    () => displayStore.isMobileView,
     () => {
-      readMode.value = displayStore.isMobile ? 'slide' : 'scroll';
+      readMode.value = displayStore.isMobileView ? 'slide' : 'scroll';
     }
   );
   const fontSize = useStorageAsync('readFontSize', 20);
@@ -2428,25 +2656,46 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     }
     return false;
   };
-  const addToBookSelf = (bookItem: BookItem, shelfId?: string) => {
+  const addToBookSelf = (bookItem: BookItem, shelfId?: string): boolean => {
+    /**const shelf = shelfId
+      ? photoShelf.value.find((item) => item.id === shelfId)
+      : photoShelf.value[0];
+    if (!shelf) {
+      showToast('收藏夹不存在');
+      return false;
+    }
+
+    if (shelf.photos.find((i) => i.id === item.id)) {
+      showToast('已存在');
+      return false;
+    } else {
+      item.extra ||= {};
+      item.extra.selected ||= false; // 用作从书架中删除
+      shelf.photos.push(_.cloneDeep(item));
+      showToast(`已添加到 ${shelf.name}`);
+      return true;
+    } */
     if (!bookShelf.value.length) {
       showToast('书架为空，请先创建书架');
-      return;
+      return false;
     }
-    if (!shelfId) shelfId = bookShelf.value[0].id;
-    const shelf = bookShelf.value.find((item) => item.id === shelfId);
+    const shelf = shelfId
+      ? bookShelf.value.find((item) => item.id === shelfId)
+      : bookShelf.value[0];
     if (!shelf) {
       showToast('书架不存在');
-      return;
+      return false;
     }
     if (shelf.books.find((item) => item.book.id === bookItem.id)) {
       showToast('书架中已存在此书');
-      return;
+      return false;
     }
     shelf.books.push({
-      book: bookItem,
+      book: _.cloneDeep(bookItem),
       createTime: Date.now(),
     });
+    showToast(`已添加到 ${shelf.name}`);
+    return true;
   };
   const removeBookFromShelf = (bookItem: BookItem, shelfId?: string) => {
     if (!bookShelf.value.length) {
@@ -2546,7 +2795,7 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     playlist: {
       id: nanoid(),
       name: '我喜欢的音乐',
-      picUrl: '',
+      picUrl: HeartSVG,
       sourceId: '',
       list: {
         list: [],
@@ -2570,23 +2819,24 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     );
   };
 
-  const createShelf = (name: string): boolean => {
+  const createShelf = (name: string): SongShelf | null => {
     // 创建收藏
     if (songCreateShelf.value.some((item) => item.playlist.name === name)) {
       showToast('收藏夹已存在');
-      return false;
+      return null;
     }
-    songCreateShelf.value.push({
+    const newShelf = {
       type: SongShelfType.create,
       playlist: {
         id: nanoid(),
         name,
         picUrl: '',
-        sourceId: '',
+        sourceId: 'create',
       },
       createTime: Date.now(),
-    });
-    return true;
+    };
+    songCreateShelf.value.push(newShelf);
+    return newShelf;
   };
   const addSongToShelf = (song: SongInfo, shelfId?: string): boolean => {
     let shelf: SongShelf | undefined;
@@ -2674,7 +2924,7 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
       playlist: {
         id: nanoid(),
         name: '我喜欢的音乐',
-        picUrl: '',
+        picUrl: HeartSVG,
         sourceId: '',
         list: {
           list: [],
@@ -2744,6 +2994,8 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
       showToast('已存在');
       return false;
     } else {
+      item.extra ||= {};
+      item.extra.selected ||= false; // 用作从书架中删除
       shelf.photos.push(_.cloneDeep(item));
       showToast(`已添加到 ${shelf.name}`);
       return true;
@@ -2835,8 +3087,12 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
     }
   };
   const removeComicShelf = (shelfId: string) => {
-    const find = comicShelf.value.find((item) => item.id === shelfId);
-    comicShelf.value = comicShelf.value.filter((item) => item.id !== shelfId);
+    if (comicShelf.value.length === 1) {
+      showToast('至少需要保留一个收藏夹');
+      return false;
+    }
+    _.remove(comicShelf.value, (item) => item.id === shelfId);
+    return true;
   };
   const isComicInShelf = (
     comic: ComicItem | string,
@@ -2862,25 +3118,28 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
     }
     return false;
   };
-  const addToComicSelf = (comicItem: ComicItem, shelfId?: string) => {
+  const addToComicSelf = (comicItem: ComicItem, shelfId?: string): boolean => {
     if (!comicShelf.value.length) {
       showToast('书架为空，请先创建书架');
-      return;
+      return false;
     }
-    if (!shelfId) shelfId = comicShelf.value[0].id;
-    const shelf = comicShelf.value.find((item) => item.id === shelfId);
+    const shelf = shelfId
+      ? comicShelf.value.find((item) => item.id === shelfId)
+      : comicShelf.value[0];
     if (!shelf) {
       showToast('书架不存在');
-      return;
+      return false;
     }
     if (shelf.comics.find((item) => item.comic.id === comicItem.id)) {
       showToast('书架中已存在此书');
-      return;
+      return false;
     }
     shelf.comics.push({
-      comic: comicItem,
+      comic: _.cloneDeep(comicItem),
       createTime: Date.now(),
     });
+    showToast(`已添加到 ${shelf.name}`);
+    return true;
   };
   const removeComicFromShelf = (comicItem: ComicItem, shelfId?: string) => {
     if (!comicShelf.value.length) {
@@ -2954,6 +3213,183 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
     updateComicReadInfo,
     deleteComicFromShelf,
     comicRefreshChapters,
+    clear,
+  };
+});
+
+export const useVideoShelfStore = defineStore('videoShelfStore', () => {
+  const kvStorage = createKVStore('videoShelfStore');
+
+  // 影视收藏⬇️
+  const videoShelf = useStorageAsync<VideoShelf[]>(
+    'videoShelf',
+    [
+      {
+        id: nanoid(),
+        name: '默认收藏',
+        videos: [],
+        createTime: Date.now(),
+      },
+    ],
+    kvStorage.storage
+  );
+
+  const createVideoShelf = (name: string) => {
+    if (videoShelf.value.some((item) => item.name === name)) {
+      // 收藏已存在
+      return;
+    } else {
+      videoShelf.value.push({
+        id: nanoid(),
+        name,
+        videos: [],
+        createTime: Date.now(),
+      });
+    }
+  };
+  const removeVideoShelf = (shelfId: string) => {
+    if (videoShelf.value.length === 1) {
+      showToast('至少需要保留一个收藏夹');
+      return false;
+    }
+    _.remove(videoShelf.value, (item) => item.id === shelfId);
+    return true;
+  };
+  const isVideoInShelf = (
+    video: VideoItem | string,
+    shelfId?: string
+  ): boolean => {
+    let id: string;
+    if (typeof video === 'string') {
+      id = video;
+    } else {
+      id = video.id;
+    }
+    if (shelfId) {
+      return !!videoShelf.value
+        .find((shelf) => shelf.id === shelfId)
+        ?.videos.find((b) => b.video.id === id);
+    } else {
+      for (const shelf of videoShelf.value) {
+        const find = shelf.videos.find((b) => b.video.id === id);
+        if (find) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+  const addToViseoSelf = (videoItem: VideoItem, shelfId?: string): boolean => {
+    if (!videoShelf.value.length) {
+      showToast('收藏为空，请先创建收藏');
+      return false;
+    }
+    const shelf = shelfId
+      ? videoShelf.value.find((item) => item.id === shelfId)
+      : videoShelf.value[0];
+    if (!shelf) {
+      showToast('收藏夹不存在');
+      return false;
+    }
+    if (shelf.videos.find((item) => item.video.id === videoItem.id)) {
+      showToast('收藏中已存在此视频');
+      return false;
+    }
+    videoItem.extra ||= {};
+    videoItem.extra.selected ||= false; // 用作从书架中删除
+    shelf.videos.push({
+      video: _.cloneDeep(videoItem),
+      createTime: Date.now(),
+    });
+    showToast(`已添加到 ${shelf.name}`);
+    return true;
+  };
+  const getVideoFromShelf = (
+    videoItem: VideoItem,
+    shelfId?: string
+  ): VideoItemInShelf | undefined => {
+    if (shelfId) {
+      return videoShelf.value
+        .find((item) => item.id === shelfId)
+        ?.videos.find((b) => b.video.id === videoItem.id);
+    } else {
+      // 遍历所有videoShelf.value， 获取第一个
+      for (const shelf of videoShelf.value) {
+        const find = shelf.videos.find((b) => b.video.id === videoItem.id);
+        if (find) {
+          return find;
+        }
+      }
+    }
+  };
+  const removeVideoFromShelf = (videoItem: VideoItem, shelfId?: string) => {
+    if (!videoShelf.value.length) {
+      showToast('收藏为空');
+      return;
+    }
+    if (!shelfId) shelfId = videoShelf.value[0].id;
+    const shelf = videoShelf.value.find((item) => item.id === shelfId);
+    if (!shelf) {
+      showToast('收藏不存在');
+      return;
+    }
+    _.remove(shelf.videos, (item) => item.video.id === videoItem.id);
+  };
+  const updateVideoPlayInfo = (
+    videoItem: VideoItem,
+    options: {
+      episode: VideoEpisode;
+      resource: VideoResource;
+      position?: number;
+    }
+  ) => {
+    if (!videoShelf.value) return;
+    for (let shelf of videoShelf.value) {
+      for (let video of shelf.videos) {
+        if (video.video.id === videoItem.id) {
+          video.video.lastWatchEpisodeId = options.episode.id;
+          video.video.lastWatchResourceId = options.resource.id;
+          if (options.position) {
+            const r = video.video.resources?.find(
+              (item) => item.id === video.video.lastWatchResourceId
+            );
+            const e = r?.episodes?.find(
+              (item) => item.id === video.video.lastWatchEpisodeId
+            );
+            if (e) {
+              e.lastWatchPosition = options.position;
+            }
+          }
+        }
+      }
+    }
+  };
+  const deleteVideoFromShelf = (videoItem: VideoItem, shelfId: string) => {
+    const shelf = videoShelf.value.find((item) => item.id === shelfId);
+    if (!shelf) return;
+    _.remove(shelf.videos, (item) => item.video.id === videoItem.id);
+  };
+  const clear = () => {
+    videoShelf.value = [
+      {
+        id: nanoid(),
+        name: '默认收藏',
+        videos: [],
+        createTime: Date.now(),
+      },
+    ];
+  };
+
+  return {
+    videoShelf,
+    createVideoShelf,
+    removeVideoShelf,
+    isVideoInShelf,
+    addToViseoSelf,
+    removeVideoFromShelf,
+    getVideoFromShelf,
+    updateVideoPlayInfo,
+    deleteVideoFromShelf,
     clear,
   };
 });
@@ -3407,8 +3843,6 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
       if (!ret) {
         throw Error('fetchAndSave 失败');
       }
-      await saveCover(song, cache_song_id);
-      displayStore.closeToast(t);
 
       if (!find) {
         songs.value.unshift({
@@ -3421,13 +3855,44 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
       } else {
         find.update_time = Date.now();
       }
-      return true;
     } catch (error) {
       console.warn('saveSongv2:', error);
     }
     await saveCover(song, cache_song_id);
     displayStore.closeToast(t);
     return true;
+  };
+
+  const replaceSongSrc = async (song: SongInfo, goodSong: SongInfo) => {
+    // 使用goodSong的播放地址覆盖song的播放地址
+    if (!inited) {
+      await ensureBase();
+    }
+    const find = songs.value.find(
+      (s) => s.song_id === song.id && s.source_id === song.sourceId
+    );
+
+    const cache_song_id = genCacheSongId(song);
+    const good_cache_song_id = genCacheSongId(goodSong);
+    await fs.copyFile(
+      `${dirName}/${good_cache_song_id}`,
+      `${dirName}/${cache_song_id}`,
+      {
+        fromPathBaseDir: baseDir,
+        toPathBaseDir: baseDir,
+      }
+    );
+    if (!find) {
+      songs.value.unshift({
+        song_id: song.id,
+        song_name: song.name || '',
+        source_id: song.sourceId,
+        update_time: Date.now(),
+        cache_song_id,
+      });
+    } else {
+      find.update_time = Date.now();
+    }
   };
 
   const saveCover = async (song: SongInfo, cache_song_id: string) => {
@@ -3645,5 +4110,6 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
     removeSong,
     removeCover,
     clear,
+    replaceSongSrc,
   };
 });

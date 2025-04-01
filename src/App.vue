@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useDisplayStore } from './store';
+import { useDisplayStore, useSongStore } from './store';
 import WinApp from './WinApp.vue';
 import MobileApp from './MobileApp.vue';
 import { storeToRefs } from 'pinia';
@@ -7,18 +7,24 @@ import { h, nextTick, onBeforeMount, onMounted, ref } from 'vue';
 import { router } from './router';
 import PlatformSwitch from './components/PlatformSwitch.vue';
 import View from './components/View.vue';
+import { checkAndUpdate } from './utils/update';
 
 const displayStore = useDisplayStore();
-const { isMobile } = storeToRefs(displayStore);
+const { isMobileView, isDark } = storeToRefs(displayStore);
 
 onMounted(() => {
   // 初始化路径
   nextTick(async () => {
+    console.log('routerCurrPath', displayStore.routerCurrPath);
+
     router.replace(displayStore.routerCurrPath);
   });
 });
 
-onMounted(() => {
+onMounted(async () => {
+  if (!displayStore.isAndroid) {
+    await checkAndUpdate();
+  }
   // forwardConsoleLog();
   // // 启用 TargetKind::Webview 后，这个函数将把日志打印到浏览器控制台
   // const detach = await attachConsole();
@@ -32,8 +38,8 @@ const routerView = ref(h(View));
 
 <template>
   <van-config-provider
-    :theme="displayStore.isDark ? 'dark' : 'light'"
-    :class="displayStore.isMobile ? 'mobile-scrollbar' : 'not-mobile-scrollbar'"
+    :theme="isDark ? 'dark' : 'light'"
+    :class="isMobileView ? 'mobile-scrollbar' : 'not-mobile-scrollbar'"
   >
     <PlatformSwitch>
       <template #mobile>

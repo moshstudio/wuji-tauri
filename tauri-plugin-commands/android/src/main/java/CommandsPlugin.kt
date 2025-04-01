@@ -2,7 +2,6 @@ package tauri.plugin.commands
 
 import android.app.Activity
 import android.content.res.Configuration
-import android.util.Log
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
@@ -11,17 +10,36 @@ import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
 
 @InvokeArg
-data class SetStatusBarArgs(val value: String)
+class SetStatusBarArgs {
+    lateinit var bg: String;
+    var text: String? = null;
+}
+
+
+@InvokeArg
+class HideStatusBarArgs(
+    var hide: Boolean? = null
+)
+
 
 @TauriPlugin
 class CommandsPlugin(private val activity: Activity) : Plugin(activity) {
     private val implementation = Commands(activity)
 
     @Command
-    fun set_status_bar(invoke: Invoke) {
-        val args = invoke.getArgs()
-        val color = args.getString("value")
-        var res = implementation.set_status_bar(color)
+    fun setStatusBar(invoke: Invoke) {
+        val args = invoke.parseArgs(SetStatusBarArgs::class.java)
+        var res = implementation.setStatusBar(args.bg, args.text)
+
+        val ret = JSObject()
+        ret.put("res", res)
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun hideStatusBar(invoke: Invoke) {
+        val args = invoke.parseArgs(HideStatusBarArgs::class.java)
+        var res = implementation.hideStatusBar(args.hide ?: true)
 
         val ret = JSObject()
         ret.put("res", res)
@@ -39,7 +57,17 @@ class CommandsPlugin(private val activity: Activity) : Plugin(activity) {
     }
 
     @Command
-    fun exit_app(invoke: Invoke) {
+    fun setScreenOrientation(invoke: Invoke) {
+        val args = invoke.getArgs()
+        val orientation = args.getString("orientation")
+        val res = implementation.setScreenOrientation(orientation)
+        val ret = JSObject()
+        ret.put("res", res)
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun exitApp(invoke: Invoke) {
         implementation.exit_app()
         val ret = JSObject()
         invoke.resolve(ret)

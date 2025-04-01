@@ -5,6 +5,7 @@ permissions = [
   "allow-update-playlist-order",
   "allow-play-target-music",
   "allow-seek-to",
+  "allow-set-play-mode",
   "allow-set-volume",
   "allow-set-playlist",
   "allow-play",

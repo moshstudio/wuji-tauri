@@ -2,6 +2,8 @@ package snow.player.playlist;
 
 import androidx.annotation.NonNull;
 
+import java.util.List;
+
 import channel.helper.Channel;
 import snow.player.audio.MusicItem;
 
@@ -86,4 +88,11 @@ public interface PlaylistEditor {
      * 持久化保存
      */
     void save();
+
+    /**
+     * 更新当前播放列表。
+     *
+     * @param playlist 新的播放列表
+     */
+    void updateCurrentPlaylist(Playlist playlist);
 }

@@ -72,6 +72,11 @@ class SeekToArgs {
     var milliseconds: Number? = null
 }
 
+@InvokeArg
+class PlayModeArgs {
+    var mode: Int? = null
+}
+
 
 @TauriPlugin(
     permissions = [
@@ -92,14 +97,14 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
     private val receiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val command = intent.getStringExtra("action_name")
-            Log.e("MediaSessionPlugin", "Received broadcast: $command")
+            Log.i("MediaSessionPlugin", "Received broadcast: $command")
             if ("getUrl" == command) {
                 val data = intent.getBundleExtra("musicItem")
                 val ret = JSObject()
                 if (data != null) {
                     val item = bundleToMusicItem(data)
                     if (item != null) {
-                        Log.e("MediaSessionPlugin", "send  ${MusicItemToJSON(item).toString()}")
+                        Log.i("MediaSessionPlugin", "send  ${MusicItemToJSON(item).toString()}")
                         ret.put("value", MusicItemToJSON(item).toString())
                         trigger("getUrl", ret)
                     }
@@ -235,7 +240,11 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
             ret.put("updateTime", updateTime)
             trigger("seekComplete", ret)
         }
-
+        playerClient.addOnRepeatListener { musicItem, repeatTime ->
+            // liveProgress更新会有问题，所以暂停再播放一下
+            playerClient.pause()
+            playerClient.play()
+        }
     }
 
     private suspend fun checkConnected(): Boolean = suspendCancellableCoroutine { continuation ->
@@ -309,18 +318,46 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
                 return@launch
             }
             val args = invoke.parseArgs(PlaylistArgs::class.java)
-            val orderMap: MutableMap<String, Int> = HashMap()
-            for (i in 0 until args.musics.size) {
-                orderMap[args.musics[i].id] = i
+            val targetMusicIds = args.musics.map { item -> item.id }
+
+            var builder = Playlist.Builder()
+            builder = builder.setName(args.name)
+            val bundle = Bundle()
+            bundle.putString("extra", args.extra)
+            builder = builder.setExtra(bundle)
+            builder = builder.setEditable(true)
+            for (item in args.musics) {
+                builder = builder.append(generateMusicItem(item))
             }
-            playerClient.getPlaylist { playlist ->
-                val items = playlist.allMusicItem
-                //在此处将items按照args.musics的顺序进行排序
-                items.sortBy { item ->
-                    orderMap[item.musicId] ?: Int.MAX_VALUE
-                }
-                playerClient.save()
-            }
+            val playlist = builder.build()
+            playerClient.updateCurrentPlaylist(playlist)
+
+
+//            playerClient.getPlaylist { playlist ->
+//                playerClient.insertMusicItem(targetIndex, item);
+//                Log.e(
+//                    "MediaSessionPlugin",
+//                    playlist.allMusicItem.map { it.musicId }.toList().toString()
+//                )
+//                for (targetIndex in targetMusicIds.indices) {
+//                    val item = playlist.allMusicItem.find { it.musicId == targetMusicIds[targetIndex] }
+//                    if (item == null) {
+//                        continue
+//                    }
+//                    playerClient.insertMusicItem(targetIndex, item);
+//                    val currentIndex =
+//                        playlist.allMusicItem.indexOfFirst { it.musicId == targetMusicIds[targetIndex] }
+//                    if (currentIndex != targetIndex) {
+//                        Log.e("MediaSessionPlugin", "moveMusicItem ${currentIndex} => ${targetIndex}")
+//                        playerClient.moveMusicItem(currentIndex, targetIndex)
+//                    }
+//                }
+//                playerClient.save()
+//                Log.e(
+//                    "MediaSessionPlugin",
+//                    playlist.allMusicItem.map { it.musicId }.toList().toString()
+//                )
+//            }
             val ret = JSObject()
             ret.put("value", true)
             invoke.resolve(ret)
@@ -341,10 +378,8 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
             val musicItem = invoke.parseArgs(PlayMusicItem::class.java)
             val playingItem = playerClient.playingMusicItem
             if (playingItem != null && playingItem.musicId == musicItem.id) {
-                Log.e("MediaSessionPlugin", "play")
                 withContext(Dispatchers.IO) { playerClient.playPause() }
             } else {
-                Log.e("MediaSessionPlugin", "playPositionMusic")
                 playerClient.getPlaylist { playlist ->
                     val position = playlist.allMusicItem.indexOfFirst { it.musicId == musicItem.id }
                     if (position >= 0) {
@@ -469,6 +504,30 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
             invoke.resolve(ret)
         }
 
+    }
+
+    @Command
+    fun setPlayMode(invoke: Invoke) {
+        CoroutineScope(Dispatchers.Main.immediate).launch {
+            if (!checkConnected()) {
+                val ret = JSObject()
+                ret.put("value", false)
+                invoke.resolve(ret)
+                return@launch
+            }
+            val args = invoke.parseArgs(PlayModeArgs::class.java)
+            val defaultMode = PlayMode.PLAYLIST_LOOP
+            val modeMap = mapOf(
+                0 to PlayMode.PLAYLIST_LOOP,
+                1 to PlayMode.LOOP,
+                2 to PlayMode.SHUFFLE,
+                3 to PlayMode.SINGLE_ONCE
+            )
+            playerClient.setPlayMode(modeMap[args.mode] ?: defaultMode)
+            val ret = JSObject()
+            ret.put("value", true)
+            invoke.resolve(ret)
+        }
     }
 
     private fun generateMusicItem(item: PlayMusicItem): MusicItem {

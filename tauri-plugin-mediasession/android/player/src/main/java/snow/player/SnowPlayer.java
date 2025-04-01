@@ -2149,6 +2149,29 @@ class SnowPlayer implements Player, PlaylistEditor {
 
         mPlaylistManager.save(mPlaylist, null);
     }
+    @Override
+    public void updateCurrentPlaylist(Playlist playlist) {
+        List<MusicItem> musicItems = playlist.getAllMusicItem();
+        MusicItem playingItem = getMusicItem();
+        mPlaylist = new Playlist.Builder()
+                .setName(playlist.getName())
+                .appendAll(musicItems)
+                .setEditable(playlist.isEditable())
+                .setExtra(playlist.getExtra())
+                .build();
+        mPlaylistManager.save(mPlaylist, null);
+        if (playingItem != null) {
+            int position = 0;
+            for (int i = 0; i < musicItems.size(); i++) {
+                if (musicItems.get(i).getMusicId().equals(playingItem.getMusicId())) {
+                    position = i;
+                    break;
+                }
+            }
+            mPlayerState.setPlayPosition(position);
+        }
+
+    }
 
     private void updatePlaylist(Playlist playlist, List<MusicItem> musicItems, Runnable doOnSaved) {
         mPlaylist = new Playlist.Builder()

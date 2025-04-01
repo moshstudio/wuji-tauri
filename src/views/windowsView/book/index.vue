@@ -23,7 +23,10 @@ const { bookSources } = storeToRefs(store);
 </script>
 
 <template>
-  <div class="w-full h-full overflow-x-hidden overflow-y-auto">
+  <div
+    v-remember-scroll
+    class="w-full h-full overflow-x-hidden overflow-y-auto"
+  >
     <van-row justify="center" align="center" class="relative">
       <div
         class="absolute right-6 text-button"

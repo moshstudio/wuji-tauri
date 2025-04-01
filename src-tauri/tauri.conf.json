@@ -47,6 +47,18 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE4NDNCRDczRjBFOTMzMQpSV1F4a3c0LzF6dUVDaDRpTU9qeTNIay84eUtJRW44L3JGdlNvcm0xNFZyYWlJTWpMelpaZmJTMQo=",
+      "endpoints": [
+        "https://wuji.s3.bitiful.net/wuji%2Fupdater_win.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

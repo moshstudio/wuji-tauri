@@ -163,18 +163,36 @@ const prevPageContent = computed<LineData[]>(() => {
     ];
   }
   if (chapterPage.value == 0) {
-    return [
-      {
-        isTitle: false,
-        center: true,
-        pFirst: false,
-        pLast: false,
-        pIndex: 0,
-        lineIndex: 0,
-        textIndex: 0,
-        text: '',
-      },
-    ];
+    const index = chapterLists.value?.findIndex(
+      (item) => item.id === readingChapter.value?.id
+    );
+    if (index && index > 0) {
+      return [
+        {
+          isTitle: true,
+          center: false,
+          pFirst: false,
+          pLast: true,
+          pIndex: 0,
+          lineIndex: 0,
+          textIndex: 0,
+          text: chapterLists.value?.[index - 1].title || '',
+        },
+      ];
+    } else {
+      return [
+        {
+          isTitle: false,
+          center: true,
+          pFirst: false,
+          pLast: false,
+          pIndex: 0,
+          lineIndex: 0,
+          textIndex: 0,
+          text: '',
+        },
+      ];
+    }
   } else {
     if (typeof readingPagedContent.value === 'string') {
       return [
@@ -235,18 +253,36 @@ const nextPageContent = computed<LineData[]>(() => {
     ];
   }
   if (chapterPage.value == readingPagedContent.value?.content.length - 1) {
-    return [
-      {
-        isTitle: false,
-        center: true,
-        pFirst: false,
-        pLast: false,
-        pIndex: 0,
-        lineIndex: 0,
-        textIndex: 0,
-        text: '',
-      },
-    ];
+    const index = chapterLists.value?.findIndex(
+      (item) => item.id === readingChapter.value?.id
+    );
+    if (index && index < chapterMax.value - 1) {
+      return [
+        {
+          isTitle: true,
+          center: false,
+          pFirst: false,
+          pLast: true,
+          pIndex: 0,
+          lineIndex: 0,
+          textIndex: 0,
+          text: chapterLists.value?.[index + 1].title || '',
+        },
+      ];
+    } else {
+      return [
+        {
+          isTitle: false,
+          center: true,
+          pFirst: false,
+          pLast: false,
+          pIndex: 0,
+          lineIndex: 0,
+          textIndex: 0,
+          text: '',
+        },
+      ];
+    }
   }
   return (
     (readingPagedContent.value?.content[chapterPage.value + 1] as LineData[]) ||
@@ -714,7 +750,7 @@ onBeforeUnmount(function () {
       <van-list>
         <template v-for="item in book?.chapters" :key="item.id">
           <div
-            class="flex justify-start items-center text-sm text-[--van-text-color-2] gap-2 p-2 flex-nowrap select-none van-haptics-feedback"
+            class="flex justify-start items-center text-sm gap-2 p-2 flex-nowrap select-none van-haptics-feedback"
             :class="{
               'bg-black reading-chapter': readingChapter?.id === item.id,
             }"
@@ -729,10 +765,16 @@ onBeforeUnmount(function () {
               icon="iconamoon:eye-thin"
               width="24"
               height="24"
+              color="var(--van-primary-color)"
               v-if="readingChapter?.id === item.id"
             />
             <span
               class="flex-grow text-left overflow-hidden text-nowrap text-ellipsis"
+              :class="
+                readingChapter?.id === item.id
+                  ? 'text-[var(--van-primary-color)]'
+                  : 'text-[#f5f5f5]'
+              "
             >
               {{ item.title }}
             </span>
@@ -845,6 +887,14 @@ onBeforeUnmount(function () {
           </template>
           <template #value>
             <van-switch v-model="bookStore.fullScreenClickToNext" />
+          </template>
+        </van-cell>
+        <van-cell class="bg-[#1f1f1f]" v-if="displayStore.isAndroid">
+          <template #title>
+            <span class="text-white">保持屏幕常亮</span>
+          </template>
+          <template #value>
+            <van-switch v-model="displayStore.bookKeepScreenOn" />
           </template>
         </van-cell>
       </div>

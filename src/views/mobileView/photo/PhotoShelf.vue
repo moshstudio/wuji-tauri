@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import _ from 'lodash';
 import { usePhotoShelfStore, useDisplayStore } from '@/store';
-import { PropType, watch } from 'vue';
+import { onMounted, PropType, watch } from 'vue';
 import AddPhotoShelfDialog from '@/components/windows/dialogs/AddPhotoShelf.vue';
 import removePhotoShelfDialog from '@/components/windows/dialogs/removePhotoShelf.vue';
-import { PhotoShelf } from '@/extensions/photo';
-import PhotoCard from '@/components/card/PhotoCard.vue';
+import MobileShelfPhotoCard from '@/components/card/photoCards/MobileShelfPhotoCard.vue';
+import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
 
 const displayStore = useDisplayStore();
 const shelfStore = usePhotoShelfStore();
@@ -15,10 +15,7 @@ const selecteMode = defineModel('selecteMode', {
   type: Boolean,
   default: false,
 });
-const selectedItems = defineModel('selectedItems', {
-  type: Array as PropType<PhotoShelf[]>,
-  default: [],
-});
+
 const shelfAnchors = defineModel('shelfAnchors', {
   type: Array as PropType<number[]>,
 });
@@ -28,21 +25,6 @@ const emit = defineEmits<{
   (e: 'deleteSelected'): void;
   (e: 'hidePanel'): void;
 }>();
-
-watch(selecteMode, (mode) => {
-  if (mode == true) {
-    const clone = _.cloneDeep(shelfStore.photoShelf);
-    clone.forEach((shelf) => {
-      shelf.photos.forEach((photo) => {
-        photo.extra ||= {};
-        photo.extra.selected = false;
-      });
-    });
-    selectedItems.value = clone;
-  } else {
-    selectedItems.value = [];
-  }
-});
 </script>
 
 <template>
@@ -124,36 +106,21 @@ watch(selecteMode, (mode) => {
         删除所选
       </van-button>
     </div>
-    <van-tabs shrink :active="activeIndex" class="pb-[50px]">
+    <van-tabs shrink animated :active="activeIndex" class="pb-[50px]">
       <van-tab
         :title="shelf.name"
         v-for="shelf in shelfStore.photoShelf"
         :key="shelf.id"
-        v-if="!selecteMode"
       >
-        <div class="p-4 grid grid-cols-2 gap-2">
-          <PhotoCard
-            :item="photo"
-            v-for="photo in shelf.photos"
-            :key="photo.id"
-            :selecteMode="selecteMode"
-          ></PhotoCard>
-        </div>
-      </van-tab>
-      <van-tab
-        :title="shelf.name"
-        v-for="shelf in selectedItems"
-        :key="shelf.id"
-      >
-        <div class="p-4 grid grid-cols-2 gap-2">
-          <PhotoCard
-            v-model:selected="photo.extra.selected"
-            :item="photo"
-            v-for="photo in shelf.photos"
-            :key="photo.id"
-            :selecteMode="selecteMode"
-          ></PhotoCard>
-        </div>
+        <ResponsiveGrid :base-cols="2" class="p-2">
+          <template v-for="photo in shelf.photos" :key="photo">
+            <MobileShelfPhotoCard
+              :item="photo"
+              v-model:selected="photo.extra.selected"
+              :selecteMode="selecteMode"
+            ></MobileShelfPhotoCard>
+          </template>
+        </ResponsiveGrid>
       </van-tab>
     </van-tabs>
   </van-floating-panel>

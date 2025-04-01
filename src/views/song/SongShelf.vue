@@ -18,10 +18,8 @@ import { storeToRefs } from 'pinia';
 
 const store = useStore();
 const displayStore = useDisplayStore();
-const { showSongShelf } = storeToRefs(displayStore);
+const { showSongShelf, selectedSongShelf } = storeToRefs(displayStore);
 const shelfStore = useSongShelfStore();
-
-const selectedShelf = ref<SongShelf>();
 
 const loadPage = async (id: String, pageNo?: number) => {
   const shelf = shelfStore.songPlaylistShelf.find((s) => s.playlist.id === id);
@@ -82,16 +80,17 @@ const updateAnchors = () => {
 onMounted(async () => {
   window.addEventListener('resize', updateAnchors);
   await sleep(1000);
-  selectedShelf.value = shelfStore.songLikeShelf;
+  if (showSongShelf && !selectedSongShelf.value) {
+    selectedSongShelf.value = shelfStore.songLikeShelf;
+  }
 });
 onUnmounted(() => {
   window.removeEventListener('resize', updateAnchors);
 });
 watch(
-  selectedShelf,
+  selectedSongShelf,
   async (shelf) => {
     if (shelf) {
-      selectedShelf.value = shelf;
       switch (shelf.type) {
         case SongShelfType.like:
           break;
@@ -131,7 +130,6 @@ watch(
     </template>
     <template #windows>
       <WinSongShelf
-        v-model:selected-shelf="selectedShelf"
         v-model:shelf-anchors="shelfAnchors"
         v-model:shelf-height="shelfHeight"
         @load-page="loadPage"

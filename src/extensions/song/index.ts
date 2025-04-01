@@ -1,5 +1,6 @@
 import { SongShelfType } from '@/types/song';
 import { Extension, transformResult } from '../baseExtension';
+import _ from 'lodash';
 
 // 歌曲 信息
 export interface SongInfo {
@@ -70,6 +71,7 @@ export interface PlaylistInfo {
   totalPage?: number;
   list?: SongList;
   sourceId: string;
+  extra?: Record<string, string>;
 }
 export interface SongShelf {
   playlist: PlaylistInfo;
@@ -119,8 +121,12 @@ abstract class SongExtension extends Extension {
     }
     return r;
   })
-  execGetRecommendPlaylists(pageNo?: number) {
-    return this.getRecommendPlaylists(pageNo);
+  async execGetRecommendPlaylists(pageNo?: number) {
+    const ret = await this.getRecommendPlaylists(pageNo);
+    ret?.list.forEach((item) => {
+      item.sourceId = String(this.id);
+    });
+    return ret;
   }
 
   abstract getRecommendPlaylists(pageNo?: number): Promise<PlaylistList | null>; // 推荐歌单
@@ -133,8 +139,12 @@ abstract class SongExtension extends Extension {
     }
     return r;
   })
-  execGetRecommendSongs(pageNo?: number) {
-    return this.getRecommendSongs(pageNo);
+  async execGetRecommendSongs(pageNo?: number) {
+    const ret = await this.getRecommendSongs(pageNo);
+    ret?.list.forEach((item) => {
+      item.sourceId = String(this.id);
+    });
+    return ret;
   }
   // 推荐歌曲
   abstract getRecommendSongs(pageNo?: number): Promise<SongList | null>;
@@ -150,8 +160,12 @@ abstract class SongExtension extends Extension {
     }
     return r;
   })
-  execSearchPlaylists(keyword: string, pageNo?: number) {
-    return this.searchPlaylists(keyword, pageNo);
+  async execSearchPlaylists(keyword: string, pageNo?: number) {
+    const ret = await this.searchPlaylists(keyword, pageNo);
+    ret?.list.forEach((item) => {
+      item.sourceId = String(this.id);
+    });
+    return ret;
   }
   // 搜索歌单
   abstract searchPlaylists(
@@ -167,8 +181,12 @@ abstract class SongExtension extends Extension {
     }
     return r;
   })
-  execSearchSongs(keyword: string, pageNo?: number) {
-    return this.searchSongs(keyword, pageNo);
+  async execSearchSongs(keyword: string, pageNo?: number) {
+    const ret = await this.searchSongs(keyword, pageNo);
+    ret?.list.forEach((item) => {
+      item.sourceId = String(this.id);
+    });
+    return ret;
   }
   // 搜索歌曲
   abstract searchSongs(
@@ -191,8 +209,16 @@ abstract class SongExtension extends Extension {
     }
     return r;
   })
-  execGetPlaylistDetail(item: PlaylistInfo, pageNo?: number) {
-    return this.getPlaylistDetail(item, pageNo);
+  async execGetPlaylistDetail(item: PlaylistInfo, pageNo?: number) {
+    const ret = await this.getPlaylistDetail(_.cloneDeep(item), pageNo);
+    if (ret) {
+      ret.sourceId = this.id;
+      ret.list?.list.forEach((item) => {
+        item.sourceId = String(this.id);
+      });
+      Object.assign(item, ret);
+    }
+    return ret;
   }
   // 获取歌单详情
   abstract getPlaylistDetail(
@@ -202,7 +228,7 @@ abstract class SongExtension extends Extension {
 
   @transformResult<SongUrlMap | string | null>((r) => r)
   execGetSongUrl(item: SongInfo, size?: SongSize) {
-    return this.getSongUrl(item, size);
+    return this.getSongUrl(_.cloneDeep(item), size);
   }
 
   abstract getSongUrl(
@@ -212,7 +238,7 @@ abstract class SongExtension extends Extension {
 
   @transformResult<string | null>((r) => r)
   execGetLyric(item: SongInfo) {
-    return this.getLyric(item);
+    return this.getLyric(_.cloneDeep(item));
   }
 
   abstract getLyric(item: SongInfo): Promise<string | null>;

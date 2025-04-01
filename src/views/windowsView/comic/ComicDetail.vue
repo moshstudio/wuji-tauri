@@ -4,7 +4,7 @@ import { ComicSource } from '@/types';
 import tinycolor from 'tinycolor2';
 import _ from 'lodash';
 import { PropType } from 'vue';
-import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
+import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
 import ComicShelfButton from '@/components/ComicShelfButton.vue';
 import ComicShelf from '@/views/comic/ComicShelf.vue';
 import { useDisplayStore } from '@/store';
@@ -82,7 +82,7 @@ const displayStore = useDisplayStore();
         </div>
       </van-row>
       <div
-        class="p-2 mt-4 shadow-md text-[--van-text-color] w-[80%]"
+        class="p-2 mt-4 text-[--van-text-color] lg:w-[80%]"
         v-if="comic.chapters"
       >
         <div class="w-full flex justify-between gap-2 items-center">
@@ -100,8 +100,8 @@ const displayStore = useDisplayStore();
             </p>
           </div>
         </div>
-        <ResponsiveGrid>
-          <li
+        <ResponsiveGrid2>
+          <p
             v-for="chapter in isAscending
               ? comic.chapters
               : [...comic.chapters].reverse()"
@@ -110,8 +110,8 @@ const displayStore = useDisplayStore();
             class="text-sm p-2 h-9 hover:bg-[--van-background] hover:shadow-md rounded-lg cursor-pointer select-none truncate van-haptics-feedback"
           >
             {{ chapter.title }}
-          </li>
-        </ResponsiveGrid>
+          </p>
+        </ResponsiveGrid2>
       </div>
     </main>
     <ComicShelf></ComicShelf>

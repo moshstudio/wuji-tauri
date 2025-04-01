@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ComicItem, ComicList, ComicsList } from '@/extensions/comic';
-import ComicCard from '@/components/card/comicCards/ComicCard.vue';
+import WinComicCard from '@/components/card/comicCards/WinComicCard.vue';
 import HorizonList from '@/components/HorizonList.vue';
 import SimplePagination from '../pagination/SimplePagination.vue';
 import { ComicSource } from '@/types';
@@ -66,6 +66,7 @@ watch(
       v-model:active="active"
       @rendered="(index) => load(index)"
       shrink
+      animated
       :key="tabKey"
     >
       <van-tab
@@ -84,7 +85,7 @@ watch(
         <van-loading class="p-2" v-if="!item.list.length" />
         <HorizonList>
           <template v-for="comic in item.list" :key="comic.id">
-            <ComicCard :comic-item="comic" @click="toDetail"> </ComicCard>
+            <WinComicCard :comic-item="comic" @click="toDetail"> </WinComicCard>
           </template>
         </HorizonList>
       </van-tab>
@@ -103,7 +104,7 @@ watch(
     </div>
     <HorizonList>
       <template v-for="comic in source.list.list" :key="comic.id">
-        <ComicCard :comic-item="comic" @click="toDetail"> </ComicCard>
+        <WinComicCard :comic-item="comic" @click="toDetail"> </WinComicCard>
       </template>
     </HorizonList>
   </template>

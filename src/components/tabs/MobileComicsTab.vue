@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import _ from 'lodash';
 import { ComicItem, ComicList, ComicsList } from '@/extensions/comic';
-import ComicCard from '@/components/card/comicCards/ComicCard.vue';
+import MobileComicCard from '../card/comicCards/MobileComicCard.vue';
 import SimplePagination from '../pagination/SimplePagination.vue';
 import { ComicSource } from '@/types';
 import { onMounted, ref, watch } from 'vue';
@@ -60,6 +60,7 @@ watch(
       v-model:active="active"
       @rendered="(index) => load(index)"
       shrink
+      animated
       :key="tabKey"
     >
       <van-tab
@@ -80,7 +81,8 @@ watch(
         <van-loading class="p-2" v-if="!item.list.length" />
         <div class="flex flex-col">
           <template v-for="comic in item.list" :key="comic.id">
-            <ComicCard :comic-item="comic" @click="toDetail"> </ComicCard>
+            <MobileComicCard :comic-item="comic" @click="toDetail">
+            </MobileComicCard>
           </template>
         </div>
       </van-tab>
@@ -101,7 +103,8 @@ watch(
     <van-loading class="p-2" v-if="!source.list.list.length" />
     <div class="flex flex-col">
       <template v-for="comic in source.list.list" :key="comic.id">
-        <ComicCard :comic-item="comic" @click="toDetail"> </ComicCard>
+        <MobileComicCard :comic-item="comic" @click="toDetail">
+        </MobileComicCard>
       </template>
     </div>
   </template>

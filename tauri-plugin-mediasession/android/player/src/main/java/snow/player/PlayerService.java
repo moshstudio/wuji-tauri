@@ -1328,6 +1328,11 @@ public class PlayerService extends MediaBrowserServiceCompat
         mPlayer.save();
     }
 
+    @Override
+    public void updateCurrentPlaylist(Playlist playlist) {
+        mPlayer.updateCurrentPlaylist(playlist);
+    }
+
     private void updateNotification() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             updateNotificationAPI31();

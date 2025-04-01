@@ -38,7 +38,9 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .invoke_handler(tauri::generate_handler![
             commands::exit_app,
             commands::set_status_bar,
-            commands::get_system_font_scale
+            commands::hide_status_bar,
+            commands::get_system_font_scale,
+            commands::set_screen_orientation,
         ])
         .setup(|app, api| {
             #[cfg(mobile)]

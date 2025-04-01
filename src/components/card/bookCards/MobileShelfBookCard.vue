@@ -3,6 +3,7 @@ import _ from 'lodash';
 import { BookItem, BookItemInShelf } from '@/extensions/book';
 import { Icon } from '@iconify/vue';
 import { ref } from 'vue';
+import LoadImage from '@/components/LoadImage.vue';
 import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
 import { useStore } from '@/store';
 
@@ -21,14 +22,15 @@ const showMoreOptions = ref(false);
 
 <template>
   <div
-    class="flex gap-2 m-2 p-2 bg-[--van-background] rounded-lg shadow transform transition-all duration-100 hover:-translate-y-1 hover:shadow-md cursor-pointer select-none active:bg-[--van-background-2]"
+    class="flex gap-2 m-2 p-2 rounded-lg transform transition-all duration-100 cursor-pointer select-none active:bg-[--van-background]"
     @click="() => emit('click', shelfBook, shelfBook.lastReadChapter?.id)"
   >
     <div class="w-[80px] h-[100px]">
-      <van-image
+      <LoadImage
         width="80px"
         height="100px"
         radius="4"
+        lazy-load
         :src="shelfBook.book.cover"
       >
         <template #loading>
@@ -37,24 +39,24 @@ const showMoreOptions = ref(false);
         <template #error>
           <Icon icon="codicon:book" width="48" height="48" />
         </template>
-      </van-image>
+      </LoadImage>
     </div>
 
-    <div
-      class="grow flex flex-col gap-1 justify-around text-sm text-[--van-text-color]"
-    >
+    <div class="grow flex flex-col gap-1 text-sm text-[--van-text-color]">
       <div class="flex gap-2 items-center">
-        <p class="text-base font-bold h-6 line-clamp-1">
+        <p class="text-base font-bold h-6 line-clamp-2">
           {{ shelfBook.book.title }}
         </p>
-        <p class="text-xs text-gray-400">
+        <p class="text-xs text-gray-400 truncate">
           {{ store.getBookSource(shelfBook.book.sourceId)?.item.name }}
         </p>
       </div>
 
-      <p class="text-xs line-clamp-1 flex gap-2">
-        <span v-if="shelfBook.book.author">{{ shelfBook.book.author }}</span>
-        <span v-if="unread"> {{ unread }}章未读 </span>
+      <p class="text-xs truncate flex gap-2">
+        <span v-if="shelfBook.book.author" class="min-w-0 truncate">
+          {{ shelfBook.book.author }}
+        </span>
+        <span v-if="unread" class="min-w-0 truncate"> {{ unread }}章未读 </span>
       </p>
       <p class="text-xs line-clamp-1">
         {{ shelfBook.lastReadChapter?.title }}
@@ -80,6 +82,7 @@ const showMoreOptions = ref(false);
       {
         name: '从当前收藏夹移除',
         color: '#1989fa',
+        subname: shelfBook.book.title,
         callback: () => {
           showMoreOptions = false;
           emit('remove', shelfBook);

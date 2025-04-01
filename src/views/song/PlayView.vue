@@ -56,6 +56,14 @@ watch(
     if (!newSong) {
       return;
     }
+    const direction = '43deg';
+    // 定义颜色停止点
+    const colorStops = [
+      { color: '#4158D0', position: 0 },
+      { color: '#C850C0', position: 46 },
+      { color: '#FFCC70', position: 100 },
+    ];
+
     if (newSong.picUrl || newSong.bigPicUrl) {
       panelBackgroundStyle.value.backgroundColor = '';
       backgroundImageUrl(
@@ -130,7 +138,7 @@ watch(audioCurrent, (newVal) => {
 
 // 展示相关
 const offset = computed(() => {
-  return displayStore.isMobile ? -110 : -80;
+  return displayStore.isMobileView ? -110 : -80;
 });
 const shelfAnchors = ref([
   offset.value,

@@ -1,38 +1,40 @@
 <template>
-  <div ref="container" class="p-4 overflow-x-hidden">
-    <ul class="gap-4" :class="gridClass">
-      <slot></slot>
-    </ul>
+  <div
+    class="grid"
+    :class="[
+      attrs.class,
+      `p-${gap}`,
+      `gap-${gap}`,
+      `grid-cols-${baseCols}`,
+      `xs:grid-cols-${baseCols + 1}`,
+      `sm:grid-cols-${baseCols + 2}`,
+      `md:grid-cols-${baseCols + 3}`,
+      `lg:grid-cols-${baseCols + 4}`,
+      `xl:grid-cols-${baseCols + 5}`,
+      `2xl:grid-cols-${baseCols + 6}`,
+      `3xl:grid-cols-${baseCols + 7}`,
+      `4xl:grid-cols-${baseCols + 8}`,
+      `5xl:grid-cols-${baseCols + 9}`,
+      `6xl:grid-cols-${baseCols + 10}`,
+    ]"
+  >
+    <slot></slot>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { useAttrs } from 'vue';
 
-const gridClass = ref('grid grid-cols-1');
-const container = ref<HTMLElement>();
-
-const updateGridClass = () => {
-  const width = container.value?.clientWidth || window.innerWidth;
-
-  if (width >= 768) {
-    gridClass.value = 'grid grid-cols-3';
-  } else if (width >= 512) {
-    gridClass.value = 'grid grid-cols-2';
-  } else {
-    gridClass.value = 'grid grid-cols-1';
-  }
-};
-
-onMounted(() => {
-  nextTick(() => {
-    updateGridClass();
-  });
-  window.addEventListener('resize', updateGridClass);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('resize', updateGridClass);
+const attrs = useAttrs();
+const { baseCols, gap } = defineProps({
+  baseCols: {
+    type: Number,
+    default: 1,
+  },
+  gap: {
+    type: Number,
+    default: 4,
+  },
 });
 </script>
 

@@ -10,6 +10,8 @@ import BookRead from '@/views/book/BookRead.vue';
 import Comic from '@/views/comic/index.vue';
 import ComicDetail from '@/views/comic/ComicDetail.vue';
 import ComicRead from '@/views/comic/ComicRead.vue';
+import Video from '@/views/video/index.vue';
+import VideoDetail from '@/views/video/VideoDetail.vue';
 import { type as osType } from '@tauri-apps/plugin-os';
 
 export const routes: RouteRecordRaw[] = [
@@ -79,6 +81,18 @@ export const routes: RouteRecordRaw[] = [
     path: '/comic/read/:sourceId/:comicId/:chapterId',
     name: 'ComicRead',
     component: ComicRead,
+    props: true,
+  },
+  {
+    path: '/video',
+    name: 'Video',
+    component: Video,
+    children: [],
+  },
+  {
+    path: '/video/detail/:sourceId/:videoId',
+    name: 'VideoDetail',
+    component: VideoDetail,
     props: true,
   },
 ];

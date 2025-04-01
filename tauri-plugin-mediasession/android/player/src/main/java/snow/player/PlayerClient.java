@@ -666,6 +666,11 @@ public class PlayerClient implements Player, PlayerManager, PlaylistManager, Pla
         mPlaylistEditor.save();
     }
 
+    public void updateCurrentPlaylist(Playlist playlist) {
+        mPlaylistEditor.updateCurrentPlaylist(playlist);
+    }
+
+
     @Override
     public void getPlaylist(@NonNull PlaylistManager.Callback callback) {
         Preconditions.checkNotNull(callback);

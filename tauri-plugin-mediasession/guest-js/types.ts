@@ -16,3 +16,10 @@ export interface Playlist {
   extra?: String;
   playImmediately?: boolean;
 }
+
+export enum PlayMode {
+  playlistLoop = 0,
+  loop = 1,
+  shuffle = 2,
+  singleOnce = 3,
+}

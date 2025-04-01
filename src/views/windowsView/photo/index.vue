@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useDisplayStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
-import PhotoCard from '@/components/card/PhotoCard.vue';
+import WinPhotoCard from '@/components/card/photoCards/WinPhotoCard.vue';
 import HorizonList from '@/components/HorizonList.vue';
 import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import PhotoShelf from '@/views/photo/PhotoShelf.vue';
@@ -68,7 +68,7 @@ const emit = defineEmits<{
             内容为空
           </p>
           <template v-for="photo in item.list?.list" :key="photo" v-else>
-            <PhotoCard :item="photo"></PhotoCard>
+            <WinPhotoCard :item="photo"></WinPhotoCard>
           </template>
         </HorizonList>
         <van-divider :style="{ margin: '8px 0px' }" />

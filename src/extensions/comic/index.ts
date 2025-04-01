@@ -78,8 +78,16 @@ abstract class ComicExtension extends Extension {
     }
     return r;
   })
-  execGetRecommendComics(pageNo?: number, type?: string) {
-    return this.getRecommendComics(pageNo, type);
+  async execGetRecommendComics(pageNo?: number, type?: string) {
+    const ret = await this.getRecommendComics(pageNo, type);
+    if (ret) {
+      _.castArray(ret).forEach((comicList) => {
+        comicList.list.forEach((comicItem) => {
+          comicItem.sourceId = String(this.id);
+        });
+      });
+    }
+    return ret;
   }
   // 1. 首页推荐
   abstract getRecommendComics(
@@ -98,8 +106,16 @@ abstract class ComicExtension extends Extension {
     }
     return r;
   })
-  execSearch(keyword: string, pageNo?: number) {
-    return this.search(keyword, pageNo);
+  async execSearch(keyword: string, pageNo?: number) {
+    const ret = await this.search(keyword, pageNo);
+    if (ret) {
+      _.castArray(ret).forEach((comicList) => {
+        comicList.list.forEach((comicItem) => {
+          comicItem.sourceId = String(this.id);
+        });
+      });
+    }
+    return ret;
   }
   // 2. 搜索
   abstract search(keyword: string, pageNo?: number): Promise<ComicsList | null>;
@@ -108,13 +124,18 @@ abstract class ComicExtension extends Extension {
     if (r) {
       r.id = String(r.id);
       r.chapters?.forEach((chapter) => {
-        chapter.id = String(chapter.id);
+        chapter.id = String(chapter.id || chapter.url || nanoid());
       });
     }
     return r;
   })
-  execGetComicDetail(item: ComicItem) {
-    return this.getComicDetail(item);
+  async execGetComicDetail(item: ComicItem) {
+    const ret = await this.getComicDetail(_.cloneDeep(item));
+    if (ret) {
+      ret.sourceId = String(this.id);
+      Object.assign(item, ret);
+    }
+    return ret;
   }
   // 3. 获取章节
   abstract getComicDetail(item: ComicItem): Promise<ComicItem | null>;
@@ -123,7 +144,7 @@ abstract class ComicExtension extends Extension {
     return r;
   })
   execGetContent(item: ComicItem, chapter: ComicChapter) {
-    return this.getContent(item, chapter);
+    return this.getContent(_.cloneDeep(item), chapter);
   }
   // 4. 获取内容
   abstract getContent(

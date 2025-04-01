@@ -8,6 +8,7 @@ const COMMANDS: &[&str] = &[
     "stop",
     "set_volume",
     "seek_to",
+    "set_play_mode",
     "register_listener",
     "remove_listener",
     "check_permissions",

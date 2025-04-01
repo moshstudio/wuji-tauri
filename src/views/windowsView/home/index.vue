@@ -39,6 +39,7 @@ onMounted(async () => {
         v-model:active="active"
         class="h-full max-w-full lg:max-w-[800px] select-none overflow-x-hidden overflow-y-auto"
         sticky
+        animated
       >
         <van-tab v-for="item in hotItems" :key="item.title" :title="item.title">
           <van-cell-group>

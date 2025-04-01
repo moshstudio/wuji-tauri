@@ -2,11 +2,11 @@
 import { useDisplayStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import _ from 'lodash';
-import PlaylistCard from '@/components/card/PlaylistCard.vue';
+import WinPlaylistCard from '@/components/card/songCards/WinPlaylistCard.vue';
 import WinSongCard from '@/components/card/songCards/WinSongCard.vue';
 import WinSongBar from '@/components/windows/WinSongBar.vue';
 import HorizonList from '@/components/HorizonList.vue';
-import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
+import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
 import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import { SongSource } from '@/types';
 import { SongInfo } from '@/extensions/song';
@@ -41,7 +41,7 @@ const emit = defineEmits<{
 
 <template>
   <div class="w-full h-full flex flex-col">
-    <div class="grow overflow-x-hidden overflow-y-auto">
+    <div v-remember-scroll class="grow overflow-x-hidden overflow-y-auto">
       <van-row justify="center" align="center" class="relative">
         <div
           class="absolute right-6 text-button"
@@ -62,7 +62,7 @@ const emit = defineEmits<{
           </template>
         </van-search>
       </van-row>
-      <van-tabs v-model:active="activeTabIndex" shrink>
+      <van-tabs v-model:active="activeTabIndex" shrink animated>
         <van-tab
           v-for="item in songSources.filter((s) => s.playlist || s.songList)"
           :key="item.item.id"
@@ -89,7 +89,7 @@ const emit = defineEmits<{
           </van-row>
           <HorizonList>
             <div v-for="p in item.playlist?.list" :key="p.id" class="relative">
-              <PlaylistCard :playlist="p"></PlaylistCard>
+              <WinPlaylistCard :playlist="p"></WinPlaylistCard>
             </div>
           </HorizonList>
           <div class="h-4"></div>
@@ -110,15 +110,14 @@ const emit = defineEmits<{
               @change="(page) => emit('songToPage', item, page)"
             />
           </van-row>
-          <ResponsiveGrid>
+          <ResponsiveGrid2 :gap="2" class="px-0">
             <template v-for="p in item.songList?.list" :key="p.id">
               <WinSongCard
                 :song="p"
                 @play="() => emit('playSong', item, p)"
-                class="max-w-[250px]"
               ></WinSongCard>
             </template>
-          </ResponsiveGrid>
+          </ResponsiveGrid2>
         </van-tab>
       </van-tabs>
       <SongShelf></SongShelf>

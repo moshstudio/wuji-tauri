@@ -4,7 +4,9 @@ Default permissions for the plugin
 
 - `allow-exit-app`
 - `allow-set-status-bar`
+- `allow-hide-status-bar`
 - `allow-get-system-font-scale`
+- `allow-set-screen-orientation`
 
 ## Permission Table
 
@@ -63,6 +65,58 @@ Enables the get_system_font_scale command without any pre-configured scope.
 <td>
 
 Denies the get_system_font_scale command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:allow-hide-status-bar`
+
+</td>
+<td>
+
+Enables the hide_status_bar command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:deny-hide-status-bar`
+
+</td>
+<td>
+
+Denies the hide_status_bar command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:allow-set-screen-orientation`
+
+</td>
+<td>
+
+Enables the set_screen_orientation command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:deny-set-screen-orientation`
+
+</td>
+<td>
+
+Denies the set_screen_orientation command without any pre-configured scope.
 
 </td>
 </tr>

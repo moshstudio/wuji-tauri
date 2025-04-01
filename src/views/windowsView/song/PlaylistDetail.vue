@@ -7,6 +7,7 @@ import WinSongBar from '@/components/windows/WinSongBar.vue';
 import SongShelf from '@/views/song/SongShelf.vue';
 import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import LoadImage from '@/components/LoadImage.vue';
+import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
 
 const songStore = useSongStore();
 const displayStore = useDisplayStore();
@@ -33,7 +34,7 @@ const emit = defineEmits<{
     <van-nav-bar left-arrow @click-left="() => emit('back')" />
     <div
       ref="content"
-      class="flex flex-col px-4 pb-12 bg-[--van-background-2] grow gap-2 w-full overflow-y-auto"
+      class="flex flex-col px-4 pb-12 grow gap-2 w-full overflow-y-auto"
     >
       <div class="head flex justify-center my-4">
         <LoadImage
@@ -67,12 +68,7 @@ const emit = defineEmits<{
           />
         </div>
       </div>
-      <van-row
-        justify="end"
-        align="center"
-        v-if="playlist?.list?.list"
-        class="w-[80%] bg-[--van-background-2] gap-2"
-      >
+      <div v-if="playlist?.list?.list" class="flex gap-2 pl-4">
         <template v-if="shelfStore.playlistInShelf(playlist)">
           <van-button
             size="small"
@@ -103,14 +99,15 @@ const emit = defineEmits<{
           @change="(pageNo) => emit('toPage', pageNo)"
           v-if="playlist.list.totalPage"
         />
-      </van-row>
-      <template v-for="item in playlist?.list?.list" :key="item.id">
-        <WinSongCard
-          :song="item"
-          @play="songStore.setPlayingList(playlist!.list!.list, item)"
-          class="mx-auto w-[80%]"
-        ></WinSongCard>
-      </template>
+      </div>
+      <ResponsiveGrid2>
+        <template v-for="item in playlist?.list?.list" :key="item.id">
+          <WinSongCard
+            :song="item"
+            @play="songStore.setPlayingList(playlist!.list!.list, item)"
+          ></WinSongCard>
+        </template>
+      </ResponsiveGrid2>
     </div>
     <WinSongBar></WinSongBar>
     <SongShelf></SongShelf>

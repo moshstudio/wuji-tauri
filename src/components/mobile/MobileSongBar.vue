@@ -23,6 +23,13 @@ watch(showPlayView, (value) => {
     }
   }
 });
+const togglePlay = () => {
+  if (songStore.isPlaying) {
+    songStore.onPause();
+  } else {
+    songStore.onPlay();
+  }
+};
 </script>
 
 <template>
@@ -38,7 +45,8 @@ watch(showPlayView, (value) => {
             v-model="songStore.audioCurrent"
             :min="0"
             :max="songStore.audioDuration"
-            button-size="10px"
+            bar-height="4px"
+            button-size="6px"
             class="z-[1002]"
             @change="(value) => songStore.seek(value)"
           />
@@ -51,12 +59,11 @@ watch(showPlayView, (value) => {
               <LoadImage
                 :width="30"
                 :height="30"
-                :radius="99999"
+                round
                 fit="cover"
                 lazy-load
                 :src="playingSong.picUrl || ''"
                 :headers="playingSong.picHeaders"
-                class="cursor-pointer hover:-translate-y-1 trasnform ease-in-out duration-100"
               >
                 <template #loading>
                   <Icon
@@ -84,26 +91,22 @@ watch(showPlayView, (value) => {
             </div>
           </div>
           <div class="right-buttons flex gap-3">
-            <div label="playButton">
-              <transition name="transform" mode="out-in">
+            <transition name="transform" mode="out-in">
+              <div
+                label="playButton"
+                @click.stop="togglePlay"
+                class="cursor-pointer van-haptics-feedback text-[#1989fa] hover:scale-105"
+                style="touch-action: manipulation"
+              >
                 <Icon
-                  icon="ion:pause-circle"
+                  :icon="
+                    songStore.isPlaying ? 'ion:pause-circle' : 'ion:play-circle'
+                  "
                   width="24px"
                   height="24px"
-                  class="cursor-pointer van-haptics-feedback text-[#1989fa] hover:scale-105"
-                  @click.stop="() => songStore.onPause()"
-                  v-if="songStore.isPlaying"
                 />
-                <Icon
-                  icon="ion:play-circle"
-                  width="24px"
-                  height="24px"
-                  class="cursor-pointer van-haptics-feedback text-[#1989fa] hover:scale-105"
-                  @click.stop="() => songStore.onPlay()"
-                  v-else
-                />
-              </transition>
-            </div>
+              </div>
+            </transition>
             <Icon
               icon="solar:playlist-minimalistic-2-bold"
               width="24px"
@@ -122,15 +125,16 @@ watch(showPlayView, (value) => {
 <style scoped lang="less">
 .transform-enter-active,
 .transform-leave-active {
-  transition: all 0.05s linear;
+  transition: transform 0.1s linear;
+  -webkit-transition: transform 0.1s linear;
 }
 
 .transform-enter-from {
-  transform: rotateZ(45deg);
+  transform: rotateZ(45deg) translateZ(0);
 }
 
 .transform-leave-to {
-  transform: rotateZ(-45deg);
+  transform: rotateZ(-45deg) translateZ(0);
 }
 .fade-enter-active,
 .fade-leave-active {
@@ -140,5 +144,8 @@ watch(showPlayView, (value) => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+:deep(.van-slider__button) {
+  background-color: var(--van-primary-color);
 }
 </style>

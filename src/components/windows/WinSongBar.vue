@@ -22,7 +22,6 @@ const { showPlayingPlaylist } = storeToRefs(displayStore);
   <PlayView></PlayView>
   <div
     class="flex justify-between items-center py-2 px-4 border-t-[1px] select-none flex-nowrap h-[80px] z-[1000] bg-[--van-background]"
-    v-if="playingSong"
   >
     <div class="flex gap-4 shrink-0">
       <LoadImage
@@ -31,8 +30,8 @@ const { showPlayingPlaylist } = storeToRefs(displayStore);
         :radius="99999"
         fit="cover"
         lazy-load
-        :src="playingSong.picUrl || ''"
-        :headers="playingSong.picHeaders"
+        :src="playingSong?.picUrl || ''"
+        :headers="playingSong?.picHeaders"
         class="cursor-pointer hover:-translate-y-1 trasnform ease-in-out duration-100"
         @click="() => (displayStore.showPlayView = !displayStore.showPlayView)"
       >
@@ -44,10 +43,13 @@ const { showPlayingPlaylist } = storeToRefs(displayStore);
         </template>
       </LoadImage>
       <div class="flex flex-col justify-center w-[140px]">
-        <span class="text-base text-[--van-text-color] truncate">
+        <span
+          class="text-base text-[--van-text-color] truncate"
+          v-if="playingSong"
+        >
           {{ playingSong.name }}
         </span>
-        <span class="text-sm text-gray-500 truncate">
+        <span class="text-sm text-gray-500 truncate" v-if="playingSong">
           {{ joinSongArtists(playingSong.artists) }}
         </span>
       </div>
@@ -174,6 +176,7 @@ const { showPlayingPlaylist } = storeToRefs(displayStore);
         <WinSongCard
           :song="item"
           @play="() => songStore.setPlayingList(songStore.playlist, item)"
+          :class="item.id === songStore.playingSong?.id ? 'playing-song' : ''"
         ></WinSongCard>
       </template>
     </div>

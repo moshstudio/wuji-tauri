@@ -5,6 +5,7 @@ import Components from 'unplugin-vue-components/vite';
 import { VantResolver } from '@vant/auto-import-resolver';
 import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
 import path from 'node:path';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 const host = process.env.TAURI_DEV_HOST;
 
@@ -24,6 +25,7 @@ export default defineConfig(async () => ({
     Vuetify({
       autoImport: true,
     }),
+    nodePolyfills(),
   ],
   resolve: {
     alias: {

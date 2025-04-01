@@ -76,3 +76,11 @@ pub(crate) async fn seek_to<R: Runtime>(
 ) -> Result<BooleanResponse> {
     app.mediasession().seek_to(payload)
 }
+
+#[command]
+pub(crate) async fn set_play_mode<R: Runtime>(
+    app: AppHandle<R>,
+    payload: PlayModeRequest,
+) -> Result<BooleanResponse> {
+    app.mediasession().set_play_mode(payload)
+}

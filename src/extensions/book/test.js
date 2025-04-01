@@ -4,158 +4,191 @@ class TestBookExtension extends BookExtension {
   id = 'testBook';
   name = 'testBook';
   version = '0.0.1';
-  baseUrl = 'https://wap.xs74w.com/';
+  baseUrl = 'https://www.mayi93.com/';
+
   async getRecommendBooks(pageNo, type) {
     let items = [
       {
         name: '全部',
-        id: 'xclass/0',
+        tag: `1-a-a-a-a-{pageNo}`,
       },
       {
-        name: '玄幻小说',
-        id: 'xclass/0',
+        name: '玄幻',
+        tag: `1-1-a-a-a-{pageNo}`,
       },
       {
-        name: '武侠小说',
-        id: 'xclass/0',
+        name: '女生',
+        tag: `1-94-a-a-a-{pageNo}`,
       },
       {
-        name: '都市小说',
-        id: 'xclass/0',
+        name: '幻言',
+        tag: `1-93-a-a-a-{pageNo}`,
       },
       {
-        name: '穿越小说',
-        id: 'xclass/0',
+        name: '古言',
+        tag: `1-92-a-a-a-{pageNo}`,
       },
       {
-        name: '网游小说',
-        id: 'xclass/0',
+        name: '体育',
+        tag: `1-91-a-a-a-{pageNo}`,
       },
       {
-        name: '科幻小说',
-        id: 'xclass/0',
+        name: '武侠',
+        tag: `1-90-a-a-a-{pageNo}`,
+      },
+      {
+        name: '奇幻',
+        tag: `1-89-a-a-a-{pageNo}`,
+      },
+      {
+        name: '都市',
+        tag: `1-2-a-a-a-{pageNo}`,
+      },
+      {
+        name: '仙侠',
+        tag: `1-3-a-a-a-{pageNo}`,
+      },
+      {
+        name: '言情',
+        tag: `1-4-a-a-a-{pageNo}`,
+      },
+      {
+        name: '穿越',
+        tag: `1-5-a-a-a-{pageNo}`,
+      },
+      {
+        name: '游戏',
+        tag: `1-6-a-a-a-{pageNo}`,
+      },
+      {
+        name: '科幻',
+        tag: `1-7-a-a-a-{pageNo}`,
+      },
+      {
+        name: '悬疑',
+        tag: `1-9-a-a-a-{pageNo}`,
+      },
+      {
+        name: '灵异',
+        tag: `1-10-a-a-a-{pageNo}`,
+      },
+      {
+        name: '历史',
+        tag: `1-11-a-a-a-{pageNo}`,
+      },
+      {
+        name: '青春',
+        tag: `1-12-a-a-a-{pageNo}`,
+      },
+      {
+        name: '军事',
+        tag: `1-13-a-a-a-{pageNo}`,
+      },
+      {
+        name: '竞技',
+        tag: `1-14-a-a-a-{pageNo}`,
+      },
+      {
+        name: '现言',
+        tag: `1-15-a-a-a-{pageNo}`,
+      },
+      {
+        name: '其他',
+        tag: `1-16-a-a-a-{pageNo}`,
       },
     ];
     if (!type) {
       return items.map((item) => ({
-        id: item.id,
+        id: item.tag,
         type: item.name,
         list: [],
         page: pageNo,
-        totalPage: 1,
         sourceId: '',
       }));
     }
     const item = items.find((item) => item.name === type);
     if (!item) return null;
     pageNo = pageNo || 1;
-    const url = this.urlJoin(this.baseUrl, item.id, `/${pageNo}.html`);
-    const body = await this.fetchDom(url);
-    const list = await this.queryBookElements(body, {
-      element: '.hot_sale',
+    let url = `${this.baseUrl}book/store/${item.tag.replace('{pageNo}', pageNo)}`;
+    const document = await this.fetchDom(url);
+
+    const list = await this.queryBookElements(document, {
+      element: '.bookList li',
       cover: 'img',
-      title: '.detail a p',
-      url: '.detail a',
-      intro: '.review',
-      author: '.author',
-      latestUpdate: '.score',
+      title: '.bookNm',
+      author: '.authorNm',
+      intro: '.bookIntro',
+      url: '.bookNm',
+      tags: '.classifyLt',
     });
-    let totalPage = 1;
-    const totalPageElement = body.querySelector('.page_txt');
-    if (totalPageElement?.getAttribute('value')) {
-      totalPage = parseInt(
-        totalPageElement.getAttribute('value').split('/').pop()
-      );
-    }
+    const pageElements = document.querySelectorAll('#pageForm a');
 
     return {
       list,
       page: pageNo,
-      totalPage: totalPage,
+      totalPage: this.maxPageNoFromElements(pageElements),
+      type: item.name,
+      sourceId: '',
     };
   }
 
   async search(keyword, pageNo) {
-    const url = `${this.baseUrl}search.php?keyword=${keyword}`;
-    const body = await this.fetchDom(url);
-    const list = await this.queryBookElements(body, {
-      element: '.hot_sale',
-      title: 'a p',
-      author: '.author',
-      latestChapter: '.author:nth-of-type(2) a',
+    const url = `${this.baseUrl}book/store?q=${keyword}`;
+    const document = await this.fetchDom(url);
+    const list = await this.queryBookElements(document, {
+      element: '.bookList li',
+      cover: 'img',
+      title: '.bookNm',
+      author: '.authorNm',
+      intro: '.bookIntro',
+      url: '.bookNm',
+      tags: '.classifyLt',
     });
     return {
       list,
       page: pageNo,
       totalPage: 1,
+      sourceId: '',
     };
   }
 
-  async getBookDetail(item, pageNo) {
-    const body = await this.fetchDom(item.url);
-    item.cover ??= this.urlJoin(
-      this.baseUrl,
-      body.querySelector('#bookdetail img')?.getAttribute('src')
-    );
-    item.intro ??= body.querySelector('.review').textContent;
-    const allChaptersElement = body.querySelector(
-      '.recommend h2:nth-of-type(2) a'
-    );
-    const allChaptersUrl = allChaptersElement?.getAttribute('href')
-      ? this.urlJoin(this.baseUrl, allChaptersElement?.getAttribute('href'))
-      : itemFromKind.url.replace('.html', '/all.html');
-
-    const allChaptersBody = await this.fetchDom(allChaptersUrl);
-    const allChaptersElements =
-      allChaptersBody.querySelectorAll('#chapterlist a');
+  async getBookDetail(item) {
+    let url = item.url;
+    const document = await this.fetchDom(url);
     const chapters = [];
-    allChaptersElements.forEach((a) => {
-      const title = a.textContent;
-      if (!title || title.includes('直达页面底部')) {
-        return;
-      }
-      const url = a.getAttribute('href');
-      if (url) {
-        chapters.push({
-          id: this.urlJoin(this.baseUrl, url),
-          title: title,
-          url: this.urlJoin(this.baseUrl, url),
-        });
-      }
+
+    let elements = Array.from(document.querySelectorAll('.lf.lfT a[href]'));
+    elements.forEach((element) => {
+      const url = this.urlJoin(this.baseUrl, element.getAttribute('href'));
+      chapters.push({
+        id: url,
+        title: element.textContent.trim(),
+        url: url,
+      });
     });
     item.chapters = chapters;
-
     return item;
   }
 
   async getContent(item, chapter) {
-    const chapterId = chapter.url.split('/').pop().replace('.html', '');
-    let content = '';
-    let nextPageUrl = chapter.url;
-    while (nextPageUrl) {
-      const body = await this.fetchDom(nextPageUrl);
-      const chapterContent = body.querySelector('#chaptercontent');
-
-      chapterContent?.childNodes.forEach((node) => {
-        if (node.nodeType === Node.TEXT_NODE) {
-          content += node.textContent + '\n';
-        }
-      });
-      const nextPageElement = body.querySelector('#pt_next');
-      if (
-        nextPageElement &&
-        nextPageElement.getAttribute('href').includes(chapterId)
-      ) {
-        nextPageUrl = nextPageElement.getAttribute('href');
-        if (nextPageUrl && !nextPageUrl.startsWith('http')) {
-          nextPageUrl = this.urlJoin(this.baseUrl, nextPageUrl);
-        }
-      } else {
-        nextPageUrl = null;
+    let url = chapter.url;
+    const document = await this.fetchDom(url);
+    let articleContent = document.querySelector('.read_details');
+    return this.getContentText(articleContent);
+  }
+  
+  getContentText = (element) => {
+    if (!element) return '';
+    let text = '';
+    for (const child of element.childNodes) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        text += child.textContent + '\n';
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        text += this.getContentText(child) + '\n';
       }
     }
-    return content;
-  }
+    return text.trim();
+  };
 }
 
 export default TestBookExtension;

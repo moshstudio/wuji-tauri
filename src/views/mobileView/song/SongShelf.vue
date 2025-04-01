@@ -7,6 +7,7 @@ import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import AddSongShelfDialog from '@/components/windows/dialogs/AddSongShelf.vue';
 import RemoveSongShelfDialog from '@/components/windows/dialogs/RemoveSongShelf.vue';
 import MobileShelfSongCard from '@/components/card/songCards/MobileShelfSongCard.vue';
+import ImportPlaylistDialog from '@/components/windows/dialogs/ImportPlaylist.vue';
 import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
 import { ActionSheetAction } from 'vant';
 import { SongShelfType } from '@/types/song';
@@ -16,10 +17,6 @@ import { storeToRefs } from 'pinia';
 const displayStore = useDisplayStore();
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
-
-const selectedShelf = defineModel('selectedShelf', {
-  type: Object as PropType<SongShelf>,
-});
 
 const shelfAnchors = defineModel('shelfAnchors', {
   type: Array as PropType<number[]>,
@@ -33,24 +30,7 @@ const emit = defineEmits<{
   (e: 'hidePanel'): void;
 }>();
 
-const showMoreOptions = ref(false);
-const moreOptionActions = ref<ActionSheetAction[]>([]);
-const updateActions = (song: SongInfo, shelf: SongShelf) => {
-  moreOptionActions.value = [
-    {
-      name: '移除此歌曲',
-      color: '#1989fa',
-      subname: song.name,
-      callback: () => {
-        shelfStore.removeSongFromShelf(song, shelf.playlist.id);
-        showMoreOptions.value = false;
-      },
-    },
-  ];
-  showMoreOptions.value = true;
-};
-
-const { showSongShelfDetail } = storeToRefs(displayStore);
+const { showSongShelfDetail, selectedSongShelf } = storeToRefs(displayStore);
 const offset = 0;
 const shelfDetailAnchors = ref([
   offset,
@@ -138,20 +118,27 @@ onUnmounted(() => {
           @click="() => (displayStore.showRemoveSongShelfDialog = true)"
         >
         </van-button>
+        <van-button
+          icon="link-o"
+          size="small"
+          round
+          @click="() => (displayStore.showImportPlaylistDialog = true)"
+        >
+        </van-button>
       </div>
       <div class="flex flex-col gap-1 px-2 text-sm">
         <div
           class="flex items-center gap-2 p-1 rounded cursor-pointer hover:bg-[--van-background] text-[--van-text-color]"
           :style="{
             borderBottomColor:
-              selectedShelf?.playlist.id ===
+              selectedSongShelf?.playlist.id ===
               shelfStore.songLikeShelf.playlist.id
                 ? '#1989fa'
                 : 'transparent',
           }"
           @click="
             () => {
-              selectedShelf = shelfStore.songLikeShelf;
+              selectedSongShelf = shelfStore.songLikeShelf;
               showSongShelfDetail = true;
             }
           "
@@ -172,13 +159,13 @@ onUnmounted(() => {
           class="flex items-center gap-2 p-1 rounded cursor-pointer hover:bg-[--van-background] text-[--van-text-color]"
           :style="{
             borderBottomColor:
-              selectedShelf?.playlist.id === shelf.playlist.id
+              selectedSongShelf?.playlist.id === shelf.playlist.id
                 ? '#1989fa'
                 : 'transparent',
           }"
           @click="
             () => {
-              selectedShelf = shelf;
+              selectedSongShelf = shelf;
               showSongShelfDetail = true;
             }
           "
@@ -200,13 +187,13 @@ onUnmounted(() => {
           class="flex items-center gap-2 p-1 rounded cursor-pointer hover:bg-[--van-background] text-[--van-text-color]"
           :style="{
             borderBottomColor:
-              selectedShelf?.playlist.id === shelf.playlist.id
+              selectedSongShelf?.playlist.id === shelf.playlist.id
                 ? '#1989fa'
                 : 'transparent',
           }"
           @click="
             () => {
-              selectedShelf = shelf;
+              selectedSongShelf = shelf;
               showSongShelfDetail = true;
             }
           "
@@ -239,7 +226,7 @@ onUnmounted(() => {
   >
     <template #header>
       <van-nav-bar
-        :title="selectedShelf?.playlist.name || '详情'"
+        :title="selectedSongShelf?.playlist.name || '详情'"
         left-arrow
         @click-left="hideDetailPanel"
       />
@@ -248,52 +235,51 @@ onUnmounted(() => {
       <div
         class="flex gap-2"
         v-if="
-          selectedShelf &&
-          selectedShelf.type === SongShelfType.playlist &&
-          selectedShelf.playlist.list &&
-          (selectedShelf.playlist.list.totalPage || 0) > 1
+          selectedSongShelf &&
+          selectedSongShelf.playlist &&
+          selectedSongShelf.type === SongShelfType.playlist &&
+          selectedSongShelf.playlist.list &&
+          (selectedSongShelf.playlist.list.totalPage || 0) > 1
         "
       >
         <van-button
           size="small"
           plain
-          @click="() => emit('playAll', selectedShelf!.playlist)"
+          @click="() => emit('playAll', selectedSongShelf!.playlist)"
         >
           全部播放
         </van-button>
         <SimplePagination
-          v-model="selectedShelf.playlist.list.page"
-          :page-count="selectedShelf.playlist.list.totalPage || undefined"
+          v-model="selectedSongShelf.playlist.list.page"
+          :page-count="selectedSongShelf.playlist.list.totalPage || undefined"
           @change="
-            (page: number) => emit('loadPage', selectedShelf!.playlist.id, page)
+            (page: number) =>
+              emit('loadPage', selectedSongShelf!.playlist.id, page)
           "
         ></SimplePagination>
       </div>
       <template
-        v-for="song in selectedShelf?.playlist.list?.list"
-        :key="song.id"
+        v-for="song in selectedSongShelf?.playlist.list?.list"
+        v-if="selectedSongShelf"
+        :key="song"
       >
         <MobileShelfSongCard
           :song="song"
-          :type="selectedShelf!.type"
+          :shelf="selectedSongShelf"
           @play="
             () =>
               songStore.setPlayingList(
-                selectedShelf?.playlist.list?.list || [],
+                selectedSongShelf?.playlist.list?.list || [],
                 song
               )
           "
-          @show-more-options="() => updateActions(song, selectedShelf!)"
         ></MobileShelfSongCard>
-        <MoreOptionsSheet
-          v-model="showMoreOptions"
-          :actions="moreOptionActions"
-        ></MoreOptionsSheet>
       </template>
     </div>
   </van-floating-panel>
   <AddSongShelfDialog></AddSongShelfDialog>
   <RemoveSongShelfDialog></RemoveSongShelfDialog>
+  <ImportPlaylistDialog></ImportPlaylistDialog>
 </template>
 
 <style scoped lang="less">

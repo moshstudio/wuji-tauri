@@ -7,6 +7,8 @@ import { Icon } from '@iconify/vue';
 import { computed, PropType } from 'vue';
 import AddComicShelfDialog from '@/components/windows/dialogs/AddComicShelf.vue';
 import DeleteComicShelfDialog from '@/components/windows/dialogs/RemoveComicShelf.vue';
+import WinShelfComicCard from '@/components/card/comicCards/WinShelfComicCard.vue';
+import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
 
 const shelfAnchors = defineModel('shelfAnchors', {
   type: Array as PropType<number[]>,
@@ -101,13 +103,10 @@ const sourceName = (comic: ComicItemInShelf) => {
       </van-button>
     </div>
 
-    <van-tabs shrink>
+    <van-tabs shrink animated>
       <van-tab :title="shelf.name" v-for="shelf in comicShelf" :key="shelf.id">
-        <van-list class="p-2">
-          <van-card
-            :desc="item.comic.intro"
-            centered
-            lazy-load
+        <ResponsiveGrid2>
+          <template
             v-for="item in _.orderBy(
               shelf.comics,
               [(comic) => comic.lastReadTime || 0, (comic) => comic.createTime],
@@ -115,72 +114,14 @@ const sourceName = (comic: ComicItemInShelf) => {
             )"
             :key="item.comic.id"
           >
-            <template #thumb>
-              <van-image
-                width="80px"
-                height="100px"
-                radius="4"
-                :src="item.comic.cover"
-              >
-                <template #loading>
-                  <Icon icon="codicon:comic" width="48" height="48" />
-                </template>
-                <template #error>
-                  <Icon icon="codicon:comic" width="48" height="48" />
-                </template>
-              </van-image>
-            </template>
-            <template #title>
-              <van-row align="center" class="gap-4">
-                <h1
-                  class="text-button-2 text-base font-bold"
-                  @click="() => emit('toComic', item)"
-                >
-                  {{ item.comic.title }}
-                </h1>
-                <span class="text-gray-400">{{ sourceName(item) }}</span>
-              </van-row>
-            </template>
-            <template #tags>
-              <p
-                class="text-button-2 text-[var(--van-card-desc-color)] font-normal pt-1"
-                @click="() => emit('toComic', item, lastChapter(item)?.id)"
-              >
-                {{
-                  item.comic.chapters?.length
-                    ? '最新章节:' + lastChapter(item)?.title
-                    : ''
-                }}
-              </p>
-            </template>
-            <template #price>
-              <van-badge
-                :content="unreadCount(item)"
-                color="#1989fa"
-                :offset="[18, 13.8]"
-              >
-                <p
-                  class="text-button-2 text-[var(--van-card-desc-color)] pt-1"
-                  @click="() => emit('toComic', item, item.lastReadChapter?.id)"
-                >
-                  {{
-                    item.lastReadChapter
-                      ? '最近阅读:' + item.lastReadChapter.title
-                      : undefined
-                  }}
-                </p>
-              </van-badge>
-            </template>
-            <template #footer>
-              <van-button
-                size="mini"
-                @click="() => emit('removeComicFromShelf', item, shelf.id)"
-              >
-                移除
-              </van-button>
-            </template>
-          </van-card>
-        </van-list>
+            <WinShelfComicCard
+              :shelf-comic="item"
+              :unread="unreadCount(item)"
+              @click="(comic, chapterId) => emit('toComic', comic, chapterId)"
+              @remove="(comic) => emit('removeComicFromShelf', comic, shelf.id)"
+            ></WinShelfComicCard>
+          </template>
+        </ResponsiveGrid2>
       </van-tab>
     </van-tabs>
   </van-floating-panel>
