@@ -25,4 +25,4 @@ dist-ssr
 
 *lock.yaml
 upload-keystore.jks
-~/*
+.tauri

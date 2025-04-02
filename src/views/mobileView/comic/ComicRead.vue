@@ -17,7 +17,7 @@ import {
 } from 'vue';
 import { useScroll } from '@vueuse/core';
 import LoadImage from '@/components/LoadImage.vue';
-import SwitchComicSourceDialog from '@/components/dialogs/SwitchComicSource.vue';
+import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 
 const comic = defineModel('comic', { type: Object as PropType<ComicItem> });
 const comicSource = defineModel('comicSource', {
@@ -180,21 +180,20 @@ const showMenu = ref(false);
         @click="() => (showMenu = !showMenu)"
         v-if="readingContent"
       >
-        <template
+        <div
+          class="w-full min-h-[50px] text-center leading-[0]"
           v-if="readingContent"
-          v-for="item in readingContent.photos"
-          :key="item.id"
+          v-for="(item, index) in readingContent.photos"
+          :key="index"
         >
-          <div class="w-full min-h-[50px] text-center leading-[0]">
-            <LoadImage
-              :src="item"
-              :headers="readingContent.photosHeaders"
-              fit="contain"
-              lazy-load
-            >
-            </LoadImage>
-          </div>
-        </template>
+          <LoadImage
+            :src="item"
+            :headers="readingContent.photosHeaders"
+            fit="contain"
+            lazy-load
+          >
+          </LoadImage>
+        </div>
 
         <van-floating-bubble
           v-model:offset="bubbleOffset"
@@ -319,7 +318,18 @@ const showMenu = ref(false);
             <span class="text-white">保持屏幕常亮</span>
           </template>
           <template #value>
-            <van-switch v-model="displayStore.comicKeepScreenOn" />
+            <van-switch
+              v-model="displayStore.comicKeepScreenOn"
+              @change="
+                (v) => {
+                  if (v) {
+                    keepScreenOn(true);
+                  } else {
+                    keepScreenOn(false);
+                  }
+                }
+              "
+            />
           </template>
         </van-cell>
       </div>

@@ -4,41 +4,33 @@ class TestVideoExtension extends VideoExtension {
   id = 'testVideo';
   name = 'testVideo';
   version = '0.0.1';
-  baseUrl = 'https://www.66s6.net/';
-  headers = {
-    'Upgrade-Insecure-Requests': '1',
-    Origin: 'https://www.66s6.net',
-    Host: 'www.66s6.net',
-    Referer: 'https://www.66s6.net/',
-    'Content-Type': 'application/x-www-form-urlencoded',
-    Accept: '*/*',
-  };
-  searchIds = {};
+  baseUrl = 'https://www.duse0.com/';
   async getRecommendVideos(pageNo, type) {
-    let items = [
+    const items = [
       {
-        name: '首页',
-        tag: '',
+        name: '电影',
+        tag: 'show/1-----3-{pageNo}.html',
       },
       {
-        name: '喜剧',
-        tag: 'xijupian',
+        name: '连续剧',
+        tag: 'show/2-----3-{pageNo}.html',
       },
       {
-        name: '动作',
-        tag: 'dongzuopian',
+        name: '动漫',
+        tag: 'show/3-----3-{pageNo}.html',
       },
       {
-        name: '爱情',
-        tag: 'aiqingpian',
+        name: '综艺记录',
+        tag: 'show/4-----3-{pageNo}.html',
       },
       {
-        name: '科幻',
-        tag: 'kehuanpian',
+        name: '短剧',
+        tag: 'show/6-----3-{pageNo}.html',
       },
     ];
     if (!type) {
       return items.map((item) => ({
+        id: this.urlJoin(this.baseUrl, item.tag),
         type: item.name,
         list: [],
         page: pageNo,
@@ -47,177 +39,130 @@ class TestVideoExtension extends VideoExtension {
       }));
     }
     const item = items.find((item) => item.name === type);
-    if (!item) return null;
-    pageNo = pageNo || 1;
-    let url = `${this.baseUrl}${item.tag}/`;
-    if (pageNo > 1) {
-      url += `index_${pageNo}.html`;
-    }
+    pageNo ||= 1;
+    const url = this.urlJoin(
+      this.baseUrl,
+      item.tag.replace('{pageNo}', pageNo)
+    );
     const document = await this.fetchDom(url);
     const list = await this.queryVideoElements(document, {
-      element: '#post_container li',
-      cover: 'img',
-      title: 'h2 a',
-      url: 'h2 a',
-      tag: '.info_category a',
-      latestUpdate: '.info_date',
+      element: '.main .module-item',
+      cover: 'img:nth-child(2)',
+      coverDomain: 'https://vres1.ipvav.cn/',
+      title: '.v-item-title:nth-child(2)',
+      url: 'a',
     });
-
-    const pageElements = document.querySelectorAll('.pagination a');
+    const pageElements = Array.from(
+      document.querySelectorAll('.pagenation-box a').values()
+    );
     return {
       list,
       page: pageNo,
-      totalPage: this.maxPageNoFromElements(pageElements),
+      totalPage: pageElements.find((a) => a.textContent.includes('下一页'))
+        ? pageNo + 1
+        : pageNo,
+      type: item.name,
+      sourceId: '',
     };
   }
 
   async search(keyword, pageNo) {
-    pageNo ||= 1;
-    let document;
-    if (pageNo === 1 || !this.searchIds[keyword]) {
-      const url = `${this.baseUrl}/e/search/1index.php`;
-      const body = `show=title&tempid=1&tbname=article&mid=1&dopost=search&submit=&keyboard=${keyword}`;
-      const response = await this.fetch(url, {
-        method: 'POST',
-        body: body,
-        headers: this.headers,
-      });
-      const text = await response.text();
-      const searchId = URL.parse(response.url).searchParams.get('searchid');
-      if (!searchId) return null;
-      this.searchIds[keyword] = searchId;
-      document = new DOMParser().parseFromString(text, 'text/html');
-    } else {
-      const url = `${this.baseUrl}e/search/result/?page=${pageNo}&searchid=${this.searchIds[keyword]}`;
-      document = await this.fetchDom(url);
-    }
-    const list = await this.queryVideoElements(document, {
-      element: '#post_container li',
-      cover: 'img',
-      title: 'h2 a',
-      url: 'h2 a',
-      tag: '.info_category a',
-      latestUpdate: '.info_date',
-    });
+    const url = `${this.baseUrl}search?k=${keyword}&page=${pageNo}&os=pc`;
+    const document = await this.fetchDom(url);
 
-    const pageElements = document.querySelectorAll('.pagination a');
+    const list = await this.queryVideoElements(document, {
+      element: '.search-result-list a',
+      cover: 'img:nth-child(1)',
+      coverDomain: 'https://vres1.ipvav.cn/',
+      title: '.title',
+      url: '',
+    });
+    const pageElements = Array.from(
+      document.querySelectorAll('.pagenation-box a').values()
+    );
+
     return {
       list,
       page: pageNo,
-      totalPage: this.maxPageNoFromElements(pageElements),
+      totalPage: pageElements.find((a) => a.textContent.includes('下一页'))
+        ? pageNo + 1
+        : pageNo,
+      sourceId: '',
     };
   }
 
   async getVideoDetail(item, pageNo) {
     pageNo ||= 1;
-    const document = await this.fetchDom(item.url, { headers: this.headers });
-    const pElements = Array.from(
-      document.querySelectorAll('#post_content p').values()
+    const document = await this.fetchDom(item.url);
+
+    item.intro = document.querySelector('.detail-desc p')?.textContent.trim();
+    const rows = Array.from(
+      document.querySelectorAll('.detail-info-row').values()
     );
-    let infoIndex = null;
-    pElements.forEach((p, index) => {
-      const text = p.textContent;
-      if (text.includes('译　　名')) {
-        infoIndex = index;
-        const infos = p.textContent
-          .replace(/\r?\n|\r/g, '', '')
-          .split('◎')
-          .map((info) => info.trim());
+    item.director = rows[0].querySelector('.detail-info-row-main')?.textContent;
+    item.cast = rows[1].querySelector('.detail-info-row-main')?.textContent;
 
-        if (infos.find((i) => i.startsWith('年　　代'))) {
-          item.releaseDate = infos
-            .find((i) => i.startsWith('年　　代'))
-            .substring(5);
-        }
-        if (infos.find((i) => i.startsWith('产　　地'))) {
-          item.country = infos
-            .find((i) => i.startsWith('产　　地'))
-            .substring(5);
-        }
-        if (infos.find((i) => i.startsWith('片　　长'))) {
-          item.duration = infos
-            .find((i) => i.startsWith('片　　长'))
-            .substring(5);
-        }
-        if (infos.find((i) => i.startsWith('导　　演'))) {
-          item.director = infos
-            .find((i) => i.startsWith('导　　演'))
-            .substring(5);
-        }
-        if (infos.find((i) => i.startsWith('主　　演'))) {
-          item.cast = infos.find((i) => i.startsWith('主　　演')).substring(5);
-        }
-        if (infos.find((i) => i.startsWith('类　　别'))) {
-          item.tags = infos.find((i) => i.startsWith('类　　别')).substring(5);
-        }
-      }
-    });
-    if (infoIndex !== null) {
-      let introP = pElements[infoIndex + 1];
-      if (!introP?.textContent || introP.textContent.includes('简　　介')) {
-        introP = pElements[infoIndex + 2];
-      }
-      item.intro = introP?.textContent.trim();
+    const tagElements = Array.from(
+      document.querySelectorAll('.detail-tags a').values()
+    );
+    item.releaseDate = tagElements[0]?.textContent;
+    item.country = tagElements[1]?.textContent;
+    if (tagElements.length > 2) {
+      item.tags = tagElements
+        .slice(2)
+        .map((a) => a.textContent)
+        .join('');
     }
-
-    const widgets = document.querySelectorAll('.context .widget.box.row');
     const resources = [];
-    widgets.forEach((widget) => {
-      const title = widget.querySelector('h3')?.textContent;
-      if (!title) return;
-      const resource = {
-        id: title,
-        title: title,
-        episodes: [],
-      };
-      const elements = widget.querySelectorAll('a[title]');
-      elements.forEach((element) => {
-        const url = this.urlJoin(this.baseUrl, element.getAttribute('href'));
-        resource.episodes.push({
+    const sourceNames = Array.from(
+      document
+        .querySelectorAll('.episode-box .swiper-slide .source-item span')
+        .values()
+    ).map((a) => a.textContent);
+    const episodeElements = Array.from(
+      document.querySelectorAll('.episode-box-main .episode-list').values()
+    );
+    sourceNames.forEach((sourceName, index) => {
+      const episodeElement = episodeElements[index];
+      if (!episodeElement) return;
+      const episodes = [];
+      episodeElement.querySelectorAll('a[href]').forEach((a) => {
+        const url = this.urlJoin(this.baseUrl, a.getAttribute('href'));
+        episodes.push({
           id: url,
-          title: element.textContent,
+          title: a.textContent,
           url: url,
         });
       });
-
-      resources.push(resource);
+      resources.push({
+        id: sourceName,
+        title: sourceName,
+        episodes: episodes,
+      });
     });
     item.resources = resources;
     return item;
   }
 
   async getPlayUrl(item, resource, episode) {
-    const document = await this.fetchDom(episode.url, {
-      headers: this.headers,
-    });
-    const iframe = document.querySelector('.video iframe');
-    let domExtractedUrl = '';
-    if (iframe) {
-      const url = iframe.getAttribute('src');
-      const doc = await this.fetchDom(url);
-      const scripts = doc.querySelectorAll('script');
+    const response = await this.fetch(episode.url);
+    const text = await response.text();
 
-      scripts.forEach((script) => {
-        if (script.textContent.includes('url:')) {
-          const urlMatch = script.textContent.match(/url:\s*'([^']+)'/);
-          if (urlMatch) {
-            domExtractedUrl = urlMatch[1];
-          }
-        }
-      });
-    } else {
-      const scripts = document.querySelectorAll('script');
-      scripts.forEach((script) => {
-        if (script.textContent.includes('source:')) {
-          // source: "
-          const urlMatch = script.textContent.match(/source: "([^"]+)"/);
-          if (urlMatch) {
-            domExtractedUrl = urlMatch[1];
-          }
-        }
-      });
+    const regex = /const\s*playSource\s*=\s*([^;]+);/;
+    const match = text.match(regex);
+    if (match && match[1]) {
+      const func = new Function('return ' + match[1]);
+      const playSource = func();
+
+      if (!playSource) {
+        return null;
+      }
+      if (playSource.src) {
+        return { url: playSource.src };
+      } else {
+        return { url: playSource };
+      }
     }
-    return { url: domExtractedUrl };
   }
 }
 

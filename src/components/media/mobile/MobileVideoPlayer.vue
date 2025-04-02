@@ -21,6 +21,8 @@
       @loadedmetadata="(args) => emit('canPlay', args)"
       @timeupdate="(args) => emit('timeUpdate', args)"
       @mounted="handleMounted"
+      @error="onError"
+      @fullscreenchange="onFullScreenChange"
       class="video-player flex w-full h-full items-center"
     >
       <template
@@ -103,7 +105,7 @@ import {
   set_screen_orientation,
   hide_status_bar,
 } from 'tauri-plugin-commands-api';
-import { showToast } from 'vant';
+import { showNotify, showToast } from 'vant';
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
 const displayStore = useDisplayStore();
@@ -160,6 +162,14 @@ const vClickSeparate = {
   },
 };
 
+const onFullScreenChange = () => {
+  if (player.value?.isFullscreen()) {
+    displayStore.fullScreenMode = true;
+  } else {
+    displayStore.fullScreenMode = false;
+  }
+};
+
 const quickForward = (seconds: number) => {
   if (player.value) {
     player.value.currentTime(
@@ -170,6 +180,12 @@ const quickForward = (seconds: number) => {
 const quickBackward = (seconds: number) => {
   if (player.value) {
     player.value.currentTime(Math.max(player.value.currentTime() - seconds, 0));
+  }
+};
+const onError = (e: any) => {
+  const err = player.value?.error()?.message;
+  if (err) {
+    showNotify(err);
   }
 };
 

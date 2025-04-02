@@ -8,10 +8,14 @@
       :volume="1"
       :height="320"
       :playback-rates="[0.5, 0.75, 1.0, 1.25, 1.5, 2.0]"
+      @fullscreenchange="onFullScreenChange"
       @loadedmetadata="(args) => emit('canPlay', args)"
       @timeupdate="(args) => emit('timeUpdate', args)"
       @mounted="handleMounted"
+      @error="onError"
       class="flex w-full h-full items-center"
+      @keydown.left="() => quickBackward(10)"
+      @keydown.right="() => quickForward(10)"
     >
       <template
         v-slot="{
@@ -70,18 +74,19 @@
                 <FullScreenButton
                   :state="state"
                   :player="player"
+                  :focus="() => player.focus()"
                 ></FullScreenButton>
               </div>
             </div>
           </div>
         </div>
+        <div
+          class="absolute bottom-0 left-0 right-0 h-[76px] bg-transparent"
+          v-if="!showControls"
+          @mouseenter.stop="showControlsAction"
+        ></div>
       </template>
     </video-player>
-    <div
-      class="absolute bottom-0 left-0 right-0 h-[76px] bg-transparent"
-      v-if="!showControls"
-      @mouseenter.stop="showControlsAction"
-    ></div>
   </div>
 </template>
 
@@ -95,6 +100,7 @@ import QuickSeekButton from '@/components/media/win/QuickSeekButton.vue';
 import {
   defineComponent,
   onBeforeUnmount,
+  onMounted,
   PropType,
   ref,
   shallowRef,
@@ -104,6 +110,9 @@ import videojs from 'video.js';
 import { VideoPlayer, VideoPlayerState } from '@videojs-player/vue';
 import 'video.js/dist/video-js.css';
 import { setTimeout, clearTimeout } from 'worker-timers';
+import { log } from 'console';
+import { useDisplayStore } from '@/store';
+import { showNotify } from 'vant';
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
 const player = defineModel('player', {
@@ -119,10 +128,12 @@ const emit = defineEmits<{
   (e: 'timeUpdate', args: any): void;
 }>();
 
+const displayStore = useDisplayStore();
 const state = shallowRef<VideoPlayerState>();
 const handleMounted = (payload: any) => {
   state.value = payload.state;
   player.value = payload.player;
+  player.value?.focus();
 };
 
 const showControls = ref(false);
@@ -139,6 +150,14 @@ const showControlsAction = () => {
   }, 2000); // 2秒后隐藏
 };
 
+const onFullScreenChange = () => {
+  if (player.value?.isFullscreen()) {
+    displayStore.fullScreenMode = true;
+  } else {
+    displayStore.fullScreenMode = false;
+  }
+};
+
 const quickForward = (seconds: number) => {
   if (player.value) {
     player.value.currentTime(
@@ -149,6 +168,12 @@ const quickForward = (seconds: number) => {
 const quickBackward = (seconds: number) => {
   if (player.value) {
     player.value.currentTime(Math.max(player.value.currentTime() - seconds, 0));
+  }
+};
+const onError = (e: any) => {
+  const err = player.value?.error()?.message;
+  if (err) {
+    showNotify(err);
   }
 };
 

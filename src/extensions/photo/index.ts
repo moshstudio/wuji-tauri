@@ -94,10 +94,9 @@ abstract class PhotoExtension extends Extension {
     return r;
   })
   async execGetPhotoDetail(item: PhotoItem, pageNo?: number) {
-    const ret = await this.getPhotoDetail(_.cloneDeep(item), pageNo);
+    const ret = await this.getPhotoDetail(item, pageNo);
     if (ret) {
       ret.item.sourceId = String(this.id);
-      Object.assign(item, ret);
     }
     return ret;
   }

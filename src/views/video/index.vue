@@ -3,10 +3,10 @@ import { storeToRefs } from 'pinia';
 import WinVideo from '../windowsView/video/index.vue';
 import MobileVideo from '../mobileView/video/index.vue';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
-import { ref, triggerRef } from 'vue';
+import { ref, toRaw, triggerRef } from 'vue';
 import { useDisplayStore, useStore } from '@/store';
 import { VideoSource } from '@/types';
-import { debounce } from 'lodash';
+import _, { debounce } from 'lodash';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { router } from '@/router';
 import { showLoadingToast } from 'vant';
@@ -36,15 +36,15 @@ const search = createCancellableFunction(async (signal: AbortSignal) => {
   const t = displayStore.showToast();
   if (!keyword) {
     await recommend(true);
-    triggerRef(videoSources);
   } else {
     await Promise.all(
-      videoSources.value.map(async (videoSources) => {
+      videoSources.value.map(async (source) => {
         if (signal.aborted) return;
-        await store.videoSearch(videoSources, keyword, 1);
+        await store.videoSearch(source, keyword, 1);
       })
     );
   }
+  triggerRef(videoSources);
   displayStore.closeToast(t);
 });
 const loadType = async (source: VideoSource, type?: string) => {

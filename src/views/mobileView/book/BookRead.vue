@@ -17,6 +17,7 @@ import { PropType } from 'vue';
 import { ReaderResult, type LineData } from '@/utils/reader/types';
 import BookShelfButton from '@/components/BookShelfButton.vue';
 import SwitchBookSourceDialog from '@/components/dialogs/SwitchBookSource.vue';
+import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 
 const book = defineModel('book', { type: Object as PropType<BookItem> });
 const bookSource = defineModel('bookSource', {
@@ -894,7 +895,18 @@ onBeforeUnmount(function () {
             <span class="text-white">保持屏幕常亮</span>
           </template>
           <template #value>
-            <van-switch v-model="displayStore.bookKeepScreenOn" />
+            <van-switch
+              v-model="displayStore.bookKeepScreenOn"
+              @change="
+                (v) => {
+                  if (v) {
+                    keepScreenOn(true);
+                  } else {
+                    keepScreenOn(false);
+                  }
+                }
+              "
+            />
           </template>
         </van-cell>
       </div>

@@ -114,6 +114,7 @@ import {
   VideoUrlMap,
 } from '@/extensions/video';
 import HeartSVG from '@/assets/heart-fill.svg';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 async function tauriAddPluginListener<T>(
   plugin: string,
@@ -502,6 +503,7 @@ export const useStore = defineStore('store', () => {
     } else {
       source.list = undefined;
     }
+    triggerRef(bookSources);
   };
   const bookDetail = async (source: BookSource, book: BookItem) => {
     const sc = (await sourceClass(source.item)) as BookExtension;
@@ -652,6 +654,7 @@ export const useStore = defineStore('store', () => {
     } else {
       source.list = undefined;
     }
+    triggerRef(comicSources);
   };
   const comicDetail = async (source: ComicSource, comic: ComicItem) => {
     const sc = (await sourceClass(source.item)) as ComicExtension;
@@ -749,9 +752,11 @@ export const useStore = defineStore('store', () => {
     const sc = (await sourceClass(source.item)) as VideoExtension;
     const res = await sc?.execSearch(keyword, pageNo);
     if (res) {
-      if (!_.isArray(res) && !res.list?.length) {
-        source.list = undefined;
-        return;
+      if (!_.isArray(res)) {
+        if (!res.list?.length) {
+          source.list = undefined;
+          return;
+        }
       }
       source.list = res;
     } else {
@@ -1019,19 +1024,34 @@ export const useStore = defineStore('store', () => {
     const displayStore = useDisplayStore();
     const t = displayStore.showToast();
     const failed: string[] = [];
-    for (const source of subscribeSourceStore.subscribeSources) {
-      const url = source.url;
-      try {
-        if (source.detail.id === localSourceId) {
-          await addLocalSubscribeSource(url);
-        } else {
-          await addSubscribeSource(url, true);
+    await Promise.all(
+      subscribeSourceStore.subscribeSources.map(async (source) => {
+        const url = source.url;
+        try {
+          if (source.detail.id === localSourceId) {
+            await addLocalSubscribeSource(url);
+          } else {
+            await addSubscribeSource(url, true);
+          }
+        } catch (error) {
+          console.log(error);
+          failed.push(source.detail.name);
         }
-      } catch (error) {
-        console.log(error);
-        failed.push(source.detail.name);
-      }
-    }
+      })
+    );
+    // for (const source of subscribeSourceStore.subscribeSources) {
+    //   const url = source.url;
+    //   try {
+    //     if (source.detail.id === localSourceId) {
+    //       await addLocalSubscribeSource(url);
+    //     } else {
+    //       await addSubscribeSource(url, true);
+    //     }
+    //   } catch (error) {
+    //     console.log(error);
+    //     failed.push(source.detail.name);
+    //   }
+    // }
 
     if (failed.length > 0) {
       showNotify(`${failed.join(',')} 订阅源更新失败`);
@@ -1313,12 +1333,12 @@ export const useStore = defineStore('store', () => {
         }
       } catch (error) {}
     }
-    keepTest.value = true;
+    // keepTest.value = true;
     // addTestSource(new TestSongExtension(), SourceType.Song);
     // addTestSource(new TestBookExtension(), SourceType.Book);
     // addTestSource(new TestPhotoExtension(), SourceType.Photo);
     // addTestSource(new TestComicExtension(), SourceType.Comic);
-    addTestSource(new TestVideoExtension(), SourceType.Video);
+    // addTestSource(new TestVideoExtension(), SourceType.Video);
 
     loadSubscribeSources(true);
   });
@@ -1382,21 +1402,7 @@ export const useStore = defineStore('store', () => {
 
 export const useDisplayStore = defineStore('display', () => {
   const showTabBar = ref(true);
-  const fullScreenMode = ref(false);
-  watch(
-    fullScreenMode,
-    async (newValue) => {
-      //android 全屏播放时，自动隐藏状态栏
-      if (newValue) {
-        showTabBar.value = false;
-        await commands.set_screen_orientation('landscape');
-      } else {
-        showTabBar.value = true;
-        await commands.set_screen_orientation('portrait');
-      }
-    },
-    { immediate: true }
-  );
+
   // 检测是否为手机尺寸
   const mobileMediaQuery = window.matchMedia('(max-width: 420px)');
   // 检测是否为横屏
@@ -1406,6 +1412,36 @@ export const useDisplayStore = defineStore('display', () => {
   const isWindows = ref(osType() == 'windows');
   const isAndroid = ref(osType() == 'android');
   const isLandscape = ref(landscapeMediaQuery.matches);
+
+  const fullScreenMode = ref(false);
+  watch(
+    fullScreenMode,
+    async (newValue) => {
+      //android 全屏播放时，自动隐藏状态栏
+      console.log('new value is', newValue);
+
+      if (newValue) {
+        console.log('fullScreenMode');
+
+        showTabBar.value = false;
+        if (isAndroid.value) {
+          await commands.set_screen_orientation('landscape');
+        } else {
+          await getCurrentWindow().setFullscreen(true);
+        }
+      } else {
+        console.log('not fullScreenMode');
+
+        showTabBar.value = true;
+        if (isAndroid.value) {
+          await commands.set_screen_orientation('portrait');
+        } else {
+          await getCurrentWindow().setFullscreen(false);
+        }
+      }
+    },
+    { immediate: true }
+  );
 
   const checkMobile = (event: MediaQueryListEvent) => {
     // 全屏状态下就不刷新`isMobile`了
@@ -2209,6 +2245,10 @@ export const useSongStore = defineStore('song', () => {
         playMode,
         (newMode, oldMode) => {
           // 播放模式变化时，重置播放列表索引
+          if (!playingPlaylist.value.length && newMode === SongPlayMode.list) {
+            // 初始状态就不用提前赋值了
+            return;
+          }
           switch (oldMode) {
             case SongPlayMode.single:
               switch (newMode) {

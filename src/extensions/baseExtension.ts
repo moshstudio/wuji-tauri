@@ -59,6 +59,7 @@ abstract class Extension {
       url?: string;
       latestChapter?: string;
       latestUpdate?: string;
+      coverDomain?: string;
     }
   ) => Promise<BookItem[]>;
   queryComicElements: (
@@ -92,6 +93,7 @@ abstract class Extension {
       status?: string;
       url?: string;
       latestUpdate?: string;
+      coverDomain?: string;
     }
   ) => Promise<BookItem[]>;
   queryPhotoElements: (
@@ -106,6 +108,7 @@ abstract class Extension {
       hot?: string;
       view?: string;
       url?: string;
+      coverDomain?: string;
     }
   ) => Promise<PhotoItem[]>;
   queryChapters: (
@@ -167,6 +170,7 @@ abstract class Extension {
         url = 'a',
         latestChapter = '.latestchapter a',
         latestUpdate = '.update',
+        coverDomain = undefined,
       }
     ) => {
       const elements = body.querySelectorAll(element);
@@ -189,7 +193,7 @@ abstract class Extension {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
             } else {
-              coverE = this.urlJoin(this.baseUrl, coverE);
+              coverE = this.urlJoin(coverDomain ?? this.baseUrl, coverE);
             }
           }
         }
@@ -238,19 +242,6 @@ abstract class Extension {
     this.queryVideoElements = async (
       body: Document,
       {
-        // element?: string;
-      // cover?: string;
-      // title?: string;
-      // intro?: string;
-      // releaseDate?: string;
-      // country?: string;
-      // duration?: string;
-      // director?: string;
-      // cast?: string;
-      // tags?: string;
-      // status?: string;
-      // url?: string;
-      // latestUpdate?: string;
         element = '.bookbox',
         cover = 'img',
         title = 'h3 a',
@@ -264,6 +255,7 @@ abstract class Extension {
         status = '.status',
         url = 'a',
         latestUpdate = '.update',
+        coverDomain = undefined,
       }
     ) => {
       const elements = body.querySelectorAll(element);
@@ -286,7 +278,7 @@ abstract class Extension {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
             } else {
-              coverE = this.urlJoin(this.baseUrl, coverE);
+              coverE = this.urlJoin(coverDomain ?? this.baseUrl, coverE);
             }
           }
         }
@@ -348,6 +340,7 @@ abstract class Extension {
         hot = '.hot',
         view = '.view',
         url = 'a',
+        coverDomain = undefined,
       }
     ) => {
       const elements = body.querySelectorAll(element);
@@ -373,7 +366,9 @@ abstract class Extension {
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           title: titleE?.trim() || '',
           desc: descE?.trim() || undefined,
-          cover: coverE ? this.urlJoin(this.baseUrl, coverE) : '',
+          cover: coverE
+            ? this.urlJoin(coverDomain ?? this.baseUrl, coverE)
+            : '',
           author: authorE?.trim() || undefined,
           datetime: datetimeE?.trim() || undefined,
           hot: hotE?.trim() || undefined,

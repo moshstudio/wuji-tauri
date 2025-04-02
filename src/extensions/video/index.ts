@@ -105,7 +105,7 @@ abstract class VideoExtension extends Extension {
   @transformResult<VideosList | null>((r) => {
     if (r) {
       _.castArray(r).forEach((videoList) => {
-        videoList.id = String(videoList.id) || nanoid();
+        videoList.id = String(videoList.id || nanoid());
         videoList.list?.forEach((videoItem) => {
           videoItem.id = String(videoItem.id);
         });
@@ -132,7 +132,7 @@ abstract class VideoExtension extends Extension {
     return r;
   })
   async execGetVideoDetail(item: VideoItem) {
-    const ret = await this.getVideoDetail(_.cloneDeep(item));
+    const ret = await this.getVideoDetail(item);
     if (ret) {
       ret.id = String(ret.id);
       ret.resources?.forEach((resource) => {
@@ -163,9 +163,8 @@ abstract class VideoExtension extends Extension {
           });
         }
       });
-      Object.assign(item, ret);
     }
-    return item;
+    return ret;
   }
   // 3. 获取章节
   abstract getVideoDetail(item: VideoItem): Promise<VideoItem | null>;
@@ -178,7 +177,7 @@ abstract class VideoExtension extends Extension {
     resource: VideoResource,
     episode: VideoEpisode
   ) {
-    return this.getPlayUrl(_.cloneDeep(item), resource, episode);
+    return this.getPlayUrl(item, resource, episode);
   }
   // 4. 获取内容
   abstract getPlayUrl(

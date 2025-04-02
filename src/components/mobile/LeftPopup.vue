@@ -4,6 +4,7 @@ import logo from '@/assets/wuji.svg';
 import ImportSubscribeDialog from '../windows/dialogs/ImportSubscribe.vue';
 import ManageSubscribeDialog from '../windows/dialogs/ManageSubscribe.vue';
 import SettingDialog from '../windows/dialogs/Setting.vue';
+import AboutDialog from '../dialogs/About.vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -37,8 +38,14 @@ const options = [
       displayStore.showSettingDialog = true;
     },
   },
+  {
+    text: '关于',
+    onClick: () => {
+      displayStore.showLeftPopup = false;
+      displayStore.showAboutDialog = true;
+    },
+  },
 ];
-
 </script>
 
 <template>
@@ -74,6 +81,7 @@ const options = [
   <ImportSubscribeDialog></ImportSubscribeDialog>
   <ManageSubscribeDialog></ManageSubscribeDialog>
   <SettingDialog></SettingDialog>
+  <AboutDialog></AboutDialog>
 </template>
 
 <style scoped lang="less"></style>

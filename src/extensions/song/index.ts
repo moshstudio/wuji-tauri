@@ -210,13 +210,16 @@ abstract class SongExtension extends Extension {
     return r;
   })
   async execGetPlaylistDetail(item: PlaylistInfo, pageNo?: number) {
-    const ret = await this.getPlaylistDetail(_.cloneDeep(item), pageNo);
+    const ret = await this.getPlaylistDetail(item, pageNo);
     if (ret) {
       ret.sourceId = this.id;
-      ret.list?.list.forEach((item) => {
-        item.sourceId = String(this.id);
+      ret.list?.list.forEach((i) => {
+        i.sourceId = String(this.id);
       });
-      Object.assign(item, ret);
+      if (!item.picUrl && ret.picUrl) {
+        item.picUrl = ret.picUrl;
+        item.picHeaders = ret.picHeaders;
+      }
     }
     return ret;
   }
@@ -228,7 +231,7 @@ abstract class SongExtension extends Extension {
 
   @transformResult<SongUrlMap | string | null>((r) => r)
   execGetSongUrl(item: SongInfo, size?: SongSize) {
-    return this.getSongUrl(_.cloneDeep(item), size);
+    return this.getSongUrl(item, size);
   }
 
   abstract getSongUrl(
@@ -238,7 +241,7 @@ abstract class SongExtension extends Extension {
 
   @transformResult<string | null>((r) => r)
   execGetLyric(item: SongInfo) {
-    return this.getLyric(_.cloneDeep(item));
+    return this.getLyric(item);
   }
 
   abstract getLyric(item: SongInfo): Promise<string | null>;

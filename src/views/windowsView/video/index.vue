@@ -48,7 +48,7 @@ const { videoSources } = storeToRefs(store);
       </van-search>
     </van-row>
     <div v-for="source in videoSources" :key="source.item.id" class="px-4">
-      <template v-if="!!source.list">
+      <div v-show="!!source.list">
         <van-row justify="space-between">
           <van-button
             :plain="true"
@@ -68,7 +68,7 @@ const { videoSources } = storeToRefs(store);
         >
         </VideosTab>
         <van-divider :style="{ margin: '8px 0px' }" />
-      </template>
+      </div>
     </div>
     <VideoShelf></VideoShelf>
   </div>

@@ -47,7 +47,7 @@ const emit = defineEmits<{
       </van-search>
     </van-row>
     <div v-for="item in photoSources" :key="item.item.id" class="px-4">
-      <template v-if="item.list">
+      <div v-show="item.list">
         <van-row justify="space-between">
           <van-button
             :plain="true"
@@ -72,7 +72,7 @@ const emit = defineEmits<{
           </template>
         </HorizonList>
         <van-divider :style="{ margin: '8px 0px' }" />
-      </template>
+      </div>
     </div>
     <PhotoShelf></PhotoShelf>
   </div>

@@ -69,9 +69,9 @@ watch(
 </script>
 
 <template>
-  <template v-if="!comic"></template>
-  <template v-else>
-    <template v-if="mode === 'rectangle'">
+  <div v-if="!comic"></div>
+  <div v-else>
+    <div v-if="mode === 'rectangle'">
       <van-badge v-if="numInShelf > 0">
         <template #content>
           <p @click="() => (displayStore.showComicShelf = true)">
@@ -85,31 +85,29 @@ watch(
       <van-button plain type="primary" size="small" @click="addToShelf" v-else>
         <span class="truncate"> 加入书架 </span>
       </van-button>
-    </template>
-    <template v-else>
-      <template v-if="numInShelf === 0">
-        <van-button
-          icon="plus"
-          square
-          size="small"
-          class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
-          @click="addToShelf"
-        >
-          <span>书架</span>
-        </van-button>
-      </template>
-      <template v-else>
-        <van-button
-          square
-          size="small"
-          class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
-          @click="() => (displayStore.showComicShelf = true)"
-        >
-          <span>已加书架</span>
-        </van-button>
-      </template>
-    </template>
-  </template>
+    </div>
+    <div v-else>
+      <van-button
+        icon="plus"
+        square
+        size="small"
+        class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
+        @click="addToShelf"
+        v-if="numInShelf === 0"
+      >
+        <span>书架</span>
+      </van-button>
+      <van-button
+        square
+        size="small"
+        class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
+        @click="() => (displayStore.showComicShelf = true)"
+        v-else
+      >
+        <span>已加书架</span>
+      </van-button>
+    </div>
+  </div>
   <van-dialog
     v-model:show="pickShelfDialog"
     show-cancel-button

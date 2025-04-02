@@ -71,7 +71,9 @@ const setContainerRef = (
         >
           <van-collapse-item
             :name="item.item.name"
-            v-if="item.list && !(!Array.isArray(item.list) && !item.list?.list)"
+            v-show="
+              item.list && !(!Array.isArray(item.list) && !item.list?.list)
+            "
           >
             <template #title>
               <van-sticky offset-top="50" :container="containers[index]">

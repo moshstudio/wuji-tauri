@@ -1,8 +1,10 @@
 <template>
-  <div class="w-full flex items-center justify-around gap-1">
+  <div
+    class="w-full flex items-center justify-around gap-1 pointer-events-none"
+  >
     <button
       @click.stop="() => quickBack(seconds)"
-      class="flex items-center justify-center p-1 rounded-full active:scale-95 transition-all duration-300 focus:outline-none"
+      class="flex items-center justify-center p-1 rounded-full active:scale-95 transition-all duration-300 focus:outline-none pointer-events-auto"
     >
       <Icon
         :icon="'mingcute:rewind-backward-10-line'"
@@ -13,7 +15,7 @@
     </button>
     <button
       @click.stop="() => quickForward(seconds)"
-      class="flex items-center justify-center p-1 rounded-full active:scale-95 transition-all duration-300 focus:outline-none"
+      class="flex items-center justify-center p-1 rounded-full active:scale-95 transition-all duration-300 focus:outline-none pointer-events-auto"
     >
       <Icon
         :icon="'mingcute:rewind-forward-10-line'"

@@ -4,7 +4,7 @@ import { BookSource } from '@/types';
 import tinycolor from 'tinycolor2';
 import _ from 'lodash';
 import { PropType } from 'vue';
-import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
+import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
 import BookShelfButton from '@/components/BookShelfButton.vue';
 import BookShelf from '@/views/book/BookShelf.vue';
 import { useDisplayStore } from '@/store';
@@ -101,7 +101,7 @@ const displayStore = useDisplayStore();
             </p>
           </div>
         </div>
-        <ResponsiveGrid>
+        <ResponsiveGrid2>
           <div
             v-for="chapter in isAscending
               ? book.chapters
@@ -112,7 +112,7 @@ const displayStore = useDisplayStore();
           >
             {{ chapter.title }}
           </div>
-        </ResponsiveGrid>
+        </ResponsiveGrid2>
       </div>
     </main>
     <BookShelf></BookShelf>

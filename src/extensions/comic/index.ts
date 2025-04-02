@@ -130,10 +130,9 @@ abstract class ComicExtension extends Extension {
     return r;
   })
   async execGetComicDetail(item: ComicItem) {
-    const ret = await this.getComicDetail(_.cloneDeep(item));
+    const ret = await this.getComicDetail(item);
     if (ret) {
       ret.sourceId = String(this.id);
-      Object.assign(item, ret);
     }
     return ret;
   }
@@ -144,7 +143,7 @@ abstract class ComicExtension extends Extension {
     return r;
   })
   execGetContent(item: ComicItem, chapter: ComicChapter) {
-    return this.getContent(_.cloneDeep(item), chapter);
+    return this.getContent(item, chapter);
   }
   // 4. 获取内容
   abstract getContent(

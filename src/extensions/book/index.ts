@@ -123,10 +123,9 @@ abstract class BookExtension extends Extension {
     return r;
   })
   async execGetBookDetail(item: BookItem) {
-    const ret = await this.getBookDetail(_.cloneDeep(item));
+    const ret = await this.getBookDetail(item);
     if (ret) {
       ret.sourceId = String(this.id);
-      Object.assign(item, ret);
     }
     return ret;
   }
@@ -137,7 +136,7 @@ abstract class BookExtension extends Extension {
     return r;
   })
   execGetContent(item: BookItem, chapter: BookChapter) {
-    return this.getContent(_.cloneDeep(item), chapter).then((r) =>
+    return this.getContent(item, chapter).then((r) =>
       r ? purifyText(r) : null
     );
   }
