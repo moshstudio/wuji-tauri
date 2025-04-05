@@ -7,10 +7,12 @@
       crossorigin="anonymous"
       :volume="1"
       :height="320"
+      :control-bar="false"
       :playback-rates="[0.5, 0.75, 1.0, 1.25, 1.5, 2.0]"
       @fullscreenchange="onFullScreenChange"
       @loadedmetadata="(args) => emit('canPlay', args)"
       @timeupdate="(args) => emit('timeUpdate', args)"
+      @ended="(args) => emit('onPlayFinished', args)"
       @mounted="handleMounted"
       @error="onError"
       class="flex w-full h-full items-center"
@@ -33,53 +35,72 @@
               state.playing ? player.pause() : player.play();
             }
           "
-          v-show="showControls"
         >
           <div
-            class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/90 to-transparent pointer-events-none"
-          ></div>
-
-          <div
-            class="control-bar absolute left-0 right-0 bottom-0 flex flex-col gap-2 p-2"
-            @mouseenter.stop="showControlsAction"
-            @click.stop
+            class="w-full h-full bg-transparent pointer-events-none"
+            v-show="showControls"
           >
-            <VideoProgressBar
-              :state="state"
-              @seek="(time) => player.currentTime(time)"
-            ></VideoProgressBar>
+            <div
+              class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/90 to-transparent pointer-events-none"
+            ></div>
+            <div
+              class="top-bar absolute left-0 right-0 top-0 h-[40px] bg-transparent p-2 text-base text-gray-300 select-none"
+              @mouseenter.stop="showControlsAction"
+              @click.stop
+            >
+              {{ episode?.title || '' }}
+            </div>
 
-            <div class="flex gap-2 items-center justify-between">
-              <div class="flex items-center gap-2">
-                <PlayPauseButton
-                  :is-playing="state.playing"
-                  :play-or-pause="
-                    () => {
-                      state.playing ? player.pause() : player.play();
-                    }
-                  "
-                ></PlayPauseButton>
-                <TimeShow :state="state" :is-playing="state.playing"></TimeShow>
-                <QuickSeekButton
-                  :seconds="10"
-                  :quick-forward="quickForward"
-                  :quick-back="quickBackward"
-                ></QuickSeekButton>
-              </div>
-              <div class="flex items-center gap-2">
-                <PlaybackRateButton
-                  :state="state"
-                  :player="player"
-                ></PlaybackRateButton>
-                <FullScreenButton
-                  :state="state"
-                  :player="player"
-                  :focus="() => player.focus()"
-                ></FullScreenButton>
+            <div
+              class="control-bar absolute left-0 right-0 bottom-0 flex flex-col gap-2 p-2 pointer-events-auto select-none"
+              @mouseenter.stop="showControlsAction"
+              @click.stop
+            >
+              <VideoProgressBar
+                :state="state"
+                @seek="(time) => player.currentTime(time)"
+              ></VideoProgressBar>
+
+              <div class="flex gap-2 items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <PlayPauseButton
+                    :is-playing="state.playing"
+                    :play-or-pause="
+                      () => {
+                        state.playing ? player.pause() : player.play();
+                      }
+                    "
+                  ></PlayPauseButton>
+                  <TimeShow
+                    :state="state"
+                    :is-playing="state.playing"
+                  ></TimeShow>
+                  <QuickSeekButton
+                    :seconds="10"
+                    :quick-forward="quickForward"
+                    :quick-back="quickBackward"
+                  ></QuickSeekButton>
+                </div>
+                <div class="flex items-center gap-2">
+                  <PlaybackRateButton
+                    :state="state"
+                    :player="player"
+                  ></PlaybackRateButton>
+                  <FullScreenButton
+                    :state="state"
+                    :player="player"
+                    :focus="() => player.focus()"
+                  ></FullScreenButton>
+                </div>
               </div>
             </div>
           </div>
         </div>
+        <div
+          class="absolute top-0 left-0 right-0 h-[40px] bg-transparent"
+          v-if="!showControls"
+          @mouseenter.stop="showControlsAction"
+        ></div>
         <div
           class="absolute bottom-0 left-0 right-0 h-[76px] bg-transparent"
           v-if="!showControls"
@@ -110,9 +131,9 @@ import videojs from 'video.js';
 import { VideoPlayer, VideoPlayerState } from '@videojs-player/vue';
 import 'video.js/dist/video-js.css';
 import { setTimeout, clearTimeout } from 'worker-timers';
-import { log } from 'console';
 import { useDisplayStore } from '@/store';
 import { showNotify } from 'vant';
+import { VideoEpisode } from '@/extensions/video';
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
 const player = defineModel('player', {
@@ -122,9 +143,13 @@ const { src } = defineProps({
   src: {
     type: String,
   },
+  episode: {
+    type: Object as PropType<VideoEpisode>,
+  },
 });
 const emit = defineEmits<{
   (e: 'canPlay', args: any): void;
+  (e: 'onPlayFinished', args: any): void;
   (e: 'timeUpdate', args: any): void;
 }>();
 

@@ -13,8 +13,8 @@
         :width="24"
         :height="24"
         :class="{
-          'opacity-0 scale-90': state.isFullscreen,
-          'opacity-100 scale-100': !state.isFullscreen,
+          'opacity-0 scale-90': displayStore.fullScreenMode,
+          'opacity-100 scale-100': !displayStore.fullScreenMode,
         }"
       />
       <!-- 退出全屏图标 -->
@@ -24,8 +24,8 @@
         :width="24"
         :height="24"
         :class="{
-          'opacity-100 scale-100': state.isFullscreen,
-          'opacity-0 scale-90': !state.isFullscreen,
+          'opacity-100 scale-100': displayStore.fullScreenMode,
+          'opacity-0 scale-90': !displayStore.fullScreenMode,
         }"
       />
     </div>

@@ -35,7 +35,7 @@ const emit = defineEmits<{
     </div>
 
     <div
-      class="grow flex flex-col gap-1 justify-start text-sm text-[--van-text-color] max-w-[165px]"
+      class="grow flex flex-col justify-around text-sm text-[--van-text-color] max-w-[165px]"
     >
       <p
         class="text-base font-bold w-full"
@@ -44,7 +44,7 @@ const emit = defineEmits<{
         {{ bookItem.title }}
       </p>
       <p class="text-xs truncate">
-        {{ bookItem.author ? bookItem.author + ' ' : '' }}
+        {{ bookItem.author ? bookItem.author + ' ' : '佚名' }}
         {{
           _.castArray(bookItem.tags).length
             ? _.castArray(bookItem.tags)?.join(',') + ' '
@@ -53,7 +53,7 @@ const emit = defineEmits<{
         {{ bookItem.status || '' }}
       </p>
       <p class="text-xs line-clamp-3">
-        {{ bookItem.intro }}
+        {{ bookItem.intro || '暂无简介' }}
       </p>
     </div>
   </div>

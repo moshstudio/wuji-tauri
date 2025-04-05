@@ -6,7 +6,7 @@ const searchValue = defineModel('searchValue', {
   required: true,
 });
 const emit = defineEmits<{
-  (e: 'search', value: string): void;
+  (e: 'search'): void;
   (e: 'showShelf'): void;
 }>();
 </script>
@@ -17,8 +17,8 @@ const emit = defineEmits<{
   >
     <LeftPopup></LeftPopup>
     <SearchButton
-      v-model="searchValue"
-      @search="(v) => emit('search', v)"
+      v-model:search-value="searchValue"
+      @search="() => emit('search')"
     ></SearchButton>
     <div class="h-[50px] flex items-center justify-center gap-2">
       <van-icon

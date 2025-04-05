@@ -32,8 +32,7 @@ const onRefresh = async () => {
   await sleep(1000);
   isRefreshing.value = false;
 };
-const search = (value: string) => {
-  searchValue.value = value;
+const search = () => {
   emit('search');
 };
 

@@ -54,6 +54,7 @@ const emit = defineEmits<{
   (e: 'toChapter', chapter: BookChapter): void;
   (e: 'prevChapter'): void;
   (e: 'nextChapter'): void;
+  (e: 'refreshChapter'): void;
   (e: 'openChapterPopup'): void;
   (e: 'searchAllSources', targetBook: BookItem): void;
   (e: 'switchSource', newBookItem: BookItem): void;
@@ -100,9 +101,9 @@ onMounted(() => {
       target="#read-content"
     >
       <template #title>
-        <div class="flex flex-col gap-1 items-center truncate">
+        <div class="flex flex-col gap-2 items-center truncate">
           <span class="text-xl">{{ readingChapter?.title }}</span>
-          <div class="flex gap-1">
+          <div class="flex gap-2">
             <span class="text-xs text-[--van-text-color-2]">
               <van-icon name="orders-o" />
               {{ book?.title }}
@@ -126,6 +127,11 @@ onMounted(() => {
               name="exchange"
               class="text-[--van-text-color-2] van-haptics-feedback"
               @click="() => (showSwitchSourceDialog = true)"
+            />
+            <van-icon
+              name="replay"
+              class="text-[--van-text-color-2] van-haptics-feedback"
+              @click="() => emit('refreshChapter')"
             />
           </div>
         </div>

@@ -36,36 +36,33 @@ const emit = defineEmits<{
       ref="content"
       class="flex flex-col px-4 pb-12 grow gap-2 w-full overflow-y-auto"
     >
-      <div class="head flex justify-center my-4">
-        <LoadImage
-          v-if="playlist?.picUrl"
-          :width="120"
-          :height="120"
-          :radius="8"
-          fit="cover"
-          lazy-load
-          :src="playlist?.picUrl"
-          :headers="playlist?.picHeaders"
-        >
-          <template v-slot:loading>
-            <div class="text-center text-lg p-1">
-              {{ playlist.name }}
-            </div>
-          </template>
-        </LoadImage>
-        <div class="p-4 flex flex-col min-w-[100px] max-w-[50%] justify-around">
-          <van-text-ellipsis
-            :content="playlist?.name"
-            rows="3"
-            class="text-[--van-text-color] text-lg font-bold"
-          />
-          <van-text-ellipsis
-            :content="playlist?.desc"
-            rows="3"
-            expand-text="展开"
-            collapse-text="收起"
-            class="text-xs min-w-[100px] max-w-[50%] text-gray-400"
-          />
+      <div class="head flex justify-center p-4">
+        <div class="w-[120px] h-[120px]">
+          <LoadImage
+            v-if="playlist?.picUrl"
+            :width="120"
+            :height="120"
+            :radius="8"
+            fit="cover"
+            lazy-load
+            :src="playlist?.picUrl"
+            :headers="playlist?.picHeaders"
+          >
+            <template v-slot:loading>
+              <div class="text-center text-lg p-1">
+                {{ playlist.name }}
+              </div>
+            </template>
+          </LoadImage>
+        </div>
+
+        <div class="p-4 flex flex-col justify-around">
+          <p class="text-[--van-text-color] text-lg font-bold">
+            {{ playlist?.name }}
+          </p>
+          <p class="text-xs min-w-[100px] text-gray-400 line-clamp-3">
+            {{ playlist?.desc }}
+          </p>
         </div>
       </div>
       <div v-if="playlist?.list?.list" class="flex gap-2 pl-4">

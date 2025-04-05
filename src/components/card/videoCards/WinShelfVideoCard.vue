@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import _ from 'lodash';
 import { Icon } from '@iconify/vue';
-import { onMounted, PropType, ref } from 'vue';
+import { computed, onMounted, PropType, ref } from 'vue';
 import { useStore } from '@/store';
 import {
   VideoEpisode,
@@ -50,6 +50,16 @@ const onClick = () => {
   });
 };
 
+const lastWatchEpisode = computed((): VideoEpisode | undefined => {
+  return shelfVideo.video.resources
+    ?.find((resource) => {
+      return resource.id === shelfVideo.video.lastWatchResourceId;
+    })
+    ?.episodes?.find((episode) => {
+      return episode.id === shelfVideo.video.lastWatchEpisodeId;
+    });
+});
+
 onMounted(() => {
   const store = useStore();
   source.value = store.getVideoSource(shelfVideo.video.sourceId);
@@ -58,7 +68,7 @@ onMounted(() => {
 
 <template>
   <div
-    class="relative flex flex-col gap-2 rounded-lg transform transition-all duration-100 cursor-pointer select-none active:bg-[--van-background]"
+    class="relative flex flex-col rounded-lg transform transition-all duration-100 cursor-pointer select-none active:bg-[--van-background]"
     :class="selecteMode ? (selected ? '' : 'opacity-50') : ''"
     @click="onClick"
   >
@@ -78,10 +88,15 @@ onMounted(() => {
     </LoadImage>
 
     <p
-      class="text-xs text-center text-[var(--van-text-color)] truncate"
+      class="text-xs text-center text-[var(--van-text-color)] truncate py-1"
       v-if="shelfVideo.video.title"
     >
       {{ shelfVideo.video.title }}
+    </p>
+    <p
+      class="absolute text-xs text-gray-200 bg-slate-600/80 p-1 bottom-6 left-1 truncate"
+    >
+      {{ lastWatchEpisode?.title || '未观看' }}
     </p>
     <p
       v-if="source && selecteMode"

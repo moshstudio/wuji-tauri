@@ -35,7 +35,7 @@ const onClick = () => {
 
 <template>
   <div
-    class="w-[100px] flex flex-col gap-2 rounded-lg transform transition-all duration-100 cursor-pointer select-none active:scale-[0.98]"
+    class="w-[100px] flex flex-col rounded-lg transform transition-all duration-100 cursor-pointer select-none active:scale-[0.98]"
     @click="onClick"
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
@@ -60,7 +60,7 @@ const onClick = () => {
     </LoadImage>
     <p
       :rows="1"
-      class="text-xs text-[--van-text-color] truncate"
+      class="text-xs text-[--van-text-color] truncate py-1"
       v-if="playlist.name"
     >
       {{ playlist.name }}

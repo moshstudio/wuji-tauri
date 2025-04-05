@@ -82,7 +82,10 @@ async function songToPage(source: SongSource, pageNo: number) {
 }
 
 async function playSong(source: SongSource, song: SongInfo) {
-  const songs = source.songList!.list;
+  if (!source.songList?.list.length) {
+    return;
+  }
+  const songs = source.songList.list;
   songStore.setPlayingList(songs, song);
 }
 

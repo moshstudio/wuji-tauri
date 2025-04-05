@@ -8,6 +8,7 @@ import WinSongBar from '@/components/windows/WinSongBar.vue';
 import HorizonList from '@/components/HorizonList.vue';
 import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
 import SimplePagination from '@/components/pagination/SimplePagination.vue';
+import WinSearch from '@/components/windows/WinSearch.vue';
 import { SongSource } from '@/types';
 import { SongInfo } from '@/extensions/song';
 import SongShelf from '@/views/song/SongShelf.vue';
@@ -42,26 +43,19 @@ const emit = defineEmits<{
 <template>
   <div class="w-full h-full flex flex-col">
     <div v-remember-scroll class="grow overflow-x-hidden overflow-y-auto">
-      <van-row justify="center" align="center" class="relative">
+      <div class="flex items-center justify-between px-4 py-2">
+        <div class="placeholder"></div>
+        <WinSearch
+          v-model:search-value="searchValue"
+          @search="() => emit('search')"
+        ></WinSearch>
         <div
-          class="absolute right-6 text-button"
+          class="text-button text-nowrap"
           @click="displayStore.showSongShelf = true"
         >
           收藏
         </div>
-        <van-search
-          v-model="searchValue"
-          placeholder="请输入搜索关键词"
-          left-icon=""
-          @click-right-icon="() => emit('search')"
-          @search="() => emit('search')"
-          @clear="() => emit('search')"
-        >
-          <template #right-icon>
-            <van-icon name="search" class="van-haptics-feedback" />
-          </template>
-        </van-search>
-      </van-row>
+      </div>
       <van-tabs v-model:active="activeTabIndex" shrink animated>
         <van-tab
           v-for="item in songSources.filter((s) => s.playlist || s.songList)"

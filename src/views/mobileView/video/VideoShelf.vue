@@ -4,7 +4,7 @@ import { useVideoShelfStore, useDisplayStore } from '@/store';
 import { PropType } from 'vue';
 import AddVideoShelfDialog from '@/components/windows/dialogs/AddVideoShelf.vue';
 import removeVideoShelfDialog from '@/components/windows/dialogs/RemoveVideoShelf.vue';
-import WinShelfVideoCard from '@/components/card/videoCards/WinShelfVideoCard.vue';
+import MobileShelfVideoCard from '@/components/card/videoCards/MobileShelfVideoCard.vue';
 import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
 import { storeToRefs } from 'pinia';
 
@@ -108,13 +108,13 @@ const emit = defineEmits<{
     <van-tabs shrink animated :active="activeIndex">
       <van-tab :title="shelf.name" v-for="shelf in videoShelf" :key="shelf.id">
         <ResponsiveGrid :base-cols="2" class="p-2">
-          <WinShelfVideoCard
+          <MobileShelfVideoCard
             :shelf-video="video"
             v-model:selected="video.video.extra!.selected"
             v-for="video in shelf.videos"
             :key="video.video.id"
             :selecteMode="selecteMode"
-          ></WinShelfVideoCard>
+          ></MobileShelfVideoCard>
         </ResponsiveGrid>
       </van-tab>
     </van-tabs>

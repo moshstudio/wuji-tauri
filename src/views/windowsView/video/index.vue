@@ -3,6 +3,7 @@ import { useDisplayStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import VideosTab from '@/components/windows/VideosTab.vue';
 import VideoShelf from '@/views/video/VideoShelf.vue';
+import WinSearch from '@/components/windows/WinSearch.vue';
 import { VideoSource } from '@/types';
 import { VideoItem } from '@/extensions/video';
 
@@ -27,26 +28,19 @@ const { videoSources } = storeToRefs(store);
     v-remember-scroll
     class="w-full h-full overflow-x-hidden overflow-y-auto"
   >
-    <van-row justify="center" align="center" class="relative">
+    <div class="flex items-center justify-between px-4 py-2">
+      <div class="placeholder"></div>
+      <WinSearch
+        v-model:search-value="searchValue"
+        @search="() => emit('search')"
+      ></WinSearch>
       <div
-        class="absolute right-6 text-button"
-        @click="() => (displayStore.showVideoShelf = true)"
+        class="text-button text-nowrap"
+        @click="displayStore.showVideoShelf = true"
       >
         收藏
       </div>
-      <van-search
-        v-model="searchValue"
-        placeholder="请输入搜索关键词"
-        left-icon=""
-        @click-right-icon="() => emit('search')"
-        @search="() => emit('search')"
-        @clear="() => emit('search')"
-      >
-        <template #right-icon>
-          <van-icon name="search" class="van-haptics-feedback" />
-        </template>
-      </van-search>
-    </van-row>
+    </div>
     <div v-for="source in videoSources" :key="source.item.id" class="px-4">
       <div v-show="!!source.list">
         <van-row justify="space-between">

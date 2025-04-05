@@ -39,7 +39,7 @@ onMounted(() => {
 
 <template>
   <div
-    class="relative flex flex-col gap-2 rounded-lg transform transition-all duration-100 active:scale-[0.98] cursor-pointer select-none"
+    class="relative flex flex-col rounded-lg transform transition-all duration-100 active:scale-[0.98] cursor-pointer select-none"
     :class="selecteMode ? (selected ? '' : 'opacity-50') : ''"
     @click="onClick"
   >
@@ -52,7 +52,7 @@ onMounted(() => {
     />
 
     <p
-      class="h-[20px] text-xs text-[var(--van-text-color)] text-center truncate"
+      class="text-xs text-[var(--van-text-color)] text-center truncate py-1"
       v-if="item.title"
     >
       {{ item.title }}

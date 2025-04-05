@@ -36,22 +36,25 @@ const emit = defineEmits<{
     >
       <div class="head flex flex-col gap-2 items-center shadow rounded p-4">
         <div class="flex gap-2 items-center justify-center">
-          <LoadImage
-            v-if="playlist?.picUrl"
-            :width="120"
-            :height="120"
-            :radius="8"
-            fit="cover"
-            lazy-load
-            :src="playlist?.picUrl"
-            :headers="playlist?.picHeaders"
-          >
-            <template v-slot:loading>
-              <div class="text-center text-lg p-1">
-                {{ playlist.name }}
-              </div>
-            </template>
-          </LoadImage>
+          <div class="w-[120px] h-[120px]">
+            <LoadImage
+              v-if="playlist?.picUrl"
+              :width="120"
+              :height="120"
+              :radius="8"
+              fit="cover"
+              lazy-load
+              :src="playlist?.picUrl"
+              :headers="playlist?.picHeaders"
+            >
+              <template v-slot:loading>
+                <div class="text-center text-lg p-1">
+                  {{ playlist.name }}
+                </div>
+              </template>
+            </LoadImage>
+          </div>
+
           <div class="text-[--van-text-color] text-lg font-bold line-clamp-3">
             {{ playlist?.name }}
           </div>

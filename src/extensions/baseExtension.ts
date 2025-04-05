@@ -12,6 +12,7 @@ import {
 import { BookItem } from './book';
 import { PhotoItem } from './photo';
 import { urlJoin as myUrlJoin } from '@/utils';
+import { PlaylistInfo, SongInfo } from './song';
 
 // 定义一个装饰器工厂函数，允许传入目标类型
 export function transformResult<T>(func: (result: T) => T) {
@@ -94,6 +95,7 @@ abstract class Extension {
       url?: string;
       latestUpdate?: string;
       coverDomain?: string;
+      baseUrl?: string;
     }
   ) => Promise<BookItem[]>;
   queryPhotoElements: (
@@ -111,6 +113,34 @@ abstract class Extension {
       coverDomain?: string;
     }
   ) => Promise<PhotoItem[]>;
+  queryPlaylistElements: (
+    body: Document,
+    tags: {
+      element?: string;
+      picUrl?: string;
+      name?: string;
+      desc?: string;
+      creator?: string;
+      createTime?: string;
+      updateTime?: string;
+      url?: string;
+      coverDomain?: string;
+    }
+  ) => Promise<PlaylistInfo[]>;
+  querySongElements: (
+    body: Document,
+    tags: {
+      element?: string;
+      picUrl?: string;
+      name?: string;
+      artists?: string;
+      duration?: string;
+      url?: string;
+      playUrl?: string;
+      lyric?: string;
+      coverDomain?: string;
+    }
+  ) => Promise<SongInfo[]>;
   queryChapters: (
     body: Document,
     tags: {
@@ -142,8 +172,21 @@ abstract class Extension {
       domType?: DOMParserSupportedType,
       encoding?: 'utf8' | 'gbk'
     ) => {
+      let maxRetry = 2;
+      do {
+        try {
+          const response = await this.fetch(input, init);
+          if (response.status >= 300) {
+            throw new Error(`fetch error: ${response.status}`);
+          }
+          const buffer = await response.arrayBuffer();
+          let text = new TextDecoder(encoding || 'utf8').decode(buffer);
+          return new DOMParser().parseFromString(text, domType || 'text/html');
+        } catch (error) {
+          console.warn(`function fetchDom failed retry:`, error);
+        }
+      } while (maxRetry-- > 0);
       const response = await this.fetch(input, init);
-      response.text;
       const buffer = await response.arrayBuffer();
       let text = new TextDecoder(encoding || 'utf8').decode(buffer);
 
@@ -256,6 +299,7 @@ abstract class Extension {
         url = 'a',
         latestUpdate = '.update',
         coverDomain = undefined,
+        baseUrl = undefined,
       }
     ) => {
       const elements = body.querySelectorAll(element);
@@ -278,7 +322,10 @@ abstract class Extension {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
             } else {
-              coverE = this.urlJoin(coverDomain ?? this.baseUrl, coverE);
+              coverE = this.urlJoin(
+                coverDomain ?? baseUrl ?? this.baseUrl,
+                coverE
+              );
             }
           }
         }
@@ -306,10 +353,14 @@ abstract class Extension {
           element.querySelector(title)?.getAttribute('href');
         if (!titleE) continue;
         list.push({
-          id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
+          id: urlE
+            ? this.urlJoin(baseUrl ?? this.baseUrl, urlE)
+            : this.nanoid(),
           title: titleE.trim(),
           intro: introE?.trim() || undefined,
-          cover: coverE ? this.urlJoin(this.baseUrl, coverE) : undefined,
+          cover: coverE
+            ? this.urlJoin(baseUrl ?? this.baseUrl, coverE)
+            : undefined,
           releaseDate: releaseDateE?.trim() || undefined,
           country: countryE?.trim() || undefined,
           duration: durationE?.trim() || undefined,
@@ -322,7 +373,7 @@ abstract class Extension {
             : undefined,
           status: statusE?.trim() || undefined,
           latestUpdate: latestUpdateE?.trim() || undefined,
-          url: this.urlJoin(this.baseUrl, urlE || null),
+          url: this.urlJoin(baseUrl ?? this.baseUrl, urlE || null),
           sourceId: '',
         });
       }
@@ -374,6 +425,107 @@ abstract class Extension {
           hot: hotE?.trim() || undefined,
           view: Number(viewE) || undefined,
           url: this.urlJoin(this.baseUrl, urlE || null),
+          sourceId: '',
+        });
+      }
+      return list;
+    };
+    this.queryPlaylistElements = async (
+      body: Document,
+      {
+        element = '.update_area_content',
+        picUrl = 'img',
+        name = 'a[href]',
+        desc = '.desc',
+        creator = '.author',
+        createTime = '.datetime',
+        updateTime = '.datetime',
+        url = 'a[href]',
+        coverDomain = undefined,
+      }
+    ) => {
+      const elements = body.querySelectorAll(element);
+      const list = [];
+      for (const element of elements) {
+        const img = element.querySelector(picUrl);
+        const coverE =
+          img?.getAttribute('data-original') ||
+          img?.getAttribute('data-src') ||
+          img?.getAttribute('src');
+        const titleE =
+          element.querySelector(name)?.textContent ||
+          element.querySelector(name)?.getAttribute('title') ||
+          element.querySelector(name)?.getAttribute('alt');
+        const descE = element.querySelector(desc)?.textContent;
+        const authorE = element.querySelector(creator)?.textContent;
+        const datetimeE = element.querySelector(createTime)?.textContent;
+        const updateTimeE = element.querySelector(updateTime)?.textContent;
+        const urlE = element.querySelector(url)?.getAttribute('href')?.trim();
+        if (!titleE) continue;
+        list.push({
+          id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
+          name: titleE?.trim() || '',
+          desc: descE?.trim() || undefined,
+          picUrl: coverE
+            ? this.urlJoin(coverDomain ?? this.baseUrl, coverE)
+            : '',
+          creator: authorE?.trim() ? { name: authorE.trim() } : undefined,
+          createTime: datetimeE?.trim() || undefined,
+          updateTime: updateTimeE?.trim() || undefined,
+          url: this.urlJoin(this.baseUrl, urlE || null),
+          sourceId: '',
+        });
+      }
+      return list;
+    };
+    this.querySongElements = async (
+      body: Document,
+      {
+        element = '.update_area_content',
+        picUrl = 'img',
+        name = 'a[title]',
+        artists = '.artist',
+        duration = '.duration',
+        url = 'a[href]',
+        playUrl = '.play-url',
+        lyric = '.lyric',
+        coverDomain = undefined,
+      }
+    ) => {
+      const elements = body.querySelectorAll(element);
+      const list = [];
+      for (const element of elements) {
+        const img = element.querySelector(picUrl);
+        const coverE =
+          img?.getAttribute('data-original') ||
+          img?.getAttribute('data-src') ||
+          img?.getAttribute('src');
+        const titleE =
+          element.querySelector(name)?.textContent ||
+          element.querySelector(name)?.getAttribute('title') ||
+          element.querySelector(name)?.getAttribute('alt');
+        const authorE = Array.from(element.querySelectorAll(artists).values());
+        const durationE = element.querySelector(duration)?.textContent;
+        const lyricE = element.querySelector(lyric)?.textContent;
+        const urlE = element.querySelector(url)?.getAttribute('href')?.trim();
+        const playUrlE = element
+          .querySelector(playUrl)
+          ?.getAttribute('href')
+          ?.trim();
+        if (!titleE) continue;
+        list.push({
+          id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
+          name: titleE?.trim() || '',
+          picUrl: coverE
+            ? this.urlJoin(coverDomain ?? this.baseUrl, coverE)
+            : '',
+          artists: authorE
+            ? authorE.map((a) => a.textContent || '')
+            : undefined,
+          duration: durationE?.trim() ? Number(durationE.trim()) : undefined,
+          lyric: lyricE?.trim() || undefined,
+          url: this.urlJoin(this.baseUrl, urlE || null),
+          playUrl: playUrlE ? this.urlJoin(this.baseUrl, playUrlE) : undefined,
           sourceId: '',
         });
       }

@@ -15,7 +15,7 @@ const displayStore = useDisplayStore();
 
 <template>
   <div
-    class="relative flex flex-col gap-2 rounded-lg transform transition-all duration-100 cursor-pointer select-none active:scale-[0.98]"
+    class="relative flex flex-col rounded-lg transform transition-all duration-100 cursor-pointer select-none active:scale-[0.98]"
     @click="() => emit('click', videoItem)"
   >
     <LoadImage
@@ -26,7 +26,7 @@ const displayStore = useDisplayStore();
       class="w-full h-full"
     />
 
-    <p class="text-xs text-center truncate" v-if="videoItem.title">
+    <p class="text-xs text-center truncate py-1" v-if="videoItem.title">
       {{ videoItem.title }}
     </p>
   </div>

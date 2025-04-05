@@ -28,7 +28,7 @@ const emit = defineEmits<{
     </div>
 
     <div
-      class="grow flex flex-col gap-1 justify-start text-sm text-[--van-text-color]"
+      class="grow flex flex-col justify-around text-sm text-[--van-text-color]"
     >
       <p
         class="text-base font-bold w-full"
@@ -36,19 +36,17 @@ const emit = defineEmits<{
       >
         {{ comicItem.title }}
       </p>
-      <p class="text-xs flex gap-2 truncate">
-        <span v-if="comicItem.author" class="truncate">
-          {{ comicItem.author }}
-        </span>
-        <span v-if="_.castArray(comicItem.tags).length" class="truncate">
-          {{ _.castArray(comicItem.tags)?.join(',') }}
-        </span>
-        <span v-if="comicItem.status" class="truncate">
-          {{ comicItem.status }}
-        </span>
+      <p class="text-xs truncate">
+        {{ comicItem.author ? comicItem.author + ' ' : '佚名' }}
+        {{
+          _.castArray(comicItem.tags).length
+            ? _.castArray(comicItem.tags)?.join(',') + ' '
+            : ''
+        }}
+        {{ comicItem.status || '' }}
       </p>
       <p class="text-xs line-clamp-3">
-        {{ comicItem.intro }}
+        {{ comicItem.intro || '暂无简介' }}
       </p>
     </div>
   </div>

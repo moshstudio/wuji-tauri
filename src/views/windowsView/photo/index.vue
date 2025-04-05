@@ -5,6 +5,7 @@ import WinPhotoCard from '@/components/card/photoCards/WinPhotoCard.vue';
 import HorizonList from '@/components/HorizonList.vue';
 import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import PhotoShelf from '@/views/photo/PhotoShelf.vue';
+import WinSearch from '@/components/windows/WinSearch.vue';
 import { PhotoSource } from '@/types';
 
 const store = useStore();
@@ -26,26 +27,19 @@ const emit = defineEmits<{
     v-remember-scroll
     class="w-full h-full overflow-x-hidden overflow-y-auto"
   >
-    <van-row justify="center" align="center" class="relative">
+    <div class="flex items-center justify-between px-4 py-2">
+      <div class="placeholder"></div>
+      <WinSearch
+        v-model:search-value="searchValue"
+        @search="() => emit('search')"
+      ></WinSearch>
       <div
-        class="absolute right-6 text-button"
+        class="text-button text-nowrap"
         @click="displayStore.showPhotoShelf = true"
       >
         收藏
       </div>
-      <van-search
-        v-model="searchValue"
-        placeholder="请输入搜索关键词"
-        left-icon=""
-        @click-right-icon="() => emit('search')"
-        @search="() => emit('search')"
-        @clear="() => emit('search')"
-      >
-        <template #right-icon>
-          <van-icon name="search" class="van-haptics-feedback" />
-        </template>
-      </van-search>
-    </van-row>
+    </div>
     <div v-for="item in photoSources" :key="item.item.id" class="px-4">
       <div v-show="item.list">
         <van-row justify="space-between">

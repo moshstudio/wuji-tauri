@@ -51,7 +51,7 @@ onMounted(() => {
     />
 
     <p
-      class="text-xs text-center text-[var(--van-text-color)] truncate"
+      class="text-xs text-center text-[var(--van-text-color)] truncate py-1"
       v-if="item.title"
     >
       {{ item.title }}

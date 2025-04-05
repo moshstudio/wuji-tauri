@@ -28,6 +28,7 @@
     "@vant/use": "^1.6.0",
     "@videojs-player/vue": "^1.0.0",
     "@vueuse/core": "^12.7.0",
+    "@vueuse/gesture": "^2.0.0",
     "crypto-js": "^4.2.0",
     "hammerjs": "^2.0.8",
     "hls-video-element": "^1.5.0",

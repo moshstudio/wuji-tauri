@@ -41,7 +41,7 @@ const showMoreOptions = ref(false);
     </div>
 
     <div
-      class="grow flex flex-col gap-1 justify-around text-sm text-[--van-text-color]"
+      class="grow flex flex-col justify-around text-sm text-[--van-text-color]"
     >
       <div class="flex gap-2 items-center">
         <p class="text-base font-bold h-6 line-clamp-2">

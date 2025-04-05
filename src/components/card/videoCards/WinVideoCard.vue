@@ -15,7 +15,7 @@ const displayStore = useDisplayStore();
 
 <template>
   <div
-    class="relative flex flex-col gap-2 w-[140px] rounded-lg transform transition-all duration-100 cursor-pointer select-none active:bg-[--van-background]"
+    class="relative flex flex-col w-[140px] rounded-lg transform transition-all duration-100 cursor-pointer select-none active:bg-[--van-background]"
     @click="() => emit('click', videoItem)"
   >
     <LoadImage
@@ -29,10 +29,16 @@ const displayStore = useDisplayStore();
     />
 
     <p
-      class="text-xs text-[var(--van-text-color)] text-center truncate"
+      class="text-xs text-[var(--van-text-color)] text-center truncate py-1"
       v-if="videoItem.title"
     >
       {{ videoItem.title }}
+    </p>
+    <p
+      v-if="videoItem.tags"
+      class="absolute text-xs rounded left-0 bottom-6 p-1 truncate bg-gray-800/60 text-gray-200"
+    >
+      {{ _.castArray(videoItem.tags).join(',') }}
     </p>
   </div>
 </template>

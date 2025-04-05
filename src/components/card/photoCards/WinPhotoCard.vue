@@ -22,7 +22,7 @@ const onClick = () => {
 
 <template>
   <div
-    class="relative flex flex-col gap-2 w-[160px] rounded-lg transform transition-all duration-100 cursor-pointer select-none active:bg-[--van-background]"
+    class="relative flex flex-col w-[160px] rounded-lg transform transition-all duration-100 cursor-pointer select-none active:bg-[--van-background]"
     @click="onClick"
   >
     <LoadImage
@@ -34,7 +34,7 @@ const onClick = () => {
       :headers="item.coverHeaders || undefined"
     />
     <p
-      class="h-[20px] text-xs text-center text-[var(--van-text-color)] truncate"
+      class="text-xs text-center text-[var(--van-text-color)] truncate py-1"
       v-if="item.title"
     >
       {{ item.title }}

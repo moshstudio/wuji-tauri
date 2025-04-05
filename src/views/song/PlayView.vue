@@ -138,7 +138,7 @@ watch(audioCurrent, (newVal) => {
 
 // 展示相关
 const offset = computed(() => {
-  return displayStore.isMobileView ? -110 : -80;
+  return displayStore.isMobileView ? -100 : -80;
 });
 const shelfAnchors = ref([
   offset.value,

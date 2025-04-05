@@ -42,7 +42,9 @@ const showMoreOptions = ref(false);
       </LoadImage>
     </div>
 
-    <div class="grow flex flex-col gap-1 text-sm text-[--van-text-color]">
+    <div
+      class="grow flex flex-col justify-around text-sm text-[--van-text-color]"
+    >
       <div class="flex gap-2 items-center">
         <p class="text-base font-bold h-6 line-clamp-2">
           {{ shelfComic.comic.title }}

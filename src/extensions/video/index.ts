@@ -132,11 +132,15 @@ abstract class VideoExtension extends Extension {
     return r;
   })
   async execGetVideoDetail(item: VideoItem) {
-    const ret = await this.getVideoDetail(item);
+    const ret = await this.getVideoDetail(_.cloneDeep(item));
     if (ret) {
       ret.id = String(ret.id);
+      let index = 1;
       ret.resources?.forEach((resource) => {
-        resource.title ||= '播放地址';
+        if (!resource.title) {
+          resource.title = `播放地址${index}`;
+          index += 1;
+        }
         resource.id = String(
           resource.id || resource.url || resource.title || nanoid()
         );

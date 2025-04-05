@@ -69,6 +69,7 @@ const emit = defineEmits<{
   (e: 'toChapter', chapter: BookChapter): void;
   (e: 'prevChapter', toLast?: boolean): void;
   (e: 'nextChapter'): void;
+  (e: 'refreshChapter'): void;
   (e: 'openChapterPopup'): void;
   (e: 'searchAllSources', targetBook: BookItem): void;
   (e: 'switchSource', newBookItem: BookItem): void;
@@ -537,7 +538,12 @@ onBeforeUnmount(function () {
             {{ book?.title }}
           </span>
         </div>
-        <div class="options pr-2 flex gap-2 items-center">
+        <div class="options pr-2 flex gap-3 items-center">
+          <van-icon
+            name="replay"
+            class="text-white van-haptics-feedback"
+            @click="() => emit('refreshChapter')"
+          />
           <van-icon
             name="exchange"
             class="text-white van-haptics-feedback"

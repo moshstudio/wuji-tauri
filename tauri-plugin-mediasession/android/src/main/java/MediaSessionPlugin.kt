@@ -247,25 +247,36 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
         }
     }
 
-    private suspend fun checkConnected(): Boolean = suspendCancellableCoroutine { continuation ->
-        try {
-            if (!playerClient.isConnected) {
-                // 连接到 PlayerService
-                playerClient.connect { success ->
-                    if (success) {
-                        Log.d("App", "connect: $success")
-                        continuation.resume(true) // 连接成功，恢复协程并返回 true
-                    } else {
-                        continuation.resume(false) // 连接失败，恢复协程并返回 false
+    private suspend fun checkConnected(): Boolean {
+        var needDelay = false // 标记是否需要延迟
+        val isConnected = suspendCancellableCoroutine { continuation ->
+            try {
+                if (!playerClient.isConnected) {
+                    needDelay = true // 需要连接，后续需要延迟
+                    // 连接到 PlayerService
+                    playerClient.connect { success ->
+                        Log.i("App playerClient", "connect: $success")
+                        if (success) {
+                            continuation.resume(true)
+                        } else {
+                            continuation.resume(false)
+                        }
                     }
+                } else {
+                    // 已连接，直接返回且无需延迟
+                    continuation.resume(true)
                 }
-            } else {
-                continuation.resume(true) // 已经连接，恢复协程并返回 true
+            } catch (e: Exception) {
+                Log.e("MediaSessionPlugin", "Failed to connect to PlayerService", e)
+//                continuation.resumeWithException(e)
+                continuation.resume(false)
             }
-        } catch (e: Exception) {
-            Log.e("MediaSessionPlugin", "Failed to connect to PlayerService", e)
-            continuation.resumeWithException(e) // 发生异常，恢复协程并抛出异常
         }
+//        // 仅在需要且连接成功时延迟
+//        if (needDelay) {
+//            delay(1000) // 连接成功后等待1秒
+//        }
+        return isConnected
     }
 
     @Command
@@ -280,6 +291,7 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
             }
             try {
                 val args = invoke.parseArgs(PlaylistArgs::class.java)
+                playerClient.setPlaylist(Playlist.Builder().build())
                 var builder = Playlist.Builder()
                 builder = builder.setName(args.name)
                 val bundle = Bundle()
@@ -290,7 +302,7 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
                     builder = builder.append(generateMusicItem(item))
                 }
                 val playlist = builder.build()
-                if (args.position != null && args.position!! < 0) {
+                if (args.position == null || args.position!! < 0) {
                     args.position = 0
                 }
                 playerClient.setPlaylist(playlist, args.position ?: 0, args.playImmediately ?: true)

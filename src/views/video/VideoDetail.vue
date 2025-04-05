@@ -149,6 +149,25 @@ const onCanPlay = async (args: any) => {
   }
   await videoPlayer.value?.play();
 };
+const onPlayFinished = async (args: any) => {
+  if (
+    !playingResource.value?.episodes ||
+    !playingEpisode.value ||
+    !videoItem.value
+  ) {
+    return;
+  }
+  const index = playingResource.value.episodes.findIndex(
+    (item) => item.id == playingEpisode.value!.id
+  );
+
+  if (index === undefined || index === -1) return;
+  if (index === playingResource.value.episodes.length - 1) {
+    showToast('没有下一集了');
+    return;
+  }
+  await play(playingResource.value, playingResource.value.episodes[index + 1]);
+};
 const onTimeUpdate = (args: any) => {
   updateVideoPlayInfo();
 };
@@ -214,6 +233,9 @@ onDeactivated(() => {
   if (displayStore.isAndroid) {
     keepScreenOn(false);
   }
+  try {
+    videoPlayer.value?.pause();
+  } catch (error) {}
 });
 </script>
 
@@ -233,6 +255,7 @@ onDeactivated(() => {
         @play="play"
         @add-video-to-shelf="addVideoToShelf"
         @can-play="onCanPlay"
+        @on-play-finished="onPlayFinished"
         @time-update="onTimeUpdate"
       ></MobileVideoDetail>
     </template>
@@ -250,6 +273,7 @@ onDeactivated(() => {
         @play="play"
         @add-video-to-shelf="addVideoToShelf"
         @can-play="onCanPlay"
+        @on-play-finished="onPlayFinished"
         @time-update="onTimeUpdate"
       ></WinVideoDetail>
     </template>

@@ -12,7 +12,7 @@ export interface SongInfo {
   album?: AlbumInfo;
   mvId?: string;
   mvCid?: string;
-  url?: string | SongUrlMap;
+  playUrl?: string | SongUrlMap;
   picUrl?: string;
   bigPicUrl?: string;
   picHeaders?: Record<string, string>;
@@ -57,6 +57,7 @@ export interface AlbumInfo {
 export interface PlaylistInfo {
   name: string;
   id: string;
+  url?: string;
   picUrl: string;
   picHeaders?: Record<string, string>;
   songCount?: string | number;

@@ -165,7 +165,7 @@ const loadData = retryOnFalse({ onFailed: back })(async () => {
 
   return true;
 });
-async function loadChapter(chapter?: BookChapter) {
+async function loadChapter(chapter?: BookChapter, refresh = false) {
   if (!book.value) {
     showToast('书籍不存在');
     back();
@@ -186,7 +186,9 @@ async function loadChapter(chapter?: BookChapter) {
   chapterList.value = book.value.chapters || [];
   readingChapter.value = chapter;
   readingContent.value =
-    (await store.bookRead(bookSource.value!, book.value, chapter)) || '';
+    (await store.bookRead(bookSource.value!, book.value, chapter, {
+      refresh,
+    })) || '';
 
   readingContent.value = purifyText(readingContent.value);
   displayStore.closeToast(t);
@@ -326,6 +328,10 @@ function nextChapter() {
     showToast('没有下一章了');
   }
 }
+
+const resfreshChapter = async () => {
+  await loadChapter(undefined, true);
+};
 function toChapter(chapter: BookChapter) {
   chapter.readingPage = undefined;
 
@@ -425,6 +431,7 @@ onDeactivated(() => {
         @load-data="loadData"
         @to-chapter="toChapter"
         @next-chapter="nextChapter"
+        @refresh-chapter="resfreshChapter"
         @open-chapter-popup="openChapterPopup"
         @prev-chapter="prevChapter"
         @search-all-sources="searchAllSources"
@@ -449,6 +456,7 @@ onDeactivated(() => {
         @load-data="loadData"
         @to-chapter="toChapter"
         @next-chapter="nextChapter"
+        @refresh-chapter="resfreshChapter"
         @open-chapter-popup="openChapterPopup"
         @prev-chapter="prevChapter"
         @search-all-sources="searchAllSources"

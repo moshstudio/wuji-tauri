@@ -42,7 +42,9 @@ const showMoreOptions = ref(false);
       </LoadImage>
     </div>
 
-    <div class="grow flex flex-col gap-1 text-sm text-[--van-text-color]">
+    <div
+      class="grow flex flex-col justify-around text-sm text-[--van-text-color]"
+    >
       <div class="flex gap-2 items-center">
         <p class="text-base font-bold h-6 line-clamp-2">
           {{ shelfBook.book.title }}
@@ -53,13 +55,13 @@ const showMoreOptions = ref(false);
       </div>
 
       <p class="text-xs truncate flex gap-2">
-        <span v-if="shelfBook.book.author" class="min-w-0 truncate">
-          {{ shelfBook.book.author }}
+        <span class="min-w-0 truncate">
+          {{ shelfBook.book.author || '佚名' }}
         </span>
         <span v-if="unread" class="min-w-0 truncate"> {{ unread }}章未读 </span>
       </p>
       <p class="text-xs line-clamp-1">
-        {{ shelfBook.lastReadChapter?.title }}
+        {{ shelfBook.lastReadChapter?.title || '未开始阅读' }}
       </p>
       <p>
         <span class="text-xs line-clamp-1">

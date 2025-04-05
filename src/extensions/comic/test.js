@@ -100,7 +100,6 @@ class TestComicExtension extends ComicExtension {
   }
 
   async getContent(item, chapter) {
-    console.log(chapter.url);
 
     const document = await this.fetchDom(chapter.url);
     const elements = document.querySelectorAll('.images img');

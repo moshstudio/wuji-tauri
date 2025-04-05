@@ -3,7 +3,7 @@ import { useDisplayStore } from '@/store';
 import _ from 'lodash';
 import { storeToRefs } from 'pinia';
 import { Icon } from '@iconify/vue';
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const displayStore = useDisplayStore();
 const { searchHistories } = storeToRefs(displayStore);

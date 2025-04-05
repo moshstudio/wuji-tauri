@@ -25,6 +25,7 @@ import { ImagePreview } from 'vant';
 import 'vant/es/image-preview/style';
 import { router } from './router';
 import { createPinia } from 'pinia';
+import { GesturePlugin } from '@vueuse/gesture'
 import '@vant/touch-emulator';
 import '@/styles/index.css';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
@@ -51,6 +52,7 @@ createApp(App)
   .use(Dialog)
   .use(Notify)
   .use(ImagePreview)
+  .use(GesturePlugin)
   .use(router)
   .directive('remember-scroll', RememberScrollDirective)
   .directive('horizontal-scroll', HorizontalScrollDirective)
