@@ -9,7 +9,15 @@ import {
   useDisplayStore,
   useVideoShelfStore,
 } from './store';
-import { nextTick, onMounted, ref, VNode, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onMounted,
+  reactive,
+  ref,
+  VNode,
+  watch,
+} from 'vue';
 import { useRoute } from 'vue-router';
 import { router } from './router';
 import { showConfirmDialog, showToast } from 'vant';
@@ -28,73 +36,74 @@ const videoShelfStore = useVideoShelfStore();
 const activeKey = ref(0);
 const route = useRoute();
 
-const { photoPath, songPath, bookPath, comicPath, videoPath } =
+const { photoPath, songPath, bookPath, comicPath, videoPath, tabBarPages } =
   storeToRefs(displayStore);
-
-const pages = ref([
-  {
+const _pages = reactive({
+  Photo: {
     name: 'Photo',
     icon: 'photo-o',
     selectedIcon: 'photo',
     to: photoPath,
   },
-  {
+  Song: {
     name: 'Song',
     icon: 'music-o',
     selectedIcon: 'music',
     to: songPath,
   },
-  {
+  Book: {
     name: 'Book',
     icon: 'bookmark-o',
     selectedIcon: 'bookmark',
     to: bookPath,
   },
-  {
+  Comic: {
     name: 'Comic',
     icon: 'comment-circle-o',
     selectedIcon: 'comment-circle',
     to: comicPath,
   },
-  {
+  Video: {
     name: 'Video',
     icon: 'video-o',
     selectedIcon: 'video',
     to: videoPath,
   },
-]);
+});
+const pages = computed(() => {
+  return tabBarPages.value
+    .filter((page) => page.enable && page.name !== 'Home')
+    .map((page) => _pages[page.name as keyof typeof _pages]);
+});
 
 // 记录上一次的页面路径
-watch(
-  () => route.path,
-  (newPath) => {
-    if (newPath.startsWith('/home')) {
-      router.push('/photo');
-      return;
-    }
-    displayStore.routerCurrPath = newPath;
-    if (!newPath.startsWith('/book/read/')) {
-      displayStore.showTabBar = true;
-    }
-    if (newPath.startsWith('/photo')) {
-      photoPath.value = newPath;
-      activeKey.value = 0;
-    } else if (newPath.startsWith('/song')) {
-      songPath.value = newPath;
-      activeKey.value = 1;
-    } else if (newPath.startsWith('/book')) {
-      bookPath.value = newPath;
-      activeKey.value = 2;
-    } else if (newPath.startsWith('/comic')) {
-      comicPath.value = newPath;
-      activeKey.value = 3;
-    } else if (newPath.startsWith('/video')) {
-      videoPath.value = newPath;
-      activeKey.value = 4;
-    } else {
-    }
+watch([() => route.path, pages], ([newPath, newPages]) => {
+  if (newPath.startsWith('/home')) {
+    router.push(pages.value[0].to);
+    return;
   }
-);
+  displayStore.routerCurrPath = newPath;
+  if (!newPath.startsWith('/book/read/')) {
+    displayStore.showTabBar = true;
+  }
+  if (newPath.startsWith('/photo')) {
+    photoPath.value = newPath;
+    activeKey.value = pages.value.findIndex((page) => page.name === 'Photo');
+  } else if (newPath.startsWith('/song')) {
+    songPath.value = newPath;
+    activeKey.value = pages.value.findIndex((page) => page.name === 'Song');
+  } else if (newPath.startsWith('/book')) {
+    bookPath.value = newPath;
+    activeKey.value = pages.value.findIndex((page) => page.name === 'Book');
+  } else if (newPath.startsWith('/comic')) {
+    comicPath.value = newPath;
+    activeKey.value = pages.value.findIndex((page) => page.name === 'Comic');
+  } else if (newPath.startsWith('/video')) {
+    videoPath.value = newPath;
+    activeKey.value = pages.value.findIndex((page) => page.name === 'Video');
+  } else {
+  }
+});
 
 watch(
   [() => displayStore.isDark, () => route.path],
@@ -119,7 +128,7 @@ watch(
 onMounted(() => {
   nextTick(async () => {
     if (route.path === '/home') {
-      router.replace(photoPath.value);
+      router.replace(pages.value[0].to);
     }
   });
 });

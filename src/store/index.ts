@@ -1406,8 +1406,8 @@ export const useStore = defineStore('store', () => {
         }
       } catch (error) {}
     }
-    keepTest.value = true;
-    addTestSource(new TestSongExtension(), SourceType.Song);
+    // keepTest.value = true;
+    // addTestSource(new TestSongExtension(), SourceType.Song);
     // addTestSource(new TestBookExtension(), SourceType.Book);
     // addTestSource(new TestPhotoExtension(), SourceType.Photo);
     // addTestSource(new TestComicExtension(), SourceType.Comic);
@@ -1654,6 +1654,39 @@ export const useDisplayStore = defineStore('display', () => {
     }
   };
 
+  const tabBarPages = useStorageAsync('tabBarPages', [
+    {
+      name: 'Home',
+      chineseName: '首页',
+      enable: true,
+    },
+    {
+      name: 'Photo',
+      chineseName: '图片',
+      enable: true,
+    },
+    {
+      name: 'Song',
+      chineseName: '歌曲',
+      enable: true,
+    },
+    {
+      name: 'Book',
+      chineseName: '书籍',
+      enable: true,
+    },
+    {
+      name: 'Comic',
+      chineseName: '漫画',
+      enable: true,
+    },
+    {
+      name: 'Video',
+      chineseName: '影视',
+      enable: true,
+    },
+  ]);
+
   return {
     fullScreenMode,
     isMobileView,
@@ -1720,6 +1753,8 @@ export const useDisplayStore = defineStore('display', () => {
     showPlayingPlaylist,
 
     searchHistories,
+
+    tabBarPages,
   };
 });
 
@@ -2931,6 +2966,7 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     createTime: Date.now(),
   });
   const songInLikeShelf = (song: SongInfo) => {
+    if (!song) return false;
     return (
       songLikeShelf.value?.playlist.list?.list.some(
         (item) => item.id === song.id

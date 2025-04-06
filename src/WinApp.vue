@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import {
+  computed,
   nextTick,
   onBeforeUnmount,
   onMounted,
+  reactive,
   Ref,
   ref,
   VNode,
@@ -35,46 +37,51 @@ const store = useStore();
 const displayStore = useDisplayStore();
 
 const homePath = ref('/home');
-const { photoPath, songPath, bookPath, comicPath, videoPath } =
+const { photoPath, songPath, bookPath, comicPath, videoPath, tabBarPages } =
   storeToRefs(displayStore);
-const pages = ref<PageItem[]>([
-  {
+const _pages: any = reactive({
+  Home: {
     name: 'Home',
     icon: 'wap-home-o',
     selectedIcon: 'wap-home',
     to: homePath,
   },
-  {
+  Photo: {
     name: 'Photo',
     icon: 'photo-o',
     selectedIcon: 'photo',
     to: photoPath,
   },
-  {
+  Song: {
     name: 'Song',
     icon: 'music-o',
     selectedIcon: 'music',
     to: songPath,
   },
-  {
+  Book: {
     name: 'Book',
     icon: 'bookmark-o',
     selectedIcon: 'bookmark',
     to: bookPath,
   },
-  {
+  Comic: {
     name: 'Comic',
     icon: 'comment-circle-o',
     selectedIcon: 'comment-circle',
     to: comicPath,
   },
-  {
+  Video: {
     name: 'Video',
     icon: 'video-o',
     selectedIcon: 'video',
     to: videoPath,
   },
-]);
+});
+const pages = computed(() => {
+  return tabBarPages.value
+    .filter((page) => page.enable)
+    .map((page) => _pages[page.name as keyof typeof _pages]);
+});
 
 const activeKey = ref('0');
 
@@ -119,31 +126,40 @@ const onClickAction = (action: { text: string; onClick: Function }) =>
   action.onClick();
 
 // 记录上一次的页面路径
-watch(
-  () => route.path,
-  (newPath) => {
-    displayStore.routerCurrPath = newPath;
-    if (newPath.startsWith('/home')) {
-      activeKey.value = '0';
-    } else if (newPath.startsWith('/photo')) {
-      photoPath.value = newPath;
-      activeKey.value = '1';
-    } else if (newPath.startsWith('/song')) {
-      songPath.value = newPath;
-      activeKey.value = '2';
-    } else if (newPath.startsWith('/book')) {
-      bookPath.value = newPath;
-      activeKey.value = '3';
-    } else if (newPath.startsWith('/comic')) {
-      comicPath.value = newPath;
-      activeKey.value = '4';
-    } else if (newPath.startsWith('/video')) {
-      videoPath.value = newPath;
-      activeKey.value = '5';
-    } else {
-    }
+watch([() => route.path, pages], ([newPath, newPages]) => {
+  displayStore.routerCurrPath = newPath;
+  if (newPath.startsWith('/home')) {
+    activeKey.value = String(
+      pages.value.findIndex((page) => page.name === 'Home')
+    );
+  } else if (newPath.startsWith('/photo')) {
+    photoPath.value = newPath;
+    activeKey.value = String(
+      pages.value.findIndex((page) => page.name === 'Photo')
+    );
+  } else if (newPath.startsWith('/song')) {
+    songPath.value = newPath;
+    activeKey.value = String(
+      pages.value.findIndex((page) => page.name === 'Song')
+    );
+  } else if (newPath.startsWith('/book')) {
+    bookPath.value = newPath;
+    activeKey.value = String(
+      pages.value.findIndex((page) => page.name === 'Book')
+    );
+  } else if (newPath.startsWith('/comic')) {
+    comicPath.value = newPath;
+    activeKey.value = String(
+      pages.value.findIndex((page) => page.name === 'Comic')
+    );
+  } else if (newPath.startsWith('/video')) {
+    videoPath.value = newPath;
+    activeKey.value = String(
+      pages.value.findIndex((page) => page.name === 'Video')
+    );
+  } else {
   }
-);
+});
 
 // onMounted(async () => {
 //   await getCurrentWindow().setMinSize(new LogicalSize(600, 300));
@@ -247,11 +263,6 @@ onBeforeUnmount(async () => {
       <transition name="slide">
         <div class="content grow w-full h-full overflow-hidden">
           <Component :is="routerView" />
-          <!-- <router-view v-slot="{ Component }">
-            <keep-alive>
-              <component :is="Component" />
-            </keep-alive>
-          </router-view> -->
         </div>
       </transition>
     </div>

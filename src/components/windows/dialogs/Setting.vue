@@ -1,12 +1,52 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useDisplayStore, useStore } from '@/store';
+import { showToast } from 'vant';
+import { useRoute } from 'vue-router';
+import { router } from '@/router/index';
 
 const store = useStore();
 const displayStore = useDisplayStore();
+const route = useRoute();
 const showConfirmClearData = ref(false);
+const activeNames = ref([]);
 const clearData = () => {
   store.clearData();
+};
+const tabBarPages = computed(() => {
+  return displayStore.tabBarPages.filter((item) => {
+    if (displayStore.isMobileView && item.name === 'Home') {
+      return false;
+    } else {
+      return true;
+    }
+  });
+});
+const updateTabBarPages = (
+  page: {
+    name: string;
+    chineseName: string;
+    enable: boolean;
+  },
+  checked: boolean
+) => {
+  if (checked === false && tabBarPages.value.every((item) => !item.enable)) {
+    showToast('至少需要保留一个页面');
+    page.enable = true;
+  }
+};
+const onConfim = () => {
+  if (
+    !tabBarPages.value
+      .filter((item) => item.enable)
+      .find((page) => route.path.includes(page.name.toLowerCase()))
+  ) {
+    router.push({
+      name: tabBarPages.value.filter((item) => item.enable)[0].name,
+    });
+  } else {
+    router.push(route.path);
+  }
 };
 </script>
 
@@ -14,15 +54,37 @@ const clearData = () => {
   <van-dialog
     v-model:show="displayStore.showSettingDialog"
     title="设置"
-    show-cancel-button
-    close-on-click-overlay
+    :show-cancel-button="false"
+    :close-on-click-overlay="false"
+    @confirm="onConfim"
   >
-    <van-cell-group class="mt-2" inset>
+    <van-cell-group class="mt-2">
       <van-cell center title="深色模式">
         <template #right-icon>
           <van-switch v-model="displayStore.isDark" />
         </template>
       </van-cell>
+    </van-cell-group>
+    <van-collapse v-model="activeNames">
+      <van-collapse-item title="隐藏功能">
+        <van-cell-group>
+          <van-cell
+            :title="item.chineseName"
+            v-for="item in tabBarPages"
+            :key="item.name"
+          >
+            <template #right-icon>
+              <van-checkbox
+                shape="square"
+                v-model="item.enable"
+                @change="(v) => updateTabBarPages(item, v)"
+              ></van-checkbox>
+            </template>
+          </van-cell>
+        </van-cell-group>
+      </van-collapse-item>
+    </van-collapse>
+    <van-cell-group class="mt-2">
       <van-cell
         center
         title="清除缓存"
