@@ -41,6 +41,7 @@
     "pac-proxy-agent": "^7.2.0",
     "pinia": "^3.0.1",
     "player.style": "^0.1.6",
+    "swiper": "^11.2.6",
     "tauri-plugin-commands-api": "file:tauri-plugin-commands",
     "tauri-plugin-fs-api": "file:tauri-plugin-fs",
     "tauri-plugin-keep-screen-on-api": "^0.1.4",

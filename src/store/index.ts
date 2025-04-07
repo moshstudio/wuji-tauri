@@ -2522,13 +2522,14 @@ export const useSongStore = defineStore('song', () => {
       if (!playingPlaylist.value.length) return;
       if (currIndex !== -1) {
         if (currIndex === 0) {
-          prevIndex = playingPlaylist.value.length - 2;
+          prevIndex = playingPlaylist.value.length - 1;
         } else {
           prevIndex = currIndex - 1;
         }
       }
+      playingSong.value = playingPlaylist.value[prevIndex];
       await androidMedia.play_target_music(
-        this.musicToAndroidMusic(playingPlaylist.value[prevIndex])
+        this.musicToAndroidMusic(playingSong.value)
       );
     }
     async nextSong(): Promise<void> {
@@ -2544,8 +2545,9 @@ export const useSongStore = defineStore('song', () => {
           nextIndex = currIndex + 1;
         }
       }
+      playingSong.value = playingPlaylist.value[nextIndex];
       await androidMedia.play_target_music(
-        this.musicToAndroidMusic(playingPlaylist.value[nextIndex])
+        this.musicToAndroidMusic(playingSong.value)
       );
     }
     async onSetVolume(value: number): Promise<void> {
