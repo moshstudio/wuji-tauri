@@ -46,6 +46,14 @@ impl<R: Runtime> Commands<R> {
             .run_mobile_plugin("getSystemFontScale", payload)
             .map_err(Into::into)
     }
+    pub fn get_screen_orientation(
+        &self,
+        payload: EmptyRequest,
+    ) -> crate::Result<GetScreenOrientationResponse> {
+        self.0
+            .run_mobile_plugin("getScreenOrientation", payload)
+            .map_err(Into::into)
+    }
     pub fn set_screen_orientation(
         &self,
         payload: SetScreenOrientationRequest,

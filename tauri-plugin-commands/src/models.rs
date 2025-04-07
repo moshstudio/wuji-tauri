@@ -31,6 +31,12 @@ pub struct SetScreenOrientationRequest {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct GetScreenOrientationResponse {
+    pub orientation: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BoolResponse {
     pub res: Option<bool>,
 }

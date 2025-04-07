@@ -32,6 +32,17 @@ export async function get_system_font_scale(): Promise<Number> {
     }
   ).then((r) => Number(r.value));
 }
+
+export async function get_screen_orientation(): Promise<
+  'landscape' | 'portrait' | 'auto'
+> {
+  return await invoke<{ value?: 'landscape' | 'portrait' | 'auto' }>(
+    'plugin:commands|get_screen_orientation',
+    {
+      payload: {},
+    }
+  ).then((r) => r.value || 'auto'); // 如果r.value为undefined，返回默认值'auto'
+}
 export async function set_screen_orientation(
   orientation: 'landscape' | 'portrait' | 'auto'
 ): Promise<boolean | null> {

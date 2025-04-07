@@ -2,6 +2,7 @@ package tauri.plugin.commands
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Build
 import android.view.View
@@ -40,6 +41,27 @@ class Commands(private val activity: Activity) {
         return true
     }
 
+    fun getScreenOrientation(): String {
+        when (activity.resources.configuration.orientation) {
+            Configuration.ORIENTATION_LANDSCAPE -> {
+                return "landscape"
+            }
+
+            Configuration.ORIENTATION_PORTRAIT -> {
+                return "portrait"
+            }
+
+            Configuration.ORIENTATION_UNDEFINED -> {
+                return "auto"
+            }
+
+            else -> {
+                return "unknown"
+            }
+
+        }
+    }
+
     fun setScreenOrientation(orientation: String): Boolean {
         when (orientation) {
             "landscape" -> {
@@ -67,31 +89,43 @@ class Commands(private val activity: Activity) {
     }
 
     fun hideStatusBar(hide: Boolean = true): Boolean {
-        if (hide) {
-            // 沉浸式状态栏
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                activity.window.insetsController?.let {
-                    it.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
-                    it.systemBarsBehavior =
-                        WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                activity.window.decorView.systemUiVisibility = (
-                        View.SYSTEM_UI_FLAG_FULLSCREEN
-                                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        )
+        return if (hide) {
+            handleHideStatusBar()
+        } else {
+            handleShowStatusBar()
+        }
+    }
+
+    private fun handleHideStatusBar(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            activity.window?.insetsController?.apply {
+                hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+                systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
         } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                activity.window?.insetsController?.show(WindowInsets.Type.statusBars())
-            } else {
-                @Suppress("DEPRECATION")
-                activity.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            @Suppress("DEPRECATION")
+            activity.window?.decorView?.systemUiVisibility = (
+                    View.SYSTEM_UI_FLAG_FULLSCREEN
+                            or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    )
+        }
+        return true
+    }
+
+    private fun handleShowStatusBar(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            activity.window?.insetsController?.apply {
+                show(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+            }
+        } else {
+            @Suppress("DEPRECATION", "DEPRECATED_SYNTAX_WITHOUT_DEPRECATE")
+            activity.window?.apply {
+                clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
             }
         }
         return true

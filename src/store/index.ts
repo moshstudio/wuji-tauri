@@ -1687,11 +1687,36 @@ export const useDisplayStore = defineStore('display', () => {
     },
   ]);
 
+  /**监听安卓的屏幕方向 */
+  const androidOrientation = ref<'landscape' | 'portrait' | 'auto'>();
+  const androidPlugins: PluginListener[] = [];
+  if (isAndroid.value) {
+    onMounted(async () => {
+      const orientation = await commands.get_screen_orientation();
+      androidOrientation.value = orientation;
+      tauriAddPluginListener(
+        'commands',
+        'orientationChanged',
+        async (payload: any) => {
+          androidOrientation.value = payload.orientation;
+        }
+      ).then((listener) => {
+        androidPlugins.push(listener);
+      });
+    });
+    onUnmounted(() => {
+      for (const plugin of androidPlugins) {
+        plugin.unregister();
+      }
+    });
+  }
+
   return {
     fullScreenMode,
     isMobileView,
     isAndroid,
     isWindows,
+    androidOrientation,
 
     taichiAnimateRandomized,
     isDark,

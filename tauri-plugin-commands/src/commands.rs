@@ -34,6 +34,14 @@ pub(crate) async fn get_system_font_scale<R: Runtime>(
 }
 
 #[command]
+pub(crate) async fn get_screen_orientation<R: Runtime>(
+    app: AppHandle<R>,
+    payload: EmptyRequest,
+) -> Result<GetScreenOrientationResponse> {
+    app.commands().get_screen_orientation(payload)
+}
+
+#[command]
 pub(crate) async fn set_screen_orientation<R: Runtime>(
     app: AppHandle<R>,
     payload: SetScreenOrientationRequest,

@@ -1,7 +1,10 @@
 package tauri.plugin.commands
 
 import android.app.Activity
+import android.content.ComponentCallbacks2
+import android.content.Intent
 import android.content.res.Configuration
+import android.util.Log
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
@@ -25,6 +28,45 @@ class HideStatusBarArgs(
 @TauriPlugin
 class CommandsPlugin(private val activity: Activity) : Plugin(activity) {
     private val implementation = Commands(activity)
+    private val registerNames = ArrayList<String>()
+
+    private val orientationListener = object : ComponentCallbacks2 {
+        override fun onConfigurationChanged(newConfig: Configuration) {
+            when (newConfig.orientation) {
+                Configuration.ORIENTATION_UNDEFINED -> orientationChanged("auto")
+                Configuration.ORIENTATION_LANDSCAPE -> orientationChanged("landscape")
+                Configuration.ORIENTATION_PORTRAIT -> orientationChanged("portrait")
+                else -> Log.e("Orientation", "Undefined orientation: ${newConfig.orientation}")
+            }
+        }
+
+        private fun orientationChanged(orientation: String) {
+            val ret = JSObject()
+            ret.put("orientation", orientation)
+            trigger("orientationChanged", ret)
+        }
+
+        override fun onLowMemory() {}
+        override fun onTrimMemory(level: Int) {}
+    }
+
+override fun registerListener(invoke: Invoke) {
+    super.registerListener(invoke)
+    val eventName = invoke.getArgs().getString("event")
+    if (eventName.equals("orientationChanged", ignoreCase = true)) {
+        synchronized(registerNames) {
+            if (registerNames.add("orientationChanged")) {
+                activity?.registerComponentCallbacks(orientationListener)
+            }
+        }
+    }
+    Log.d("CommandsPlugin", "registerListener, ${invoke.getRawArgs()}")
+}
+
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+    }
 
     @Command
     fun setStatusBar(invoke: Invoke) {
@@ -54,6 +96,14 @@ class CommandsPlugin(private val activity: Activity) : Plugin(activity) {
             ret.put("value", configuration.fontScale)
             invoke.resolve(ret)
         }
+    }
+
+    @Command
+    fun getScreenOrientation(invoke: Invoke) {
+        val orientation = implementation.getScreenOrientation()
+        val ret = JSObject()
+        ret.put("orientation", orientation)
+        invoke.resolve(ret)
     }
 
     @Command

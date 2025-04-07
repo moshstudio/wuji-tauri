@@ -29,6 +29,14 @@ impl<R: Runtime> Commands<R> {
     pub fn get_system_font_scale(&self, payload: EmptyRequest) -> crate::Result<NumberResponse> {
         Ok(NumberResponse { value: 1.0 })
     }
+    pub fn get_screen_orientation(
+        &self,
+        payload: EmptyRequest,
+    ) -> crate::Result<GetScreenOrientationResponse> {
+        Ok(GetScreenOrientationResponse {
+            orientation: "".to_string(),
+        })
+    }
     pub fn set_screen_orientation(
         &self,
         payload: SetScreenOrientationRequest,

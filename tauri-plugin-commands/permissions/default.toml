@@ -5,5 +5,10 @@ permissions = [
   "allow-set-status-bar",
   "allow-hide-status-bar",
   "allow-get-system-font-scale",
+  "allow-get-screen-orientation",
   "allow-set-screen-orientation",
+  "allow-register-listener",
+  "allow-remove-listener",
+  "allow-check-permissions",
+  "allow-request-permissions",
 ]

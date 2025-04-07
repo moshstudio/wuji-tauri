@@ -43,9 +43,11 @@
 import { Icon } from '@iconify/vue';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useDisplayStore } from '@/store';
-import { onMounted } from 'vue';
+import { onMounted, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 
 const displayStore = useDisplayStore();
+const { androidOrientation } = storeToRefs(displayStore);
 
 const props = defineProps<{
   state: {
@@ -86,4 +88,18 @@ const toggleFullscreen = async () => {
 onMounted(() => {
   displayStore.fullScreenMode = false;
 });
+if (displayStore.isAndroid) {
+  /**自动横屏时进入全屏 */
+  watch(androidOrientation, (newValue, oldValue) => {
+    if (
+      newValue === 'landscape' &&
+      oldValue !== 'landscape' &&
+      !displayStore.fullScreenMode
+    ) {
+      displayStore.fullScreenMode = true;
+      displayStore.showTabBar = false;
+      return;
+    }
+  });
+}
 </script>

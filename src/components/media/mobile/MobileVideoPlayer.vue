@@ -1,14 +1,12 @@
 <template>
   <div
     ref="videoWrapper"
-    class="video-container relative w-full h-full transition-all duration-500 ease-in-out text-center"
-    :class="{
-      'z-[99999999] rounded-none': fullScreenMode,
-    }"
-    :style="{
-      width: fullScreenMode ? '100vw' : '100%',
-      height: fullScreenMode ? '100vh' : '100%',
-    }"
+    class="video-container rounded-none transition-all duration-500 ease-in-out text-center"
+    :class="
+      fullScreenMode
+        ? 'fixed z-[99999999] w-screen h-screen '
+        : 'relative w-full h-full'
+    "
     autofocus
     v-click-separate
   >
@@ -26,7 +24,7 @@
       @mounted="handleMounted"
       @error="onError"
       @fullscreenchange="onFullScreenChange"
-      class="video-player flex w-full h-full items-center z-[99998]"
+      class="relative video-player flex w-full h-full items-center z-[99998]"
     >
       <template
         v-slot="{
