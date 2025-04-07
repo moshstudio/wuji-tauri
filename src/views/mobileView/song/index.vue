@@ -66,7 +66,7 @@ const onRefresh = async () => {
       v-remember-scroll
       v-model="isRefreshing"
       @refresh="onRefresh"
-      class="main grow overflow-x-hidden overflow-y-auto"
+      class="main flex-grow overflow-x-hidden overflow-y-auto"
     >
       <van-tabs
         v-model:active="activeTabIndex"
@@ -141,12 +141,7 @@ const onRefresh = async () => {
         </van-tab>
       </van-tabs>
     </van-pull-refresh>
-    <!-- <main class="flex-1 min-h-0">
-      
-    </main> -->
-    <footer>
-      <MobileSongBar></MobileSongBar>
-    </footer>
+    <MobileSongBar></MobileSongBar>
     <SongShelf></SongShelf>
   </div>
 </template>

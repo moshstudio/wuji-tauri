@@ -35,7 +35,7 @@ const updateTabBarPages = (
     page.enable = true;
   }
 };
-const onConfim = () => {
+const onConfirm = () => {
   if (
     !tabBarPages.value
       .filter((item) => item.enable)
@@ -56,7 +56,7 @@ const onConfim = () => {
     title="设置"
     :show-cancel-button="false"
     :close-on-click-overlay="false"
-    @confirm="onConfim"
+    @confirm="onConfirm"
   >
     <van-cell-group class="mt-2">
       <van-cell center title="深色模式">

@@ -1,16 +1,12 @@
 package com.wuji_app.app
 
-import com.wuji_app.app.RustWebChromeClient
-import android.R
 import android.annotation.SuppressLint
+import android.content.ComponentCallbacks2
+import android.content.res.Configuration
 import android.os.Bundle
+import android.util.Log
 import android.view.KeyEvent
-import android.view.MenuItem
-import android.view.View
-import android.view.Window
-import android.view.WindowManager
 import android.webkit.WebView
-import android.webkit.WebViewClient
 
 
 class MainActivity : TauriActivity() {
@@ -46,5 +42,9 @@ class MainActivity : TauriActivity() {
       return false
     }
     return super.onKeyDown(keyCode, event)
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
   }
 }

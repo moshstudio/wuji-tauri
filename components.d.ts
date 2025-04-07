@@ -18,6 +18,7 @@ declare module 'vue' {
     BooksTab: typeof import('./src/components/windows/BooksTab.vue')['default']
     ComicShelfButton: typeof import('./src/components/ComicShelfButton.vue')['default']
     ComicsTab: typeof import('./src/components/windows/ComicsTab.vue')['default']
+    DraggableSongBar: typeof import('./src/components/mobile/DraggableSongBar.vue')['default']
     FullPagination: typeof import('./src/components/pagination/FullPagination.vue')['default']
     FullScreenButton: typeof import('./src/components/media/win/FullScreenButton.vue')['default']
     HorizonList: typeof import('./src/components/HorizonList.vue')['default']

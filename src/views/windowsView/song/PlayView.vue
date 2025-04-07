@@ -43,7 +43,7 @@ const emit = defineEmits<{
         }
       }
     "
-    class="absolute left-[50px] right-[0px] w-auto rounded-none up-shadow bottom-[80px] playing-bg"
+    class="left-[50px] right-[0px] w-auto rounded-none up-shadow bottom-[80px] playing-bg"
     :style="show ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>

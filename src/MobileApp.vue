@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
-import { exit_app, set_status_bar } from 'tauri-plugin-commands-api';
+import {
+  exit_app,
+  set_screen_orientation,
+  set_status_bar,
+} from 'tauri-plugin-commands-api';
 import {
   useBookShelfStore,
   useBookStore,
@@ -76,8 +80,8 @@ const pages = computed(() => {
     .map((page) => _pages[page.name as keyof typeof _pages]);
 });
 
-// 记录上一次的页面路径
-watch([() => route.path, pages], ([newPath, newPages]) => {
+const updateActiveKey = (newPath?: string) => {
+  newPath ||= route.path;
   if (newPath.startsWith('/home')) {
     router.push(pages.value[0].to);
     return;
@@ -103,6 +107,10 @@ watch([() => route.path, pages], ([newPath, newPages]) => {
     activeKey.value = pages.value.findIndex((page) => page.name === 'Video');
   } else {
   }
+};
+// 记录上一次的页面路径
+watch([() => route.path, pages], ([newPath, newPages]) => {
+  updateActiveKey(newPath);
 });
 
 watch(
@@ -124,27 +132,25 @@ watch(
   }
 );
 
-//移动版是没有home页面的
 onMounted(() => {
   nextTick(async () => {
-    if (route.path === '/home') {
-      router.replace(pages.value[0].to);
+    //移动版是没有home页面的
+    if (route.path.startsWith('/home')) {
+      router.push(pages.value[0].to);
+      return;
     }
   });
-});
-
-// 同步更新tabbar的目标
-onMounted(() => {
   setTimeout(() => {
-    // 获取当前页面的 key
-    const currentPageKey = pages.value.findIndex((page) =>
-      route.path.startsWith(page.to)
-    );
-    // 如果当前页面不在 pages 中，则默认为第一个页面
-    activeKey.value = currentPageKey !== -1 ? currentPageKey : 0;
+    // 还原上次的路径
+    updateActiveKey();
   }, 500);
 });
-// 更新showtabbar
+
+// 保持竖屏模式
+onMounted(async () => {
+  await set_screen_orientation('portrait');
+});
+
 const { showTabBar } = storeToRefs(displayStore);
 
 // 安卓返回的回调
@@ -291,16 +297,12 @@ window.androidBackCallback = async () => {
 </script>
 
 <template>
-  <div class="flex flex-col w-screen h-screen bg-[var(--van-background-2)]">
+  <div
+    class="flex flex-col w-screen h-screen overflow-hidden bg-[var(--van-background-2)]"
+  >
     <transition name="slide">
       <div class="content flex-1 w-full h-full overflow-hidden">
         <Component :is="routerView" />
-
-        <!-- <router-view v-slot="{ Component }">
-          <keep-alive>
-            <component :is="Component" />
-          </keep-alive>
-        </router-view> -->
       </div>
     </transition>
     <transition

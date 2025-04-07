@@ -6,7 +6,12 @@ Default permissions for the plugin
 - `allow-set-status-bar`
 - `allow-hide-status-bar`
 - `allow-get-system-font-scale`
+- `allow-get-screen-orientation`
 - `allow-set-screen-orientation`
+- `allow-register-listener`
+- `allow-remove-listener`
+- `allow-check-permissions`
+- `allow-request-permissions`
 
 ## Permission Table
 
@@ -16,6 +21,32 @@ Default permissions for the plugin
 <th>Description</th>
 </tr>
 
+
+<tr>
+<td>
+
+`commands:allow-check-permissions`
+
+</td>
+<td>
+
+Enables the check_permissions command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:deny-check-permissions`
+
+</td>
+<td>
+
+Denies the check_permissions command without any pre-configured scope.
+
+</td>
+</tr>
 
 <tr>
 <td>
@@ -39,6 +70,32 @@ Enables the exit_app command without any pre-configured scope.
 <td>
 
 Denies the exit_app command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:allow-get-screen-orientation`
+
+</td>
+<td>
+
+Enables the get_screen_orientation command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:deny-get-screen-orientation`
+
+</td>
+<td>
+
+Denies the get_screen_orientation command without any pre-configured scope.
 
 </td>
 </tr>
@@ -91,6 +148,84 @@ Enables the hide_status_bar command without any pre-configured scope.
 <td>
 
 Denies the hide_status_bar command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:allow-register-listener`
+
+</td>
+<td>
+
+Enables the register_listener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:deny-register-listener`
+
+</td>
+<td>
+
+Denies the register_listener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:allow-remove-listener`
+
+</td>
+<td>
+
+Enables the remove_listener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:deny-remove-listener`
+
+</td>
+<td>
+
+Denies the remove_listener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:allow-request-permissions`
+
+</td>
+<td>
+
+Enables the request_permissions command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:deny-request-permissions`
+
+</td>
+<td>
+
+Denies the request_permissions command without any pre-configured scope.
 
 </td>
 </tr>

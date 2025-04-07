@@ -295,6 +295,16 @@
       "type": "string",
       "oneOf": [
         {
+          "description": "Enables the check_permissions command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-check-permissions"
+        },
+        {
+          "description": "Denies the check_permissions command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-check-permissions"
+        },
+        {
           "description": "Enables the exit_app command without any pre-configured scope.",
           "type": "string",
           "const": "allow-exit-app"
@@ -303,6 +313,16 @@
           "description": "Denies the exit_app command without any pre-configured scope.",
           "type": "string",
           "const": "deny-exit-app"
+        },
+        {
+          "description": "Enables the get_screen_orientation command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-screen-orientation"
+        },
+        {
+          "description": "Denies the get_screen_orientation command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-screen-orientation"
         },
         {
           "description": "Enables the get_system_font_scale command without any pre-configured scope.",
@@ -323,6 +343,36 @@
           "description": "Denies the hide_status_bar command without any pre-configured scope.",
           "type": "string",
           "const": "deny-hide-status-bar"
+        },
+        {
+          "description": "Enables the register_listener command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-register-listener"
+        },
+        {
+          "description": "Denies the register_listener command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-register-listener"
+        },
+        {
+          "description": "Enables the remove_listener command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-remove-listener"
+        },
+        {
+          "description": "Denies the remove_listener command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-remove-listener"
+        },
+        {
+          "description": "Enables the request_permissions command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-request-permissions"
+        },
+        {
+          "description": "Denies the request_permissions command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-request-permissions"
         },
         {
           "description": "Enables the set_screen_orientation command without any pre-configured scope.",

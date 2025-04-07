@@ -28,6 +28,7 @@ import _ from 'lodash';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 import videojs from 'video.js';
+import { useRoute } from 'vue-router';
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
 const { videoId, sourceId } = defineProps({
@@ -35,6 +36,7 @@ const { videoId, sourceId } = defineProps({
   sourceId: String,
 });
 
+const route = useRoute();
 const store = useStore();
 const displayStore = useDisplayStore();
 const shelfStore = useVideoShelfStore();
@@ -147,7 +149,10 @@ const onCanPlay = async (args: any) => {
   if (playingEpisode.value?.lastWatchPosition) {
     videoPlayer.value?.currentTime(playingEpisode.value.lastWatchPosition);
   }
-  await videoPlayer.value?.play();
+  if (route.path.includes('/video/detail/')) {
+    // 判断是否还在当前页面
+    await videoPlayer.value?.play();
+  }
 };
 const onPlayFinished = async (args: any) => {
   if (

@@ -124,7 +124,7 @@ export function retryOnFalse(
 
 export function purifyText(text: string): string {
   // 1. 统一换行符
-  text = text.replace(/\r\n|\r/g, '\n');
+  text = text.replace(/\r\n|\\n|\r/g, '\n');
 
   // 2. 去除 HTML 标签
   text = text.replace(/<[^>]+>/g, '');

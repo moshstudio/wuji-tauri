@@ -78,7 +78,7 @@ onUnmounted(() => {
         }
       }
     "
-    class="absolute left-[0px] right-[0px] bottom-[80px] w-auto rounded-none up-shadow"
+    class="left-[0px] right-[0px] bottom-[80px] w-auto rounded-none up-shadow"
     :style="displayStore.showSongShelf ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
@@ -102,112 +102,114 @@ onUnmounted(() => {
         </van-button>
       </div>
     </template>
-    <div class="flex flex-col w-full h-full">
-      <div class="flex gap-2 m-2 p-1 shrink">
-        <van-button
-          icon="plus"
-          size="small"
-          round
-          @click="() => (displayStore.showAddSongShelfDialog = true)"
-        >
-        </van-button>
-        <van-button
-          icon="delete-o"
-          size="small"
-          round
-          @click="() => (displayStore.showRemoveSongShelfDialog = true)"
-        >
-        </van-button>
-        <van-button
-          icon="link-o"
-          size="small"
-          round
-          @click="() => (displayStore.showImportPlaylistDialog = true)"
-        >
-        </van-button>
+
+    <div class="flex gap-2 m-2 p-1 shrink">
+      <van-button
+        icon="plus"
+        size="small"
+        round
+        @click="() => (displayStore.showAddSongShelfDialog = true)"
+      >
+      </van-button>
+      <van-button
+        icon="delete-o"
+        size="small"
+        round
+        @click="() => (displayStore.showRemoveSongShelfDialog = true)"
+      >
+      </van-button>
+      <van-button
+        icon="link-o"
+        size="small"
+        round
+        @click="() => (displayStore.showImportPlaylistDialog = true)"
+      >
+      </van-button>
+    </div>
+    <div
+      class="flex flex-col gap-1 px-2 text-sm overflow-hidden"
+      :class="songStore.playingSong ? 'mb-[45px]' : ''"
+    >
+      <div
+        class="flex items-center gap-2 p-1 rounded cursor-pointer hover:bg-[--van-background] text-[--van-text-color]"
+        :style="{
+          borderBottomColor:
+            selectedSongShelf?.playlist.id ===
+            shelfStore.songLikeShelf.playlist.id
+              ? '#1989fa'
+              : 'transparent',
+        }"
+        @click="
+          () => {
+            selectedSongShelf = shelfStore.songLikeShelf;
+            showSongShelfDetail = true;
+          }
+        "
+      >
+        <SongPlaylistPhoto
+          :url="shelfStore.songLikeShelf.playlist.picUrl"
+          :width="40"
+          :height="40"
+        ></SongPlaylistPhoto>
+        <span>
+          {{ shelfStore.songLikeShelf.playlist.name }}
+        </span>
       </div>
-      <div class="flex flex-col gap-1 px-2 text-sm">
-        <div
-          class="flex items-center gap-2 p-1 rounded cursor-pointer hover:bg-[--van-background] text-[--van-text-color]"
-          :style="{
-            borderBottomColor:
-              selectedSongShelf?.playlist.id ===
-              shelfStore.songLikeShelf.playlist.id
-                ? '#1989fa'
-                : 'transparent',
-          }"
-          @click="
-            () => {
-              selectedSongShelf = shelfStore.songLikeShelf;
-              showSongShelfDetail = true;
-            }
-          "
-        >
-          <SongPlaylistPhoto
-            :url="shelfStore.songLikeShelf.playlist.picUrl"
-            :width="40"
-            :height="40"
-          ></SongPlaylistPhoto>
-          <span>
-            {{ shelfStore.songLikeShelf.playlist.name }}
-          </span>
-        </div>
-        <p class="text-gray-400">
-          创建的歌单({{ shelfStore.songCreateShelf.length }})
-        </p>
-        <div
-          class="flex items-center gap-2 p-1 rounded cursor-pointer hover:bg-[--van-background] text-[--van-text-color]"
-          :style="{
-            borderBottomColor:
-              selectedSongShelf?.playlist.id === shelf.playlist.id
-                ? '#1989fa'
-                : 'transparent',
-          }"
-          @click="
-            () => {
-              selectedSongShelf = shelf;
-              showSongShelfDetail = true;
-            }
-          "
-          v-for="shelf in shelfStore.songCreateShelf"
-        >
-          <SongPlaylistPhoto
-            :url="shelf.playlist.picUrl"
-            :width="40"
-            :height="40"
-          ></SongPlaylistPhoto>
-          <span>
-            {{ shelf.playlist.name }}
-          </span>
-        </div>
-        <p class="text-gray-400">
-          收藏的歌单({{ shelfStore.songPlaylistShelf.length }})
-        </p>
-        <div
-          class="flex items-center gap-2 p-1 rounded cursor-pointer hover:bg-[--van-background] text-[--van-text-color]"
-          :style="{
-            borderBottomColor:
-              selectedSongShelf?.playlist.id === shelf.playlist.id
-                ? '#1989fa'
-                : 'transparent',
-          }"
-          @click="
-            () => {
-              selectedSongShelf = shelf;
-              showSongShelfDetail = true;
-            }
-          "
-          v-for="shelf in shelfStore.songPlaylistShelf"
-        >
-          <SongPlaylistPhoto
-            :url="shelf.playlist.picUrl"
-            :width="40"
-            :height="40"
-          ></SongPlaylistPhoto>
-          <span>
-            {{ shelf.playlist.name }}
-          </span>
-        </div>
+      <p class="text-gray-400">
+        创建的歌单({{ shelfStore.songCreateShelf.length }})
+      </p>
+      <div
+        class="flex items-center gap-2 p-1 rounded cursor-pointer hover:bg-[--van-background] text-[--van-text-color]"
+        :style="{
+          borderBottomColor:
+            selectedSongShelf?.playlist.id === shelf.playlist.id
+              ? '#1989fa'
+              : 'transparent',
+        }"
+        @click="
+          () => {
+            selectedSongShelf = shelf;
+            showSongShelfDetail = true;
+          }
+        "
+        v-for="shelf in shelfStore.songCreateShelf"
+      >
+        <SongPlaylistPhoto
+          :url="shelf.playlist.picUrl"
+          :width="40"
+          :height="40"
+        ></SongPlaylistPhoto>
+        <span>
+          {{ shelf.playlist.name }}
+        </span>
+      </div>
+      <p class="text-gray-400">
+        收藏的歌单({{ shelfStore.songPlaylistShelf.length }})
+      </p>
+      <div
+        class="flex items-center gap-2 p-1 rounded cursor-pointer hover:bg-[--van-background] text-[--van-text-color]"
+        :style="{
+          borderBottomColor:
+            selectedSongShelf?.playlist.id === shelf.playlist.id
+              ? '#1989fa'
+              : 'transparent',
+        }"
+        @click="
+          () => {
+            selectedSongShelf = shelf;
+            showSongShelfDetail = true;
+          }
+        "
+        v-for="shelf in shelfStore.songPlaylistShelf"
+      >
+        <SongPlaylistPhoto
+          :url="shelf.playlist.picUrl"
+          :width="40"
+          :height="40"
+        ></SongPlaylistPhoto>
+        <span>
+          {{ shelf.playlist.name }}
+        </span>
       </div>
     </div>
   </van-floating-panel>

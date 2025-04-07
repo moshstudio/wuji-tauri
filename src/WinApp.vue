@@ -122,11 +122,12 @@ const sourceActions = [
     },
   },
 ];
-const onClickAction = (action: { text: string; onClick: Function }) =>
+const onClickAction = (action: { text: string; onClick: Function }) => {
   action.onClick();
+};
 
-// 记录上一次的页面路径
-watch([() => route.path, pages], ([newPath, newPages]) => {
+const updateActiveKey = (newPath?: string) => {
+  newPath ||= route.path;
   displayStore.routerCurrPath = newPath;
   if (newPath.startsWith('/home')) {
     activeKey.value = String(
@@ -159,24 +160,16 @@ watch([() => route.path, pages], ([newPath, newPages]) => {
     );
   } else {
   }
-});
+};
 
-// onMounted(async () => {
-//   await getCurrentWindow().setMinSize(new LogicalSize(600, 300));
-//   await getCurrentWindow().setSizeConstraints({
-//     minWidth: 600,
-//     minHeight: 300,
-//   });
-// });
+// 记录上一次的页面路径
+watch([() => route.path, pages], ([newPath, newPages]) => {
+  updateActiveKey(newPath);
+});
 
 onMounted(() => {
   setTimeout(() => {
-    // 获取当前页面的 key
-    const currentPageKey = pages.value.findIndex((page) =>
-      route.path.startsWith(page.to)
-    );
-    // 如果当前页面不在 pages 中，则默认为第一个页面
-    activeKey.value = currentPageKey !== -1 ? currentPageKey.toString() : '0';
+    updateActiveKey();
   }, 500);
 });
 

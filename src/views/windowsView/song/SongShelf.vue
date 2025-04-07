@@ -41,7 +41,7 @@ const { selectedSongShelf } = storeToRefs(displayStore);
         }
       }
     "
-    class="absolute left-[50px] right-[0px] w-auto rounded-none up-shadow bottom-[80px]"
+    class="left-[50px] right-[0px] w-auto rounded-none up-shadow bottom-[80px]"
     :style="displayStore.showSongShelf ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
