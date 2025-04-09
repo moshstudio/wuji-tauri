@@ -4,32 +4,33 @@ class TestVideoExtension extends VideoExtension {
   id = 'testVideo';
   name = 'testVideo';
   version = '0.0.1';
-  baseUrl = 'http://hscangku.com/';
-  newUrl = null;
+  baseUrl = 'https://www.keke6.app/';
   async getRecommendVideos(pageNo, type) {
-    await this.initUrl();
-    if (!this.newUrl) return null;
     const items = [
       {
-        name: '日韩',
-        tag: 'vodtype/1-{pageNo}.html',
+        name: '电影',
+        tag: 'show/1-----3-{pageNo}.html',
       },
       {
-        name: '国产',
-        tag: 'vodtype/2-{pageNo}.html',
-      },
-      {
-        name: '欧美',
-        tag: 'vodtype/3-{pageNo}.html',
+        name: '连续剧',
+        tag: 'show/2-----3-{pageNo}.html',
       },
       {
         name: '动漫',
-        tag: 'vodtype/4-{pageNo}.html',
+        tag: 'show/3-----3-{pageNo}.html',
+      },
+      {
+        name: '综艺记录',
+        tag: 'show/4-----3-{pageNo}.html',
+      },
+      {
+        name: '短剧',
+        tag: 'show/6-----3-{pageNo}.html',
       },
     ];
     if (!type) {
       return items.map((item) => ({
-        id: item.tag,
+        id: this.urlJoin(this.baseUrl, item.tag),
         type: item.name,
         list: [],
         page: pageNo,
@@ -37,126 +38,131 @@ class TestVideoExtension extends VideoExtension {
         sourceId: '',
       }));
     }
-
     const item = items.find((item) => item.name === type);
     pageNo ||= 1;
-    const url = this.urlJoin(this.newUrl, item.tag.replace('{pageNo}', pageNo));
+    const url = this.urlJoin(
+      this.baseUrl,
+      item.tag.replace('{pageNo}', pageNo)
+    );
     const document = await this.fetchDom(url);
-
-    const list = (
-      await this.queryVideoElements(document, {
-        element: '.stui-vodlist li',
-        cover: 'a[data-original]',
-        title: 'h4 a',
-        url: 'h4 a',
-        tags: '.sub ',
-        baseUrl: this.newUrl,
-      })
-    ).filter((item) => item.url.includes('vodplay'));
-
-    const pageElements = document.querySelectorAll('.stui-page a[href]');
+    const list = await this.queryVideoElements(document, {
+      element: '.main .module-item',
+      cover: 'img:nth-child(2)',
+      coverDomain: 'https://vres1.ipvav.cn/',
+      title: '.v-item-title:nth-child(2)',
+      url: 'a',
+    });
+    const pageElements = Array.from(
+      document.querySelectorAll('.pagenation-box a').values()
+    );
     return {
       list,
       page: pageNo,
-      totalPage: this.maxPageNoFromElements(pageElements),
+      totalPage: pageElements.find((a) => a.textContent.includes('下一页'))
+        ? pageNo + 1
+        : pageNo,
       type: item.name,
       sourceId: '',
     };
   }
 
   async search(keyword, pageNo) {
-    await this.initUrl();
-    if (!this.newUrl) return null;
-    const url = `${this.newUrl}vodsearch/${keyword}----------${pageNo}---.html`;
+    const url = `${this.baseUrl}search?k=${keyword}&page=${pageNo}&os=pc`;
     const document = await this.fetchDom(url);
 
-    const list = (
-      await this.queryVideoElements(document, {
-        element: '.stui-vodlist li',
-        cover: 'a[data-original]',
-        title: 'h4 a',
-        url: 'h4 a',
-        tags: '.sub .number',
-        baseUrl: this.newUrl,
-      })
-    ).filter((item) => item.url.includes('vodplay'));
+    const list = await this.queryVideoElements(document, {
+      element: '.search-result-list a',
+      cover: 'img:nth-child(1)',
+      coverDomain: 'https://vres1.ipvav.cn/',
+      title: '.title',
+      url: '',
+    });
+    const pageElements = Array.from(
+      document.querySelectorAll('.pagenation-box a').values()
+    );
 
-    const pageElements = document.querySelectorAll('.stui-page a[href]');
     return {
       list,
       page: pageNo,
-      totalPage: this.maxPageNoFromElements(pageElements),
+      totalPage: pageElements.find((a) => a.textContent.includes('下一页'))
+        ? pageNo + 1
+        : pageNo,
       sourceId: '',
     };
   }
 
   async getVideoDetail(item, pageNo) {
-    await this.initUrl();
-    if (!this.newUrl) return null;
     pageNo ||= 1;
     const document = await this.fetchDom(item.url);
-    const scripts = document.querySelectorAll('script');
-    let playerObj = null;
 
-    // 遍历script标签查找目标对象
-    for (let script of scripts) {
+    item.intro = document.querySelector('.detail-desc p')?.textContent.trim();
+    const rows = Array.from(
+      document.querySelectorAll('.detail-info-row').values()
+    );
+    item.director = rows[0].querySelector('.detail-info-row-main')?.textContent;
+    item.cast = rows[1].querySelector('.detail-info-row-main')?.textContent;
 
-      if (script.textContent.includes('var player_aaaa=')) {
-        // 提取对象定义部分
-        const start = script.textContent.indexOf('{');
-        const end = script.textContent.lastIndexOf('}') + 1;
-        const jsonStr = script.textContent.slice(start, end);
-
-        try {
-          playerObj = JSON.parse(jsonStr);
-          break;
-        } catch (e) {
-          console.error('解析JSON失败:', e);
-        }
-      }
+    const tagElements = Array.from(
+      document.querySelectorAll('.detail-tags a').values()
+    );
+    item.releaseDate = tagElements[0]?.textContent;
+    item.country = tagElements[1]?.textContent;
+    if (tagElements.length > 2) {
+      item.tags = tagElements
+        .slice(2)
+        .map((a) => a.textContent)
+        .join('');
     }
-
-    item.resources = [
-      {
-        episodes: [
-          {
-            id: playerObj.url,
-            title: '播放地址',
-            url: playerObj.url,
-          },
-        ],
-      },
-    ];
+    const resources = [];
+    const sourceNames = Array.from(
+      document
+        .querySelectorAll('.episode-box .swiper-slide .source-item span')
+        .values()
+    ).map((a) => a.textContent);
+    const episodeElements = Array.from(
+      document.querySelectorAll('.episode-box-main .episode-list').values()
+    );
+    sourceNames.forEach((sourceName, index) => {
+      const episodeElement = episodeElements[index];
+      if (!episodeElement) return;
+      const episodes = [];
+      episodeElement.querySelectorAll('a[href]').forEach((a) => {
+        const url = this.urlJoin(this.baseUrl, a.getAttribute('href'));
+        episodes.push({
+          id: url,
+          title: a.textContent,
+          url: url,
+        });
+      });
+      resources.push({
+        id: sourceName,
+        title: sourceName,
+        episodes: episodes,
+      });
+    });
+    item.resources = resources;
     return item;
   }
 
   async getPlayUrl(item, resource, episode) {
-    return { url: episode.url };
-  }
-  async initUrl() {
-    const cache = localStorage.getItem('hscangku');
-    if (cache) {
-      if (Date.now() - JSON.parse(cache).ts < 1000 * 60 * 60 * 3) {
-        this.newUrl = JSON.parse(cache).url;
-        this.baseUrl = this.newUrl;
-        return;
+    const response = await this.fetch(episode.url);
+    const text = await response.text();
+
+    const regex = /const\s*playSource\s*=\s*([^;]+);/;
+    const match = text.match(regex);
+    if (match && match[1]) {
+      const func = new Function('return ' + match[1]);
+      const playSource = func();
+
+      if (!playSource) {
+        return null;
+      }
+      if (playSource.src) {
+        return { url: playSource.src };
+      } else {
+        return { url: playSource };
       }
     }
-    const response = await this.fetch(this.baseUrl);
-    const text = await response.text();
-    var match = text.match(/strU=\"([^\"]+)\"/);
-    if (!match || !match[1]) return;
-    const directUrl = match[1] + this.baseUrl;
-    const response2 = await this.fetch(directUrl);
-    this.newUrl = response2.url;
-    this.baseUrl = this.newUrl;
-    localStorage.setItem(
-      'hscangku',
-      JSON.stringify({
-        url: this.newUrl,
-        ts: Date.now(),
-      })
-    );
   }
 }
 

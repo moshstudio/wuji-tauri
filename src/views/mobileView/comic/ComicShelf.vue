@@ -7,6 +7,7 @@ import { computed, PropType } from 'vue';
 import AddComicShelfDialog from '@/components/windows/dialogs/AddComicShelf.vue';
 import DeleteComicShelfDialog from '@/components/windows/dialogs/RemoveComicShelf.vue';
 import MobileShelfComicCard from '@/components/card/comicCards/MobileShelfComicCard.vue';
+import LeftPopup from '@/components/mobile/LeftPopup.vue';
 
 const shelfAnchors = defineModel('shelfAnchors', {
   type: Array as PropType<number[]>,
@@ -61,14 +62,17 @@ const sourceName = (comic: ComicItemInShelf) => {
     :style="displayStore.showComicShelf ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
-      <div class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-lg font-semibold">
-          <slot name="title">
-            <p class="text-[--van-text-color]">书架</p>
-          </slot>
-        </h2>
+      <div class="flex justify-between items-center p-2 border-b">
+        <div class="flex items-center gap-2">
+          <LeftPopup></LeftPopup>
+          <h2 class="text-lg font-bold">
+            <slot name="title">
+              <p class="text-[--van-text-color]">书架</p>
+            </slot>
+          </h2>
+        </div>
         <van-button
-          icon="cross"
+          icon="arrow-down"
           size="small"
           plain
           round
@@ -113,7 +117,10 @@ const sourceName = (comic: ComicItemInShelf) => {
             <ul
               v-for="item in _.orderBy(
                 shelf.comics,
-                [(comic) => comic.lastReadTime || 0, (comic) => comic.createTime],
+                [
+                  (comic) => comic.lastReadTime || 0,
+                  (comic) => comic.createTime,
+                ],
                 ['desc', 'desc']
               )"
               :key="item.comic.id"
@@ -122,7 +129,9 @@ const sourceName = (comic: ComicItemInShelf) => {
                 :shelf-comic="item"
                 :unread="unreadCount(item)"
                 @click="(comic, chapterId) => emit('toComic', comic, chapterId)"
-                @remove="(comic) => emit('removeComicFromShelf', comic, shelf.id)"
+                @remove="
+                  (comic) => emit('removeComicFromShelf', comic, shelf.id)
+                "
               ></MobileShelfComicCard>
             </ul>
           </van-list>

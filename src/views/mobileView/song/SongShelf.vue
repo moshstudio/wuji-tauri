@@ -8,8 +8,7 @@ import AddSongShelfDialog from '@/components/windows/dialogs/AddSongShelf.vue';
 import RemoveSongShelfDialog from '@/components/windows/dialogs/RemoveSongShelf.vue';
 import MobileShelfSongCard from '@/components/card/songCards/MobileShelfSongCard.vue';
 import ImportPlaylistDialog from '@/components/windows/dialogs/ImportPlaylist.vue';
-import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
-import { ActionSheetAction } from 'vant';
+import LeftPopup from '@/components/mobile/LeftPopup.vue';
 import { SongShelfType } from '@/types/song';
 import { PlaylistInfo, SongInfo, SongShelf } from '@/extensions/song';
 import { storeToRefs } from 'pinia';
@@ -82,14 +81,17 @@ onUnmounted(() => {
     :style="displayStore.showSongShelf ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
-      <div class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-lg font-semibold">
-          <slot name="title">
-            <p class="text-[--van-text-color]">音乐收藏</p>
-          </slot>
-        </h2>
+      <div class="flex justify-between items-center p-2 border-b">
+        <div class="flex items-center gap-2">
+          <LeftPopup></LeftPopup>
+          <h2 class="text-lg font-bold">
+            <slot name="title">
+              <p class="text-[--van-text-color]">乐库</p>
+            </slot>
+          </h2>
+        </div>
         <van-button
-          icon="cross"
+          icon="arrow-down"
           size="small"
           plain
           round

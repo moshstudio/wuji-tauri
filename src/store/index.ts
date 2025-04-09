@@ -1406,12 +1406,12 @@ export const useStore = defineStore('store', () => {
         }
       } catch (error) {}
     }
-    // keepTest.value = true;
+    keepTest.value = true;
     // addTestSource(new TestSongExtension(), SourceType.Song);
     // addTestSource(new TestBookExtension(), SourceType.Book);
     // addTestSource(new TestPhotoExtension(), SourceType.Photo);
     // addTestSource(new TestComicExtension(), SourceType.Comic);
-    // addTestSource(new TestVideoExtension(), SourceType.Video);
+    addTestSource(new TestVideoExtension(), SourceType.Video);
 
     loadSubscribeSources(true);
   });

@@ -109,7 +109,7 @@ const updateActiveKey = (newPath?: string) => {
   }
 };
 // 记录上一次的页面路径
-watch([() => route.path, pages], ([newPath, newPages]) => {
+watch([() => route.path, pages], async ([newPath, newPages]) => {
   updateActiveKey(newPath);
 });
 

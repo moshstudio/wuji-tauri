@@ -5,11 +5,15 @@
     v-on="listeners"
     :class="attrs.class"
   >
-    <slot></slot>
+    <div class="min-w-[40px] min-h-[40px]">
+      <slot></slot>
+    </div>
 
     <!-- 传递具名插槽 -->
     <template v-for="(_, name) in $slots" #[name]>
-      <slot :name="name"></slot>
+      <div class="min-w-[40px] min-h-[40px]">
+        <slot :name="name"></slot>
+      </div>
     </template>
   </van-image>
 </template>

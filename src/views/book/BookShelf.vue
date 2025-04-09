@@ -42,7 +42,9 @@ const toBook = async (book: BookItemInShelf, chapterId?: string) => {
   }
 
   chapterId ||= book.book.chapters![0].id;
-  showBookShelf.value = false;
+  if (!displayStore.isAndroid) {
+    showBookShelf.value = false;
+  }
   router.push({
     name: 'BookRead',
     params: {

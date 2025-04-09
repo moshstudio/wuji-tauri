@@ -6,6 +6,7 @@ import AddPhotoShelfDialog from '@/components/windows/dialogs/AddPhotoShelf.vue'
 import removePhotoShelfDialog from '@/components/windows/dialogs/removePhotoShelf.vue';
 import MobileShelfPhotoCard from '@/components/card/photoCards/MobileShelfPhotoCard.vue';
 import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
+import LeftPopup from '@/components/mobile/LeftPopup.vue';
 
 const displayStore = useDisplayStore();
 const shelfStore = usePhotoShelfStore();
@@ -43,14 +44,17 @@ const emit = defineEmits<{
     :style="displayStore.showPhotoShelf ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
-      <div class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-lg font-semibold">
-          <slot name="title">
-            <p class="text-[--van-text-color]">图片收藏</p>
-          </slot>
-        </h2>
+      <div class="flex justify-between items-center p-2 border-b">
+        <div class="flex items-center gap-2">
+          <LeftPopup></LeftPopup>
+          <h2 class="text-lg font-bold">
+            <slot name="title">
+              <p class="text-[--van-text-color]">图库</p>
+            </slot>
+          </h2>
+        </div>
         <van-button
-          icon="cross"
+          icon="arrow-down"
           size="small"
           plain
           round

@@ -6,6 +6,7 @@ import AddVideoShelfDialog from '@/components/windows/dialogs/AddVideoShelf.vue'
 import removeVideoShelfDialog from '@/components/windows/dialogs/RemoveVideoShelf.vue';
 import MobileShelfVideoCard from '@/components/card/videoCards/MobileShelfVideoCard.vue';
 import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
+import LeftPopup from '@/components/mobile/LeftPopup.vue';
 import { storeToRefs } from 'pinia';
 
 const displayStore = useDisplayStore();
@@ -44,23 +45,27 @@ const emit = defineEmits<{
     :style="displayStore.showVideoShelf ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
-      <div class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-lg font-semibold">
-          <slot name="title">
-            <p class="text-[--van-text-color]">视频收藏</p>
-          </slot>
-        </h2>
-        <div
-          class="text-button"
+      <div class="flex justify-between items-center p-2 border-b">
+        <div class="flex items-center gap-2">
+          <LeftPopup></LeftPopup>
+          <h2 class="text-lg font-bold">
+            <slot name="title">
+              <p class="text-[--van-text-color]">收藏</p>
+            </slot>
+          </h2>
+        </div>
+        <van-button
+          icon="arrow-down"
+          size="small"
+          plain
+          round
           @click="
             () => {
               selecteMode = false;
               emit('hidePanel');
             }
           "
-        >
-          关闭收藏
-        </div>
+        ></van-button>
       </div>
     </template>
     <div class="flex gap-2 m-2 p-1 shrink">

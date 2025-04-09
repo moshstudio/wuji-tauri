@@ -7,6 +7,7 @@ import { computed, PropType } from 'vue';
 import AddBookShelfDialog from '@/components/windows/dialogs/AddBookShelf.vue';
 import DeleteBookShelfDialog from '@/components/windows/dialogs/RemoveBookShelf.vue';
 import MobileShelfBookCard from '@/components/card/bookCards/MobileShelfBookCard.vue';
+import LeftPopup from '@/components/mobile/LeftPopup.vue';
 
 const shelfAnchors = defineModel('shelfAnchors', {
   type: Array as PropType<number[]>,
@@ -61,14 +62,18 @@ const sourceName = (book: BookItemInShelf) => {
     :style="displayStore.showBookShelf ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
-      <div class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-lg font-semibold">
-          <slot name="title">
-            <p class="text-[--van-text-color]">书架</p>
-          </slot>
-        </h2>
+      <div class="flex justify-between items-center p-2 border-b">
+        <div class="flex items-center gap-2">
+          <LeftPopup></LeftPopup>
+          <h2 class="text-lg font-bold">
+            <slot name="title">
+              <p class="text-[--van-text-color]">书架</p>
+            </slot>
+          </h2>
+        </div>
+
         <van-button
-          icon="cross"
+          icon="arrow-down"
           size="small"
           plain
           round
