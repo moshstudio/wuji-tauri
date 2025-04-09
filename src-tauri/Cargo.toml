@@ -1,6 +1,6 @@
 [package]
 name = "wuji-app"
-version = "0.1.6"
+version = "0.1.7"
 description = "一款资源聚合软件"
 authors = ["moshangstudio"]
 edition = "2021"
