@@ -48,3 +48,39 @@ pub(crate) async fn set_screen_orientation<R: Runtime>(
 ) -> Result<BoolResponse> {
     app.commands().set_screen_orientation(payload)
 }
+
+#[command]
+pub(crate) async fn get_brightness<R: Runtime>(
+    app: AppHandle<R>,
+    payload: EmptyRequest,
+) -> Result<NumberResponse> {
+    app.commands().get_brightness(payload)
+}
+#[command]
+pub(crate) async fn get_system_brightness<R: Runtime>(
+    app: AppHandle<R>,
+    payload: EmptyRequest,
+) -> Result<NumberResponse> {
+    app.commands().get_system_brightness(payload)
+}
+#[command]
+pub(crate) async fn set_brightness<R: Runtime>(
+    app: AppHandle<R>,
+    payload: SetBrightnessRequest,
+) -> Result<BoolResponse> {
+    app.commands().set_brightness(payload)
+}
+#[command]
+pub(crate) async fn get_volume<R: Runtime>(
+    app: AppHandle<R>,
+    payload: EmptyRequest,
+) -> Result<NumberResponse> {
+    app.commands().get_volume(payload)
+}
+#[command]
+pub(crate) async fn set_volume<R: Runtime>(
+    app: AppHandle<R>,
+    payload: SetVolumeRequest,
+) -> Result<BoolResponse> {
+    app.commands().set_volume(payload)
+}

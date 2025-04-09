@@ -46,6 +46,7 @@ const emit = defineEmits<{
   (e: 'play', resource: VideoResource, episode: VideoEpisode): void;
   (e: 'addVideoToShelf', shelfId: string): void;
   (e: 'canPlay', args: any): void;
+  (e: 'playNext', args: any): void;
   (e: 'onPlayFinished', args: any): void;
   (e: 'timeUpdate', args: any): void;
 }>();
@@ -88,9 +89,11 @@ watch(
         <MobileVideoPlayer
           v-model:player="player"
           :src="videoSrc?.url"
+          :resource="playingResource"
           :episode="playingEpisode"
           @time-update="(args) => emit('timeUpdate', args)"
           @can-play="(args) => emit('canPlay', args)"
+          @play-next="(args) => emit('playNext', args)"
           @on-play-finished="(args) => emit('onPlayFinished', args)"
           class="w-full"
         >

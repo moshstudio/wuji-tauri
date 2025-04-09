@@ -62,4 +62,29 @@ impl<R: Runtime> Commands<R> {
             .run_mobile_plugin("setScreenOrientation", payload)
             .map_err(Into::into)
     }
+    pub fn get_brightness(&self, payload: EmptyRequest) -> crate::Result<NumberResponse> {
+        self.0
+            .run_mobile_plugin("getBrightness", payload)
+            .map_err(Into::into)
+    }
+    pub fn get_system_brightness(&self, payload: EmptyRequest) -> crate::Result<NumberResponse> {
+        self.0
+            .run_mobile_plugin("getSystemBrightness", payload)
+            .map_err(Into::into)
+    }
+    pub fn set_brightness(&self, payload: SetBrightnessRequest) -> crate::Result<BoolResponse> {
+        self.0
+            .run_mobile_plugin("setBrightness", payload)
+            .map_err(Into::into)
+    }
+    pub fn get_volume(&self, payload: EmptyRequest) -> crate::Result<NumberResponse> {
+        self.0
+            .run_mobile_plugin("getVolume", payload)
+            .map_err(Into::into)
+    }
+    pub fn set_volume(&self, payload: SetVolumeRequest) -> crate::Result<BoolResponse> {
+        self.0
+            .run_mobile_plugin("setVolume", payload)
+            .map_err(Into::into)
+    }
 }

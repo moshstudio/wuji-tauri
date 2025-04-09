@@ -8,6 +8,11 @@ Default permissions for the plugin
 - `allow-get-system-font-scale`
 - `allow-get-screen-orientation`
 - `allow-set-screen-orientation`
+- `allow-get-brightness`
+- `allow-get-system-brightness`
+- `allow-set-brightness`
+- `allow-get-volume`
+- `allow-set-volume`
 - `allow-register-listener`
 - `allow-remove-listener`
 - `allow-check-permissions`
@@ -77,6 +82,32 @@ Denies the exit_app command without any pre-configured scope.
 <tr>
 <td>
 
+`commands:allow-get-brightness`
+
+</td>
+<td>
+
+Enables the get_brightness command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:deny-get-brightness`
+
+</td>
+<td>
+
+Denies the get_brightness command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `commands:allow-get-screen-orientation`
 
 </td>
@@ -103,6 +134,32 @@ Denies the get_screen_orientation command without any pre-configured scope.
 <tr>
 <td>
 
+`commands:allow-get-system-brightness`
+
+</td>
+<td>
+
+Enables the get_system_brightness command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:deny-get-system-brightness`
+
+</td>
+<td>
+
+Denies the get_system_brightness command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `commands:allow-get-system-font-scale`
 
 </td>
@@ -122,6 +179,32 @@ Enables the get_system_font_scale command without any pre-configured scope.
 <td>
 
 Denies the get_system_font_scale command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:allow-get-volume`
+
+</td>
+<td>
+
+Enables the get_volume command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:deny-get-volume`
+
+</td>
+<td>
+
+Denies the get_volume command without any pre-configured scope.
 
 </td>
 </tr>
@@ -233,6 +316,32 @@ Denies the request_permissions command without any pre-configured scope.
 <tr>
 <td>
 
+`commands:allow-set-brightness`
+
+</td>
+<td>
+
+Enables the set_brightness command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:deny-set-brightness`
+
+</td>
+<td>
+
+Denies the set_brightness command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `commands:allow-set-screen-orientation`
 
 </td>
@@ -278,6 +387,32 @@ Enables the set_status_bar command without any pre-configured scope.
 <td>
 
 Denies the set_status_bar command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:allow-set-volume`
+
+</td>
+<td>
+
+Enables the set_volume command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`commands:deny-set-volume`
+
+</td>
+<td>
+
+Denies the set_volume command without any pre-configured scope.
 
 </td>
 </tr>

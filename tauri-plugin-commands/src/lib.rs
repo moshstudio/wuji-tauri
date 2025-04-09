@@ -42,6 +42,11 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::get_system_font_scale,
             commands::get_screen_orientation,
             commands::set_screen_orientation,
+            commands::get_brightness,
+            commands::get_system_brightness,
+            commands::set_brightness,
+            commands::get_volume,
+            commands::set_volume,
         ])
         .setup(|app, api| {
             #[cfg(mobile)]

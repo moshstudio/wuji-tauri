@@ -24,8 +24,8 @@ export async function hide_status_bar(
   }).then((r) => (r.res === 'true' ? true : false));
 }
 
-export async function get_system_font_scale(): Promise<Number> {
-  return await invoke<{ value?: Number }>(
+export async function get_system_font_scale(): Promise<number> {
+  return await invoke<{ value?: number }>(
     'plugin:commands|get_system_font_scale',
     {
       payload: {},
@@ -54,4 +54,41 @@ export async function set_screen_orientation(
       },
     }
   ).then((r) => (r.res === 'true' ? true : false));
+}
+
+export async function get_brightness(): Promise<number> {
+  return await invoke<{ value?: number }>('plugin:commands|get_brightness', {
+    payload: {},
+  }).then((r) => Number(r.value));
+}
+
+export async function get_system_brightness(): Promise<number> {
+  return await invoke<{ value?: number }>(
+    'plugin:commands|get_system_brightness',
+    {
+      payload: {},
+    }
+  ).then((r) => Number(r.value));
+}
+
+export async function set_brightness(value: number): Promise<Boolean | null> {
+  return await invoke<{ value?: boolean }>('plugin:commands|set_brightness', {
+    payload: {
+      brightness: value,
+    },
+  }).then((r) => (r.value ? r.value : null));
+}
+
+export async function get_volume(): Promise<number> {
+  return await invoke<{ value?: number }>('plugin:commands|get_volume', {
+    payload: {},
+  }).then((r) => Number(r.value));
+}
+
+export async function set_volume(value: number): Promise<Boolean | null> {
+  return await invoke<{ value?: boolean }>('plugin:commands|set_volume', {
+    payload: {
+      volume: value,
+    },
+  }).then((r) => (r.value ? r.value : null));
 }

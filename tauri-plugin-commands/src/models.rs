@@ -37,6 +37,18 @@ pub struct GetScreenOrientationResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct SetBrightnessRequest {
+    pub brightness: f32,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetVolumeRequest {
+    pub volume: f32,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BoolResponse {
     pub res: Option<bool>,
 }

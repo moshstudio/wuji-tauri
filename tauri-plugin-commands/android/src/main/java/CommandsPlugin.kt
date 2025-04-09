@@ -50,18 +50,18 @@ class CommandsPlugin(private val activity: Activity) : Plugin(activity) {
         override fun onTrimMemory(level: Int) {}
     }
 
-override fun registerListener(invoke: Invoke) {
-    super.registerListener(invoke)
-    val eventName = invoke.getArgs().getString("event")
-    if (eventName.equals("orientationChanged", ignoreCase = true)) {
-        synchronized(registerNames) {
-            if (registerNames.add("orientationChanged")) {
-                activity?.registerComponentCallbacks(orientationListener)
+    override fun registerListener(invoke: Invoke) {
+        super.registerListener(invoke)
+        val eventName = invoke.getArgs().getString("event")
+        if (eventName.equals("orientationChanged", ignoreCase = true)) {
+            synchronized(registerNames) {
+                if (registerNames.add("orientationChanged")) {
+                    activity?.registerComponentCallbacks(orientationListener)
+                }
             }
         }
+        Log.d("CommandsPlugin", "registerListener, ${invoke.getRawArgs()}")
     }
-    Log.d("CommandsPlugin", "registerListener, ${invoke.getRawArgs()}")
-}
 
 
     override fun onNewIntent(intent: Intent) {
@@ -113,6 +113,51 @@ override fun registerListener(invoke: Invoke) {
         val res = implementation.setScreenOrientation(orientation)
         val ret = JSObject()
         ret.put("res", res)
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun getBrightness(invoke: Invoke) {
+        val brightness = implementation.getBrightness()
+        val ret = JSObject()
+        ret.put("value", brightness)
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun getSystemBrightness(invoke: Invoke) {
+        val brightness = implementation.getSystemBrightness()
+        val ret = JSObject()
+        ret.put("value", brightness)
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun setBrightness(invoke: Invoke) {
+        val args = invoke.getArgs()
+        val brightness = args.getDouble("brightness")
+        val result = implementation.setBrightness(brightness.toFloat())
+        val ret = JSObject()
+        ret.put("res", result)
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun getVolume(invoke: Invoke) {
+        val volume = implementation.getVolume()
+        Log.e("CommandsPlugin", "getVolume: $volume")
+        val ret = JSObject()
+        ret.put("value", volume)
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun setVolume(invoke: Invoke) {
+        val args = invoke.getArgs()
+        val volume = args.getInt("volume")
+        val result = implementation.setVolume(volume)
+        val ret = JSObject()
+        ret.put("res", result)
         invoke.resolve(ret)
     }
 

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-set-brightness"
+description = "Enables the set_brightness command without any pre-configured scope."
+commands.allow = ["set_brightness"]
+
+[[permission]]
+identifier = "deny-set-brightness"
+description = "Denies the set_brightness command without any pre-configured scope."
+commands.deny = ["set_brightness"]

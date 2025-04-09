@@ -52,7 +52,7 @@
           <div
             class="top-bar absolute left-0 right-0 top-0 h-[40px] bg-transparent flex p-2 text-sm text-gray-300 select-none"
           >
-            {{ episode?.title || '' }}
+            {{ episode?.title || '' }} - {{ resource?.title || '' }}
           </div>
           <MobileQuickSeekButton
             :seconds="10"
@@ -119,7 +119,7 @@ import {
   onMounted,
   nextTick,
   computed,
-  watch,
+  onDeactivated,
 } from 'vue';
 import Hammer from 'hammerjs';
 import videojs from 'video.js';
@@ -127,11 +127,16 @@ import { VideoPlayer, VideoPlayerState } from '@videojs-player/vue';
 import 'video.js/dist/video-js.css';
 import { useDisplayStore } from '@/store';
 import { storeToRefs } from 'pinia';
-import { hide_status_bar } from 'tauri-plugin-commands-api';
+import {
+  hide_status_bar,
+  get_brightness,
+  get_system_brightness,
+  set_brightness,
+  get_volume,
+  set_volume,
+} from 'tauri-plugin-commands-api';
 import { showNotify } from 'vant';
-import { VideoEpisode } from '@/extensions/video';
-import { DragState, useGesture } from '@vueuse/gesture';
-import { sleep } from '@/utils';
+import { VideoEpisode, VideoResource } from '@/extensions/video';
 
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
@@ -145,6 +150,9 @@ const { src } = defineProps({
   src: {
     type: String,
   },
+  resource: {
+    type: Object as PropType<VideoResource>,
+  },
   episode: {
     type: Object as PropType<VideoEpisode>,
   },
@@ -154,6 +162,7 @@ const emit = defineEmits<{
   (e: 'canPlay', args: any): void;
   (e: 'onPlayFinished', args: any): void;
   (e: 'timeUpdate', args: any): void;
+  (e: 'playNext', args: any): void;
 }>();
 
 const state = shallowRef<VideoPlayerState>();
@@ -172,77 +181,38 @@ const togglePlay = () => {
   player.value?.paused() ? player.value.play() : player.value?.pause();
 };
 const isDragging = ref(false);
-const dragDirection = ref<'Horizontal' | 'Vertical'>();
+const dragDirection = ref<'Horizontal' | 'VerticalLeft' | 'VerticalRight'>();
 const dragMovement = ref<[number, number]>([0, 0]);
+
+const initBrightness = ref(0); // 0-100
+const currentBrightness = ref(0); // 0-100
+if (displayStore.isAndroid) {
+  get_system_brightness().then((brightness) => {
+    initBrightness.value = Math.ceil((brightness / 255) * 100);
+    currentBrightness.value = Math.ceil((brightness / 255) * 100);
+  });
+}
+const initVolume = ref(0); // 0-100
+const currentVolume = ref(0); // 0-100
+if (displayStore.isAndroid) {
+  get_volume().then((volume) => {
+    initVolume.value = volume;
+    currentVolume.value = volume;
+  });
+}
+
 const dragHint = computed(() => {
   if (dragDirection.value == undefined) return '';
   if (dragDirection.value == 'Horizontal') {
     return `${dragMovement.value[0] > 0 ? '快进' : '快退'} ${Math.abs(
       Math.floor(dragMovement.value[0])
     )} 秒`;
-  } else if (dragDirection.value == 'Vertical') {
-    return '';
-    // return `音量 ${dragMovement.value[0] > 0 ? '-' : '+'} ${Math.abs(
-    //   dragMovement.value[0]
-    // )} %`;
+  } else if (dragDirection.value == 'VerticalLeft') {
+    return `亮度 ${currentBrightness.value} %`;
+  } else if (dragDirection.value == 'VerticalRight') {
+    return `音量 ${currentVolume.value} %`;
   }
 });
-
-const mountGuesture = () => {
-  useGesture(
-    {
-      onDragStart: (state) => {
-        dragMovement.value = [state.movement[0], state.movement[1]];
-        isDragging.value = true;
-        dragDirection.value = undefined;
-      },
-      onDrag: (state) => {
-        dragMovement.value = [state.movement[0], state.movement[1]];
-        const threshold = 20;
-        if (
-          Math.abs(state.movement[0]) < threshold &&
-          Math.abs(state.movement[1]) < threshold
-        ) {
-          return;
-        }
-        if (dragDirection.value == undefined) {
-          dragDirection.value =
-            Math.abs(dragMovement.value[0]) > Math.abs(dragMovement.value[1])
-              ? 'Horizontal'
-              : 'Vertical';
-        }
-      },
-      onDragEnd: async (state) => {
-        dragMovement.value = [state.movement[0], state.movement[1]];
-        await sleep(100);
-        let offset = 0;
-        if (dragDirection.value === 'Horizontal') {
-          offset = dragMovement.value[0];
-        } else {
-          offset = dragMovement.value[1];
-        }
-        if (dragDirection.value === 'Horizontal') {
-          const currTime = player.value?.currentTime();
-          if (currTime && offset != 0) {
-            player.value?.currentTime(
-              Math.min(player?.value.duration(), Math.max(0, currTime + offset))
-            );
-          }
-        }
-        isDragging.value = false;
-        dragDirection.value = undefined;
-        dragMovement.value = [0, 0];
-      },
-    },
-    {
-      domTarget: videoWrapper,
-      eventOptions: { passive: false },
-    }
-  );
-};
-if (displayStore.isAndroid) {
-  mountGuesture();
-}
 
 const vClickSeparate = {
   mounted(el: Element) {
@@ -297,6 +267,9 @@ const onError = (e: any) => {
 };
 
 onMounted(() => {
+  const isTargetElement = (e: HTMLElement) => {
+    return e.classList.contains('vjs-tech') || e.classList.contains('bg-mask');
+  };
   nextTick(() => {
     if (displayStore.isAndroid) {
       const element = document.querySelector('.video-container') as HTMLElement;
@@ -311,15 +284,21 @@ onMounted(() => {
         const tap = new Hammer.Tap({
           event: 'tap',
         });
+        const panHorizontal = new Hammer.Pan({
+          event: 'panHorizontal',
+          direction: Hammer.DIRECTION_HORIZONTAL,
+        });
+        const panVertical = new Hammer.Pan({
+          event: 'panVertical',
+          direction: Hammer.DIRECTION_VERTICAL,
+        });
         // 将识别器添加到管理器
-        manager.add([dbtap, tap]); // 注意顺序，双击识别器要先添加
+        manager.add([dbtap, tap, panHorizontal, panVertical]); // 注意顺序，双击识别器要先添加
         manager.get('tap').requireFailure('dbtap');
 
         manager.on('tap', (e) => {
-          if (
-            e.target.classList.contains('vjs-tech') ||
-            e.target.classList.contains('bg-mask')
-          ) {
+          // 单击事件
+          if (isTargetElement(e.target)) {
             toggleShowControls();
           }
           if (displayStore.fullScreenMode && displayStore.isAndroid) {
@@ -327,23 +306,107 @@ onMounted(() => {
           }
         });
         manager.on('dbtap', (e) => {
-          if (
-            e.target.classList.contains('vjs-tech') ||
-            e.target.classList.contains('bg-mask')
-          ) {
+          // 双击事件
+          if (isTargetElement(e.target)) {
             togglePlay();
           }
+        });
+        manager.on('panHorizontalstart', (e) => {
+          if (!isTargetElement(e.target)) return;
+          dragMovement.value = [e.deltaX, e.deltaY];
+          isDragging.value = true;
+          dragDirection.value = 'Horizontal';
+        });
+        manager.on('panHorizontal', (e) => {
+          if (!isTargetElement(e.target)) return;
+          dragMovement.value = [e.deltaX, e.deltaY];
+        });
+        manager.on('panHorizontalend', (e) => {
+          // 开始调整进度
+          if (!isTargetElement(e.target)) return;
+          dragMovement.value = [e.deltaX, e.deltaY];
+          const offset = dragMovement.value[0];
+          const currTime = player.value?.currentTime();
+          if (currTime && offset != 0) {
+            player.value?.currentTime(
+              Math.min(player?.value.duration(), Math.max(0, currTime + offset))
+            );
+          }
+          isDragging.value = false;
+          dragDirection.value = undefined;
+          dragMovement.value = [0, 0];
+        });
+        manager.on('panVerticalstart', async (e) => {
+          if (!isTargetElement(e.target)) return;
+          dragMovement.value = [e.deltaX, e.deltaY];
+          isDragging.value = true;
+          const middle = (videoWrapper.value?.clientWidth || 0) / 2;
+          const startV = e.center.x;
+          if (startV < middle) {
+            // 左侧调整亮度
+            dragDirection.value = 'VerticalLeft';
+            let brightness = await get_brightness();
+            if (brightness === -1) {
+              brightness = (await get_system_brightness()) / 255;
+            }
+            initBrightness.value = Math.ceil(brightness * 100);
+            currentBrightness.value = Math.ceil(brightness * 100);
+          } else {
+            // 右侧调整音量
+            dragDirection.value = 'VerticalRight';
+            const volume = await get_volume();
+            initVolume.value = volume;
+            currentVolume.value = volume;
+          }
+        });
+        manager.on('panVertical', async (e) => {
+          if (!isTargetElement(e.target)) return;
+          dragMovement.value = [e.deltaX, e.deltaY];
+          switch (dragDirection.value) {
+            case 'VerticalLeft':
+              // 亮度实时变化
+              const distance = Math.ceil(-dragMovement.value[1] / 2); // / 2 来减小变化幅度
+              const percentage = Math.max(
+                0,
+                Math.min(100, Math.ceil(initBrightness.value + distance))
+              );
+              if (
+                currentBrightness.value - percentage >= 5 ||
+                (currentBrightness.value != percentage && percentage % 5 === 0)
+              ) {
+                currentBrightness.value = percentage;
+                await set_brightness(percentage / 100);
+              }
+              break;
+            case 'VerticalRight':
+              // 音量实时变化
+              const volumeDistance = Math.ceil(-dragMovement.value[1] / 2); // / 2 来减小变化幅度
+              const volume = Math.max(
+                0,
+                Math.min(100, initVolume.value + volumeDistance)
+              );
+              if (currentVolume.value != volume) {
+                currentVolume.value = volume;
+                await set_volume(volume);
+              }
+              break;
+          }
+        });
+        manager.on('panVerticalend', async (e) => {
+          if (!isTargetElement(e.target)) return;
+          isDragging.value = false;
+          dragDirection.value = undefined;
+          dragMovement.value = [0, 0];
         });
       }
     }
   });
 });
-watch(
-  () => displayStore.fullScreenMode,
-  (newVal, oldVal) => {
-    mountGuesture();
+onDeactivated(() => {
+  if (displayStore.isAndroid) {
+    set_brightness(-1);
   }
-);
+});
 </script>
 
 <style lang="less" scoped></style>

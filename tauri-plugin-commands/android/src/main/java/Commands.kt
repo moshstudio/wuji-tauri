@@ -4,13 +4,17 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Color
+import android.media.AudioManager
 import android.os.Build
+import android.provider.Settings
+import android.util.Log
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.annotation.RequiresApi
 import androidx.core.view.WindowCompat
+import kotlin.math.roundToInt
 
 class Commands(private val activity: Activity) {
     fun exit_app() {
@@ -129,6 +133,65 @@ class Commands(private val activity: Activity) {
             }
         }
         return true
+    }
+    fun getBrightness(): Float {
+        val layoutParams = activity.window.attributes
+        return layoutParams.screenBrightness
+    }
+    fun getSystemBrightness(): Int {
+        return try {
+            Settings.System.getInt(
+                activity.contentResolver,
+                Settings.System.SCREEN_BRIGHTNESS
+            )
+        } catch (e: Settings.SettingNotFoundException) {
+            -1  // 返回-1表示获取失败
+        }
+    }
+
+    fun setBrightness(brightness: Float): Boolean {
+        if (!(brightness in 0f..1f || brightness == -1f)) {
+            throw IllegalArgumentException("Brightness must be between 0 and 1 or -1")
+        }
+        val layoutParams = activity.window.attributes
+        layoutParams.screenBrightness = brightness
+        activity.window.attributes = layoutParams
+        return true
+    }
+
+    fun getVolume(): Int? {
+        val audioManager = activity.getSystemService(AudioManager::class.java) ?: return null
+        if (audioManager.isVolumeFixed) {
+            Log.e("VolumeManager", "Device volume is fixed")
+            return null // 设备音量固定，无法获取
+        }
+
+        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+
+        // 计算百分比（四舍五入）
+        return ((currentVolume.toFloat() / maxVolume) * 100).roundToInt()
+    }
+
+    fun setVolume(volume: Int): Boolean {
+        val audioManager = activity?.getSystemService(AudioManager::class.java) ?: return false
+        if (audioManager.isVolumeFixed) {
+            Log.e("VolumeManager", "Device volume is fixed")
+            return false // 设备音量固定，无法设置
+        }
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        // 计算实际音量值（四舍五入）
+        val targetVolume = (volume * maxVolume / 100f).roundToInt()
+        return try {
+            audioManager.setStreamVolume(
+                AudioManager.STREAM_MUSIC,
+                targetVolume,
+                0
+            )
+            true
+        } catch (e: SecurityException) {
+            false // 无权限
+        }
     }
 
 

@@ -43,4 +43,19 @@ impl<R: Runtime> Commands<R> {
     ) -> crate::Result<BoolResponse> {
         Ok(BoolResponse { res: Some(true) })
     }
+    pub fn get_brightness(&self, payload: EmptyRequest) -> crate::Result<NumberResponse> {
+        Ok(NumberResponse { value: 1.0 })
+    }
+    pub fn get_system_brightness(&self, payload: EmptyRequest) -> crate::Result<NumberResponse> {
+        Ok(NumberResponse { value: 1.0 })
+    }
+    pub fn set_brightness(&self, payload: SetBrightnessRequest) -> crate::Result<BoolResponse> {
+        Ok(BoolResponse { res: Some(true) })
+    }
+    pub fn get_volume(&self, payload: EmptyRequest) -> crate::Result<NumberResponse> {
+        Ok(NumberResponse { value: 1.0 })
+    }
+    pub fn set_volume(&self, payload: SetVolumeRequest) -> crate::Result<BoolResponse> {
+        Ok(BoolResponse { res: Some(true) })
+    }
 }

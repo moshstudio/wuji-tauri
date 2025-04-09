@@ -6,7 +6,6 @@
       :loop="false"
       crossorigin="anonymous"
       :volume="1"
-      :height="320"
       :control-bar="false"
       :playback-rates="[0.5, 0.75, 1.0, 1.25, 1.5, 2.0]"
       @fullscreenchange="onFullScreenChange"
@@ -62,7 +61,7 @@
               ></VideoProgressBar>
 
               <div class="flex gap-2 items-center justify-between">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-4">
                   <PlayPauseButton
                     :is-playing="state.playing"
                     :play-or-pause="
@@ -71,6 +70,10 @@
                       }
                     "
                   ></PlayPauseButton>
+                  <PlayNextButton
+                    :play-next="() => emit('playNext', {})"
+                    v-if="resource && (resource.episodes?.length || 0) > 1"
+                  ></PlayNextButton>
                   <TimeShow
                     :state="state"
                     :is-playing="state.playing"
@@ -81,15 +84,22 @@
                     :quick-back="quickBackward"
                   ></QuickSeekButton>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-4">
                   <PlaybackRateButton
                     :state="state"
                     :player="player"
                   ></PlaybackRateButton>
-                  <FullScreenButton
-                    :state="state"
-                    :player="player"
+                  <BrowserFullScreenButton
+                    :is-fullscreen="displayStore.fullScreenMode"
+                    :is-browser-fullscreen="isBrowserFullscreen"
+                    :request-browser-fullscreen="requestBrowserFullscreen"
+                    :exit-browser-fullscreen="exitBrowserFullscreen"
                     :focus="() => player.focus()"
+                  ></BrowserFullScreenButton>
+                  <FullScreenButton
+                    :is-fullscreen="displayStore.fullScreenMode"
+                    :request-fullscreen="requestFullScreen"
+                    :exit-fullscreen="exitFullScreen"
                   ></FullScreenButton>
                 </div>
               </div>
@@ -116,10 +126,11 @@ import VideoProgressBar from '@/components/media/win/ProgressBar.vue';
 import PlayPauseButton from '@/components/media/win/PlayPauseButton.vue';
 import TimeShow from '@/components/media/win/TimeShow.vue';
 import PlaybackRateButton from '@/components/media/win/PlaybackRateButton.vue';
+import BrowserFullScreenButton from './BrowserFullScreenButton.vue';
 import FullScreenButton from '@/components/media/win/FullScreenButton.vue';
 import QuickSeekButton from '@/components/media/win/QuickSeekButton.vue';
+import PlayNextButton from './PlayNextButton.vue';
 import {
-  defineComponent,
   onBeforeUnmount,
   onMounted,
   PropType,
@@ -133,15 +144,18 @@ import 'video.js/dist/video-js.css';
 import { setTimeout, clearTimeout } from 'worker-timers';
 import { useDisplayStore } from '@/store';
 import { showNotify } from 'vant';
-import { VideoEpisode } from '@/extensions/video';
+import { VideoEpisode, VideoResource } from '@/extensions/video';
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
 const player = defineModel('player', {
   type: Object as PropType<VideoJsPlayer>,
 });
-const { src } = defineProps({
+const { src, resource, episode } = defineProps({
   src: {
     type: String,
+  },
+  resource: {
+    type: Object as PropType<VideoResource>,
   },
   episode: {
     type: Object as PropType<VideoEpisode>,
@@ -151,8 +165,10 @@ const emit = defineEmits<{
   (e: 'canPlay', args: any): void;
   (e: 'onPlayFinished', args: any): void;
   (e: 'timeUpdate', args: any): void;
+  (e: 'playNext', args: any): void;
 }>();
 
+const isBrowserFullscreen = ref(false);
 const displayStore = useDisplayStore();
 const state = shallowRef<VideoPlayerState>();
 const handleMounted = (payload: any) => {
@@ -176,11 +192,37 @@ const showControlsAction = () => {
 };
 
 const onFullScreenChange = () => {
-  if (player.value?.isFullscreen()) {
-    displayStore.fullScreenMode = true;
-  } else {
-    displayStore.fullScreenMode = false;
+  if (!player.value?.isFullscreen()) {
+    if (displayStore.fullScreenMode) {
+      exitFullScreen();
+    }
+    if (isBrowserFullscreen.value) {
+      exitBrowserFullscreen();
+    }
   }
+};
+
+const requestFullScreen = () => {
+  displayStore.fullScreenMode = true;
+  player.value?.requestFullscreen();
+  player.value?.focus();
+};
+const exitFullScreen = () => {
+  displayStore.fullScreenMode = false;
+  if (!isBrowserFullscreen.value) {
+    player.value?.exitFullscreen();
+  }
+  player.value?.focus();
+};
+const requestBrowserFullscreen = () => {
+  isBrowserFullscreen.value = true;
+  player.value?.requestFullscreen();
+  player.value?.focus();
+};
+const exitBrowserFullscreen = () => {
+  isBrowserFullscreen.value = false;
+  player.value?.exitFullscreen();
+  player.value?.focus();
 };
 
 const quickForward = (seconds: number) => {

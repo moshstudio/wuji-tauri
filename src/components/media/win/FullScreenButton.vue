@@ -13,8 +13,8 @@
         :width="24"
         :height="24"
         :class="{
-          'opacity-0 scale-90': state.isFullscreen,
-          'opacity-100 scale-100': !state.isFullscreen,
+          'opacity-0 scale-90': isFullscreen,
+          'opacity-100 scale-100': !isFullscreen,
         }"
       />
       <!-- 退出全屏图标 -->
@@ -24,8 +24,8 @@
         :width="24"
         :height="24"
         :class="{
-          'opacity-100 scale-100': state.isFullscreen,
-          'opacity-0 scale-90': !state.isFullscreen,
+          'opacity-100 scale-100': isFullscreen,
+          'opacity-0 scale-90': !isFullscreen,
         }"
       />
     </div>
@@ -34,29 +34,23 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue';
-import { useDisplayStore } from '@/store';
-
-const displayStore = useDisplayStore();
 
 const props = defineProps<{
-  state: {
-    isFullscreen: boolean;
-  };
-  player: {
-    requestFullscreen: () => void;
-    exitFullscreen: () => void;
-  };
-  focus: () => void;
+  isFullscreen: boolean;
+  requestFullscreen: () => void;
+  exitFullscreen: () => void;
 }>();
 
 const toggleFullscreen = async () => {
-  if (props.state.isFullscreen) {
-    displayStore.fullScreenMode = false;
-    props.player.exitFullscreen();
+  if (props.isFullscreen) {
+    props.exitFullscreen();
+    // displayStore.fullScreenMode = false;
+    // props.player.exitFullscreen();
   } else {
-    displayStore.fullScreenMode = true;
-    props.player.requestFullscreen();
-    props.focus();
+    props.requestFullscreen();
+    // displayStore.fullScreenMode = true;
+    // props.player.requestFullscreen();
+    // props.focus();
   }
 };
 </script>

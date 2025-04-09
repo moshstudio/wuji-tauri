@@ -1,37 +1,24 @@
 <template>
   <button
     @click="playOrPause"
-    class="flex items-center justify-center p-1 rounded-full active:scale-95 transition-all duration-300 focus:outline-none"
+    class="relative w-[24px] h-[24px] rounded-full flex items-center justify-center duration-200"
+    aria-label="Play/Pause"
   >
-    <div class="relative w-[24px] h-[24px]">
-      <!-- 播放图标 -->
+    <Transition name="bounce" mode="out-in">
       <Icon
-        :icon="'mdi:play'"
-        class="absolute inset-0 transform transition-all duration-300"
+        :key="isPlaying ? 'pause' : 'play'"
+        :icon="
+          isPlaying ? 'material-symbols:pause' : 'material-symbols:play-arrow'
+        "
         :width="24"
         :height="24"
-        :class="{
-          'opacity-0 scale-75': isPlaying,
-          'opacity-100 scale-100': !isPlaying,
-        }"
+        color="white"
       />
-      <!-- 暂停图标 -->
-      <Icon
-        :icon="'mdi:pause'"
-        class="absolute inset-0 transform transition-all duration-300"
-        :width="24"
-        :height="24"
-        :class="{
-          'opacity-100 scale-100': isPlaying,
-          'opacity-0 scale-75': !isPlaying,
-        }"
-      />
-    </div>
+    </Transition>
   </button>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
 import { Icon } from '@iconify/vue';
 
 const props = defineProps<{
@@ -39,3 +26,28 @@ const props = defineProps<{
   playOrPause: () => void;
 }>();
 </script>
+
+<style lang="less" scoped>
+/* 入场动画 */
+.bounce-enter-active {
+  animation: bounce-in 0.2s;
+}
+
+/* 离场动画 */
+.bounce-leave-active {
+  animation: bounce-in 0.2s reverse;
+}
+
+/* 弹跳动画关键帧 */
+@keyframes bounce-in {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(0.5);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+</style>

@@ -154,6 +154,10 @@ const onCanPlay = async (args: any) => {
     await videoPlayer.value?.play();
   }
 };
+
+const playNext = async (args: any) => {
+  await onPlayFinished(args);
+};
 const onPlayFinished = async (args: any) => {
   if (
     !playingResource.value?.episodes ||
@@ -260,6 +264,7 @@ onDeactivated(() => {
         @play="play"
         @add-video-to-shelf="addVideoToShelf"
         @can-play="onCanPlay"
+        @play-next="playNext"
         @on-play-finished="onPlayFinished"
         @time-update="onTimeUpdate"
       ></MobileVideoDetail>
@@ -278,6 +283,7 @@ onDeactivated(() => {
         @play="play"
         @add-video-to-shelf="addVideoToShelf"
         @can-play="onCanPlay"
+        @play-next="playNext"
         @on-play-finished="onPlayFinished"
         @time-update="onTimeUpdate"
       ></WinVideoDetail>

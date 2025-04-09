@@ -315,6 +315,16 @@
           "const": "deny-exit-app"
         },
         {
+          "description": "Enables the get_brightness command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-brightness"
+        },
+        {
+          "description": "Denies the get_brightness command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-brightness"
+        },
+        {
           "description": "Enables the get_screen_orientation command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-screen-orientation"
@@ -325,6 +335,16 @@
           "const": "deny-get-screen-orientation"
         },
         {
+          "description": "Enables the get_system_brightness command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-system-brightness"
+        },
+        {
+          "description": "Denies the get_system_brightness command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-system-brightness"
+        },
+        {
           "description": "Enables the get_system_font_scale command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-system-font-scale"
@@ -333,6 +353,16 @@
           "description": "Denies the get_system_font_scale command without any pre-configured scope.",
           "type": "string",
           "const": "deny-get-system-font-scale"
+        },
+        {
+          "description": "Enables the get_volume command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-volume"
+        },
+        {
+          "description": "Denies the get_volume command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-volume"
         },
         {
           "description": "Enables the hide_status_bar command without any pre-configured scope.",
@@ -375,6 +405,16 @@
           "const": "deny-request-permissions"
         },
         {
+          "description": "Enables the set_brightness command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-brightness"
+        },
+        {
+          "description": "Denies the set_brightness command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-brightness"
+        },
+        {
           "description": "Enables the set_screen_orientation command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-screen-orientation"
@@ -393,6 +433,16 @@
           "description": "Denies the set_status_bar command without any pre-configured scope.",
           "type": "string",
           "const": "deny-set-status-bar"
+        },
+        {
+          "description": "Enables the set_volume command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-volume"
+        },
+        {
+          "description": "Denies the set_volume command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-volume"
         },
         {
           "description": "Default permissions for the plugin",
