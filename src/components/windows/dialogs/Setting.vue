@@ -57,6 +57,7 @@ const onConfirm = () => {
     :show-cancel-button="false"
     :close-on-click-overlay="false"
     @confirm="onConfirm"
+    @touchmove.stop
   >
     <van-cell-group class="mt-2">
       <van-cell center title="深色模式">

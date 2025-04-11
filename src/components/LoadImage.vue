@@ -1,19 +1,17 @@
 <template>
   <van-image
     :src="processedSrc"
+    :style="loadFinished ? '' : 'min-height: 40px; min-width: 40px;'"
     v-bind="restProps"
     v-on="listeners"
     :class="attrs.class"
+    @load="onLoadFinished"
   >
-    <div class="min-w-[40px] min-h-[40px]">
-      <slot></slot>
-    </div>
+    <slot></slot>
 
     <!-- 传递具名插槽 -->
     <template v-for="(_, name) in $slots" #[name]>
-      <div class="min-w-[40px] min-h-[40px]">
-        <slot :name="name"></slot>
-      </div>
+      <slot :name="name"></slot>
     </template>
   </van-image>
 </template>
@@ -49,9 +47,13 @@ const listeners = {
   error: attrs.onError, // 其他事件可以根据需要添加
 };
 
+const loadFinished = ref(false);
 // 定义 processedSrc
 const processedSrc = ref('');
 
+const onLoadFinished = () => {
+  loadFinished.value = true;
+};
 // 异步处理 src 的函数
 const processSrc = async (
   src: string,
@@ -80,6 +82,7 @@ const processSrc = async (
   if (blob.size === 0) {
     return src;
   }
+  loadFinished.value = true;
   return URL.createObjectURL(
     new Blob([blob], { type: blob.type || 'image/png' })
   ); // 将二进制数据转换为 URL
@@ -96,11 +99,6 @@ watch(
   },
   { immediate: true } // 立即执行一次
 );
-
-// 或者可以在 onMounted 中初始化
-// onMounted(async () => {
-//   processedSrc.value = await processSrc(props.src, props.headers || undefined);
-// });
 </script>
 
 <style scoped></style>

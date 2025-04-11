@@ -158,6 +158,8 @@ const backTs = ref(Date.now());
 window.androidBackCallback = async () => {
   if (displayStore.fullScreenMode) {
     displayStore.fullScreenMode = false;
+    displayStore.showTabBar = true;
+    await set_screen_orientation('portrait');
     return;
   }
   const checkBack = async () => {
@@ -316,7 +318,7 @@ window.androidBackCallback = async () => {
       <van-tabbar
         v-model="activeKey"
         placeholder
-        class="z-[1002]"
+        class="z-[1002] h-[50px]"
         active-color="var(--van-text-color)"
         v-show="showTabBar"
       >

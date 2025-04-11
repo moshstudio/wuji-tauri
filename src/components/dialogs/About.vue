@@ -20,15 +20,16 @@ onMounted(async () => {
   <van-dialog
     v-model:show="displayStore.showAboutDialog"
     close-on-click-overlay
+    @touchmove.stop
   >
     <div class="flex flex-col gap-2 justify-center items-center p-4">
       <van-image
-        width="100"
-        height="100"
+        width="80"
+        height="80"
         :src="wujisvg"
-        class="shadow border-radius-lg"
+        class="shadow rounded-lg"
       />
-      <h1 class="text-2xl text-[--van-text-color]">无极</h1>
+      <h1 class="text-xl text-[var(--van-primary-color)]">无极</h1>
       <p class="text-gray-400 text-sm">{{ version }}</p>
       <p class="text-gray-400 text-sm">By moshang studio</p>
       <div class="flex gap-2">

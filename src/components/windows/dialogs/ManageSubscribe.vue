@@ -65,6 +65,7 @@ function clearSources() {
     title="管理订阅源"
     :show-cancel-button="false"
     @confirm="save"
+    @touchmove.stop
   >
     <van-row class="p-2" justify="end">
       <van-popover v-model:show="showClearPopover">
@@ -77,7 +78,11 @@ function clearSources() {
       </van-popover>
     </van-row>
 
-    <van-collapse v-model="activeNames" class="max-h-[50vh] overflow-y-auto">
+    <van-collapse
+      v-model="activeNames"
+      class="max-h-[50vh] overflow-y-auto touch-auto"
+      @touchmove.stop
+    >
       <van-checkbox-group v-model="checked" shape="square">
         <van-collapse-item
           v-for="item in sourceStore.subscribeSources"
