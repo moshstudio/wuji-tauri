@@ -25,7 +25,6 @@ import { retryOnFalse, sleep } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { showLoadingToast, showNotify, showToast } from 'vant';
 import _ from 'lodash';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 import videojs from 'video.js';
 import { useRoute } from 'vue-router';
@@ -48,7 +47,35 @@ const videoItem = ref<VideoItem>();
 const playingResource = ref<VideoResource>();
 const playingEpisode = ref<VideoEpisode>();
 const videoSrc = ref<VideoUrlMap>();
+const videoSources = ref<import('video.js').default.Tech.SourceObject[]>([]);
 
+watch(videoSrc, (_) => {
+  if (videoSrc.value) {
+    function getStreamType(): string {
+      const url = videoSrc.value?.url || '';
+      if (url.includes('.m3u8')) {
+        return 'application/x-mpegURL'; // HLS
+      } else if (url.includes('.mpd')) {
+        return 'application/dash+xml'; // DASH
+      } else if (url.includes('rtmp://')) {
+        return 'rtmp/flv'; // RTMP
+      } else if (videoSrc.value?.isLive) {
+        return 'application/x-mpegURL'; // HLS
+      } else if (url.includes('mp4')) {
+        return 'video/mp4';
+      }
+      return 'application/x-mpegURL'; // 默认
+    }
+    videoSources.value = [
+      {
+        src: videoSrc.value.url,
+        type: getStreamType(), // 根据你的直播流类型设置
+      },
+    ];
+  }
+});
+
+const pageBody = ref<HTMLElement>();
 const shouldLoad = ref(true);
 const showAddDialog = ref(false);
 
@@ -85,8 +112,14 @@ const loadData = retryOnFalse({ onFailed: back })(
       closeOnClick: true,
       closeOnClickOverlay: false,
     });
-    videoItem.value = (await store.videoDetail(source!, item)) || undefined;
-    if (!videoItem.value) {
+    const detail = (await store.videoDetail(source!, item)) || undefined;
+    if (detail?.id != videoItem.value?.id) {
+      toast.close();
+      return false;
+    }
+
+    videoItem.value = detail;
+    if (!videoItem.value || signal.aborted) {
       toast.close();
       return false;
     }
@@ -99,13 +132,18 @@ const loadData = retryOnFalse({ onFailed: back })(
       playingResource.value?.episodes?.find(
         (item) => item.id == videoItem.value?.lastWatchEpisodeId
       ) || playingResource.value?.episodes?.[0];
+    if (signal.aborted) return false;
     if (playingResource.value && playingEpisode.value) {
       await getPlayUrl();
+    }
+    if (!playingResource.value) {
+      shouldLoad.value = true;
     }
     return true;
   })
 );
 const play = async (resource: VideoResource, episode: VideoEpisode) => {
+  pageBody?.value?.scrollTo({ top: 0, behavior: 'smooth' });
   playingResource.value = resource;
   playingEpisode.value = episode;
   shelfStore.updateVideoPlayInfo(videoItem.value!, {
@@ -152,6 +190,8 @@ const onCanPlay = async (args: any) => {
   if (route.path.includes('/video/detail/')) {
     // 判断是否还在当前页面
     await videoPlayer.value?.play();
+  } else {
+    await videoPlayer.value?.pause();
   }
 };
 
@@ -229,9 +269,6 @@ onActivated(async () => {
     loadData();
   }
 });
-// onDeactivated(() => {
-//   videoPlayer.value?.pause();
-// });
 
 onActivated(() => {
   if (displayStore.isAndroid) {
@@ -254,6 +291,8 @@ onDeactivated(() => {
       <MobileVideoDetail
         v-model:player="videoPlayer"
         v-model:show-add-dialog="showAddDialog"
+        v-model:page-body="pageBody"
+        :videoSources="videoSources"
         :videoSource="videoSource"
         :videoItem="videoItem"
         :playingResource="playingResource"
@@ -273,6 +312,8 @@ onDeactivated(() => {
       <WinVideoDetail
         v-model:player="videoPlayer"
         v-model:show-add-dialog="showAddDialog"
+        v-model:page-body="pageBody"
+        :videoSources="videoSources"
         :videoSource="videoSource"
         :videoItem="videoItem"
         :playingResource="playingResource"

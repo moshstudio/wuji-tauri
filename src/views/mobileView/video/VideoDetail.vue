@@ -20,25 +20,37 @@ const showAddDialog = defineModel('showAddDialog', {
   type: Boolean,
   default: false,
 });
+const pageBody = defineModel('pageBody', {
+  type: Object as PropType<HTMLElement>,
+});
 
-const { videoSource, videoItem, playingResource, playingEpisode, videoSrc } =
-  defineProps({
-    videoSource: {
-      type: Object as PropType<VideoSource>,
-    },
-    videoItem: {
-      type: Object as PropType<VideoItem>,
-    },
-    playingResource: {
-      type: Object as PropType<VideoResource>,
-    },
-    playingEpisode: {
-      type: Object as PropType<VideoEpisode>,
-    },
-    videoSrc: {
-      type: Object as PropType<VideoUrlMap>,
-    },
-  });
+const {
+  videoSources,
+  videoSource,
+  videoItem,
+  playingResource,
+  playingEpisode,
+  videoSrc,
+} = defineProps({
+  videoSources: {
+    type: Object as PropType<import('video.js').default.Tech.SourceObject[]>,
+  },
+  videoSource: {
+    type: Object as PropType<VideoSource>,
+  },
+  videoItem: {
+    type: Object as PropType<VideoItem>,
+  },
+  playingResource: {
+    type: Object as PropType<VideoResource>,
+  },
+  playingEpisode: {
+    type: Object as PropType<VideoEpisode>,
+  },
+  videoSrc: {
+    type: Object as PropType<VideoUrlMap>,
+  },
+});
 
 const emit = defineEmits<{
   (e: 'back'): void;
@@ -69,67 +81,71 @@ watch(
 
 <template>
   <div
-    class="relative flex flex-col gap-2 items-center w-full h-full bg-[--van-background-2]"
+    ref="pageBody"
+    class="relative flex flex-col gap-0 items-center w-full h-full bg-[--van-background-2]"
     :class="[
       displayStore.fullScreenMode
         ? 'overflow-hidden'
         : 'overflow-y-auto overflow-x-hidden',
     ]"
   >
-    <van-nav-bar
-      right-text="收藏"
-      left-arrow
-      @click-left="() => emit('back')"
-      @click-right="() => emit('collect')"
-      class="w-full"
-      v-show="!displayStore.fullScreenMode"
-    />
-    <div class="w-full grid grid-cols-1 gap-4">
-      <div class="w-full aspect-[16/9]">
-        <MobileVideoPlayer
-          v-model:player="player"
-          :src="videoSrc?.url"
-          :resource="playingResource"
-          :episode="playingEpisode"
-          @time-update="(args) => emit('timeUpdate', args)"
-          @can-play="(args) => emit('canPlay', args)"
-          @play-next="(args) => emit('playNext', args)"
-          @on-play-finished="(args) => emit('onPlayFinished', args)"
-          class="w-full"
-        >
-        </MobileVideoPlayer>
-      </div>
-      <div class="flex flex-col gap-2 px-2 text-[var(--van-text-color)]">
+    <MobileVideoPlayer
+      v-model:player="player"
+      :video-src="videoSrc"
+      :video-sources="videoSources"
+      :resource="playingResource"
+      :episode="playingEpisode"
+      @time-update="(args) => emit('timeUpdate', args)"
+      @can-play="(args) => emit('canPlay', args)"
+      @play-next="(args) => emit('playNext', args)"
+      @on-play-finished="(args) => emit('onPlayFinished', args)"
+      @back="() => emit('back')"
+      @collect="() => emit('collect')"
+    >
+    </MobileVideoPlayer>
+    <div
+      class="w-full mt-4 flex flex-col gap-2 px-2 text-[var(--van-text-color)]"
+    >
+      <div class="flex gap-2 items-center justify-between">
         <h2 class="text-lg font-bold">{{ videoItem?.title }}</h2>
-        <div class="flex gap-2 text-xs">
-          <p v-if="videoItem?.releaseDate">
-            <span class="text-gray-500">年份</span>
-            {{ videoItem?.releaseDate }}
-          </p>
-          <p v-if="videoItem?.country">
-            <span class="text-gray-500">地区</span>
-            {{ videoItem?.country }}
-          </p>
-          <p class="text-gray-500">{{ videoSource?.item.name }}</p>
-        </div>
-        <div class="truncate text-xs" v-if="videoItem?.cast">
-          <span class="text-gray-500">演员</span>
-          {{ videoItem?.cast }}
-        </div>
-        <div class="truncate text-xs" v-if="videoItem?.director">
-          <span class="text-gray-500">导演</span>
-          {{ videoItem?.director }}
-        </div>
-        <van-text-ellipsis
-          rows="3"
-          :content="videoItem?.intro"
-          expand-text="展开"
-          collapse-text="收起"
-          class="text-xs"
-        />
+        <van-button
+          size="small"
+          plain
+          type="primary"
+          @click="() => emit('collect')"
+        >
+          收藏
+        </van-button>
       </div>
+
+      <div class="flex gap-2 text-xs">
+        <p v-if="videoItem?.releaseDate">
+          <span class="text-gray-500">年份</span>
+          {{ videoItem?.releaseDate }}
+        </p>
+        <p v-if="videoItem?.country">
+          <span class="text-gray-500">地区</span>
+          {{ videoItem?.country }}
+        </p>
+        <p class="text-gray-500">{{ videoSource?.item.name }}</p>
+      </div>
+      <div class="truncate text-xs" v-if="videoItem?.cast">
+        <span class="text-gray-500">演员</span>
+        {{ videoItem?.cast }}
+      </div>
+      <div class="truncate text-xs" v-if="videoItem?.director">
+        <span class="text-gray-500">导演</span>
+        {{ videoItem?.director }}
+      </div>
+      <van-text-ellipsis
+        rows="3"
+        :content="videoItem?.intro"
+        expand-text="展开"
+        collapse-text="收起"
+        class="text-xs"
+      />
     </div>
-    <div class="flex-grow flex w-full">
+    <div class="flex w-full">
       <van-tabs shrink animated class="w-full" v-model:active="activeResource">
         <van-tab
           :name="resource.id"

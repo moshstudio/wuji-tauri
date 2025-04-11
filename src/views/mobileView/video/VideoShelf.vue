@@ -110,7 +110,7 @@ const emit = defineEmits<{
         删除所选
       </van-button>
     </div>
-    <van-tabs shrink animated :active="activeIndex">
+    <van-tabs shrink animated :active="activeIndex" class="pb-[50px]">
       <van-tab :title="shelf.name" v-for="shelf in videoShelf" :key="shelf.id">
         <ResponsiveGrid :base-cols="2" class="p-2">
           <MobileShelfVideoCard

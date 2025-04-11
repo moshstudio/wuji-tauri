@@ -20,25 +20,37 @@ const showAddDialog = defineModel('showAddDialog', {
   type: Boolean,
   default: false,
 });
+const pageBody = defineModel('pageBody', {
+  type: Object as PropType<HTMLElement>,
+});
 
-const { videoSource, videoItem, playingResource, playingEpisode, videoSrc } =
-  defineProps({
-    videoSource: {
-      type: Object as PropType<VideoSource>,
-    },
-    videoItem: {
-      type: Object as PropType<VideoItem>,
-    },
-    playingResource: {
-      type: Object as PropType<VideoResource>,
-    },
-    playingEpisode: {
-      type: Object as PropType<VideoEpisode>,
-    },
-    videoSrc: {
-      type: Object as PropType<VideoUrlMap>,
-    },
-  });
+const {
+  videoSources,
+  videoSource,
+  videoItem,
+  playingResource,
+  playingEpisode,
+  videoSrc,
+} = defineProps({
+  videoSources: {
+    type: Object as PropType<import('video.js').default.Tech.SourceObject[]>,
+  },
+  videoSource: {
+    type: Object as PropType<VideoSource>,
+  },
+  videoItem: {
+    type: Object as PropType<VideoItem>,
+  },
+  playingResource: {
+    type: Object as PropType<VideoResource>,
+  },
+  playingEpisode: {
+    type: Object as PropType<VideoEpisode>,
+  },
+  videoSrc: {
+    type: Object as PropType<VideoUrlMap>,
+  },
+});
 
 const emit = defineEmits<{
   (e: 'back'): void;
@@ -68,6 +80,7 @@ watch(
 
 <template>
   <div
+    ref="pageBody"
     class="relative flex flex-col gap-2 items-center w-full h-full overflow-y-auto bg-[--van-background-2]"
   >
     <van-nav-bar
@@ -81,7 +94,8 @@ watch(
       <div class="w-full aspect-[16/9]">
         <VideoPlayer
           v-model:player="player"
-          :src="videoSrc?.url"
+          :video-src="videoSrc"
+          :video-sources="videoSources"
           :resource="playingResource"
           :episode="playingEpisode"
           @time-update="(args) => emit('timeUpdate', args)"

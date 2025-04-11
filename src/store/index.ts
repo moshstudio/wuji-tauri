@@ -1406,12 +1406,12 @@ export const useStore = defineStore('store', () => {
         }
       } catch (error) {}
     }
-    keepTest.value = true;
+    // keepTest.value = true;
     // addTestSource(new TestSongExtension(), SourceType.Song);
     // addTestSource(new TestBookExtension(), SourceType.Book);
     // addTestSource(new TestPhotoExtension(), SourceType.Photo);
     // addTestSource(new TestComicExtension(), SourceType.Comic);
-    addTestSource(new TestVideoExtension(), SourceType.Video);
+    // addTestSource(new TestVideoExtension(), SourceType.Video);
 
     loadSubscribeSources(true);
   });
@@ -1487,28 +1487,14 @@ export const useDisplayStore = defineStore('display', () => {
   const isLandscape = ref(landscapeMediaQuery.matches);
 
   const fullScreenMode = ref(false);
-  watch(
-    fullScreenMode,
-    async (newValue) => {
-      //android 全屏播放时，自动隐藏状态栏
-      if (newValue) {
-        showTabBar.value = false;
-        if (isAndroid.value) {
-          await commands.set_screen_orientation('landscape');
-        } else {
-          await getCurrentWindow().setFullscreen(true);
-        }
-      } else {
-        showTabBar.value = true;
-        if (isAndroid.value) {
-          await commands.set_screen_orientation('portrait');
-        } else {
-          await getCurrentWindow().setFullscreen(false);
-        }
-      }
-    },
-    { immediate: true }
-  );
+  onMounted(async () => {
+    showTabBar.value = true;
+    if (isAndroid.value) {
+      await commands.set_screen_orientation('portrait');
+    } else {
+      await getCurrentWindow().setFullscreen(false);
+    }
+  });
 
   const checkMobile = (event: MediaQueryListEvent) => {
     // 全屏状态下就不刷新`isMobile`了

@@ -2,6 +2,7 @@
 use tauri::AppHandle;
 use tauri::Manager;
 mod fetch_plugin;
+mod proxy_plugin;
 use log::LevelFilter;
 use tauri_plugin_log::{Target, TargetKind};
 
@@ -30,6 +31,7 @@ pub fn run() {
         .setup(move |app| {
             let handle = app.handle();
             handle.plugin(fetch_plugin::init())?;
+            handle.plugin(proxy_plugin::init())?;
             Ok(())
         })
         .plugin(tauri_plugin_fs2::init())

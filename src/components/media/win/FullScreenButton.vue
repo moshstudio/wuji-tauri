@@ -44,13 +44,8 @@ const props = defineProps<{
 const toggleFullscreen = async () => {
   if (props.isFullscreen) {
     props.exitFullscreen();
-    // displayStore.fullScreenMode = false;
-    // props.player.exitFullscreen();
   } else {
     props.requestFullscreen();
-    // displayStore.fullScreenMode = true;
-    // props.player.requestFullscreen();
-    // props.focus();
   }
 };
 </script>

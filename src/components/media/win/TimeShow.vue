@@ -31,6 +31,8 @@ const props = defineProps<{
 
 // 格式化时间为 MM:SS
 const formatTime = (seconds: number) => {
+  if (seconds === Infinity) return '';
+
   if (!seconds) return '--:--';
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);

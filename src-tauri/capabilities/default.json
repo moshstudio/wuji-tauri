@@ -29,6 +29,7 @@
     "store:allow-length",
     "store:allow-reset",
     "fetch-plugin:default",
+    "proxy-plugin:allow-get-proxy-url",
     "os:default",
     "core:window:allow-set-min-size",
     "core:window:allow-destroy",

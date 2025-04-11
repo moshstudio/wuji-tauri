@@ -5,6 +5,8 @@ import { nanoid } from 'nanoid';
 export interface VideoUrlMap {
   url: string;
   headers?: Record<string, string> | null;
+  isLive?: boolean;
+  extra?: Record<string, any>;
 }
 
 export interface VideoEpisode {

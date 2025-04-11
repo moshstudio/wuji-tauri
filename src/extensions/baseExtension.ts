@@ -2,6 +2,7 @@ import CryptoJS from 'crypto-js';
 import forge from 'node-forge';
 import _ from 'lodash';
 import * as iconv from 'iconv-lite';
+import * as m3u8Parser from 'm3u8-parser';
 import { nanoid } from 'nanoid';
 import { ClientOptions, fetch } from '@/utils/fetch';
 import {
@@ -12,6 +13,7 @@ import {
 import { BookItem } from './book';
 import { PhotoItem } from './photo';
 import { urlJoin as myUrlJoin } from '@/utils';
+import { getProxyServerUrl } from '@/utils/proxyUrl';
 import { PlaylistInfo, SongInfo } from './song';
 
 // 定义一个装饰器工厂函数，允许传入目标类型
@@ -40,6 +42,8 @@ abstract class Extension {
   forge: typeof forge;
   fetch: typeof fetch;
   iconv: typeof iconv;
+  m3u8Parser: typeof m3u8Parser;
+  getProxyServerUrl: typeof getProxyServerUrl;
   _: typeof _;
   fetchDom: (
     input: URL | Request | string,
@@ -164,6 +168,8 @@ abstract class Extension {
     this.cryptoJs = CryptoJS;
     this.forge = forge;
     this.iconv = iconv;
+    this.m3u8Parser = m3u8Parser;
+    this.getProxyServerUrl = getProxyServerUrl;
     this._ = _;
     this.fetch = fetch;
     this.fetchDom = async (

@@ -13,8 +13,8 @@
         :width="24"
         :height="24"
         :class="{
-          'opacity-0 scale-90': displayStore.fullScreenMode,
-          'opacity-100 scale-100': !displayStore.fullScreenMode,
+          'opacity-0 scale-90': isFullscreen,
+          'opacity-100 scale-100': !isFullscreen,
         }"
       />
       <!-- 退出全屏图标 -->
@@ -24,82 +24,28 @@
         :width="24"
         :height="24"
         :class="{
-          'opacity-100 scale-100': displayStore.fullScreenMode,
-          'opacity-0 scale-90': !displayStore.fullScreenMode,
+          'opacity-100 scale-100': isFullscreen,
+          'opacity-0 scale-90': !isFullscreen,
         }"
       />
     </div>
-
-    <!-- 悬浮提示 -->
-    <span
-      class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-gray-800 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap"
-    >
-      {{ state.isFullscreen ? '退出全屏' : '全屏' }}
-    </span>
   </button>
 </template>
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { useDisplayStore } from '@/store';
-import { onMounted, watch } from 'vue';
-import { storeToRefs } from 'pinia';
-
-const displayStore = useDisplayStore();
-const { androidOrientation } = storeToRefs(displayStore);
 
 const props = defineProps<{
-  state: {
-    isFullscreen: boolean;
-  };
-  player: {
-    requestFullscreen: () => void;
-    exitFullscreen: () => void;
-  };
-  videoWrapper: HTMLElement | null;
+  isFullscreen: boolean;
+  requestFullscreen: () => void;
+  exitFullscreen: () => void;
 }>();
 
 const toggleFullscreen = async () => {
-  if (displayStore.isAndroid) {
-    if (displayStore.fullScreenMode) {
-      // 退出全屏
-      displayStore.fullScreenMode = false;
-      displayStore.showTabBar = true;
-    } else {
-      // 进入全屏
-      displayStore.fullScreenMode = true;
-      displayStore.showTabBar = false;
-    }
+  if (props.isFullscreen) {
+    props.exitFullscreen();
   } else {
-    if (props.state.isFullscreen) {
-      displayStore.fullScreenMode = false;
-      await getCurrentWindow().setFullscreen(false);
-      props.player.exitFullscreen();
-    } else {
-      displayStore.fullScreenMode = true;
-
-      await getCurrentWindow().setFullscreen(true);
-      props.player.requestFullscreen();
-    }
+    props.requestFullscreen();
   }
 };
-
-onMounted(() => {
-  displayStore.fullScreenMode = false;
-});
-if (displayStore.isAndroid) {
-  /**自动横屏时进入全屏 */
-  watch(androidOrientation, (newValue, oldValue) => {
-    if (
-      newValue === 'landscape' &&
-      oldValue !== 'landscape' &&
-      !displayStore.fullScreenMode
-    ) {
-      displayStore.fullScreenMode = true;
-      displayStore.showTabBar = false;
-      return;
-    }
-  });
-}
 </script>
