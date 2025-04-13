@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { useDisplayStore, useStore } from '@/store';
-import { storeToRefs } from 'pinia';
+import type { BookItem } from '@/extensions/book';
+import type { BookSource } from '@/types';
 import BooksTab from '@/components/windows/BooksTab.vue';
-import BookShelf from '@/views/book/BookShelf.vue';
 import WinSearch from '@/components/windows/WinSearch.vue';
-import { BookSource } from '@/types';
-import { BookItem } from '@/extensions/book';
-
-const searchValue = defineModel('searchValue', { type: String, default: '' });
+import { useDisplayStore, useStore } from '@/store';
+import BookShelf from '@/views/book/BookShelf.vue';
+import { storeToRefs } from 'pinia';
 
 const emit = defineEmits<{
   (e: 'recommend', force?: boolean): void;
@@ -17,6 +15,8 @@ const emit = defineEmits<{
   (e: 'toDetail', source: BookSource, item: BookItem): void;
   (e: 'openBaseUrl', source: BookSource): void;
 }>();
+
+const searchValue = defineModel('searchValue', { type: String, default: '' });
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -29,11 +29,11 @@ const { bookSources } = storeToRefs(store);
     class="w-full h-full overflow-x-hidden overflow-y-auto"
   >
     <div class="flex items-center justify-between px-4 py-2">
-      <div class="placeholder"></div>
+      <div class="placeholder" />
       <WinSearch
         v-model:search-value="searchValue"
         @search="() => emit('search')"
-      ></WinSearch>
+      />
       <div
         class="text-button text-nowrap"
         @click="displayStore.showBookShelf = true"
@@ -59,12 +59,11 @@ const { bookSources } = storeToRefs(store);
             (source, pageNo, type) => emit('loadPage', source, pageNo, type)
           "
           @on-detail="(source, item) => emit('toDetail', source, item)"
-        >
-        </BooksTab>
+        />
         <van-divider :style="{ margin: '8px 0px' }" />
       </div>
     </div>
-    <BookShelf></BookShelf>
+    <BookShelf />
   </div>
 </template>
 

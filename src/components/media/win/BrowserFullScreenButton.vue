@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue';
+
 const props = defineProps<{
   isFullscreen: boolean;
   isBrowserFullscreen: boolean;
@@ -7,21 +8,22 @@ const props = defineProps<{
   exitBrowserFullscreen: () => void;
 }>();
 
-const toggleBrowserFullscreen = async () => {
+async function toggleBrowserFullscreen() {
   if (props.isBrowserFullscreen) {
     props.exitBrowserFullscreen();
-  } else {
+  }
+  else {
     props.requestBrowserFullscreen();
   }
-};
+}
 </script>
 
 <template>
   <button
-    @click="toggleBrowserFullscreen"
+    v-show="!isFullscreen"
     class="rounded-md transition-colors duration-200 group relative"
     aria-label="网页全屏"
-    v-show="!isFullscreen"
+    @click="toggleBrowserFullscreen"
   >
     <div class="relative w-[16px] h-[16px]">
       <!-- 进入全屏图标 -->

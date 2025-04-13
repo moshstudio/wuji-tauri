@@ -133,7 +133,7 @@ const ERROR_REQUEST_CANCELLED = 'Request canceled';
  */
 export async function _fetch(
   input: URL | Request | string,
-  init?: RequestInit & ClientOptions
+  init?: RequestInit & ClientOptions,
 ): Promise<Response> {
   // abort early here if needed
   const signal = init?.signal;
@@ -160,8 +160,8 @@ export async function _fetch(
 
   const req = new Request(input, init);
   const buffer = await req.arrayBuffer();
-  const data =
-    buffer.byteLength !== 0 ? Array.from(new Uint8Array(buffer)) : null;
+  const data
+    = buffer.byteLength !== 0 ? Array.from(new Uint8Array(buffer)) : null;
 
   // append new headers created by the browser `Request` implementation,
   // if not already declared by the caller of this function
@@ -176,8 +176,8 @@ export async function _fetch(
     // navigator.userAgent
   }
 
-  const headersArray =
-    headers instanceof Headers
+  const headersArray
+    = headers instanceof Headers
       ? Array.from(headers.entries())
       : Array.isArray(headers)
         ? headers
@@ -188,9 +188,9 @@ export async function _fetch(
     ([name, val]) => [
       name,
       // we need to ensure we have all header values as strings
-      // eslint-disable-next-line
+
       typeof val === 'string' ? val : (val as any).toString(),
-    ]
+    ],
   );
 
   // abort early here if needed
@@ -246,19 +246,19 @@ export async function _fetch(
     'plugin:fetch-plugin|fetch_read_body',
     {
       rid: responseRid,
-    }
+    },
   );
 
   const res = new Response(
     body instanceof ArrayBuffer && body.byteLength !== 0
       ? body
-      : body instanceof Array && body.length > 0
+      : Array.isArray(body) && body.length > 0
         ? new Uint8Array(body)
         : null,
     {
       status,
       statusText,
-    }
+    },
   );
 
   // url and headers are read only properties
@@ -277,7 +277,7 @@ export async function _fetch(
 
 export async function fetch(
   input: URL | Request | string,
-  init?: RequestInit & ClientOptions
+  init?: RequestInit & ClientOptions,
 ): Promise<Response> {
   try {
     let response = await _fetch(input, init);
@@ -289,7 +289,8 @@ export async function fetch(
       }
     }
     return response;
-  } catch (error) {
+  }
+  catch (error) {
     console.error('fetch error:', error);
     return Response.error();
   }

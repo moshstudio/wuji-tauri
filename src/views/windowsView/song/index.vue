@@ -1,18 +1,25 @@
 <script setup lang="ts">
-import { useDisplayStore, useStore } from '@/store';
-import { storeToRefs } from 'pinia';
-import _ from 'lodash';
+import type { SongInfo } from '@/extensions/song';
+import type { SongSource } from '@/types';
 import WinPlaylistCard from '@/components/card/songCards/WinPlaylistCard.vue';
 import WinSongCard from '@/components/card/songCards/WinSongCard.vue';
-import WinSongBar from '@/components/windows/WinSongBar.vue';
 import HorizonList from '@/components/HorizonList.vue';
-import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
 import SimplePagination from '@/components/pagination/SimplePagination.vue';
+import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
 import WinSearch from '@/components/windows/WinSearch.vue';
-import { SongSource } from '@/types';
-import { SongInfo } from '@/extensions/song';
+import WinSongBar from '@/components/windows/WinSongBar.vue';
+import { useDisplayStore, useStore } from '@/store';
 import SongShelf from '@/views/song/SongShelf.vue';
+import { storeToRefs } from 'pinia';
 
+const emit = defineEmits<{
+  (e: 'search'): void;
+  (e: 'recommend', force?: boolean): void;
+  (e: 'playlistToPage', source: SongSource, pageNo: number): void;
+  (e: 'songToPage', source: SongSource, pageNo: number): void;
+  (e: 'playSong', source: SongSource, song: SongInfo): void;
+  (e: 'openBaseUrl', source: SongSource): void;
+}>();
 const store = useStore();
 const displayStore = useDisplayStore();
 const { songSources } = storeToRefs(store);
@@ -29,26 +36,17 @@ const activeTabIndex = defineModel('activeTabIndex', {
   type: Number,
   default: 0,
 });
-
-const emit = defineEmits<{
-  (e: 'search'): void;
-  (e: 'recommend', force?: boolean): void;
-  (e: 'playlistToPage', source: SongSource, pageNo: number): void;
-  (e: 'songToPage', source: SongSource, pageNo: number): void;
-  (e: 'playSong', source: SongSource, song: SongInfo): void;
-  (e: 'openBaseUrl', source: SongSource): void;
-}>();
 </script>
 
 <template>
   <div class="w-full h-full flex flex-col">
     <div v-remember-scroll class="grow overflow-x-hidden overflow-y-auto">
       <div class="flex items-center justify-between px-4 py-2">
-        <div class="placeholder"></div>
+        <div class="placeholder" />
         <WinSearch
           v-model:search-value="searchValue"
           @search="() => emit('search')"
-        ></WinSearch>
+        />
         <div
           class="text-button text-nowrap"
           @click="displayStore.showSongShelf = true"
@@ -65,8 +63,8 @@ const emit = defineEmits<{
         >
           <van-loading v-if="!item.playlist && !item.songList" />
           <van-row
-            justify="space-between"
             v-if="item.playlist && item.playlist.totalPage"
+            justify="space-between"
           >
             <van-button
               :plain="true"
@@ -83,13 +81,13 @@ const emit = defineEmits<{
           </van-row>
           <HorizonList>
             <div v-for="p in item.playlist?.list" :key="p.id" class="relative">
-              <WinPlaylistCard :playlist="p"></WinPlaylistCard>
+              <WinPlaylistCard :playlist="p" />
             </div>
           </HorizonList>
-          <div class="h-4"></div>
+          <div class="h-4" />
           <van-row
-            justify="space-between"
             v-if="item.songList && item.songList.totalPage"
+            justify="space-between"
           >
             <van-button
               :plain="true"
@@ -109,14 +107,14 @@ const emit = defineEmits<{
               <WinSongCard
                 :song="p"
                 @play="() => emit('playSong', item, p)"
-              ></WinSongCard>
+              />
             </template>
           </ResponsiveGrid2>
         </van-tab>
       </van-tabs>
-      <SongShelf></SongShelf>
+      <SongShelf />
     </div>
-    <WinSongBar></WinSongBar>
+    <WinSongBar />
   </div>
 </template>
 

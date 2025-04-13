@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useStore, useDisplayStore, useSubscribeSourceStore } from '@/store';
-import { SubscribeItem, SubscribeSource } from '@/types';
+import type { SubscribeItem, SubscribeSource } from '@/types';
+import { useDisplayStore, useStore, useSubscribeSourceStore } from '@/store';
 import { storeToRefs } from 'pinia';
-import { ref, reactive, triggerRef } from 'vue';
+import { ref } from 'vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -13,7 +13,7 @@ const checked = ref([]);
 const showClearPopover = ref(false);
 
 function isDisable(item: SubscribeSource) {
-  return item.detail?.urls.every((url) => url.disable === true) || false;
+  return item.detail?.urls.every(url => url.disable === true) || false;
 }
 
 function sourceSwitch(item: SubscribeSource, value: boolean) {
@@ -21,12 +21,13 @@ function sourceSwitch(item: SubscribeSource, value: boolean) {
   // value=true时，disable应为true；value=false时，disable应为false
 
   if (value) {
-    //禁用此source
+    // 禁用此source
     item.detail?.urls.forEach((url) => {
       url.disable = true;
     });
-  } else {
-    //启用此source
+  }
+  else {
+    // 启用此source
     item.detail?.urls.forEach((url) => {
       url.disable = false;
     });
@@ -37,13 +38,14 @@ function urlSwitch(item: SubscribeSource, url: SubscribeItem, value: boolean) {
   // 启用时，value是false；禁用时，value是true
   // value=true时，disable应为true；value=false时，disable应为false
   if (value) {
-    //禁用此url
+    // 禁用此url
     url.disable = true;
-    if (item.detail?.urls.every((url) => url.disable)) {
+    if (item.detail?.urls.every(url => url.disable)) {
       item.disable = true;
     }
-  } else {
-    //启用此url
+  }
+  else {
+    // 启用此url
     url.disable = false;
     item.disable = false;
   }
@@ -73,7 +75,9 @@ function clearSources() {
           确认清空?
         </van-button>
         <template #reference>
-          <van-button size="small">清空</van-button>
+          <van-button size="small">
+            清空
+          </van-button>
         </template>
       </van-popover>
     </van-row>
@@ -106,11 +110,11 @@ function clearSources() {
               </van-popover>
               <van-switch
                 :model-value="isDisable(item)"
-                @click.stop
                 :active-value="false"
                 :inactive-value="true"
                 size="18px"
                 class="mx-[10px]"
+                @click.stop
                 @update:model-value="(value) => sourceSwitch(item, value)"
               />
             </van-row>
@@ -124,10 +128,10 @@ function clearSources() {
             <template #value>
               <van-switch
                 :model-value="cell.disable || false"
-                @click.stop
                 :active-value="false"
                 :inactive-value="true"
                 size="16px"
+                @click.stop
                 @update:model-value="(value) => urlSwitch(item, cell, value)"
               />
             </template>

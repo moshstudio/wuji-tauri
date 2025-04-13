@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import { ComicItem, ComicItemInShelf } from '@/extensions/comic';
-import { Icon } from '@iconify/vue';
-import { ref } from 'vue';
-import LoadImage from '@/components/LoadImage.vue';
+import type { ComicItemInShelf } from '@/extensions/comic';
 import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
+import LoadImage from '@/components/LoadImage.vue';
 import { useStore } from '@/store';
+import { Icon } from '@iconify/vue';
+import _ from 'lodash';
+import { ref } from 'vue';
 
 const { shelfComic, unread } = defineProps<{
   shelfComic: ComicItemInShelf;
@@ -91,7 +91,7 @@ const showMoreOptions = ref(false);
         },
       },
     ]"
-  ></MoreOptionsSheet>
+  />
 </template>
 
 <style scoped lang="less"></style>

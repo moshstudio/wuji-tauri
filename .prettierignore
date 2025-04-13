@@ -4,4 +4,6 @@ dist/
 public/
 .git/
 .vscode/
-
+tauri-plugin-commands/
+tauri-plugin-fs/
+tauri-plugin-mediasession/

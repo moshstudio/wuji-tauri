@@ -1,7 +1,8 @@
-import _ from 'lodash';
-import { Extension, transformResult } from '../baseExtension';
-import { nanoid } from 'nanoid';
 import { purifyText } from '@/utils';
+import _ from 'lodash';
+import { nanoid } from 'nanoid';
+import { Extension, transformResult } from '../baseExtension';
+
 export interface BookChapter {
   id: string;
   title: string;
@@ -85,7 +86,7 @@ abstract class BookExtension extends Extension {
   // 1. 首页推荐
   abstract getRecommendBooks(
     pageNo?: number,
-    type?: string
+    type?: string,
   ): Promise<BooksList | null>;
 
   @transformResult<BooksList | null>((r) => {
@@ -94,7 +95,7 @@ abstract class BookExtension extends Extension {
         bookList.id = String(bookList.id) || nanoid();
         bookList.list.forEach((bookItem) => {
           bookItem.id = String(
-            bookItem.id || bookItem.url || bookItem.title || nanoid()
+            bookItem.id || bookItem.url || bookItem.title || nanoid(),
           );
         });
       });
@@ -120,7 +121,7 @@ abstract class BookExtension extends Extension {
       r.id = String(r.id);
       r.chapters?.forEach((chapter) => {
         chapter.id = String(
-          chapter.id || chapter.url || chapter.title || nanoid()
+          chapter.id || chapter.url || chapter.title || nanoid(),
         );
       });
     }
@@ -140,25 +141,26 @@ abstract class BookExtension extends Extension {
     return r;
   })
   execGetContent(item: BookItem, chapter: BookChapter) {
-    return this.getContent(item, chapter).then((r) =>
-      r ? purifyText(r) : null
+    return this.getContent(item, chapter).then(r =>
+      r ? purifyText(r) : null,
     );
   }
   // 4. 获取内容
   abstract getContent(
     item: BookItem,
-    chapter: BookChapter
+    chapter: BookChapter,
   ): Promise<string | null>;
 }
 
 function loadBookExtensionString(
-  codeString: string
+  codeString: string,
 ): BookExtension | undefined {
   try {
     const func = new Function('BookExtension', codeString);
     const extensionclass = func(BookExtension);
     return new extensionclass();
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Error executing code:\n', error);
   }
 }

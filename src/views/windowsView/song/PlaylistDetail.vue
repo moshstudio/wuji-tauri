@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import { PlaylistInfo } from '@/extensions/song';
-import { useSongStore, useSongShelfStore, useDisplayStore } from '@/store';
-import { PropType } from 'vue';
+import type { PlaylistInfo } from '@/extensions/song';
+import type { PropType } from 'vue';
 import WinSongCard from '@/components/card/songCards/WinSongCard.vue';
-import WinSongBar from '@/components/windows/WinSongBar.vue';
-import SongShelf from '@/views/song/SongShelf.vue';
-import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import LoadImage from '@/components/LoadImage.vue';
+import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
+import WinSongBar from '@/components/windows/WinSongBar.vue';
+import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
+import SongShelf from '@/views/song/SongShelf.vue';
 
+const emit = defineEmits<{
+  (e: 'back'): void;
+  (e: 'loadData', pageNo?: number): void;
+  (e: 'toPage', pageNo?: number): void;
+  (e: 'playAll'): void;
+  (e: 'addToShelf'): void;
+}>();
 const songStore = useSongStore();
 const displayStore = useDisplayStore();
 const shelfStore = useSongShelfStore();
@@ -19,14 +26,6 @@ const playlist = defineModel('playlist', {
 
 const currentPage = defineModel('currentPage', { type: Number, default: 1 });
 const content = defineModel('content', { type: HTMLElement });
-
-const emit = defineEmits<{
-  (e: 'back'): void;
-  (e: 'loadData', pageNo?: number): void;
-  (e: 'toPage', pageNo?: number): void;
-  (e: 'playAll'): void;
-  (e: 'addToShelf'): void;
-}>();
 </script>
 
 <template>
@@ -48,7 +47,7 @@ const emit = defineEmits<{
             :src="playlist?.picUrl"
             :headers="playlist?.picHeaders"
           >
-            <template v-slot:loading>
+            <template #loading>
               <div class="text-center text-lg p-1">
                 {{ playlist.name }}
               </div>
@@ -90,11 +89,11 @@ const emit = defineEmits<{
         </van-button>
 
         <SimplePagination
+          v-if="playlist.list.totalPage"
           v-model="currentPage"
           :page-count="playlist.list.totalPage"
           class="p-1"
           @change="(pageNo) => emit('toPage', pageNo)"
-          v-if="playlist.list.totalPage"
         />
       </div>
       <ResponsiveGrid2>
@@ -102,12 +101,12 @@ const emit = defineEmits<{
           <WinSongCard
             :song="item"
             @play="songStore.setPlayingList(playlist!.list!.list, item)"
-          ></WinSongCard>
+          />
         </template>
       </ResponsiveGrid2>
     </div>
-    <WinSongBar></WinSongBar>
-    <SongShelf></SongShelf>
+    <WinSongBar />
+    <SongShelf />
   </div>
 </template>
 

@@ -1,3 +1,19 @@
+<script setup lang="ts">
+import { useAttrs } from 'vue';
+
+const { baseCols, gap } = defineProps({
+  baseCols: {
+    type: Number,
+    default: 1,
+  },
+  gap: {
+    type: Number,
+    default: 4,
+  },
+});
+const attrs = useAttrs();
+</script>
+
 <template>
   <div
     class="grid"
@@ -18,24 +34,8 @@
       `6xl:grid-cols-${baseCols + 10}`,
     ]"
   >
-    <slot></slot>
+    <slot />
   </div>
 </template>
-
-<script setup lang="ts">
-import { useAttrs } from 'vue';
-
-const attrs = useAttrs();
-const { baseCols, gap } = defineProps({
-  baseCols: {
-    type: Number,
-    default: 1,
-  },
-  gap: {
-    type: Number,
-    default: 4,
-  },
-});
-</script>
 
 <style scoped lang="less"></style>

@@ -1,24 +1,23 @@
 <script setup lang="ts">
-import { BookItemInShelf } from '@/extensions/book';
+import type { BookItemInShelf } from '@/extensions/book';
 import { router } from '@/router';
-import { useStore, useBookShelfStore, useDisplayStore } from '@/store';
-import _ from 'lodash';
+import { useBookShelfStore, useDisplayStore, useStore } from '@/store';
+import { storeToRefs } from 'pinia';
 import { showLoadingToast, showToast } from 'vant';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
-import WinBookShelf from '../windowsView/book/BookShelf.vue';
 import MobileBookShelf from '../mobileView/book/BookShelf.vue';
-import { storeToRefs } from 'pinia';
+import WinBookShelf from '../windowsView/book/BookShelf.vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();
 const shelfStore = useBookShelfStore();
 const { showBookShelf } = storeToRefs(displayStore);
 
-const refreshChapters = async () => {
+async function refreshChapters() {
   await shelfStore.bookRefreshChapters();
-};
+}
 
-const toBook = async (book: BookItemInShelf, chapterId?: string) => {
+async function toBook(book: BookItemInShelf, chapterId?: string) {
   const source = store.getBookSource(book.book.sourceId);
   if (!source) {
     showToast('源不存在或未启用');
@@ -50,38 +49,39 @@ const toBook = async (book: BookItemInShelf, chapterId?: string) => {
     params: {
       bookId: book.book.id,
       sourceId: book.book.sourceId,
-      chapterId: chapterId,
+      chapterId,
     },
   });
-};
-const removeBookFromShelf = (book: BookItemInShelf, shelfId: string) => {
+}
+function removeBookFromShelf(book: BookItemInShelf, shelfId: string) {
   shelfStore.removeBookFromShelf(book.book, shelfId);
-};
+}
 
 // 书架展示相关
 const shelfAnchors = ref([0, Math.round(window.innerHeight)]);
 const shelfHeight = ref(0);
-const hidePanel = () => {
+function hidePanel() {
   shelfHeight.value = shelfAnchors.value[0];
   showBookShelf.value = false;
-};
+}
 watch(
   showBookShelf,
   (newValue) => {
     if (newValue) {
       shelfHeight.value = shelfAnchors.value[1];
-    } else {
+    }
+    else {
       shelfHeight.value = shelfAnchors.value[0];
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
-const updateAnchors = () => {
+function updateAnchors() {
   shelfAnchors.value[1] = Math.round(window.innerHeight);
   if (showBookShelf.value) {
     shelfHeight.value = shelfAnchors.value[1];
   }
-};
+}
 onMounted(() => {
   window.addEventListener('resize', updateAnchors);
 });
@@ -100,7 +100,7 @@ onUnmounted(() => {
         @to-book="toBook"
         @remove-book-from-shelf="removeBookFromShelf"
         @hide-panel="hidePanel"
-      ></MobileBookShelf>
+      />
     </template>
     <template #windows>
       <WinBookShelf
@@ -110,7 +110,7 @@ onUnmounted(() => {
         @to-book="toBook"
         @remove-book-from-shelf="removeBookFromShelf"
         @hide-panel="hidePanel"
-      ></WinBookShelf>
+      />
     </template>
   </PlatformSwitch>
 </template>

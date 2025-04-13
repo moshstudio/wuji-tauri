@@ -1,18 +1,19 @@
-import { createWebHashHistory, createRouter, RouteRecordRaw } from 'vue-router';
+import type { RouteRecordRaw } from 'vue-router';
+import BookDetail from '@/views/book/BookDetail.vue';
+import BookRead from '@/views/book/BookRead.vue';
+import Book from '@/views/book/index.vue';
+import ComicDetail from '@/views/comic/ComicDetail.vue';
+import ComicRead from '@/views/comic/ComicRead.vue';
+import Comic from '@/views/comic/index.vue';
 import Home from '@/views/home/index.vue';
 import Photo from '@/views/photo/index.vue';
 import PhotoDetail from '@/views/photo/PhotoDetail.vue';
 import Song from '@/views/song/index.vue';
 import PlaylistDetail from '@/views/song/PlaylistDetail.vue';
-import Book from '@/views/book/index.vue';
-import BookDetail from '@/views/book/BookDetail.vue';
-import BookRead from '@/views/book/BookRead.vue';
-import Comic from '@/views/comic/index.vue';
-import ComicDetail from '@/views/comic/ComicDetail.vue';
-import ComicRead from '@/views/comic/ComicRead.vue';
 import Video from '@/views/video/index.vue';
 import VideoDetail from '@/views/video/VideoDetail.vue';
 import { type as osType } from '@tauri-apps/plugin-os';
+import { createRouter, createWebHashHistory } from 'vue-router';
 
 export const routes: RouteRecordRaw[] = [
   {

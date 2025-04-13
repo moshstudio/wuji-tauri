@@ -1,79 +1,78 @@
 <script lang="ts" setup>
+import type { BookChapter, BookItem } from "@/extensions/book";
+import type { BookSource } from "@/types";
+import type { LineData, ReaderResult } from "@/utils/reader/types";
+import type { PropType } from "vue";
+
+import BookShelfButton from "@/components/BookShelfButton.vue";
+import SwitchBookSourceDialog from "@/components/dialogs/SwitchBookSource.vue";
+import { useBookChapterStore, useBookStore, useDisplayStore } from "@/store";
+import { Icon } from "@iconify/vue";
+import { keepScreenOn } from "tauri-plugin-keep-screen-on-api";
+import { showToast } from "vant";
 import {
   computed,
-  ref,
-  reactive,
-  onBeforeUnmount,
-  watch,
   onActivated,
-} from 'vue';
-import { showToast } from 'vant';
-import { Icon } from '@iconify/vue';
-import { BookChapter, BookItem } from '@/extensions/book';
+  onBeforeUnmount,
+  reactive,
+  ref,
+  watch,
+} from "vue";
 
-import { useBookChapterStore, useBookStore, useDisplayStore } from '@/store';
-import { BookSource } from '@/types';
-import { PropType } from 'vue';
-import { ReaderResult, type LineData } from '@/utils/reader/types';
-import BookShelfButton from '@/components/BookShelfButton.vue';
-import SwitchBookSourceDialog from '@/components/dialogs/SwitchBookSource.vue';
-import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
-
-const book = defineModel('book', { type: Object as PropType<BookItem> });
-const bookSource = defineModel('bookSource', {
+const emit = defineEmits<{
+  (e: "back", checkShelf?: boolean): void;
+  (e: "loadData"): void;
+  (e: "toChapter", chapter: BookChapter): void;
+  (e: "prevChapter", toLast?: boolean): void;
+  (e: "nextChapter"): void;
+  (e: "refreshChapter"): void;
+  (e: "openChapterPopup"): void;
+  (e: "searchAllSources", targetBook: BookItem): void;
+  (e: "switchSource", newBookItem: BookItem): void;
+}>();
+const book = defineModel("book", { type: Object as PropType<BookItem> });
+const bookSource = defineModel("bookSource", {
   type: Object as PropType<BookSource>,
 });
-const chapterLists = defineModel('chapterList', {
+const chapterLists = defineModel("chapterList", {
   type: Array as PropType<BookChapter[]>,
 });
-const readingChapter = defineModel('readingChapter', {
+const readingChapter = defineModel("readingChapter", {
   type: Object as PropType<BookChapter>,
 });
-const readingContent = defineModel('readingContent', {
+const readingContent = defineModel("readingContent", {
   type: String,
 });
-const readingPagedContent = defineModel('readingPagedContent', {
+const readingPagedContent = defineModel("readingPagedContent", {
   type: Object as PropType<{ isPrev: boolean; content: ReaderResult }>,
 });
-const chapterPage = defineModel('chapterPage', {
+const chapterPage = defineModel("chapterPage", {
   type: Number,
   required: true,
 });
-const showBookShelf = defineModel('showBookShelf', {
+const showBookShelf = defineModel("showBookShelf", {
   type: Boolean,
   required: true,
 });
-const showChapters = defineModel('showChapters', {
+const showChapters = defineModel("showChapters", {
   type: Boolean,
   required: true,
 });
-const showSettingDialog = defineModel('showSettingDialog', {
+const showSettingDialog = defineModel("showSettingDialog", {
   type: Boolean,
   required: true,
 });
-const showNavBar = defineModel('showNavBar', {
+const showNavBar = defineModel("showNavBar", {
   type: Boolean,
   required: true,
 });
-const allSourceResults = defineModel('allSourceResults', {
+const allSourceResults = defineModel("allSourceResults", {
   type: Array as PropType<BookItem[]>,
 });
-const showSwitchSourceDialog = defineModel('showSwitchSourceDialog', {
+const showSwitchSourceDialog = defineModel("showSwitchSourceDialog", {
   type: Boolean,
   required: true,
 });
-
-const emit = defineEmits<{
-  (e: 'back', checkShelf?: boolean): void;
-  (e: 'loadData'): void;
-  (e: 'toChapter', chapter: BookChapter): void;
-  (e: 'prevChapter', toLast?: boolean): void;
-  (e: 'nextChapter'): void;
-  (e: 'refreshChapter'): void;
-  (e: 'openChapterPopup'): void;
-  (e: 'searchAllSources', targetBook: BookItem): void;
-  (e: 'switchSource', newBookItem: BookItem): void;
-}>();
 
 const displayStore = useDisplayStore();
 const bookStore = useBookStore();
@@ -101,10 +100,10 @@ const slideTime = 260;
 /** 有效拖拽时间（毫秒） */
 const dragTime = 300;
 
-/**touch 参数 */
+/** touch 参数 */
 const touchParams = reactive({
   /** 页面负偏移量（负数） */
-  pageSlideValue: '-102%',
+  pageSlideValue: "-102%",
   /** 触摸位置 */
   touchPosition: 0,
   /** 触摸的位置Y */
@@ -123,18 +122,18 @@ const touchParams = reactive({
 let slideTimer: NodeJS.Timeout | null;
 
 const prevPageStyle = reactive({
-  transform: '-102%',
-  transition: '0s all',
+  transform: "-102%",
+  transition: "0s all",
   zIndex: 3,
 });
 const currPageStyle = reactive({
-  transform: '0px',
-  transition: '0s all',
+  transform: "0px",
+  transition: "0s all",
   zIndex: 2,
 });
 const nextPageStyle = reactive({
-  transform: '0px',
-  transition: '0s all',
+  transform: "0px",
+  transition: "0s all",
   zIndex: 1,
 });
 
@@ -160,11 +159,11 @@ const prevPageContent = computed<LineData[]>(() => {
         pIndex: 0,
         lineIndex: 0,
         textIndex: 0,
-        text: '',
+        text: "",
       },
     ];
   }
-  if (chapterPage.value == 0) {
+  if (chapterPage.value === 0) {
     const index = chapterLists.value?.findIndex(
       (item) => item.id === readingChapter.value?.id
     );
@@ -178,7 +177,7 @@ const prevPageContent = computed<LineData[]>(() => {
           pIndex: 0,
           lineIndex: 0,
           textIndex: 0,
-          text: chapterLists.value?.[index - 1].title || '',
+          text: chapterLists.value?.[index - 1].title || "",
         },
       ];
     } else {
@@ -191,12 +190,12 @@ const prevPageContent = computed<LineData[]>(() => {
           pIndex: 0,
           lineIndex: 0,
           textIndex: 0,
-          text: '',
+          text: "",
         },
       ];
     }
   } else {
-    if (typeof readingPagedContent.value === 'string') {
+    if (typeof readingPagedContent.value === "string") {
       return [
         {
           isTitle: false,
@@ -219,7 +218,7 @@ const prevPageContent = computed<LineData[]>(() => {
   }
 });
 const currPageContent = computed<LineData[]>(() => {
-  if (typeof readingPagedContent.value === 'string') {
+  if (typeof readingPagedContent.value === "string") {
     return [
       {
         isTitle: false,
@@ -250,11 +249,11 @@ const nextPageContent = computed<LineData[]>(() => {
         pIndex: 0,
         lineIndex: 0,
         textIndex: 0,
-        text: '',
+        text: "",
       },
     ];
   }
-  if (chapterPage.value == readingPagedContent.value?.content.length - 1) {
+  if (chapterPage.value === readingPagedContent.value?.content.length - 1) {
     const index = chapterLists.value?.findIndex(
       (item) => item.id === readingChapter.value?.id
     );
@@ -268,7 +267,7 @@ const nextPageContent = computed<LineData[]>(() => {
           pIndex: 0,
           lineIndex: 0,
           textIndex: 0,
-          text: chapterLists.value?.[index + 1].title || '',
+          text: chapterLists.value?.[index + 1].title || "",
         },
       ];
     } else {
@@ -281,7 +280,7 @@ const nextPageContent = computed<LineData[]>(() => {
           pIndex: 0,
           lineIndex: 0,
           textIndex: 0,
-          text: '',
+          text: "",
         },
       ];
     }
@@ -296,17 +295,18 @@ const nextPageContent = computed<LineData[]>(() => {
 const isFirstPage = computed(
   () => chapterIndex.value === 0 && chapterPage.value === 0
 );
-/** 否最后一页 */
+/** 是否否最后一页 */
 const isLastPage = computed(
   () =>
     (chapterIndex.value === chapterMax.value - 1 &&
-      chapterPage.value === readingPagedContent.length - 1) ||
+      chapterPage.value ===
+        (readingPagedContent.value?.content.length || 0) - 1) ||
     false
 );
 
 function goBack() {
   // uni.navigateBack();
-  emit('back', true);
+  emit("back", true);
 }
 
 /**
@@ -314,42 +314,42 @@ function goBack() {
  * @returns 'left'|'middle'|'right'
  */
 function checkTouchPosition(x: number, y: number) {
-  const element = document.querySelector('#read-content');
+  const element = document.querySelector("#read-content");
   if (!element) {
-    return 'middle';
+    return "middle";
   }
   const rect = element.getBoundingClientRect();
   const width = Math.floor(rect.width * 0.3);
   const height = Math.floor(rect.height * 0.3);
   if (x < width) {
     if (bookStore.fullScreenClickToNext) {
-      return 'right';
+      return "right";
     } else {
-      return 'left';
+      return "left";
     }
   }
-  if (x >= rect.width - width) return 'right';
+  if (x >= rect.width - width) return "right";
   if (y < height) {
     if (bookStore.fullScreenClickToNext) {
-      return 'right';
+      return "right";
     } else {
-      return 'left';
+      return "left";
     }
   }
-  if (y >= rect.height - height) return 'right';
-  return 'middle';
+  if (y >= rect.height - height) return "right";
+  return "middle";
 }
 
 /** 重置页面（位置偏移） */
 function resetPage() {
-  prevPageStyle.transition = '0s all';
+  prevPageStyle.transition = "0s all";
   prevPageStyle.transform = touchParams.pageSlideValue;
 
-  currPageStyle.transition = '0s all';
-  currPageStyle.transform = '0px';
+  currPageStyle.transition = "0s all";
+  currPageStyle.transform = "0px";
 
-  nextPageStyle.transition = '0s all';
-  nextPageStyle.transform = '0px';
+  nextPageStyle.transition = "0s all";
+  nextPageStyle.transform = "0px";
 }
 
 /** 切换到上一页 */
@@ -367,7 +367,7 @@ function pagePrev() {
     if (chapterPage.value > 0) {
       chapterPage.value--;
     } else {
-      emit('prevChapter', true);
+      emit("prevChapter", true);
     }
     resetPage();
     clearTimeout(slideTimer!);
@@ -377,21 +377,21 @@ function pagePrev() {
 
 /** 切换到下一页 */
 function pageNext() {
-  prevPageStyle.transition = '0s all';
+  prevPageStyle.transition = "0s all";
   prevPageStyle.transform = touchParams.pageSlideValue;
 
   currPageStyle.transition = `${slideTime}ms all`;
   currPageStyle.transform = touchParams.pageSlideValue;
 
-  nextPageStyle.transition = '0s all';
+  nextPageStyle.transition = "0s all";
   nextPageStyle.transform = `0px`;
 
   slideTimer = setTimeout(() => {
     if (
-      chapterPage.value ==
+      chapterPage.value ===
       (readingPagedContent.value?.content.length || 1) - 1
     ) {
-      emit('nextChapter');
+      emit("nextChapter");
     } else {
       chapterPage.value++;
     }
@@ -418,10 +418,10 @@ function onTouchMove(e: TouchEvent) {
   const slide = pageX - touchParams.touchPosition;
 
   if (slide < 0) {
-    currPageStyle.transition = '0s all';
+    currPageStyle.transition = "0s all";
     currPageStyle.transform = `${slide}px`;
   } else {
-    prevPageStyle.transition = '0s all';
+    prevPageStyle.transition = "0s all";
     prevPageStyle.transform = `calc(${touchParams.pageSlideValue} + ${slide}px)`;
   }
   // console.log("onTouchMove", slide);
@@ -445,27 +445,27 @@ function onTouchEnd(e: TouchEvent) {
     prevPageStyle.transform = touchParams.pageSlideValue;
 
     currPageStyle.transition = `${slideTime}ms all`;
-    currPageStyle.transform = '0px';
+    currPageStyle.transform = "0px";
   };
   // console.log("onTouchEnd", slideX);
   if (Math.abs(slideX) <= 10) {
     // 处理点击事件
     switch (checkTouchPosition(pageX, pageY)) {
-      case 'left':
+      case "left":
         if (isFirstPage.value) {
-          showToast('没有上一页了');
+          showToast("没有上一页了");
         } else {
           pagePrev();
         }
         break;
-      case 'right':
+      case "right":
         if (isLastPage.value) {
-          showToast('当前小说已完结');
+          showToast("当前小说已完结");
         } else {
           pageNext();
         }
         break;
-      case 'middle':
+      case "middle":
         showMenu.value = true;
         break;
     }
@@ -479,7 +479,7 @@ function onTouchEnd(e: TouchEvent) {
       if (slideX > 0) {
         // console.log("向右边滑动");
         if (isFirstPage.value) {
-          showToast('没有上一页了');
+          showToast("没有上一页了");
           backPosition();
         } else {
           pagePrev();
@@ -487,7 +487,7 @@ function onTouchEnd(e: TouchEvent) {
       } else {
         // console.log("向左边滑动");
         if (isLastPage.value) {
-          showToast('当前小说已完结');
+          showToast("当前小说已完结");
           backPosition();
         } else {
           pageNext();
@@ -503,19 +503,20 @@ function onTouchEnd(e: TouchEvent) {
 
 /** 上一章 */
 function chapterPrev() {
-  emit('prevChapter');
+  emit("prevChapter");
 }
 
 /** 下一章 */
 function chapterNext() {
   if (chapterIndex.value === chapterMax.value)
-    return showToast('当前小说已完结');
-  emit('nextChapter');
+    return showToast("当前小说已完结");
+  emit("nextChapter");
 }
-onBeforeUnmount(function () {
+onBeforeUnmount(() => {
   slideTimer && clearTimeout(slideTimer);
 });
 </script>
+
 <template>
   <div
     id="read-content"
@@ -553,7 +554,7 @@ onBeforeUnmount(function () {
           <BookShelfButton
             :book="book"
             :reading-chapter="readingChapter"
-          ></BookShelfButton>
+          />
         </div>
       </div>
       <div
@@ -561,8 +562,8 @@ onBeforeUnmount(function () {
       >
         <span v-if="readingChapter">{{ readingChapter?.title }}</span>
         <div
-          class="p-1 rounded bg-[var(--van-primary-color)] mr-2"
           v-if="bookSource"
+          class="p-1 rounded bg-[var(--van-primary-color)] mr-2"
         >
           {{ bookSource?.item.name }}
         </div>
@@ -602,11 +603,11 @@ onBeforeUnmount(function () {
                 : '',
           },
         ]"
+        :key="`pageStyle${index}`"
         class="page w-full h-full box-border shadow absolute left-0 top-0 overflow-hidden flex flex-col"
-        :key="'pageStyle' + index"
         :style="{
           transition: style.transition,
-          transform: 'translate3d(' + style.transform + ',0px,0px)',
+          transform: `translate3d(${style.transform},0px,0px)`,
           'z-index': style.zIndex,
           paddingLeft: `${bookStore.paddingX}px`,
           paddingRight: `${bookStore.paddingX}px`,
@@ -622,7 +623,7 @@ onBeforeUnmount(function () {
         <div
           class="status_bar w-full"
           :style="{ height: `${bookStore.paddingTop}px` }"
-        ></div>
+        />
         <!-- 小说段落 -->
         <div class="grow">
           <template
@@ -632,11 +633,11 @@ onBeforeUnmount(function () {
             <p
               v-if="line.isTitle"
               :style="{
-                'font-size': bookStore.fontSize * 1.3 + 'px',
+                'font-size': `${bookStore.fontSize * 1.3}px`,
                 'font-family': `'${bookStore.fontFamily}'`,
                 'line-height': bookStore.lineHeight * 1.3,
                 'text-indent': line.pFirst
-                  ? bookStore.fontSize * 1.3 * 2 + 'px'
+                  ? `${bookStore.fontSize * 1.3 * 2}px`
                   : '0px',
                 'text-align': 'justify',
                 'text-align-last': line.pLast ? 'auto' : 'justify',
@@ -644,7 +645,7 @@ onBeforeUnmount(function () {
                 //   ? bookStore.readPGap * 1.3 + 'px'
                 //   : '0px',
                 'padding-bottom': line.pLast
-                  ? bookStore.readPGap * 1.3 + 'px'
+                  ? `${bookStore.readPGap * 1.3}px`
                   : '0px',
               }"
             >
@@ -653,15 +654,15 @@ onBeforeUnmount(function () {
             <p
               v-else
               :style="{
-                'font-size': bookStore.fontSize + 'px',
+                'font-size': `${bookStore.fontSize}px`,
                 'font-family': `'${bookStore.fontFamily}'`,
                 'line-height': bookStore.lineHeight,
                 'text-indent': line.pFirst
-                  ? bookStore.fontSize * 2 + 'px'
+                  ? `${bookStore.fontSize * 2}px`
                   : '0px',
                 'text-align': 'justify',
                 'text-align-last': line.pLast ? 'auto' : 'justify',
-                'padding-top': line.pFirst ? bookStore.readPGap + 'px' : '0px',
+                'padding-top': line.pFirst ? `${bookStore.readPGap}px` : '0px',
               }"
             >
               {{ line.text }}
@@ -674,12 +675,14 @@ onBeforeUnmount(function () {
           class="bottom_bar flex items-center justify-between text-xs"
           :style="{ height: `${bookStore.paddingBottom}px` }"
         >
-          <p class="truncate">{{ readingChapter?.title }}</p>
+          <p class="truncate">
+            {{ readingChapter?.title }}
+          </p>
           <div class="flex flex-nowrap gap-1">
             <span>
               {{ pageNo }}/{{
-                typeof readingPagedContent === 'string'
-                  ? '1'
+                typeof readingPagedContent === "string"
+                  ? "1"
                   : readingPagedContent?.content.length || 1
               }}
             </span>
@@ -704,19 +707,25 @@ onBeforeUnmount(function () {
       class="bottom fixed bottom-0 left-0 z-[6] w-full flex flex-col p-2 pb-[50px] bg-[#1f1f1f] text-white transition"
     >
       <div class="flex items-center gap-[10px]">
-        <div class="text-sm w-[50px] van-haptics-feedback" @click="chapterPrev">
+        <div
+          class="text-sm w-[50px] van-haptics-feedback"
+          @click="chapterPrev"
+        >
           上一章
         </div>
         <van-slider
-          class="w-[calc(100%-120px)]"
           v-model="chapterPage"
+          class="w-[calc(100%-120px)]"
           :button-size="16"
           :max="
             readingPagedContent ? readingPagedContent.content.length - 1 : 0
           "
           @change="(val) => (chapterPage = val)"
-        ></van-slider>
-        <div class="text-sm w-[50px] van-haptics-feedback" @click="chapterNext">
+        />
+        <div
+          class="text-sm w-[50px] van-haptics-feedback"
+          @click="chapterNext"
+        >
           下一章
         </div>
       </div>
@@ -725,21 +734,33 @@ onBeforeUnmount(function () {
           class="flex flex-col gap-1 items-center van-haptics-feedback p-2"
           @click="() => emit('openChapterPopup')"
         >
-          <Icon icon="tabler:list" width="20" height="20" />
+          <Icon
+            icon="tabler:list"
+            width="20"
+            height="20"
+          />
           章节
         </div>
         <div
           class="flex flex-col gap-1 items-center van-haptics-feedback p-2"
           @click="() => (showSettingDialog = true)"
         >
-          <Icon icon="ci:font" width="20" height="20" />
+          <Icon
+            icon="ci:font"
+            width="20"
+            height="20"
+          />
           界面
         </div>
         <div
           class="flex flex-col gap-1 items-center van-haptics-feedback p-2"
           @click="() => (showReadSettingDialog = true)"
         >
-          <Icon icon="tabler:settings" width="20" height="20" />
+          <Icon
+            icon="tabler:settings"
+            width="20"
+            height="20"
+          />
           设置
         </div>
       </div>
@@ -755,7 +776,10 @@ onBeforeUnmount(function () {
       }"
     >
       <van-list>
-        <template v-for="item in book?.chapters" :key="item.id">
+        <template
+          v-for="item in book?.chapters"
+          :key="item.id"
+        >
           <div
             class="flex justify-start items-center text-sm gap-2 p-2 flex-nowrap select-none van-haptics-feedback"
             :class="{
@@ -769,11 +793,11 @@ onBeforeUnmount(function () {
             "
           >
             <Icon
+              v-if="readingChapter?.id === item.id"
               icon="iconamoon:eye-thin"
               width="24"
               height="24"
               color="var(--van-primary-color)"
-              v-if="readingChapter?.id === item.id"
             />
             <span
               class="flex-grow text-left overflow-hidden text-nowrap text-ellipsis"
@@ -786,10 +810,10 @@ onBeforeUnmount(function () {
               {{ item.title }}
             </span>
             <Icon
+              v-if="book && bookCacheStore.chapterInCache(book, item)"
               icon="material-symbols-light:download-done-rounded"
               width="20"
               height="20"
-              v-if="book && bookCacheStore.chapterInCache(book, item)"
             />
           </div>
         </template>
@@ -797,7 +821,7 @@ onBeforeUnmount(function () {
     </van-popup>
     <van-dialog
       v-model:show="showSettingDialog"
-      closeOnClickOverlay
+      close-on-click-overlay
       :show-confirm-button="false"
       class="setting-dialog bg-[#1f1f1f] text-white"
     >
@@ -811,7 +835,11 @@ onBeforeUnmount(function () {
             <span class="text-white">字体大小</span>
           </template>
           <template #value>
-            <van-stepper v-model="bookStore.fontSize" min="10" max="40" />
+            <van-stepper
+              v-model="bookStore.fontSize"
+              min="10"
+              max="40"
+            />
           </template>
         </van-cell>
         <van-cell class="bg-[#1f1f1f]">
@@ -833,7 +861,11 @@ onBeforeUnmount(function () {
             <span class="text-white">段间距</span>
           </template>
           <template #value>
-            <van-stepper v-model="bookStore.readPGap" min="0" max="30" />
+            <van-stepper
+              v-model="bookStore.readPGap"
+              min="0"
+              max="30"
+            />
           </template>
         </van-cell>
         <van-cell class="bg-[#1f1f1f]">
@@ -841,7 +873,11 @@ onBeforeUnmount(function () {
             <span class="text-white">左右边距</span>
           </template>
           <template #value>
-            <van-stepper v-model="bookStore.paddingX" min="0" max="60" />
+            <van-stepper
+              v-model="bookStore.paddingX"
+              min="0"
+              max="60"
+            />
           </template>
         </van-cell>
         <van-cell class="bg-[#1f1f1f]">
@@ -853,7 +889,10 @@ onBeforeUnmount(function () {
           </template>
         </van-cell>
         <div class="pb-2">文字颜色和背景</div>
-        <div v-horizontal-scroll class="flex gap-2 overflow-x-auto">
+        <div
+          v-horizontal-scroll
+          class="flex gap-2 overflow-x-auto"
+        >
           <div
             v-for="theme in bookStore.themes"
             :key="JSON.stringify(theme)"
@@ -880,7 +919,7 @@ onBeforeUnmount(function () {
     </van-dialog>
     <van-dialog
       v-model:show="showReadSettingDialog"
-      closeOnClickOverlay
+      close-on-click-overlay
       :show-confirm-button="false"
       class="setting-dialog bg-[#1f1f1f]"
     >
@@ -896,7 +935,10 @@ onBeforeUnmount(function () {
             <van-switch v-model="bookStore.fullScreenClickToNext" />
           </template>
         </van-cell>
-        <van-cell class="bg-[#1f1f1f]" v-if="displayStore.isAndroid">
+        <van-cell
+          v-if="displayStore.isAndroid"
+          class="bg-[#1f1f1f]"
+        >
           <template #title>
             <span class="text-white">保持屏幕常亮</span>
           </template>
@@ -918,6 +960,7 @@ onBeforeUnmount(function () {
       </div>
     </van-dialog>
     <SwitchBookSourceDialog
+      v-if="book"
       v-model:show="showSwitchSourceDialog"
       :search-result="allSourceResults || []"
       :book="book"
@@ -929,8 +972,7 @@ onBeforeUnmount(function () {
         }
       "
       @select="(item) => emit('switchSource', item)"
-      v-if="book"
-    ></SwitchBookSourceDialog>
+    />
   </div>
 </template>
 

@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import { useDisplayStore, useStore } from '@/store';
-import { storeToRefs } from 'pinia';
-import BookShelf from '@/views/book/BookShelf.vue';
+import type { BookItem } from '@/extensions/book';
+import type { BookSource } from '@/types';
+import type { ComponentPublicInstance } from 'vue';
 import MobileHeader from '@/components/mobile/MobileHeader.vue';
 import MobileBooksTab from '@/components/tabs/MobileBooksTab.vue';
-import { BookSource } from '@/types';
-import { BookItem } from '@/extensions/book';
-import { ComponentPublicInstance, ref } from 'vue';
+import { useDisplayStore, useStore } from '@/store';
 import { sleep } from '@/utils';
-
-const searchValue = defineModel('searchValue', { type: String, default: '' });
+import BookShelf from '@/views/book/BookShelf.vue';
+import { storeToRefs } from 'pinia';
+import { ref } from 'vue';
 
 const emit = defineEmits<{
   (e: 'recommend', force?: boolean): void;
@@ -21,32 +19,31 @@ const emit = defineEmits<{
   (e: 'openBaseUrl', source: BookSource): void;
 }>();
 
+const searchValue = defineModel('searchValue', { type: String, default: '' });
+
 const store = useStore();
 const displayStore = useDisplayStore();
 const { bookSources } = storeToRefs(store);
 
 const isRefreshing = ref(false);
-const onRefresh = async () => {
+async function onRefresh() {
   isRefreshing.value = true;
   emit('search');
   await sleep(1000);
   isRefreshing.value = false;
-};
-const search = () => {
+}
+function search() {
   emit('search');
-};
+}
 
 const containers = ref<Array<HTMLElement | undefined>>(
-  new Array(2000).fill(undefined)
+  Array.from({ length: 2000 }).fill(undefined),
 );
-const setContainerRef = (
-  el: Element | ComponentPublicInstance | null,
-  index: number
-) => {
+function setContainerRef(el: Element | ComponentPublicInstance | null, index: number) {
   if (el) {
     containers.value[index] = el as HTMLElement;
   }
-};
+}
 </script>
 
 <template>
@@ -55,12 +52,12 @@ const setContainerRef = (
       v-model:search-value="searchValue"
       @search="search"
       @show-shelf="() => (displayStore.showBookShelf = true)"
-    ></MobileHeader>
+    />
     <van-pull-refresh
-      v-remember-scroll
       v-model="isRefreshing"
-      @refresh="onRefresh"
+      v-remember-scroll
       class="main grow overflow-x-hidden overflow-y-auto"
+      @refresh="onRefresh"
     >
       <van-collapse v-model="displayStore.bookCollapse">
         <div
@@ -69,10 +66,10 @@ const setContainerRef = (
           :ref="(el) => setContainerRef(el, index)"
         >
           <van-collapse-item
-            :name="item.item.name"
             v-show="
               item.list && !(!Array.isArray(item.list) && !item.list?.list)
             "
+            :name="item.item.name"
           >
             <template #title>
               <van-sticky offset-top="50" :container="containers[index]">
@@ -88,13 +85,13 @@ const setContainerRef = (
                 (source, pageNo, type) => emit('loadPage', source, pageNo, type)
               "
               @on-detail="(source, item) => emit('toDetail', source, item)"
-            ></MobileBooksTab>
+            />
           </van-collapse-item>
         </div>
       </van-collapse>
       <van-back-top bottom="60" right="10" />
     </van-pull-refresh>
-    <BookShelf></BookShelf>
+    <BookShelf />
   </div>
 </template>
 

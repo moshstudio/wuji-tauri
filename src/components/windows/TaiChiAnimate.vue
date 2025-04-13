@@ -1,25 +1,8 @@
-<template>
-  <div class="fixed w-full h-full overflow-hidden">
-    <div
-      class="relative left-1/2 top-1/2 translate-x-[-500px] translate-y-[-130px]"
-    >
-      <div class="tai-chi-animation absolute">
-        <div
-          v-for="(part, index) in parts"
-          :key="index"
-          class="part"
-          :style="getPartStyle(part)"
-          @click="toggle"
-        />
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted, CSSProperties, watch } from 'vue';
+import type { CSSProperties } from 'vue';
 import { useDisplayStore } from '@/store';
 import { storeToRefs } from 'pinia';
+import { onMounted, ref, watch } from 'vue';
 
 interface Part {
   x: number;
@@ -127,12 +110,12 @@ const initialParts: Part[] = [
 ];
 const randomized = ref(false);
 
-const buildParts = () => {
+function buildParts() {
   parts.value.splice(0, parts.value.length);
   parts.value.push(...JSON.parse(JSON.stringify(initialParts)));
-};
+}
 
-const getPartStyle = (part: Part): CSSProperties => {
+function getPartStyle(part: Part): CSSProperties {
   const left = part.x * (size + gap);
   const top = part.y * (size + gap);
   return {
@@ -146,9 +129,9 @@ const getPartStyle = (part: Part): CSSProperties => {
     transform: `rotate(${part.deg ?? 0}deg)`,
     transition: `all ${duration}ms`,
   };
-};
+}
 
-const randomize = () => {
+function randomize() {
   randomized.value = true;
   parts.value.forEach((part) => {
     const partSize = Math.max(50, Math.floor(Math.random() * (size * 8)));
@@ -161,20 +144,21 @@ const randomize = () => {
     part.rotate = Math.floor(Math.random() * 90);
     part.deg = Math.floor(Math.random() * 360) - 180;
   });
-};
+}
 
-const assemble = () => {
+function assemble() {
   randomized.value = false;
   buildParts();
-};
+}
 
-const toggle = () => {
+function toggle() {
   if (randomized.value) {
     assemble();
-  } else {
+  }
+  else {
     randomize();
   }
-};
+}
 
 onMounted(() => {
   buildParts();
@@ -182,11 +166,30 @@ onMounted(() => {
 watch(taichiAnimateRandomized, (v) => {
   if (v) {
     randomize();
-  } else {
+  }
+  else {
     assemble();
   }
 });
 </script>
+
+<template>
+  <div class="fixed w-full h-full overflow-hidden">
+    <div
+      class="relative left-1/2 top-1/2 translate-x-[-500px] translate-y-[-130px]"
+    >
+      <div class="tai-chi-animation absolute">
+        <div
+          v-for="(part, index) in parts"
+          :key="index"
+          class="part"
+          :style="getPartStyle(part)"
+          @click="toggle"
+        />
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .part {

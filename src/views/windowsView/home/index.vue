@@ -1,25 +1,26 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { open } from '@tauri-apps/plugin-shell';
-import TaiChiAnimate from '../../../components/windows/TaiChiAnimate.vue';
-import { showToast } from 'vant';
-import { useDisplayStore, useStore } from '@/store';
-import { storeToRefs } from 'pinia';
 import { apiHot } from '@/apis/hot';
+import { useDisplayStore, useStore } from '@/store';
 import { sleep } from '@/utils';
+import { open } from '@tauri-apps/plugin-shell';
+import { storeToRefs } from 'pinia';
+import { showToast } from 'vant';
+import { onMounted, ref } from 'vue';
+import TaiChiAnimate from '../../../components/windows/TaiChiAnimate.vue';
 
 const store = useStore();
 const { hotItems } = storeToRefs(store);
 
 const active = ref(0);
-const openInBrowser = async (url: string) => {
+async function openInBrowser(url: string) {
   try {
     await open(url);
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Failed to open link:', error);
     showToast('打开失败,请尝试重置默认浏览器');
   }
-};
+}
 onMounted(async () => {
   if (!hotItems.value.length) {
     const res = await apiHot.fetchHotApi();
@@ -33,7 +34,7 @@ onMounted(async () => {
 
 <template>
   <div class="relative w-full h-full">
-    <TaiChiAnimate></TaiChiAnimate>
+    <TaiChiAnimate />
     <div class="absolute left-1/2 -translate-x-1/2 max-w-full h-full">
       <van-tabs
         v-model:active="active"
@@ -51,7 +52,7 @@ onMounted(async () => {
               class="van-haptics-feedback"
               @click="openInBrowser(entity.url)"
             >
-              <template #value v-if="entity.cover">
+              <template v-if="entity.cover" #value>
                 <van-image
                   width="10em"
                   radius="4"

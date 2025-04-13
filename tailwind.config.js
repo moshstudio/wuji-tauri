@@ -12,16 +12,16 @@ export default {
         },
       },
       animation: {
-        shake: 'shake 0.2s linear 2s infinite',
+        'shake': 'shake 0.2s linear 2s infinite',
         'spin-slow': 'spin 9s linear infinite',
       },
     },
     screens: {
-      xs: '360px',
-      sm: '640px',
-      md: '700px',
-      lg: '865px',
-      xl: '1000px',
+      'xs': '360px',
+      'sm': '640px',
+      'md': '700px',
+      'lg': '865px',
+      'xl': '1000px',
       '2xl': '1280px',
       '3xl': '1560px',
       '4xl': '1920px',
@@ -46,8 +46,8 @@ export default {
       '4xl',
       '5xl',
       '6xl',
-    ].flatMap((prefix) =>
-      Array.from({ length: 12 }, (_, i) => `${prefix}:grid-cols-${i + 1}`)
+    ].flatMap(prefix =>
+      Array.from({ length: 12 }, (_, i) => `${prefix}:grid-cols-${i + 1}`),
     ),
     ...Array.from({ length: 12 }, (_, i) => `p-${i + 1}`),
     ...Array.from({ length: 12 }, (_, i) => `gap-${i + 1}`),

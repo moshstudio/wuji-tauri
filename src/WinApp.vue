@@ -1,26 +1,26 @@
 <script setup lang="ts">
+import type {
+  Ref,
+  VNode,
+} from 'vue';
+import AboutDialog from '@/components/dialogs/About.vue';
+import ImportSubscribeDialog from '@/components/windows/dialogs/ImportSubscribe.vue';
+import { Icon } from '@iconify/vue';
+import { TrayIcon } from '@tauri-apps/api/tray';
+import { storeToRefs } from 'pinia';
 import {
   computed,
-  nextTick,
   onBeforeUnmount,
   onMounted,
   reactive,
-  Ref,
   ref,
-  VNode,
   watch,
 } from 'vue';
-import { useStore, useDisplayStore } from './store';
-import { Icon } from '@iconify/vue';
 import { useRoute } from 'vue-router';
-import buildTray from './utils/tray';
-import ImportSubscribeDialog from '@/components/windows/dialogs/ImportSubscribe.vue';
 import ManageSubscribeDialog from './components/windows/dialogs/ManageSubscribe.vue';
-import AboutDialog from '@/components/dialogs/About.vue';
 import SettingDialog from './components/windows/dialogs/Setting.vue';
-import { TrayIcon } from '@tauri-apps/api/tray';
-import { storeToRefs } from 'pinia';
-import { router } from './router';
+import { useDisplayStore, useStore } from './store';
+import buildTray from './utils/tray';
 
 interface PageItem {
   name: string;
@@ -37,8 +37,8 @@ const store = useStore();
 const displayStore = useDisplayStore();
 
 const homePath = ref('/home');
-const { photoPath, songPath, bookPath, comicPath, videoPath, tabBarPages } =
-  storeToRefs(displayStore);
+const { photoPath, songPath, bookPath, comicPath, videoPath, tabBarPages }
+  = storeToRefs(displayStore);
 const _pages: any = reactive({
   Home: {
     name: 'Home',
@@ -79,8 +79,8 @@ const _pages: any = reactive({
 });
 const pages = computed(() => {
   return tabBarPages.value
-    .filter((page) => page.enable)
-    .map((page) => _pages[page.name as keyof typeof _pages]);
+    .filter(page => page.enable)
+    .map(page => _pages[page.name as keyof typeof _pages]);
 });
 
 const activeKey = ref('0');
@@ -122,45 +122,51 @@ const sourceActions = [
     },
   },
 ];
-const onClickAction = (action: { text: string; onClick: Function }) => {
+function onClickAction(action: { text: string; onClick: Function }) {
   action.onClick();
-};
+}
 
-const updateActiveKey = (newPath?: string) => {
+function updateActiveKey(newPath?: string) {
   newPath ||= route.path;
   displayStore.routerCurrPath = newPath;
   if (newPath.startsWith('/home')) {
     activeKey.value = String(
-      pages.value.findIndex((page) => page.name === 'Home')
+      pages.value.findIndex(page => page.name === 'Home'),
     );
-  } else if (newPath.startsWith('/photo')) {
+  }
+  else if (newPath.startsWith('/photo')) {
     photoPath.value = newPath;
     activeKey.value = String(
-      pages.value.findIndex((page) => page.name === 'Photo')
+      pages.value.findIndex(page => page.name === 'Photo'),
     );
-  } else if (newPath.startsWith('/song')) {
+  }
+  else if (newPath.startsWith('/song')) {
     songPath.value = newPath;
     activeKey.value = String(
-      pages.value.findIndex((page) => page.name === 'Song')
+      pages.value.findIndex(page => page.name === 'Song'),
     );
-  } else if (newPath.startsWith('/book')) {
+  }
+  else if (newPath.startsWith('/book')) {
     bookPath.value = newPath;
     activeKey.value = String(
-      pages.value.findIndex((page) => page.name === 'Book')
+      pages.value.findIndex(page => page.name === 'Book'),
     );
-  } else if (newPath.startsWith('/comic')) {
+  }
+  else if (newPath.startsWith('/comic')) {
     comicPath.value = newPath;
     activeKey.value = String(
-      pages.value.findIndex((page) => page.name === 'Comic')
+      pages.value.findIndex(page => page.name === 'Comic'),
     );
-  } else if (newPath.startsWith('/video')) {
+  }
+  else if (newPath.startsWith('/video')) {
     videoPath.value = newPath;
     activeKey.value = String(
-      pages.value.findIndex((page) => page.name === 'Video')
+      pages.value.findIndex(page => page.name === 'Video'),
     );
-  } else {
   }
-};
+  else {
+  }
+}
 
 // 记录上一次的页面路径
 watch([() => route.path, pages], ([newPath, newPages]) => {
@@ -267,7 +273,7 @@ onBeforeUnmount(async () => {
         color="teal"
         height="4"
         @click="() => displayStore.closeToast()"
-      ></v-progress-linear>
+      />
     </div>
   </div>
 

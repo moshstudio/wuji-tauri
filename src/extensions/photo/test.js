@@ -8,9 +8,9 @@ class TestPhotoExtension extends PhotoExtension {
 
   async getRecommendList(pageNo) {
     pageNo ||= 1;
-    let url = `${this.baseUrl}photo/page/${pageNo}/`;
+    const url = `${this.baseUrl}photo/page/${pageNo}/`;
     const document = await this.fetchDom(url, {
-      headers: { 'Upgrade-Insecure-Requests': '1', Referer: this.baseUrl },
+      headers: { 'Upgrade-Insecure-Requests': '1', 'Referer': this.baseUrl },
     });
     const list = await this.queryPhotoElements(document, {
       element: 'main .uk-card',
@@ -33,10 +33,10 @@ class TestPhotoExtension extends PhotoExtension {
 
   async search(keyword, pageNo) {
     pageNo ||= 1;
-    let url = `${this.baseUrl}search/${keyword}/page/${pageNo}/`;
+    const url = `${this.baseUrl}search/${keyword}/page/${pageNo}/`;
 
     const document = await this.fetchDom(url, {
-      headers: { 'Upgrade-Insecure-Requests': '1', Referer: this.baseUrl },
+      headers: { 'Upgrade-Insecure-Requests': '1', 'Referer': this.baseUrl },
     });
     const list = await this.queryPhotoElements(document, {
       element: '.uk-article',
@@ -56,13 +56,14 @@ class TestPhotoExtension extends PhotoExtension {
       totalPage: this.maxPageNoFromElements(pageItems),
     };
   }
+
   async getPhotoDetail(item, pageNo) {
     const firstResponse = await this.fetch(item.url, {
-      headers: { 'Upgrade-Insecure-Requests': '1', Referer: this.baseUrl },
+      headers: { 'Upgrade-Insecure-Requests': '1', 'Referer': this.baseUrl },
     });
     const element = new DOMParser().parseFromString(
       await firstResponse.text(),
-      'text/html'
+      'text/html',
     );
     const img = element?.querySelector('.uk-container img');
     const imgSrc = img?.getAttribute('src');
@@ -75,18 +76,17 @@ class TestPhotoExtension extends PhotoExtension {
     const response = await this.fetch(url, {
       headers: {
         'Upgrade-Insecure-Requests': '1',
-        Referer: this.baseUrl,
+        'Referer': this.baseUrl,
       },
     });
 
     const encryptData = (await response.json()).data;
     const iv = Array.from({ length: 16 }, (_, i) =>
-      ((parseInt(pid) % (i + 3)) % 9).toString()
-    ).join('');
+      ((Number.parseInt(pid) % (i + 3)) % 9).toString()).join('');
     const data = this.decryptPid(pid, encryptData, iv);
     return {
       item,
-      photos: data.map((link) => this.urlJoin(imgPrefix, link)),
+      photos: data.map(link => this.urlJoin(imgPrefix, link)),
       photosHeaders: { Referer: imgPrefix },
       page: pageNo || 1,
       totalPage: pageNo || 1,
@@ -107,7 +107,7 @@ class TestPhotoExtension extends PhotoExtension {
     const data1 = encryptData.split(s)[1];
     // 将16进制字符串转换为Base64编码
     const base64 = this.cryptoJs.enc.Base64.stringify(
-      this.cryptoJs.enc.Hex.parse(data1)
+      this.cryptoJs.enc.Hex.parse(data1),
     );
 
     const decryptedData = this.cryptoJs.AES.decrypt(
@@ -115,7 +115,7 @@ class TestPhotoExtension extends PhotoExtension {
       this.cryptoJs.enc.Utf8.parse(key),
       {
         iv: this.cryptoJs.enc.Utf8.parse(iv),
-      }
+      },
     )
       .toString(this.cryptoJs.enc.Utf8)
       .toString();

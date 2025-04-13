@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { useDisplayStore } from '@/store';
+import { Icon } from '@iconify/vue';
 import _ from 'lodash';
 import { storeToRefs } from 'pinia';
-import { Icon } from '@iconify/vue';
 import { computed, ref } from 'vue';
 
+const emit = defineEmits<{
+  (e: 'search'): void;
+}>();
 const displayStore = useDisplayStore();
 const { searchHistories } = storeToRefs(displayStore);
 
@@ -12,21 +15,17 @@ const searchValue = defineModel('searchValue', {
   type: String,
   required: true,
 });
-const emit = defineEmits<{
-  (e: 'search'): void;
-}>();
-
 const showHistory = ref(false);
 const searchInput = ref<HTMLInputElement>();
 
-const onSearch = () => {
+function onSearch() {
   emit('search');
   saveSearch();
-};
-const clearSearch = () => {
+}
+function clearSearch() {
   searchValue.value = '';
   onSearch();
-};
+}
 
 // 实时过滤历史记录
 const filteredHistory = computed(() => {
@@ -34,58 +33,60 @@ const filteredHistory = computed(() => {
     return searchHistories.value;
   }
   return searchHistories.value.filter((item: string) =>
-    item.toLowerCase().includes(searchValue.value.toLowerCase())
+    item.toLowerCase().includes(searchValue.value.toLowerCase()),
   );
 });
 
 // 输入处理
-const handleInput = () => {
+function handleInput() {
   if (searchValue.value && !filteredHistory.value) {
     showHistory.value = true;
   }
-};
+}
 
 // 保存搜索
-const saveSearch = () => {
-  if (!searchValue.value.trim()) return;
+function saveSearch() {
+  if (!searchValue.value.trim())
+    return;
 
   if (searchHistories.value.includes(searchValue.value)) {
-    _.remove(searchHistories.value, (item) => item === searchValue.value);
+    _.remove(searchHistories.value, item => item === searchValue.value);
   }
   searchHistories.value.unshift(searchValue.value);
   showHistory.value = false;
-};
+}
 
 // 选择历史记录
-const selectHistory = (item: string) => {
+function selectHistory(item: string) {
   searchValue.value = item;
   showHistory.value = false;
   setTimeout(() => {
     // 如果需要可以在这里触发搜索
     // doSearch()
   }, 0);
-};
+}
 
-const deleteHistory = (e: Event, item: string) => {
+function deleteHistory(e: Event, item: string) {
   e.preventDefault();
-  _.remove(searchHistories.value, (i) => i === item);
+  _.remove(searchHistories.value, i => i === item);
   searchInput.value?.focus();
   showHistory.value = true;
-};
+}
 
 // 清空历史记录
-const clearHistory = () => {
+function clearHistory() {
   searchHistories.value = [];
   showHistory.value = false;
-};
+}
 
 // 失去焦点处理
-const onBlur = () => {
+function onBlur() {
   setTimeout(() => {
     showHistory.value = false;
   }, 200);
-};
+}
 </script>
+
 <template>
   <div class="relative w-full max-w-md mx-auto">
     <van-search
@@ -127,7 +128,9 @@ const onBlur = () => {
             :key="index"
             class="px-4 py-2 cursor-pointer flex items-center justify-between"
           >
-            <p class="flex-grow" @click="selectHistory(item)">{{ item }}</p>
+            <p class="flex-grow" @click="selectHistory(item)">
+              {{ item }}
+            </p>
             <Icon
               icon="jam:close"
               width="24"

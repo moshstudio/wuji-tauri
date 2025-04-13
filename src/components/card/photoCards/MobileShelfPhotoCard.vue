@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { PhotoItem } from '@/extensions/photo';
-import { router } from '@/router';
-import { onMounted, PropType, ref } from 'vue';
+import type { PhotoItem } from '@/extensions/photo';
+import type { PhotoSource } from '@/types';
+import type { PropType } from 'vue';
 import LoadImage from '@/components/LoadImage.vue';
-import { PhotoSource } from '@/types';
-import { useDisplayStore, useStore } from '@/store';
+import { router } from '@/router';
+import { useStore } from '@/store';
+import { onMounted, ref } from 'vue';
 
 const { item, selecteMode } = defineProps({
   item: {
@@ -20,7 +21,7 @@ const selected = defineModel('selected');
 
 const source = ref<PhotoSource>();
 
-const onClick = () => {
+function onClick() {
   if (selecteMode) {
     selected.value = !selected.value;
     return;
@@ -29,7 +30,7 @@ const onClick = () => {
     name: 'PhotoDetail',
     params: { id: item.id, sourceId: item.sourceId },
   });
-};
+}
 
 onMounted(() => {
   const store = useStore();
@@ -52,8 +53,8 @@ onMounted(() => {
     />
 
     <p
-      class="text-xs text-[var(--van-text-color)] text-center truncate py-1"
       v-if="item.title"
+      class="text-xs text-[var(--van-text-color)] text-center truncate py-1"
     >
       {{ item.title }}
     </p>
@@ -64,12 +65,12 @@ onMounted(() => {
       {{ source.item.name }}
     </p>
     <van-checkbox
+      v-if="selecteMode"
       v-model="selected"
       shape="square"
       class="absolute top-2 right-2"
       @click.stop="onClick"
-      v-if="selecteMode"
-    ></van-checkbox>
+    />
   </div>
 </template>
 

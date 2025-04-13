@@ -1,24 +1,28 @@
 <script lang="ts" setup>
-import { ref, CSSProperties, PropType } from 'vue';
-import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
-import { storeToRefs } from 'pinia';
-import { Lyric } from '@/utils/lyric';
-import { transTime } from '@/utils';
+import type { Lyric } from '@/utils/lyric';
+import type { CSSProperties, PropType } from 'vue';
+import CDSVG from '@/assets/cd.svg';
 import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
 import SongSelectShelfSheet from '@/components/actionSheets/SongSelectShelf.vue';
 import LoadImage from '@/components/LoadImage.vue';
-import CDSVG from '@/assets/cd.svg';
+import { useSongShelfStore, useSongStore } from '@/store';
+import { transTime } from '@/utils';
+import { storeToRefs } from 'pinia';
+import { ref } from 'vue';
 
+const emit = defineEmits<{
+  (e: 'hidePanel'): void;
+}>();
 const songStore = useSongStore();
 const { playingSong, isPlaying } = storeToRefs(songStore);
 
 const show = defineModel('show', { type: Boolean, default: false });
 const lyric = defineModel('lyric', { type: Object as PropType<Lyric> });
-const activeIndex = defineModel('activeIndex', { type: Number, default: 0 }); //高亮Index
+const activeIndex = defineModel('activeIndex', { type: Number, default: 0 }); // 高亮Index
 const transformStyle = defineModel('transformStyle', {
   type: String,
   default: '',
-}); //偏移量
+}); // 偏移量
 const panelBackgroundStyle = defineModel('panelBackgroundStyle', {
   type: Object as PropType<CSSProperties>,
   default: { 'background-color': 'rgba(0, 0, 0, 0.1)' },
@@ -29,22 +33,18 @@ const shelfAnchors = defineModel('shelfAnchors', {
 });
 const shelfHeight = defineModel('shelfHeight', { type: Number, default: 0 });
 
-const emit = defineEmits<{
-  (e: 'hidePanel'): void;
-}>();
-
 const shelfStore = useSongShelfStore();
 
 const isFlipped = ref(false);
 const showMoreOptions = ref(false);
 const showAddToShelfSheet = ref(false);
 
-const flipCard = () => {
+function flipCard() {
   isFlipped.value = !isFlipped.value;
-};
-const addSongToShelf = (shelfId: string) => {
+}
+function addSongToShelf(shelfId: string) {
   shelfStore.addSongToShelf(playingSong.value, shelfId);
-};
+}
 </script>
 
 <template>
@@ -52,6 +52,8 @@ const addSongToShelf = (shelfId: string) => {
     v-model:height="shelfHeight"
     :anchors="shelfAnchors"
     :content-draggable="false"
+    class="z-[1000] left-[0px] right-[0px] w-auto h-full rounded-none up-shadow bottom-[110px] overflow-hidden playing-bg"
+    :style="show ? { height: `${shelfHeight}px` } : {}"
     @height-change="
       (height) => {
         if (height.height === shelfAnchors[0]) {
@@ -59,8 +61,6 @@ const addSongToShelf = (shelfId: string) => {
         }
       }
     "
-    class="z-[1000] left-[0px] right-[0px] w-auto h-full rounded-none up-shadow bottom-[110px] overflow-hidden playing-bg"
-    :style="show ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
       <van-row class="absolute p-4 z-[1001]">
@@ -72,9 +72,9 @@ const addSongToShelf = (shelfId: string) => {
       </van-row>
     </template>
     <div
+      v-if="playingSong"
       class="flip-card overflow-hidden"
       :class="{ flipped: isFlipped }"
-      v-if="playingSong"
     >
       <div class="front flex flex-col gap-2" @click="flipCard">
         <div
@@ -99,7 +99,7 @@ const addSongToShelf = (shelfId: string) => {
 
           <span
             class="mask absolute top-0 left-0 w-full h-full bg-cover"
-          ></span>
+          />
         </div>
         <div class="flex gap-2 px-4 w-full items-center justify-between mt-12">
           <div class="left flex gap-1 items-center text-xs text-gray-400">
@@ -114,18 +114,18 @@ const addSongToShelf = (shelfId: string) => {
           <div class="right flex gap-2">
             <div class="clickable p-1">
               <van-icon
+                v-if="shelfStore.songInLikeShelf(playingSong)"
                 class="text-red-600"
                 name="like"
                 size="20"
                 @click.stop="() => shelfStore.removeSongFromShelf(playingSong)"
-                v-if="shelfStore.songInLikeShelf(playingSong)"
               />
               <van-icon
+                v-else
                 name="like-o"
                 class="text-gray-400"
                 size="20"
                 @click.stop="() => shelfStore.addSongToShelf(playingSong)"
-                v-else
               />
             </div>
             <div
@@ -142,23 +142,25 @@ const addSongToShelf = (shelfId: string) => {
         </div>
       </div>
       <div class="back" @click="flipCard">
-        <div class="w-[90%]" v-if="lyric">
+        <div v-if="lyric" class="w-[90%]">
           <ul
             class="flex flex-col gap-[10px] justify-start items-center text-center p-6 mt-[30vh] transition ease-in-out duration-500"
             :style="transformStyle"
           >
             <li
+              v-for="(item, index) in lyric"
+              :key="item.position"
               class="lyric-line list-none text-sm text-white leading-1 cursor-pointer transition ease-in-out duration-500"
               :class="activeIndex === index ? 'active-line' : ''"
               :data-index="index"
-              v-for="(item, index) in lyric"
-              :key="item.position"
             >
               {{ item.lyric }}
             </li>
           </ul>
         </div>
-        <div v-else class="text-sm text-white mt-[30vh]">没有歌词</div>
+        <div v-else class="text-sm text-white mt-[30vh]">
+          没有歌词
+        </div>
       </div>
     </div>
     <MoreOptionsSheet
@@ -173,19 +175,19 @@ const addSongToShelf = (shelfId: string) => {
           },
         },
       ]"
-    ></MoreOptionsSheet>
+    />
     <SongSelectShelfSheet
+      v-if="songStore.playingSong"
       v-model:show="showAddToShelfSheet"
       :song="songStore.playingSong"
       title="选择收藏夹"
       :show-confirm-button="false"
       teleport="body"
       show-cancel-button
-      v-if="songStore.playingSong"
-    >
-    </SongSelectShelfSheet>
+    />
   </van-floating-panel>
 </template>
+
 <style scoped lang="less">
 :deep(.van-floating-panel__content) {
   background-color: transparent;

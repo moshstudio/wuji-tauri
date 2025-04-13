@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { SongInfo } from '@/extensions/song';
+import type { SongInfo } from '@/extensions/song';
 import { useSongShelfStore } from '@/store';
-import { ref, reactive, computed } from 'vue';
-const show = defineModel<boolean>();
+import { computed } from 'vue';
+
 const { song } = defineProps<{
   song: SongInfo;
 }>();
-
+const show = defineModel<boolean>();
 const shelfStore = useSongShelfStore();
 const actions = computed(() => {
   return shelfStore.songCreateShelf.map((item) => {
-    const existed = item.playlist.list?.list.some((s) => s.id === song.id);
+    const existed = item.playlist.list?.list.some(s => s.id === song.id);
     return {
       name: item.playlist.name,
       subname: existed

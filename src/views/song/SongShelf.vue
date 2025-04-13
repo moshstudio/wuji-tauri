@@ -1,29 +1,28 @@
 <script setup lang="ts">
-import WinSongShelf from '../windowsView/song/SongShelf.vue';
-import MobileSongShelf from '../mobileView/song/SongShelf.vue';
+import type { PlaylistInfo } from '@/extensions/song';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
 import {
-  useStore,
-  useSongStore,
-  useSongShelfStore,
   useDisplayStore,
+  useSongShelfStore,
+  useStore,
 } from '@/store';
-import _ from 'lodash';
-import { showLoadingToast, showToast } from 'vant';
-import { onMounted, onUnmounted, ref, triggerRef, watch } from 'vue';
-import { PlaylistInfo, SongShelf } from '@/extensions/song';
-import { sleep } from '@/utils';
 import { SongShelfType } from '@/types/song';
+import { sleep } from '@/utils';
 import { storeToRefs } from 'pinia';
+import { showLoadingToast, showToast } from 'vant';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
+import MobileSongShelf from '../mobileView/song/SongShelf.vue';
+import WinSongShelf from '../windowsView/song/SongShelf.vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();
 const { showSongShelf, selectedSongShelf } = storeToRefs(displayStore);
 const shelfStore = useSongShelfStore();
 
-const loadPage = async (id: String, pageNo?: number) => {
-  const shelf = shelfStore.songPlaylistShelf.find((s) => s.playlist.id === id);
-  if (!shelf) return;
+async function loadPage(id: string, pageNo?: number) {
+  const shelf = shelfStore.songPlaylistShelf.find(s => s.playlist.id === id);
+  if (!shelf)
+    return;
   const source = store.getSongSource(shelf.playlist.sourceId);
   if (!source) {
     showToast('找不到歌曲源');
@@ -36,9 +35,9 @@ const loadPage = async (id: String, pageNo?: number) => {
   });
   await store.songPlaylistDetail(source, shelf.playlist, pageNo);
   t.close();
-};
+}
 
-const playAll = async (playlist: PlaylistInfo) => {
+async function playAll(playlist: PlaylistInfo) {
   if (!playlist) {
     return;
   }
@@ -50,33 +49,34 @@ const playAll = async (playlist: PlaylistInfo) => {
   });
   await store.songPlaylistPlayAll(playlist);
   t.close();
-};
+}
 
 // 收藏展示相关
 const offset = -80;
 const shelfAnchors = ref([offset, Math.round(window.innerHeight) + offset]);
 const shelfHeight = ref(0);
-const hidePanel = () => {
+function hidePanel() {
   shelfHeight.value = shelfAnchors.value[0];
   showSongShelf.value = false;
-};
+}
 watch(
   showSongShelf,
   (newValue) => {
     if (newValue) {
       shelfHeight.value = shelfAnchors.value[1];
-    } else {
+    }
+    else {
       shelfHeight.value = shelfAnchors.value[0];
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
-const updateAnchors = () => {
+function updateAnchors() {
   shelfAnchors.value[1] = Math.round(window.innerHeight) + offset;
   if (showSongShelf.value) {
     shelfHeight.value = shelfAnchors.value[1];
   }
-};
+}
 onMounted(async () => {
   window.addEventListener('resize', updateAnchors);
   await sleep(1000);
@@ -100,10 +100,11 @@ watch(
           const source = store.getSongSource(shelf.playlist.sourceId);
           if (!source) {
             showToast('歌曲源不存在或未启用');
-          } else {
+          }
+          else {
             const detail = await store.songPlaylistDetail(
               source,
-              shelf.playlist
+              shelf.playlist,
             );
             if (detail) {
               shelf.playlist.list = detail.list;
@@ -113,7 +114,7 @@ watch(
       }
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 </script>
 
@@ -126,7 +127,7 @@ watch(
         @load-page="loadPage"
         @play-all="playAll"
         @hide-panel="hidePanel"
-      ></MobileSongShelf>
+      />
     </template>
     <template #windows>
       <WinSongShelf
@@ -135,7 +136,7 @@ watch(
         @load-page="loadPage"
         @play-all="playAll"
         @hide-panel="hidePanel"
-      ></WinSongShelf>
+      />
     </template>
   </PlatformSwitch>
 </template>

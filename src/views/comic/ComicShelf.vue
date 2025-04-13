@@ -1,24 +1,23 @@
 <script setup lang="ts">
-import { ComicItemInShelf } from '@/extensions/comic';
+import type { ComicItemInShelf } from '@/extensions/comic';
 import { router } from '@/router';
-import { useStore, useComicShelfStore, useDisplayStore } from '@/store';
-import _ from 'lodash';
+import { useComicShelfStore, useDisplayStore, useStore } from '@/store';
+import { storeToRefs } from 'pinia';
 import { showLoadingToast, showToast } from 'vant';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
-import WinComicShelf from '../windowsView/comic/ComicShelf.vue';
 import MobileComicShelf from '../mobileView/comic/ComicShelf.vue';
-import { storeToRefs } from 'pinia';
+import WinComicShelf from '../windowsView/comic/ComicShelf.vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();
 const shelfStore = useComicShelfStore();
 const { showComicShelf } = storeToRefs(displayStore);
 
-const refreshChapters = async () => {
+async function refreshChapters() {
   await shelfStore.comicRefreshChapters();
-};
+}
 
-const toComic = async (comic: ComicItemInShelf, chapterId?: string) => {
+async function toComic(comic: ComicItemInShelf, chapterId?: string) {
   const source = store.getComicSource(comic.comic.sourceId);
   if (!source) {
     showToast('源不存在或未启用');
@@ -48,38 +47,39 @@ const toComic = async (comic: ComicItemInShelf, chapterId?: string) => {
     params: {
       comicId: comic.comic.id,
       sourceId: comic.comic.sourceId,
-      chapterId: chapterId,
+      chapterId,
     },
   });
-};
-const removeComicFromShelf = (comic: ComicItemInShelf, shelfId: string) => {
+}
+function removeComicFromShelf(comic: ComicItemInShelf, shelfId: string) {
   shelfStore.removeComicFromShelf(comic.comic, shelfId);
-};
+}
 
 // 书架展示相关
 const shelfAnchors = ref([0, Math.round(window.innerHeight)]);
 const shelfHeight = ref(0);
-const hidePanel = () => {
+function hidePanel() {
   shelfHeight.value = shelfAnchors.value[0];
   showComicShelf.value = false;
-};
+}
 watch(
   showComicShelf,
   (newValue) => {
     if (newValue) {
       shelfHeight.value = shelfAnchors.value[1];
-    } else {
+    }
+    else {
       shelfHeight.value = shelfAnchors.value[0];
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
-const updateAnchors = () => {
+function updateAnchors() {
   shelfAnchors.value[1] = Math.round(window.innerHeight);
   if (showComicShelf.value) {
     shelfHeight.value = shelfAnchors.value[1];
   }
-};
+}
 onMounted(() => {
   window.addEventListener('resize', updateAnchors);
 });
@@ -98,7 +98,7 @@ onUnmounted(() => {
         @to-comic="toComic"
         @remove-comic-from-shelf="removeComicFromShelf"
         @hide-panel="hidePanel"
-      ></MobileComicShelf>
+      />
     </template>
     <template #windows>
       <WinComicShelf
@@ -108,7 +108,7 @@ onUnmounted(() => {
         @to-comic="toComic"
         @remove-comic-from-shelf="removeComicFromShelf"
         @hide-panel="hidePanel"
-      ></WinComicShelf>
+      />
     </template>
   </PlatformSwitch>
 </template>

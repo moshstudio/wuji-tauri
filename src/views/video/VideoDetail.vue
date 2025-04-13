@@ -1,33 +1,25 @@
 <script setup lang="ts">
-import {
-  ref,
-  shallowRef,
-  watch,
-  onActivated,
-  onDeactivated,
-  onUnmounted,
-  onMounted,
-  nextTick,
-} from 'vue';
-import PlatformSwitch from '@/components/PlatformSwitch.vue';
-import WinVideoDetail from '@/views/windowsView/video/VideoDetail.vue';
-import MobileVideoDetail from '@/views/mobileView/video/VideoDetail.vue';
-import { router } from '@/router';
-import { useDisplayStore, useStore, useVideoShelfStore } from '@/store';
-import { VideoSource } from '@/types';
-import {
+import type {
   VideoEpisode,
   VideoItem,
   VideoResource,
   VideoUrlMap,
 } from '@/extensions/video';
+import type { VideoSource } from '@/types';
+import type videojs from 'video.js';
+import PlatformSwitch from '@/components/PlatformSwitch.vue';
+import { router } from '@/router';
+import { useDisplayStore, useStore, useVideoShelfStore } from '@/store';
 import { retryOnFalse, sleep } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
-import { showLoadingToast, showNotify, showToast } from 'vant';
+import MobileVideoDetail from '@/views/mobileView/video/VideoDetail.vue';
+import WinVideoDetail from '@/views/windowsView/video/VideoDetail.vue';
 import _ from 'lodash';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
-import videojs from 'video.js';
+import { showLoadingToast, showNotify, showToast } from 'vant';
+import { onActivated, onDeactivated, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
 const { videoId, sourceId } = defineProps({
@@ -77,14 +69,24 @@ watch(videoSrc, (_) => {
 
 const pageBody = ref<HTMLElement>();
 const shouldLoad = ref(true);
+const isLoading = ref(false);
 const showAddDialog = ref(false);
 
 function back() {
   shouldLoad.value = true;
   router.push({ name: 'Video' });
 }
-const loadData = retryOnFalse({ onFailed: back })(
+const loadData = retryOnFalse({
+  onFailed: () => {
+    isLoading.value = false;
+    back();
+  },
+  onSuccess: () => {
+    isLoading.value = false;
+  },
+})(
   createCancellableFunction(async (signal: AbortSignal, pageNo?: number) => {
+    isLoading.value = true;
     videoSource.value = undefined;
     videoItem.value = undefined;
     videoSrc.value = undefined;
@@ -126,11 +128,11 @@ const loadData = retryOnFalse({ onFailed: back })(
     toast.close();
     playingResource.value ||=
       videoItem.value.resources?.find(
-        (item) => item.id == videoItem.value?.lastWatchResourceId
+        (item) => item.id == videoItem.value?.lastWatchResourceId,
       ) || videoItem.value.resources?.[0];
     playingEpisode.value ||=
       playingResource.value?.episodes?.find(
-        (item) => item.id == videoItem.value?.lastWatchEpisodeId
+        (item) => item.id == videoItem.value?.lastWatchEpisodeId,
       ) || playingResource.value?.episodes?.[0];
     if (signal.aborted) return false;
     if (playingResource.value && playingEpisode.value) {
@@ -140,9 +142,9 @@ const loadData = retryOnFalse({ onFailed: back })(
       shouldLoad.value = true;
     }
     return true;
-  })
+  }),
 );
-const play = async (resource: VideoResource, episode: VideoEpisode) => {
+async function play(resource: VideoResource, episode: VideoEpisode) {
   pageBody?.value?.scrollTo({ top: 0, behavior: 'smooth' });
   playingResource.value = resource;
   playingEpisode.value = episode;
@@ -151,7 +153,7 @@ const play = async (resource: VideoResource, episode: VideoEpisode) => {
     episode,
   });
   await getPlayUrl();
-};
+}
 const getPlayUrl = createCancellableFunction(async (signal: AbortSignal) => {
   if (!playingResource.value || !playingEpisode.value || !videoItem.value) {
     return;
@@ -168,7 +170,7 @@ const getPlayUrl = createCancellableFunction(async (signal: AbortSignal) => {
       videoSource.value!,
       videoItem.value,
       playingResource.value,
-      playingEpisode.value
+      playingEpisode.value,
     );
   } catch (error) {
     console.error('get video play url error', error);
@@ -183,7 +185,7 @@ const getPlayUrl = createCancellableFunction(async (signal: AbortSignal) => {
   }
 });
 
-const onCanPlay = async (args: any) => {
+async function onCanPlay(args: any) {
   if (playingEpisode.value?.lastWatchPosition) {
     videoPlayer.value?.currentTime(playingEpisode.value.lastWatchPosition);
   }
@@ -193,12 +195,12 @@ const onCanPlay = async (args: any) => {
   } else {
     await videoPlayer.value?.pause();
   }
-};
+}
 
-const playNext = async (args: any) => {
+async function playNext(args: any) {
   await onPlayFinished(args);
-};
-const onPlayFinished = async (args: any) => {
+}
+async function onPlayFinished(args: any) {
   if (
     !playingResource.value?.episodes ||
     !playingEpisode.value ||
@@ -207,7 +209,7 @@ const onPlayFinished = async (args: any) => {
     return;
   }
   const index = playingResource.value.episodes.findIndex(
-    (item) => item.id == playingEpisode.value!.id
+    (item) => item.id == playingEpisode.value!.id,
   );
 
   if (index === undefined || index === -1) return;
@@ -216,10 +218,10 @@ const onPlayFinished = async (args: any) => {
     return;
   }
   await play(playingResource.value, playingResource.value.episodes[index + 1]);
-};
-const onTimeUpdate = (args: any) => {
+}
+function onTimeUpdate(args: any) {
   updateVideoPlayInfo();
-};
+}
 
 const updateVideoPlayInfo = _.throttle(
   () => {
@@ -233,15 +235,15 @@ const updateVideoPlayInfo = _.throttle(
       shelfStore.updateVideoPlayInfo(videoItem.value, {
         resource: playingResource.value,
         episode: playingEpisode.value,
-        position: position,
+        position,
       });
     }
   },
   1000,
-  { leading: true, trailing: false }
+  { leading: true, trailing: false },
 );
 
-const collect = () => {
+function collect() {
   if (!videoItem.value) {
     return;
   }
@@ -250,23 +252,32 @@ const collect = () => {
   } else {
     showAddDialog.value = true;
   }
-};
-const addVideoToShelf = (shelfId: string) => {
+}
+function addVideoToShelf(shelfId: string) {
   const res = shelfStore.addToViseoSelf(videoItem.value!, shelfId);
   if (res) {
     showAddDialog.value = false;
   }
-};
+}
 
-watch([() => videoId, () => sourceId], () => {
+watch([() => videoId, () => sourceId], async () => {
   shouldLoad.value = false; // watch这里优先load
   loadData();
 });
+
 onActivated(async () => {
   await sleep(200);
   if (shouldLoad.value) {
     shouldLoad.value = false;
     loadData();
+  } else {
+    if (!isLoading.value) {
+      if (!playingResource.value || !playingEpisode.value) {
+        // 没有数据的话进行加载
+        shouldLoad.value = false;
+        loadData();
+      }
+    }
   }
 });
 
@@ -292,12 +303,12 @@ onDeactivated(() => {
         v-model:player="videoPlayer"
         v-model:show-add-dialog="showAddDialog"
         v-model:page-body="pageBody"
-        :videoSources="videoSources"
-        :videoSource="videoSource"
-        :videoItem="videoItem"
-        :playingResource="playingResource"
-        :playingEpisode="playingEpisode"
-        :videoSrc="videoSrc"
+        :video-sources="videoSources"
+        :video-source="videoSource"
+        :video-item="videoItem"
+        :playing-resource="playingResource"
+        :playing-episode="playingEpisode"
+        :video-src="videoSrc"
         @back="back"
         @collect="collect"
         @play="play"
@@ -306,19 +317,19 @@ onDeactivated(() => {
         @play-next="playNext"
         @on-play-finished="onPlayFinished"
         @time-update="onTimeUpdate"
-      ></MobileVideoDetail>
+      />
     </template>
     <template #windows>
       <WinVideoDetail
         v-model:player="videoPlayer"
         v-model:show-add-dialog="showAddDialog"
         v-model:page-body="pageBody"
-        :videoSources="videoSources"
-        :videoSource="videoSource"
-        :videoItem="videoItem"
-        :playingResource="playingResource"
-        :playingEpisode="playingEpisode"
-        :videoSrc="videoSrc"
+        :video-sources="videoSources"
+        :video-source="videoSource"
+        :video-item="videoItem"
+        :playing-resource="playingResource"
+        :playing-episode="playingEpisode"
+        :video-src="videoSrc"
         @back="back"
         @collect="collect"
         @play="play"
@@ -327,7 +338,7 @@ onDeactivated(() => {
         @play-next="playNext"
         @on-play-finished="onPlayFinished"
         @time-update="onTimeUpdate"
-      ></WinVideoDetail>
+      />
     </template>
   </PlatformSwitch>
 </template>

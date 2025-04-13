@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia';
-import WinComic from '../windowsView/comic/index.vue';
-import MobileComic from '../mobileView/comic/index.vue';
+import type { ComicItem } from '@/extensions/comic';
+import type { ComicSource } from '@/types';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
-import { ref, triggerRef } from 'vue';
-import { useDisplayStore, useStore } from '@/store';
-import { ComicSource } from '@/types';
-import { debounce } from 'lodash';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { router } from '@/router';
-import { ComicItem } from '@/extensions/comic';
+import { useDisplayStore, useStore } from '@/store';
+import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { debounce } from 'lodash';
+import { storeToRefs } from 'pinia';
 import { showLoadingToast } from 'vant';
+import { ref, triggerRef } from 'vue';
+import MobileComic from '../mobileView/comic/index.vue';
+import WinComic from '../windowsView/comic/index.vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -23,12 +23,13 @@ const recommend = createCancellableFunction(
     await Promise.all(
       comicSources.value.map(async (source) => {
         if (!source.list || force) {
-          if (signal.aborted) return;
+          if (signal.aborted)
+            return;
           await store.comicRecommendList(source);
         }
-      })
+      }),
     );
-  }
+  },
 );
 
 const search = createCancellableFunction(async (signal: AbortSignal) => {
@@ -37,26 +38,28 @@ const search = createCancellableFunction(async (signal: AbortSignal) => {
   if (!keyword) {
     await recommend(true);
     triggerRef(comicSources);
-  } else {
+  }
+  else {
     await Promise.all(
       comicSources.value.map(async (comicSources) => {
-        if (signal.aborted) return;
+        if (signal.aborted)
+          return;
         await store.comicSearch(comicSources, keyword, 1);
-      })
+      }),
     );
   }
   displayStore.closeToast(t);
 });
-const loadType = async (source: ComicSource, type?: string) => {
+async function loadType(source: ComicSource, type?: string) {
   await store.comicRecommendList(source, 1, type);
-};
+}
 const loadPage = debounce(
   createCancellableFunction(
     async (
       signal: AbortSignal,
       source: ComicSource,
       pageNo?: number,
-      type?: string
+      type?: string,
     ) => {
       const toast = showLoadingToast({
         message: '加载中',
@@ -66,15 +69,16 @@ const loadPage = debounce(
       });
       if (!searchValue.value) {
         await store.comicRecommendList(source, pageNo, type);
-      } else {
+      }
+      else {
         await store.comicSearch(source, searchValue.value, pageNo);
       }
       toast.close();
-    }
+    },
   ),
-  500
+  500,
 );
-const toDetail = (source: ComicSource, item: ComicItem) => {
+function toDetail(source: ComicSource, item: ComicItem) {
   router.push({
     name: 'ComicDetail',
     params: {
@@ -82,14 +86,14 @@ const toDetail = (source: ComicSource, item: ComicItem) => {
       sourceId: source.item.id,
     },
   });
-};
+}
 
-const openBaseUrl = async (source: ComicSource) => {
+async function openBaseUrl(source: ComicSource) {
   const sc = await store.sourceClass(source.item);
   if (sc && sc.baseUrl) {
     // open(sc.baseUrl);
   }
-};
+}
 </script>
 
 <template>
@@ -103,7 +107,7 @@ const openBaseUrl = async (source: ComicSource) => {
         @to-detail="toDetail"
         @open-base-url="openBaseUrl"
         @recommend="recommend"
-      ></MobileComic>
+      />
     </template>
     <template #windows>
       <WinComic
@@ -114,7 +118,7 @@ const openBaseUrl = async (source: ComicSource) => {
         @to-detail="toDetail"
         @open-base-url="openBaseUrl"
         @recommend="recommend"
-      ></WinComic>
+      />
     </template>
   </PlatformSwitch>
 </template>

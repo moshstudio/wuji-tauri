@@ -1,5 +1,6 @@
+import type { Directive } from 'vue';
 import { useScroll } from '@vueuse/core';
-import { Directive, onActivated, onDeactivated } from 'vue';
+import { onActivated, onDeactivated } from 'vue';
 
 export default <Directive<HTMLElement, never, never, ScrollBehavior>>{
   mounted(el, binding) {
@@ -10,8 +11,8 @@ export default <Directive<HTMLElement, never, never, ScrollBehavior>>{
 
     onActivated(() => {
       el.scrollTo({
-        top: top,
-        left: left,
+        top,
+        left,
         behavior: 'instant',
       });
     }, instance);

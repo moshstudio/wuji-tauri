@@ -1,8 +1,27 @@
+<script setup lang="ts">
+import { Icon } from '@iconify/vue';
+
+const props = defineProps<{
+  isFullscreen: boolean;
+  requestFullscreen: () => void;
+  exitFullscreen: () => void;
+}>();
+
+async function toggleFullscreen() {
+  if (props.isFullscreen) {
+    props.exitFullscreen();
+  }
+  else {
+    props.requestFullscreen();
+  }
+}
+</script>
+
 <template>
   <button
-    @click="toggleFullscreen"
     class="rounded-md transition-colors duration-200 group relative"
     aria-label="全屏"
+    @click="toggleFullscreen"
   >
     <!-- 两个图标叠加，通过动画切换 -->
     <div class="relative w-[24px] h-[24px]">
@@ -31,21 +50,3 @@
     </div>
   </button>
 </template>
-
-<script setup lang="ts">
-import { Icon } from '@iconify/vue';
-
-const props = defineProps<{
-  isFullscreen: boolean;
-  requestFullscreen: () => void;
-  exitFullscreen: () => void;
-}>();
-
-const toggleFullscreen = async () => {
-  if (props.isFullscreen) {
-    props.exitFullscreen();
-  } else {
-    props.requestFullscreen();
-  }
-};
-</script>

@@ -1,33 +1,32 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { Icon } from '@iconify/vue';
+import { ref } from 'vue';
 
-const searchValue = defineModel({ type: String, required: true });
 const emit = defineEmits<{
   (e: 'search', value: string): void;
 }>();
-
+const searchValue = defineModel({ type: String, required: true });
 const isExpanded = ref(false);
 const searchBar = ref<HTMLElement>();
-const showSearchBar = () => {
+function showSearchBar() {
   isExpanded.value = true;
   // 让输入框自动聚焦
   setTimeout(() => {
     searchBar.value?.focus();
   }, 0);
-};
-const hideSearchBar = () => {
+}
+function hideSearchBar() {
   if (!searchValue.value.trim()) {
     isExpanded.value = false;
   }
-};
-const performSearch = () => {
+}
+function performSearch() {
   emit('search', searchValue.value);
-};
+}
 </script>
+
 <template>
   <div class="relative">
-    <button v-if="!isExpanded" @click="showSearchBar" class="text-button-2">
+    <button v-if="!isExpanded" class="text-button-2" @click="showSearchBar">
       <van-icon name="search" />
     </button>
     <transition name="slide">

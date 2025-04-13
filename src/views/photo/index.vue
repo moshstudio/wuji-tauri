@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia';
-import WinPhotoList from '@/views/windowsView/photo/index.vue';
-import MobilePhotoList from '@/views/mobileView/photo/index.vue';
+import type { PhotoSource } from '@/types';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
-import { ref, onMounted } from 'vue';
 import { useDisplayStore, useStore } from '@/store';
-import { PhotoSource } from '@/types';
-import { showLoadingToast } from 'vant';
-import { debounce } from 'lodash';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import MobilePhotoList from '@/views/mobileView/photo/index.vue';
+import WinPhotoList from '@/views/windowsView/photo/index.vue';
+import { debounce } from 'lodash';
+import { storeToRefs } from 'pinia';
+import { showLoadingToast } from 'vant';
+import { ref } from 'vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -21,12 +21,13 @@ const recommend = createCancellableFunction(
     await Promise.all(
       photoSources.value.map(async (source) => {
         if (!source.list || force) {
-          if (signal.aborted) return;
+          if (signal.aborted)
+            return;
           await store.photoRecommendList(source);
         }
-      })
+      }),
     );
-  }
+  },
 );
 
 const search = createCancellableFunction(async (signal: AbortSignal) => {
@@ -34,12 +35,14 @@ const search = createCancellableFunction(async (signal: AbortSignal) => {
   const t = displayStore.showToast();
   if (!keyword) {
     await recommend(true);
-  } else {
+  }
+  else {
     await Promise.all(
       photoSources.value.map(async (source) => {
-        if (signal.aborted) return;
+        if (signal.aborted)
+          return;
         await store.photoSearchList(source, keyword, 1);
-      })
+      }),
     );
   }
   displayStore.closeToast(t);
@@ -56,20 +59,21 @@ const pageChange = debounce(
       });
       if (!searchValue.value) {
         await store.photoRecommendList(source, pageNo);
-      } else {
+      }
+      else {
         await store.photoSearchList(source, searchValue.value, pageNo);
       }
       toast.close();
-    }
+    },
   ),
-  500
+  500,
 );
-const openBaseUrl = async (source: PhotoSource) => {
+async function openBaseUrl(source: PhotoSource) {
   const sc = await store.sourceClass(source.item);
   if (sc && sc.baseUrl) {
     // open(sc.baseUrl);
   }
-};
+}
 </script>
 
 <template>
@@ -81,7 +85,7 @@ const openBaseUrl = async (source: PhotoSource) => {
         @page-change="pageChange"
         @open-base-url="openBaseUrl"
         @recommend="recommend"
-      ></MobilePhotoList>
+      />
     </template>
     <template #windows>
       <WinPhotoList
@@ -90,7 +94,7 @@ const openBaseUrl = async (source: PhotoSource) => {
         @page-change="pageChange"
         @open-base-url="openBaseUrl"
         @recommend="recommend"
-      ></WinPhotoList>
+      />
     </template>
   </PlatformSwitch>
 </template>

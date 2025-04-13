@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import { ComicItem } from '@/extensions/comic';
+import type { ComicItem } from '@/extensions/comic';
 import LoadImage from '@/components/LoadImage.vue';
 import { Icon } from '@iconify/vue';
+import _ from 'lodash';
+
 const { comicItem } = defineProps<{
   comicItem: ComicItem;
 }>();
@@ -37,10 +38,10 @@ const emit = defineEmits<{
         {{ comicItem.title }}
       </p>
       <p class="text-xs truncate">
-        {{ comicItem.author ? comicItem.author + ' ' : '佚名' }}
+        {{ comicItem.author ? `${comicItem.author} ` : '佚名' }}
         {{
           _.castArray(comicItem.tags).length
-            ? _.castArray(comicItem.tags)?.join(',') + ' '
+            ? `${_.castArray(comicItem.tags)?.join(',')} `
             : ''
         }}
         {{ comicItem.status || '' }}

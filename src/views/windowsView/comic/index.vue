@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { useDisplayStore, useStore } from '@/store';
-import { storeToRefs } from 'pinia';
+import type { ComicItem } from '@/extensions/comic';
+import type { ComicSource } from '@/types';
 import ComicsTab from '@/components/windows/ComicsTab.vue';
-import ComicShelf from '@/views/comic/ComicShelf.vue';
 import WinSearch from '@/components/windows/WinSearch.vue';
-import { ComicSource } from '@/types';
-import { ComicItem } from '@/extensions/comic';
-
-const searchValue = defineModel('searchValue', { type: String, default: '' });
+import { useDisplayStore, useStore } from '@/store';
+import ComicShelf from '@/views/comic/ComicShelf.vue';
+import { storeToRefs } from 'pinia';
 
 const emit = defineEmits<{
   (e: 'recommend', force?: boolean): void;
@@ -17,6 +15,8 @@ const emit = defineEmits<{
   (e: 'toDetail', source: ComicSource, item: ComicItem): void;
   (e: 'openBaseUrl', source: ComicSource): void;
 }>();
+
+const searchValue = defineModel('searchValue', { type: String, default: '' });
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -29,11 +29,11 @@ const { comicSources } = storeToRefs(store);
     class="w-full h-full overflow-x-hidden overflow-y-auto"
   >
     <div class="flex items-center justify-between px-4 py-2">
-      <div class="placeholder"></div>
+      <div class="placeholder" />
       <WinSearch
         v-model:search-value="searchValue"
         @search="() => emit('search')"
-      ></WinSearch>
+      />
       <div
         class="text-button text-nowrap"
         @click="displayStore.showComicShelf = true"
@@ -59,12 +59,11 @@ const { comicSources } = storeToRefs(store);
             (source, pageNo, type) => emit('loadPage', source, pageNo, type)
           "
           @on-detail="(source, item) => emit('toDetail', source, item)"
-        >
-        </ComicsTab>
+        />
         <van-divider :style="{ margin: '8px 0px' }" />
       </div>
     </div>
-    <ComicShelf></ComicShelf>
+    <ComicShelf />
   </div>
 </template>
 

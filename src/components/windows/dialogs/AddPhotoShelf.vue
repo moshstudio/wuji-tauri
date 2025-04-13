@@ -1,25 +1,27 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { useDisplayStore, usePhotoShelfStore } from '@/store';
 import { showToast } from 'vant';
+import { ref } from 'vue';
 
 const displayStore = useDisplayStore();
 const shelfStore = usePhotoShelfStore();
 const value = ref('');
 
 // 只保留中文，英文，- _
-const filter = (value: string) =>
-  value.replace(/[^\u4e00-\u9fa5a-z0-9A-Z-_]/g, '');
-const addPhotoShelf = () => {
+function filter(value: string) {
+  return value.replace(/[^\u4E00-\u9FA5\w-]/g, '');
+}
+function addPhotoShelf() {
   const name = value.value.trim();
-  if (!name) return;
-  if (shelfStore.photoShelf.some((item) => item.name === name)) {
+  if (!name)
+    return;
+  if (shelfStore.photoShelf.some(item => item.name === name)) {
     showToast('收藏夹已存在');
     return;
   }
   shelfStore.createShelf(name);
   displayStore.showAddPhotoShelfDialog = false;
-};
+}
 </script>
 
 <template>

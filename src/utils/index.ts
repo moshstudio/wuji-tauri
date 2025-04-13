@@ -1,10 +1,11 @@
-import { warn, debug, trace, info, error } from '@tauri-apps/plugin-log';
-import { ArtistInfo, SongUrlMap } from '@/extensions/song';
-import { ClientOptions, fetch } from '@/utils/fetch';
-import { onBeforeUnmount, onMounted } from 'vue';
-import { showToast } from 'vant';
-import _urlJoin from 'url-join';
+import type { ArtistInfo, SongUrlMap } from '@/extensions/song';
+import type { ClientOptions } from '@/utils/fetch';
+import { fetch } from '@/utils/fetch';
+import { debug, error, info, trace, warn } from '@tauri-apps/plugin-log';
 import * as fs from 'tauri-plugin-fs-api';
+import _urlJoin from 'url-join';
+import { showToast } from 'vant';
+import { onBeforeUnmount, onMounted } from 'vue';
 // import * as dialog from '@tauri-apps/plugin-dialog';
 export * from './extensionUtils';
 
@@ -15,35 +16,35 @@ export function sleep(ms: number) {
 }
 
 // 音频时间格式化换算
-export const transTime = (value: number) => {
+export function transTime(value: number) {
   let time = '';
-  let h = parseInt(String(value / 3600));
+  const h = Number.parseInt(String(value / 3600));
   value %= 3600;
-  let m = parseInt(String(value / 60));
-  let s = parseInt(String(value % 60));
+  const m = Number.parseInt(String(value / 60));
+  const s = Number.parseInt(String(value % 60));
   if (h > 0) {
-    time = formatTime(h + ':' + m + ':' + s);
+    time = formatTime(`${h}:${m}:${s}`);
   } else {
-    time = formatTime(m + ':' + s);
+    time = formatTime(`${m}:${s}`);
   }
   return time;
-};
+}
 // 格式化时间显示，补零对齐
-const formatTime = (value: string) => {
+function formatTime(value: string) {
   let time = '';
-  let s = value.split(':');
+  const s = value.split(':');
   let i = 0;
   for (; i < s.length - 1; i++) {
-    time += s[i].length == 1 ? '0' + s[i] : s[i];
+    time += s[i].length == 1 ? `0${s[i]}` : s[i];
     time += ':';
   }
-  time += s[i].length == 1 ? '0' + s[i] : s[i];
+  time += s[i].length == 1 ? `0${s[i]}` : s[i];
 
   return time;
-};
+}
 
 export function joinSongArtists(
-  artists: ArtistInfo[] | string[] | undefined | null
+  artists: ArtistInfo[] | string[] | undefined | null,
 ): string {
   if (!artists) return '';
   return artists
@@ -69,7 +70,7 @@ export function songUrlToString(url: string | SongUrlMap | undefined): string {
 
 export function keepCNAndEN(str: string): string {
   // 使用正则表达式匹配中文和英文字符
-  return str.replace(/[^\u4e00-\u9fa5a-zA-Z]/g, '');
+  return str.replace(/[^\u4E00-\u9FA5a-z]/gi, '');
 }
 
 export function getScrollTop(el: Element | Window): number {
@@ -93,7 +94,7 @@ export function retryOnFalse(
     maxRetries?: number;
     onSuccess?: () => void;
     onFailed?: () => void;
-  } = { waitTime: 1200, maxRetries: 3 }
+  } = { waitTime: 1200, maxRetries: 3 },
 ) {
   options.waitTime ||= 1200;
   options.maxRetries ||= 3;
@@ -111,7 +112,7 @@ export function retryOnFalse(
         retries++;
         if (retries < options.maxRetries!) {
           console.log(
-            `Retry ${retries}/${options.maxRetries} after ${options.waitTime}ms...`
+            `Retry ${retries}/${options.maxRetries} after ${options.waitTime}ms...`,
           );
           await new Promise((resolve) => setTimeout(resolve, options.waitTime));
         }
@@ -160,7 +161,7 @@ export function purifyText(text: string): string {
   ];
   const lines = text.split('\n');
   const cleanedLines = lines.filter(
-    (line) => !uselessPatterns.some((pattern) => pattern.test(line))
+    (line) => !uselessPatterns.some((pattern) => pattern.test(line)),
   );
   text = cleanedLines.join('\n');
 
@@ -178,7 +179,7 @@ export function purifyText(text: string): string {
 
 export async function cachedFetch(
   input: URL | Request | string,
-  init?: RequestInit & ClientOptions
+  init?: RequestInit & ClientOptions,
 ): Promise<Response> {
   if ('caches' in window) {
     const cacheKey = input.toString();
@@ -200,23 +201,21 @@ export async function cachedFetch(
 }
 
 export function levenshteinDistance(a: string, b: string): number {
-  // Levenshtein 距离越小，说明两个字符串越相似；距离越大，说明差异越大。
-  const matrix = Array.from({ length: a.length + 1 }, () =>
-    Array(b.length + 1).fill(0)
+  const matrix: number[][] = Array.from<number, number[]>(
+    { length: a.length + 1 },
+    () => Array.from<number>({ length: b.length + 1 }).fill(0),
   );
 
-  // 初始化第一行和第一列
   for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
   for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
 
-  // 填充矩阵
   for (let i = 1; i <= a.length; i++) {
     for (let j = 1; j <= b.length; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
       matrix[i][j] = Math.min(
         matrix[i - 1][j] + 1, // 删除
         matrix[i][j - 1] + 1, // 插入
-        matrix[i - 1][j - 1] + cost // 替换
+        matrix[i - 1][j - 1] + cost, // 替换
       );
     }
   }
@@ -226,7 +225,7 @@ export function levenshteinDistance(a: string, b: string): number {
 
 export function useElementResize(
   elementSelector: string,
-  callback: (width: number, height: number) => void
+  callback: (width: number, height: number) => void,
 ) {
   let resizeObserver: ResizeObserver | null = null;
 
@@ -255,7 +254,7 @@ export function useElementResize(
 export function forwardConsoleLog() {
   function forwardConsole(
     fnName: 'log' | 'debug' | 'info' | 'warn' | 'error',
-    logger: (message: string) => Promise<void>
+    logger: (message: string) => Promise<void>,
   ) {
     const original = console[fnName];
     console[fnName] = (...args: any[]) => {
@@ -271,15 +270,15 @@ export function forwardConsoleLog() {
   forwardConsole('error', error);
 }
 
-export const urlJoin = (
+export function urlJoin(
   parts: (string | null | undefined)[],
-  option?: { baseUrl: string }
-): string => {
+  option?: { baseUrl: string },
+): string {
   const filter = parts.filter((part) => part != null && part !== undefined);
   if (!filter.length) return '';
   if (filter.length === 1) {
     if (filter[0].startsWith('//')) {
-      return 'http:' + filter[0];
+      return `http:${filter[0]}`;
     } else if (
       !filter[0].startsWith('http://') &&
       !filter[0].startsWith('https://')
@@ -289,7 +288,7 @@ export const urlJoin = (
           baseUrl: option.baseUrl,
         });
       } else {
-        return 'http://' + filter[0];
+        return `http://${filter[0]}`;
       }
     } else {
       return filter[0];
@@ -304,7 +303,7 @@ export const urlJoin = (
   }
 
   return _urlJoin(filter);
-};
+}
 
 export function getFileNameFromUrl(url: string, suffix?: string): string {
   // 移除 URL 中的查询参数和哈希部分
@@ -338,7 +337,7 @@ export function getFileNameFromUrl(url: string, suffix?: string): string {
 }
 
 async function streamToUint8Array(
-  stream: ReadableStream<Uint8Array>
+  stream: ReadableStream<Uint8Array>,
 ): Promise<Uint8Array> {
   const reader = stream.getReader();
   const chunks: Uint8Array[] = [];
@@ -369,7 +368,7 @@ export async function downloadFile(
     headers?: Record<string, string>;
     filename?: string;
     suffix?: string;
-  }
+  },
 ): Promise<boolean> {
   try {
     // const path = await dialog.save({
@@ -382,7 +381,7 @@ export async function downloadFile(
     // });
     // console.log(path);
     url = urlJoin([url]);
-    let response = await fetch(url, {
+    const response = await fetch(url, {
       headers: options?.headers,
       verify: false,
     });
@@ -435,7 +434,7 @@ export async function downloadFile(
 
 export function sanitizePathName(
   folderName: string,
-  options: { removeSpaces?: boolean; maxLength?: number } = {}
+  options: { removeSpaces?: boolean; maxLength?: number } = {},
 ): string {
   const { removeSpaces = true, maxLength = 255 } = options;
 

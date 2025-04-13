@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import { BookItem } from '@/extensions/book';
-import { Icon } from '@iconify/vue';
+import type { BookItem } from '@/extensions/book';
 import LoadImage from '@/components/LoadImage.vue';
+import { Icon } from '@iconify/vue';
+import _ from 'lodash';
 
 const { bookItem } = defineProps<{
   bookItem: BookItem;
@@ -44,10 +44,10 @@ const emit = defineEmits<{
         {{ bookItem.title }}
       </p>
       <p class="text-xs truncate">
-        {{ bookItem.author ? bookItem.author + ' ' : '佚名' }}
+        {{ bookItem.author ? `${bookItem.author} ` : '佚名' }}
         {{
           _.castArray(bookItem.tags).length
-            ? _.castArray(bookItem.tags)?.join(',') + ' '
+            ? `${_.castArray(bookItem.tags)?.join(',')} `
             : ''
         }}
         {{ bookItem.status || '' }}

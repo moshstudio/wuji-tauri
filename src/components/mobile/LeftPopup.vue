@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { useDisplayStore, useStore } from '@/store';
 import logo from '@/assets/wuji.svg';
+import { useDisplayStore, useStore } from '@/store';
+import AboutDialog from '../dialogs/About.vue';
 import ImportSubscribeDialog from '../windows/dialogs/ImportSubscribe.vue';
 import ManageSubscribeDialog from '../windows/dialogs/ManageSubscribe.vue';
 import SettingDialog from '../windows/dialogs/Setting.vue';
-import AboutDialog from '../dialogs/About.vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -63,7 +63,9 @@ const options = [
       <!-- Logo 和软件名 -->
       <div class="flex flex-col justify-center items-center mb-5">
         <van-image width="50" height="50" radius="4" :src="logo" />
-        <div class="text-lg font-bold text-[--van-text-color]">无极</div>
+        <div class="text-lg font-bold text-[--van-text-color]">
+          无极
+        </div>
       </div>
       <van-cell-group>
         <van-cell
@@ -72,16 +74,16 @@ const options = [
           :title="option.text"
           clickable
           is-link
-          @click="option.onClick"
           class="mb-2 text-[--van-text-color]"
+          @click="option.onClick"
         />
       </van-cell-group>
     </div>
   </van-popup>
-  <ImportSubscribeDialog></ImportSubscribeDialog>
-  <ManageSubscribeDialog></ManageSubscribeDialog>
-  <SettingDialog></SettingDialog>
-  <AboutDialog></AboutDialog>
+  <ImportSubscribeDialog />
+  <ManageSubscribeDialog />
+  <SettingDialog />
+  <AboutDialog />
 </template>
 
 <style scoped lang="less"></style>

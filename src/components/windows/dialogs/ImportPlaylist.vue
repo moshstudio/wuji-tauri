@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import type { ActionSheetAction } from 'vant';
 import { useDisplayStore, useSongShelfStore } from '@/store';
-import { showToast, ActionSheetAction } from 'vant';
-import { ref } from 'vue';
 import * as netease from '@/utils/neteaseMusic';
+import { showToast } from 'vant';
+import { ref } from 'vue';
 
 enum Source {
   netease = '网易云',
@@ -10,7 +11,7 @@ enum Source {
 }
 function extractId(url: string, paramName = 'id'): string | null {
   // 使用正则表达式提取完整的链接
-  const urlMatch = url.match(/https?:\/\/[^\s]+/);
+  const urlMatch = url.match(/https?:\/\/\S+/);
   if (!urlMatch) {
     return null; // 如果没有匹配到链接，返回 null
   }
@@ -24,7 +25,8 @@ function extractId(url: string, paramName = 'id'): string | null {
 
     // 从查询参数中提取 id 和 creatorId
     return searchParams.get(paramName);
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Invalid URL:', error);
     return null; // 如果 URL 解析失败，返回 null
   }
@@ -36,11 +38,11 @@ const shelfStore = useSongShelfStore();
 const link = ref('');
 const showSelectSource = ref(false);
 const selectedSource = ref<Source>(Source.netease);
-const onSelectSource = (item: ActionSheetAction) => {
+function onSelectSource(item: ActionSheetAction) {
   selectedSource.value = item.name! as Source;
   showSelectSource.value = false;
-};
-const importAction = async () => {
+}
+async function importAction() {
   const id = extractId(link.value);
   if (!id) {
     showToast('链接无效');
@@ -60,7 +62,7 @@ const importAction = async () => {
   newShelf.playlist.picHeaders = playlist.picHeaders;
   newShelf.playlist.desc = playlist.desc;
   newShelf.playlist.list = playlist.list;
-};
+}
 </script>
 
 <template>
@@ -78,8 +80,8 @@ const importAction = async () => {
     />
 
     <van-action-sheet
-      teleport="body"
       v-model:show="showSelectSource"
+      teleport="body"
       :actions="Object.values(Source).map((i) => ({ name: i }))"
       @select="onSelectSource"
     />

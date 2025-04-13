@@ -1,4 +1,3 @@
-import { method } from 'lodash';
 import { SongExtension } from '.';
 
 class TestSongExtension extends SongExtension {
@@ -25,6 +24,7 @@ class TestSongExtension extends SongExtension {
       totalPage: this.maxPageNoFromElements(pageElements),
     };
   }
+
   async getRecommendSongs(pageNo) {
     pageNo ||= 1;
     const url = `${this.baseUrl}list/new/${pageNo}.html`;
@@ -48,9 +48,11 @@ class TestSongExtension extends SongExtension {
       totalPage: this.maxPageNoFromElements(pageElements),
     };
   }
+
   async searchPlaylists(keyword, pageNo) {
     return null;
   }
+
   async searchSongs(keyword, pageNo) {
     pageNo ||= 1;
     const url = `${this.baseUrl}so/${keyword}/${pageNo}.html`;
@@ -116,6 +118,7 @@ class TestSongExtension extends SongExtension {
     const json = await response.json();
     return json.url;
   }
+
   async getLyric(item) {
     return null;
   }

@@ -1,17 +1,29 @@
 <script setup lang="ts">
-import { BookChapter, BookItem } from '@/extensions/book';
+import type { BookChapter, BookItem } from '@/extensions/book';
 
-import { useBookChapterStore, useBookStore, useDisplayStore } from '@/store';
-import { BookSource } from '@/types';
+import type { BookSource } from '@/types';
+import type { ReaderResult } from '@/utils/reader/types';
+import type { PropType } from 'vue';
 import BookShelfButton from '@/components/BookShelfButton.vue';
-import BookShelf from '@/views/book/BookShelf.vue';
-import NavBar from '@/components/NavBar.vue';
-import { Icon } from '@iconify/vue';
-import { onActivated, onDeactivated, onMounted, PropType } from 'vue';
-import { useScroll } from '@vueuse/core';
-import { ReaderResult } from '@/utils/reader/types';
 import SwitchBookSourceDialog from '@/components/dialogs/SwitchBookSource.vue';
+import NavBar from '@/components/NavBar.vue';
+import { useBookChapterStore, useBookStore } from '@/store';
+import BookShelf from '@/views/book/BookShelf.vue';
+import { Icon } from '@iconify/vue';
+import { useScroll } from '@vueuse/core';
+import { onActivated, onDeactivated, onMounted } from 'vue';
 
+const emit = defineEmits<{
+  (e: 'back', checkShelf?: boolean): void;
+  (e: 'loadData'): void;
+  (e: 'toChapter', chapter: BookChapter): void;
+  (e: 'prevChapter'): void;
+  (e: 'nextChapter'): void;
+  (e: 'refreshChapter'): void;
+  (e: 'openChapterPopup'): void;
+  (e: 'searchAllSources', targetBook: BookItem): void;
+  (e: 'switchSource', newBookItem: BookItem): void;
+}>();
 const book = defineModel('book', { type: Object as PropType<BookItem> });
 const bookSource = defineModel('bookSource', {
   type: Object as PropType<BookSource>,
@@ -47,18 +59,6 @@ const showSwitchSourceDialog = defineModel('showSwitchSourceDialog', {
   type: Boolean,
   required: true,
 });
-
-const emit = defineEmits<{
-  (e: 'back', checkShelf?: boolean): void;
-  (e: 'loadData'): void;
-  (e: 'toChapter', chapter: BookChapter): void;
-  (e: 'prevChapter'): void;
-  (e: 'nextChapter'): void;
-  (e: 'refreshChapter'): void;
-  (e: 'openChapterPopup'): void;
-  (e: 'searchAllSources', targetBook: BookItem): void;
-  (e: 'switchSource', newBookItem: BookItem): void;
-}>();
 
 const bookStore = useBookStore();
 const bookCacheStore = useBookChapterStore();
@@ -96,9 +96,9 @@ onMounted(() => {
     <NavBar
       v-model:show="showNavBar"
       left-arrow
-      @click-left="() => emit('back', true)"
       class="absolute w-full h-[70px]"
       target="#read-content"
+      @click-left="() => emit('back', true)"
     >
       <template #title>
         <div class="flex flex-col gap-2 items-center truncate">
@@ -113,13 +113,13 @@ onMounted(() => {
               {{ book?.author }}
             </span>
             <span
-              class="text-xs text-[--van-text-color-2]"
               v-if="readingContent?.length"
+              class="text-xs text-[--van-text-color-2]"
             >
               <van-icon name="points" />
               {{ readingContent?.length }} 字
             </span>
-            <span class="text-xs text-[--van-text-color-2]" v-if="bookSource">
+            <span v-if="bookSource" class="text-xs text-[--van-text-color-2]">
               <van-icon name="flag-o" />
               {{ bookSource?.item.name }}
             </span>
@@ -141,23 +141,23 @@ onMounted(() => {
       class="scroll-container flex h-full overflow-y-auto min-w-[400px] w-[95%] sm:w-[90%] md:w-[75%] lg:w-[60%]"
     >
       <div
+        v-if="readingContent"
         id="read-content"
         class="pt-[80px] relative overflow-y-auto p-4 text-justify leading-[1.8] text-[--van-text-color]"
         :style="{
-          fontSize: bookStore.fontSize + 'px',
-          fontFamily: `'${bookStore.fontFamily}'`,
-          lineHeight: bookStore.lineHeight,
+          'fontSize': `${bookStore.fontSize}px`,
+          'fontFamily': `'${bookStore.fontFamily}'`,
+          'lineHeight': bookStore.lineHeight,
           // 'text-indent': bookStore.fontSize * 2 + 'px',
           'text-align': 'justify',
-          color: bookStore.currTheme.color,
-          backgroundColor: bookStore.currTheme.bgColor,
-          textDecoration: bookStore.underline
+          'color': bookStore.currTheme.color,
+          'backgroundColor': bookStore.currTheme.bgColor,
+          'textDecoration': bookStore.underline
             ? 'underline solid 0.5px'
             : 'none',
-          textUnderlineOffset: bookStore.underline ? '6px' : 'none',
+          'textUnderlineOffset': bookStore.underline ? '6px' : 'none',
         }"
-        v-if="readingContent"
-      ></div>
+      />
       <div
         class="read-sidebar absolute right-[8px] bottom-[8px] flex flex-col gap-1 opacity-80 sm:opacity-100 hover:opacity-100"
       >
@@ -165,7 +165,7 @@ onMounted(() => {
           :book="book"
           mode="square"
           :reading-chapter="readingChapter"
-        ></BookShelfButton>
+        />
         <van-button
           icon="bars"
           square
@@ -243,11 +243,11 @@ onMounted(() => {
             "
           >
             <Icon
+              v-if="readingChapter?.id === item.id"
               icon="iconamoon:eye-thin"
               width="24"
               height="24"
               color="var(--van-primary-color)"
-              v-if="readingChapter?.id === item.id"
             />
             <span
               class="flex-grow text-left overflow-hidden text-nowrap text-ellipsis"
@@ -260,10 +260,10 @@ onMounted(() => {
               {{ item.title }}
             </span>
             <Icon
+              v-if="book && bookCacheStore.chapterInCache(book, item)"
               icon="material-symbols-light:download-done-rounded"
               width="20"
               height="20"
-              v-if="book && bookCacheStore.chapterInCache(book, item)"
             />
           </div>
         </template>
@@ -272,15 +272,19 @@ onMounted(() => {
     <van-dialog
       v-model:show="showSettingDialog"
       titl
-      closeOnClickOverlay
+      close-on-click-overlay
       :show-confirm-button="false"
       class="setting-dialog bg-[#1f1f1f] text-white"
     >
       <template #title>
-        <div class="text-white">界面设置</div>
+        <div class="text-white">
+          界面设置
+        </div>
       </template>
       <div class="flex flex-col p-2 text-sm">
-        <div class="pb-2">字体和样式</div>
+        <div class="pb-2">
+          字体和样式
+        </div>
         <van-cell class="bg-[#1f1f1f]">
           <template #title>
             <span class="text-white">字体大小</span>
@@ -327,7 +331,9 @@ onMounted(() => {
             <van-switch v-model="bookStore.underline" />
           </template>
         </van-cell>
-        <div class="pb-2">文字颜色和背景</div>
+        <div class="pb-2">
+          文字颜色和背景
+        </div>
         <div v-horizontal-scroll class="flex gap-2 overflow-x-auto" @wheel.stop>
           <div
             v-for="theme in bookStore.themes"
@@ -353,8 +359,9 @@ onMounted(() => {
         </div>
       </div>
     </van-dialog>
-    <BookShelf></BookShelf>
+    <BookShelf />
     <SwitchBookSourceDialog
+      v-if="book"
       v-model:show="showSwitchSourceDialog"
       :search-result="allSourceResults || []"
       :book="book"
@@ -366,8 +373,7 @@ onMounted(() => {
         }
       "
       @select="(item) => emit('switchSource', item)"
-      v-if="book"
-    ></SwitchBookSourceDialog>
+    />
   </div>
 </template>
 

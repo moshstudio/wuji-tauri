@@ -8,4 +8,3 @@ export enum SongShelfType {
   like = 'like', // 我喜欢的音乐
   playlist = 'playlist', // 收藏的歌单
 }
-                            

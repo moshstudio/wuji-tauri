@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
-import { useStore, useDisplayStore } from '@/store';
-import { storeToRefs } from 'pinia';
+import { useDisplayStore, useStore } from '@/store';
 import { Icon } from '@iconify/vue';
 import * as dialog from '@tauri-apps/plugin-dialog';
-import * as fs from 'tauri-plugin-fs-api';
+import { storeToRefs } from 'pinia';
+import { ref } from 'vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -13,7 +12,8 @@ const value = ref('');
 
 function addSubscribe() {
   // TODO: 添加订阅源
-  if (!value.value) return;
+  if (!value.value)
+    return;
   store.addSubscribeSource(value.value);
 }
 
@@ -31,7 +31,8 @@ async function selectLocalFile() {
     multiple: false,
     directory: false,
   });
-  if (!file) return;
+  if (!file)
+    return;
   store.addLocalSubscribeSource(file);
   showAddSubscribeDialog.value = false;
 }

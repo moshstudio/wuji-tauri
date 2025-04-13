@@ -1,20 +1,21 @@
-import CryptoJS from 'crypto-js';
-import forge from 'node-forge';
-import _ from 'lodash';
-import * as iconv from 'iconv-lite';
-import * as m3u8Parser from 'm3u8-parser';
-import { nanoid } from 'nanoid';
-import { ClientOptions, fetch } from '@/utils/fetch';
+import type { ClientOptions } from '@/utils/fetch';
+import type { BookItem } from './book';
+import type { PhotoItem } from './photo';
+import type { PlaylistInfo, SongInfo } from './song';
 import {
   maxPageNoFromElements,
+  urlJoin as myUrlJoin,
   parseAndExecuteHtml,
   toProxyUrl,
 } from '@/utils';
-import { BookItem } from './book';
-import { PhotoItem } from './photo';
-import { urlJoin as myUrlJoin } from '@/utils';
+import { fetch } from '@/utils/fetch';
 import { getProxyServerUrl } from '@/utils/proxyUrl';
-import { PlaylistInfo, SongInfo } from './song';
+import CryptoJS from 'crypto-js';
+import * as iconv from 'iconv-lite';
+import _ from 'lodash';
+import * as m3u8Parser from 'm3u8-parser';
+import { nanoid } from 'nanoid';
+import forge from 'node-forge';
 
 // 定义一个装饰器工厂函数，允许传入目标类型
 export function transformResult<T>(func: (result: T) => T) {
@@ -26,7 +27,8 @@ export function transformResult<T>(func: (result: T) => T) {
         // 调用原始方法
         const result: T = await originalMethod.apply(this, args);
         return func(result);
-      } catch (error) {
+      }
+      catch (error) {
         console.warn(`function ${key} failed`, error);
 
         return null;
@@ -49,8 +51,9 @@ abstract class Extension {
     input: URL | Request | string,
     init?: RequestInit & ClientOptions,
     domType?: DOMParserSupportedType,
-    encoding?: 'utf8' | 'gbk'
+    encoding?: 'utf8' | 'gbk',
   ) => Promise<Document>;
+
   queryBookElements: (
     body: Document,
     tags: {
@@ -65,8 +68,9 @@ abstract class Extension {
       latestChapter?: string;
       latestUpdate?: string;
       coverDomain?: string;
-    }
+    },
   ) => Promise<BookItem[]>;
+
   queryComicElements: (
     body: Document,
     tags: {
@@ -80,8 +84,9 @@ abstract class Extension {
       url?: string;
       latestChapter?: string;
       latestUpdate?: string;
-    }
+    },
   ) => Promise<BookItem[]>;
+
   queryVideoElements: (
     body: Document,
     tags: {
@@ -100,8 +105,9 @@ abstract class Extension {
       latestUpdate?: string;
       coverDomain?: string;
       baseUrl?: string;
-    }
+    },
   ) => Promise<BookItem[]>;
+
   queryPhotoElements: (
     body: Document,
     tags: {
@@ -115,8 +121,9 @@ abstract class Extension {
       view?: string;
       url?: string;
       coverDomain?: string;
-    }
+    },
   ) => Promise<PhotoItem[]>;
+
   queryPlaylistElements: (
     body: Document,
     tags: {
@@ -129,8 +136,9 @@ abstract class Extension {
       updateTime?: string;
       url?: string;
       coverDomain?: string;
-    }
+    },
   ) => Promise<PlaylistInfo[]>;
+
   querySongElements: (
     body: Document,
     tags: {
@@ -143,14 +151,16 @@ abstract class Extension {
       playUrl?: string;
       lyric?: string;
       coverDomain?: string;
-    }
+    },
   ) => Promise<SongInfo[]>;
+
   queryChapters: (
     body: Document,
     tags: {
       element?: string;
-    }
+    },
   ) => Promise<{ id: string; title: string; url?: string }[]>;
+
   getContentText: (element?: HTMLElement) => string | null;
   nanoid: typeof nanoid;
   urlJoin: (...parts: (string | null | undefined)[]) => string;
@@ -176,7 +186,7 @@ abstract class Extension {
       input: URL | Request | string,
       init?: RequestInit & ClientOptions,
       domType?: DOMParserSupportedType,
-      encoding?: 'utf8' | 'gbk'
+      encoding?: 'utf8' | 'gbk',
     ) => {
       let maxRetry = 2;
       do {
@@ -186,15 +196,16 @@ abstract class Extension {
             throw new Error(`fetch error: ${response.status}`);
           }
           const buffer = await response.arrayBuffer();
-          let text = new TextDecoder(encoding || 'utf8').decode(buffer);
+          const text = new TextDecoder(encoding || 'utf8').decode(buffer);
           return new DOMParser().parseFromString(text, domType || 'text/html');
-        } catch (error) {
+        }
+        catch (error) {
           console.warn(`function fetchDom failed retry:`, error);
         }
       } while (maxRetry-- > 0);
       const response = await this.fetch(input, init);
       const buffer = await response.arrayBuffer();
-      let text = new TextDecoder(encoding || 'utf8').decode(buffer);
+      const text = new TextDecoder(encoding || 'utf8').decode(buffer);
 
       return new DOMParser().parseFromString(text, domType || 'text/html');
     };
@@ -220,53 +231,55 @@ abstract class Extension {
         latestChapter = '.latestchapter a',
         latestUpdate = '.update',
         coverDomain = undefined,
-      }
+      },
     ) => {
       const elements = body.querySelectorAll(element);
 
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(cover);
-        let coverE =
-          img?.getAttribute('data-original') ||
-          img?.getAttribute('data-src') ||
-          img?.getAttribute('src') ||
-          img?.getAttribute('data-setbg') ||
-          (img as HTMLElement)?.style.backgroundImage?.replace(
-            /url\(["']?(.*?)["']?\)/,
-            '$1'
-          );
+        let coverE
+          = img?.getAttribute('data-original')
+            || img?.getAttribute('data-src')
+            || img?.getAttribute('src')
+            || img?.getAttribute('data-setbg')
+            || (img as HTMLElement)?.style.backgroundImage?.replace(
+              /url\(["']?(.*?)["']?\)/,
+              '$1',
+            );
 
         if (coverE) {
           if (!coverE.startsWith('http')) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
-            } else {
+            }
+            else {
               coverE = this.urlJoin(coverDomain ?? this.baseUrl, coverE);
             }
           }
         }
-        const titleE =
-          (!title
+        const titleE
+          = (!title
             ? element.textContent || element.getAttribute('title')
-            : null) ||
-          element.querySelector(title)?.textContent ||
-          element.querySelector(title)?.getAttribute('title');
+            : null)
+          || element.querySelector(title)?.textContent
+          || element.querySelector(title)?.getAttribute('title');
         const introE = element.querySelector(intro)?.textContent;
         const authorE = element.querySelector(author)?.textContent;
         const tagsE = Array.from(element.querySelectorAll(tags).values())
-          .map((item) => item.textContent)
+          .map(item => item.textContent)
           .filter((item): item is string => !!item);
         const statusE = element.querySelector(status)?.textContent;
-        const latestChapterE =
-          element.querySelector(latestChapter)?.textContent;
+        const latestChapterE
+          = element.querySelector(latestChapter)?.textContent;
         const latestUpdateE = element.querySelector(latestUpdate)?.textContent;
 
-        const urlE =
-          (!url ? element.getAttribute('href') : null) ||
-          element.querySelector(url)?.getAttribute('href') ||
-          element.querySelector(title)?.getAttribute('href');
-        if (!titleE) continue;
+        const urlE
+          = (!url ? element.getAttribute('href') : null)
+            || element.querySelector(url)?.getAttribute('href')
+            || element.querySelector(title)?.getAttribute('href');
+        if (!titleE)
+          continue;
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           title: titleE.trim(),
@@ -306,41 +319,42 @@ abstract class Extension {
         latestUpdate = '.update',
         coverDomain = undefined,
         baseUrl = undefined,
-      }
+      },
     ) => {
       const elements = body.querySelectorAll(element);
 
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(cover);
-        let coverE =
-          img?.getAttribute('data-original') ||
-          img?.getAttribute('data-src') ||
-          img?.getAttribute('src') ||
-          img?.getAttribute('data-setbg') ||
-          (img as HTMLElement)?.style.backgroundImage?.replace(
-            /url\(["']?(.*?)["']?\)/,
-            '$1'
-          );
+        let coverE
+          = img?.getAttribute('data-original')
+            || img?.getAttribute('data-src')
+            || img?.getAttribute('src')
+            || img?.getAttribute('data-setbg')
+            || (img as HTMLElement)?.style.backgroundImage?.replace(
+              /url\(["']?(.*?)["']?\)/,
+              '$1',
+            );
 
         if (coverE) {
           if (!coverE.startsWith('http')) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
-            } else {
+            }
+            else {
               coverE = this.urlJoin(
                 coverDomain ?? baseUrl ?? this.baseUrl,
-                coverE
+                coverE,
               );
             }
           }
         }
-        const titleE =
-          (!title
+        const titleE
+          = (!title
             ? element.textContent || element.getAttribute('title')
-            : null) ||
-          element.querySelector(title)?.textContent ||
-          element.querySelector(title)?.getAttribute('title');
+            : null)
+          || element.querySelector(title)?.textContent
+          || element.querySelector(title)?.getAttribute('title');
         const introE = element.querySelector(intro)?.textContent;
         const releaseDateE = element.querySelector(releaseDate)?.textContent;
         const countryE = element.querySelector(country)?.textContent;
@@ -348,16 +362,17 @@ abstract class Extension {
         const directorE = element.querySelector(director)?.textContent;
         const castE = element.querySelector(cast)?.textContent;
         const tagsE = Array.from(element.querySelectorAll(tags).values())
-          .map((item) => item.textContent)
+          .map(item => item.textContent)
           .filter((item): item is string => !!item);
         const statusE = element.querySelector(status)?.textContent;
         const latestUpdateE = element.querySelector(latestUpdate)?.textContent;
 
-        const urlE =
-          (!url ? element.getAttribute('href') : null) ||
-          element.querySelector(url)?.getAttribute('href') ||
-          element.querySelector(title)?.getAttribute('href');
-        if (!titleE) continue;
+        const urlE
+          = (!url ? element.getAttribute('href') : null)
+            || element.querySelector(url)?.getAttribute('href')
+            || element.querySelector(title)?.getAttribute('href');
+        if (!titleE)
+          continue;
         list.push({
           id: urlE
             ? this.urlJoin(baseUrl ?? this.baseUrl, urlE)
@@ -398,27 +413,28 @@ abstract class Extension {
         view = '.view',
         url = 'a',
         coverDomain = undefined,
-      }
+      },
     ) => {
       const elements = body.querySelectorAll(element);
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(cover);
-        const coverE =
-          img?.getAttribute('data-original') ||
-          img?.getAttribute('data-src') ||
-          img?.getAttribute('src');
-        const titleE =
-          element.querySelector(title)?.textContent ||
-          element.querySelector(title)?.getAttribute('title') ||
-          element.querySelector(title)?.getAttribute('alt');
+        const coverE
+          = img?.getAttribute('data-original')
+            || img?.getAttribute('data-src')
+            || img?.getAttribute('src');
+        const titleE
+          = element.querySelector(title)?.textContent
+            || element.querySelector(title)?.getAttribute('title')
+            || element.querySelector(title)?.getAttribute('alt');
         const descE = element.querySelector(desc)?.textContent;
         const authorE = element.querySelector(author)?.textContent;
         const datetimeE = element.querySelector(datetime)?.textContent;
         const hotE = element.querySelector(hot)?.textContent;
         const viewE = element.querySelector(view)?.textContent;
         const urlE = element.querySelector(url)?.getAttribute('href')?.trim();
-        if (!titleE) continue;
+        if (!titleE)
+          continue;
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           title: titleE?.trim() || '',
@@ -448,26 +464,27 @@ abstract class Extension {
         updateTime = '.datetime',
         url = 'a[href]',
         coverDomain = undefined,
-      }
+      },
     ) => {
       const elements = body.querySelectorAll(element);
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(picUrl);
-        const coverE =
-          img?.getAttribute('data-original') ||
-          img?.getAttribute('data-src') ||
-          img?.getAttribute('src');
-        const titleE =
-          element.querySelector(name)?.textContent ||
-          element.querySelector(name)?.getAttribute('title') ||
-          element.querySelector(name)?.getAttribute('alt');
+        const coverE
+          = img?.getAttribute('data-original')
+            || img?.getAttribute('data-src')
+            || img?.getAttribute('src');
+        const titleE
+          = element.querySelector(name)?.textContent
+            || element.querySelector(name)?.getAttribute('title')
+            || element.querySelector(name)?.getAttribute('alt');
         const descE = element.querySelector(desc)?.textContent;
         const authorE = element.querySelector(creator)?.textContent;
         const datetimeE = element.querySelector(createTime)?.textContent;
         const updateTimeE = element.querySelector(updateTime)?.textContent;
         const urlE = element.querySelector(url)?.getAttribute('href')?.trim();
-        if (!titleE) continue;
+        if (!titleE)
+          continue;
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           name: titleE?.trim() || '',
@@ -496,20 +513,20 @@ abstract class Extension {
         playUrl = '.play-url',
         lyric = '.lyric',
         coverDomain = undefined,
-      }
+      },
     ) => {
       const elements = body.querySelectorAll(element);
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(picUrl);
-        const coverE =
-          img?.getAttribute('data-original') ||
-          img?.getAttribute('data-src') ||
-          img?.getAttribute('src');
-        const titleE =
-          element.querySelector(name)?.textContent ||
-          element.querySelector(name)?.getAttribute('title') ||
-          element.querySelector(name)?.getAttribute('alt');
+        const coverE
+          = img?.getAttribute('data-original')
+            || img?.getAttribute('data-src')
+            || img?.getAttribute('src');
+        const titleE
+          = element.querySelector(name)?.textContent
+            || element.querySelector(name)?.getAttribute('title')
+            || element.querySelector(name)?.getAttribute('alt');
         const authorE = Array.from(element.querySelectorAll(artists).values());
         const durationE = element.querySelector(duration)?.textContent;
         const lyricE = element.querySelector(lyric)?.textContent;
@@ -518,7 +535,8 @@ abstract class Extension {
           .querySelector(playUrl)
           ?.getAttribute('href')
           ?.trim();
-        if (!titleE) continue;
+        if (!titleE)
+          continue;
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           name: titleE?.trim() || '',
@@ -526,7 +544,7 @@ abstract class Extension {
             ? this.urlJoin(coverDomain ?? this.baseUrl, coverE)
             : '',
           artists: authorE
-            ? authorE.map((a) => a.textContent || '')
+            ? authorE.map(a => a.textContent || '')
             : undefined,
           duration: durationE?.trim() ? Number(durationE.trim()) : undefined,
           lyric: lyricE?.trim() || undefined,
@@ -539,14 +557,14 @@ abstract class Extension {
     };
     this.queryChapters = async (
       body: Document,
-      { element = '.chapter_list a' }
+      { element = '.chapter_list a' },
     ) => {
       const elements = body.querySelectorAll(element);
       const list = [];
-      for (let element of elements) {
+      for (const element of elements) {
         const href = element.getAttribute('href');
-        const title =
-          element.textContent?.trim() || element.getAttribute('title');
+        const title
+          = element.textContent?.trim() || element.getAttribute('title');
         if (href) {
           list.push({
             id: this.urlJoin(this.baseUrl, href),
@@ -558,13 +576,15 @@ abstract class Extension {
       return list;
     };
     this.getContentText = (element?: HTMLElement) => {
-      if (!element) return '';
+      if (!element)
+        return '';
       let text = '';
       for (const child of element.childNodes) {
         if (child.nodeType === Node.TEXT_NODE) {
-          text += child.textContent + '\n';
-        } else if (child.nodeType === Node.ELEMENT_NODE) {
-          text += this.getContentText(child as HTMLElement) + '\n';
+          text += `${child.textContent}\n`;
+        }
+        else if (child.nodeType === Node.ELEMENT_NODE) {
+          text += `${this.getContentText(child as HTMLElement)}\n`;
         }
       }
       return text.trim();
@@ -575,6 +595,7 @@ abstract class Extension {
     // 由id+name+version生成，不可重复
     return this.cryptoJs.MD5(this.id + this.name + this.version).toString();
   }
+
   toJSON() {
     return {
       id: this.id,

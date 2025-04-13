@@ -1,6 +1,6 @@
-import { PlaylistInfo, SongInfo } from '@/extensions/song';
-import { createRequest, CryptoType } from './request';
+import type { PlaylistInfo } from '@/extensions/song';
 import _ from 'lodash';
+import { createRequest, CryptoType } from './request';
 
 export { createRequest, CryptoType };
 export async function search(keyword: string) {
@@ -14,7 +14,7 @@ export async function search(keyword: string) {
 
 export async function lyric(id: string) {
   return await createRequest('/api/song/lyric', {
-    id: id,
+    id,
     tv: -1,
     lv: -1,
     rv: -1,
@@ -27,22 +27,23 @@ export async function songDetail(ids: string[]) {
   return await createRequest(
     '/api/v3/song/detail',
     {
-      c: '[' + ids.map((id) => '{"id":' + id + '}').join(',') + ']',
+      c: `[${ids.map(id => `{"id":${id}}`).join(',')}]`,
     },
     {
       crypto: CryptoType.weapi,
-    }
+    },
   );
 }
 
 export async function playlistDetail(id: string): Promise<PlaylistInfo | null> {
   const response1 = await createRequest('/api/v6/playlist/detail', {
-    id: id,
+    id,
     n: 100000,
     s: 8,
   });
   const json1 = await response1.json();
-  if (json1.code !== 200) return null;
+  if (json1.code !== 200)
+    return null;
 
   const trackIds: { id: string }[] = json1.playlist.trackIds;
   const list = [];
@@ -51,14 +52,15 @@ export async function playlistDetail(id: string): Promise<PlaylistInfo | null> {
     const response = await createRequest(
       '/api/v3/song/detail',
       {
-        c: '[' + chunk.map((item) => '{"id":' + item.id + '}').join(',') + ']',
+        c: `[${chunk.map(item => `{"id":${item.id}}`).join(',')}]`,
       },
       {
         crypto: CryptoType.weapi,
-      }
+      },
     );
     const json = await response.json();
-    if (json.code !== 200) continue;
+    if (json.code !== 200)
+      continue;
     list.push(
       ...json.songs.map((item: any) => {
         return {
@@ -70,7 +72,7 @@ export async function playlistDetail(id: string): Promise<PlaylistInfo | null> {
           sourceId: '',
           extra: { fee: item.fee },
         };
-      })
+      }),
     );
   }
   return {

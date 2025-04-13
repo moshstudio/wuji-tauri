@@ -1,18 +1,12 @@
 <script setup lang="ts">
-import { useDisplayStore, useStore } from '@/store';
-import { storeToRefs } from 'pinia';
+import type { PhotoSource } from '@/types';
 import WinPhotoCard from '@/components/card/photoCards/WinPhotoCard.vue';
 import HorizonList from '@/components/HorizonList.vue';
 import SimplePagination from '@/components/pagination/SimplePagination.vue';
-import PhotoShelf from '@/views/photo/PhotoShelf.vue';
 import WinSearch from '@/components/windows/WinSearch.vue';
-import { PhotoSource } from '@/types';
-
-const store = useStore();
-const displayStore = useDisplayStore();
-const { photoSources } = storeToRefs(store);
-
-const searchValue = defineModel('searchValue', { type: String, default: '' });
+import { useDisplayStore, useStore } from '@/store';
+import PhotoShelf from '@/views/photo/PhotoShelf.vue';
+import { storeToRefs } from 'pinia';
 
 const emit = defineEmits<{
   (e: 'recommend', force?: boolean): void;
@@ -20,6 +14,11 @@ const emit = defineEmits<{
   (e: 'pageChange', source: PhotoSource, pageNo: number): void;
   (e: 'openBaseUrl', source: PhotoSource): void;
 }>();
+const store = useStore();
+const displayStore = useDisplayStore();
+const { photoSources } = storeToRefs(store);
+
+const searchValue = defineModel('searchValue', { type: String, default: '' });
 </script>
 
 <template>
@@ -28,11 +27,11 @@ const emit = defineEmits<{
     class="w-full h-full overflow-x-hidden overflow-y-auto"
   >
     <div class="flex items-center justify-between px-4 py-2">
-      <div class="placeholder"></div>
+      <div class="placeholder" />
       <WinSearch
         v-model:search-value="searchValue"
         @search="() => emit('search')"
-      ></WinSearch>
+      />
       <div
         class="text-button text-nowrap"
         @click="displayStore.showPhotoShelf = true"
@@ -51,24 +50,24 @@ const emit = defineEmits<{
             {{ item.item.name }}
           </van-button>
           <SimplePagination
+            v-if="item.list && item.list.totalPage"
             v-model="item.list.page"
             :page-count="item.list.totalPage"
             @change="(page) => emit('pageChange', item, page)"
-            v-if="item.list && item.list.totalPage"
           />
         </van-row>
         <HorizonList>
           <p v-if="!item.list?.list.length" class="m-2 text-xs text-gray-600">
             内容为空
           </p>
-          <template v-for="photo in item.list?.list" :key="photo" v-else>
-            <WinPhotoCard :item="photo"></WinPhotoCard>
+          <template v-for="photo in item.list?.list" v-else :key="photo">
+            <WinPhotoCard :item="photo" />
           </template>
         </HorizonList>
         <van-divider :style="{ margin: '8px 0px' }" />
       </div>
     </div>
-    <PhotoShelf></PhotoShelf>
+    <PhotoShelf />
   </div>
 </template>
 

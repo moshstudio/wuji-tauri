@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { SongInfo } from '@/extensions/song';
-import { computed, PropType, ref } from 'vue';
+import type { SongInfo } from '@/extensions/song';
+import type { PropType } from 'vue';
+import SongCardPhoto from '@/components/photos/SongCardPhoto.vue';
 import { useSongStore } from '@/store';
 import { joinSongArtists } from '@/utils';
-import SongCardPhoto from '@/components/photos/SongCardPhoto.vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
   song: {
@@ -11,9 +12,8 @@ const props = defineProps({
     required: true,
   },
 });
-const song = props.song;
 const emit = defineEmits(['play']);
-
+const song = props.song;
 const songStore = useSongStore();
 
 const playButtonVisible = ref(false);
@@ -21,12 +21,12 @@ const isPlayingSong = computed(() => {
   return songStore.playingSong?.id === song.id;
 });
 
-const onPlay = () => {
+function onPlay() {
   emit('play');
-};
-const onPause = () => {
+}
+function onPause() {
   songStore.onPause();
-};
+}
 </script>
 
 <template>
@@ -45,7 +45,7 @@ const onPause = () => {
       :height="36"
       @play="onPlay"
       @pause="onPause"
-    ></SongCardPhoto>
+    />
     <div
       class="grow flex flex-col pl-2 text-xs min-w-[10px] justify-around truncate"
     >

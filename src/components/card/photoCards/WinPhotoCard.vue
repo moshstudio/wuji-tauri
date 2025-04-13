@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { PhotoItem } from '@/extensions/photo';
-import { router } from '@/router';
-import { onMounted, PropType, ref } from 'vue';
+import type { PhotoItem } from '@/extensions/photo';
+import type { PropType } from 'vue';
 import LoadImage from '@/components/LoadImage.vue';
+import { router } from '@/router';
 
 const { item } = defineProps({
   item: {
@@ -12,12 +12,12 @@ const { item } = defineProps({
 });
 const selected = defineModel('selected', { type: Boolean, default: false });
 
-const onClick = () => {
+function onClick() {
   router.push({
     name: 'PhotoDetail',
     params: { id: item.id, sourceId: item.sourceId },
   });
-};
+}
 </script>
 
 <template>
@@ -34,8 +34,8 @@ const onClick = () => {
       :headers="item.coverHeaders || undefined"
     />
     <p
-      class="text-xs text-center text-[var(--van-text-color)] truncate py-1"
       v-if="item.title"
+      class="text-xs text-center text-[var(--van-text-color)] truncate py-1"
     >
       {{ item.title }}
     </p>

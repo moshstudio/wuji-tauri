@@ -1,9 +1,7 @@
-import _ from 'lodash';
 import { fetch } from '@/utils/fetch';
 import {
-  search as neteaseSearch,
   lyric as neteaseLyric,
-  songDetail as neteaseSongDetail,
+  search as neteaseSearch,
 } from './neteaseMusic';
 
 const cache = new Map<string, Lyric>();
@@ -15,24 +13,26 @@ export interface LyricItem {
 export type Lyric = LyricItem[];
 export async function getLyric(
   songName: string,
-  singerName?: string
+  singerName?: string,
 ): Promise<Lyric | undefined> {
   const key = `${songName}-${singerName}`;
   if (cache.has(key)) {
     return cache.get(key);
-  } else {
+  }
+  else {
     const lyricFromLongZhu = async (): Promise<string | null> => {
       const url = `https://www.hhlqilongzhu.cn/api/dg_geci.php?msg=${key}&n=1&type=2`;
       const response = await fetch(url);
       const text = await response.text();
-      if (!text.includes(songName)) return null;
+      if (!text.includes(songName))
+        return null;
       return text;
     };
     const lyricFromNetease = async (): Promise<string | null> => {
       const res = await neteaseSearch(songName);
       const t = await res.text();
       const songs: { id: number; name: string; artists: string }[] = JSON.parse(
-        t
+        t,
       ).result.songs.map((song: any) => {
         return {
           id: song.id,
@@ -40,23 +40,26 @@ export async function getLyric(
           artists: song.artists.map((artist: any) => artist.name).join(','),
         };
       });
-      if (!songs) return '';
-      const sSong =
-        songs.find(
-          (song) =>
-            song.name === songName && song.artists.includes(singerName || '')
-        );
+      if (!songs)
+        return '';
+      const sSong = songs.find(
+        song =>
+          song.name === songName && song.artists.includes(singerName || ''),
+      );
 
-      if (!sSong) return '';
+      if (!sSong)
+        return '';
       const l = await neteaseLyric(String(sSong.id));
       const lyricResponseText = await l.text();
       return JSON.parse(lyricResponseText).lrc.lyric;
     };
-    const lyricText =  (await lyricFromNetease()) || (await lyricFromLongZhu());
+    const lyricText = (await lyricFromNetease()) || (await lyricFromLongZhu());
 
-    if (!lyricText) return;
+    if (!lyricText)
+      return;
     const lyric = parseLyric(lyricText);
-    if (!lyric.length) return;
+    if (!lyric.length)
+      return;
     cache.set(key, lyric);
     return lyric;
   }
@@ -66,10 +69,11 @@ export function parseLyric(lyric: string): Lyric {
   const parseTime = (t: string): number | null => {
     try {
       const timeParts = t.split(':');
-      const minutes = parseInt(timeParts[0], 10);
-      const seconds = parseFloat(timeParts[1]);
+      const minutes = Number.parseInt(timeParts[0], 10);
+      const seconds = Number.parseFloat(timeParts[1]);
       return Math.floor((minutes * 60 + seconds) * 1000); // 转换为毫秒
-    } catch (e) {
+    }
+    catch (e) {
       return null;
     }
   };
@@ -78,12 +82,12 @@ export function parseLyric(lyric: string): Lyric {
     _lyric = _lyric.replace(/\]\[/g, '@@@');
     _lyric = _lyric.replace(/\[/g, '\n[');
     _lyric = _lyric.replace(/@@@/g, '][');
-    return _lyric.split('\n').map((line) => line.trim());
+    return _lyric.split('\n').map(line => line.trim());
   };
 
-  const remove = (x: string): string => x.replace(/[\[\]]/g, '');
+  const remove = (x: string): string => x.replace(/[[\]]/g, '');
 
-  let lyricList = lyric.split('\n').map((line) => line.trim());
+  let lyricList = lyric.split('\n').map(line => line.trim());
   if (lyricList.length === 1) {
     lyricList = mySplit1(lyric);
   }

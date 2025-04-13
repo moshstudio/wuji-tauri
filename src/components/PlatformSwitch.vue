@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia';
 import { useDisplayStore } from '@/store';
-import { computed, useAttrs } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useAttrs } from 'vue';
 
 const attrs = useAttrs();
 
@@ -12,12 +12,12 @@ const { isMobileView } = storeToRefs(displayStore);
 <template>
   <template v-if="isMobileView">
     <keep-alive>
-      <slot name="mobile" v-bind="attrs"></slot>
+      <slot name="mobile" v-bind="attrs" />
     </keep-alive>
   </template>
   <template v-else>
     <keep-alive>
-      <slot name="windows" v-bind="attrs"></slot>
+      <slot name="windows" v-bind="attrs" />
     </keep-alive>
   </template>
 </template>

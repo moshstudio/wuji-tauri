@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { useDisplayStore, useSongStore } from '@/store';
-import { storeToRefs } from 'pinia';
-import { ref, reactive, watch, computed, nextTick } from 'vue';
-import { joinSongArtists } from '@/utils';
-import { Swiper, SwiperSlide } from 'swiper/vue';
 import type { Swiper as SwiperClass } from 'swiper/types';
+import { useSongStore } from '@/store';
+import { joinSongArtists } from '@/utils';
+import { storeToRefs } from 'pinia';
+import { Swiper, SwiperSlide } from 'swiper/vue';
+import { computed, reactive } from 'vue';
 import LoadImage from '../LoadImage.vue';
 
 import 'swiper/css';
@@ -14,26 +14,32 @@ const { playingSong, playingPlaylist } = storeToRefs(songStore);
 
 // 获取相邻歌曲信息
 const previousSong = computed(() => {
-  if (!playingSong.value || !playingPlaylist.value.length) return null;
+  if (!playingSong.value || !playingPlaylist.value.length)
+    return null;
   const index = playingPlaylist.value.findIndex(
-    (item) => item.id === playingSong.value?.id
+    item => item.id === playingSong.value?.id,
   );
-  if (index === -1) return null;
+  if (index === -1)
+    return null;
   if (index === 0) {
     return playingPlaylist.value[playingPlaylist.value.length - 1];
-  } else {
+  }
+  else {
     return playingPlaylist.value[index - 1];
   }
 });
 const nextSong = computed(() => {
-  if (!playingSong.value || !playingPlaylist.value.length) return null;
+  if (!playingSong.value || !playingPlaylist.value.length)
+    return null;
   const index = playingPlaylist.value.findIndex(
-    (item) => item.id === playingSong.value?.id
+    item => item.id === playingSong.value?.id,
   );
-  if (index === -1) return null;
+  if (index === -1)
+    return null;
   if (index === playingPlaylist.value.length - 1) {
     return playingPlaylist.value[0];
-  } else {
+  }
+  else {
     return playingPlaylist.value[index + 1];
   }
 });
@@ -41,7 +47,7 @@ const nextSong = computed(() => {
 const threeSongs = reactive([previousSong, playingSong, nextSong]);
 
 // 滑动结束处理
-const onSwipeChange = async (swiper: SwiperClass) => {
+async function onSwipeChange(swiper: SwiperClass) {
   const index = swiper.activeIndex;
 
   // 滑动到左侧(上一首)
@@ -53,19 +59,19 @@ const onSwipeChange = async (swiper: SwiperClass) => {
     songStore.nextSong();
   }
   swiper.slideTo(1, 0, false);
-};
+}
 </script>
 
 <template>
-  <swiper
+  <Swiper
     :slides-per-view="1"
     :centered-slides="true"
     :initial-slide="1"
     :loop="false"
-    @slideChangeTransitionEnd="onSwipeChange"
+    @slide-change-transition-end="onSwipeChange"
   >
-    <swiper-slide v-for="(song, index) in threeSongs" :key="index">
-      <div class="flex gap-4 w-full" v-if="song.value">
+    <SwiperSlide v-for="(song, index) in threeSongs" :key="index">
+      <div v-if="song.value" class="flex gap-4 w-full">
         <div class="w-[30px] h-[30px]">
           <LoadImage
             :width="30"
@@ -100,8 +106,8 @@ const onSwipeChange = async (swiper: SwiperClass) => {
           </span>
         </div>
       </div>
-    </swiper-slide>
-  </swiper>
+    </SwiperSlide>
+  </Swiper>
 </template>
 
 <style scoped lang="less"></style>

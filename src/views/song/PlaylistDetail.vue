@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import WinPlaylistDetail from '../windowsView/song/PlaylistDetail.vue';
-import MobilePlaylistDetail from '../mobileView/song/PlaylistDetail.vue';
+import type { PlaylistInfo } from '@/extensions/song';
+import type { SongSource } from '@/types';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
-import { PlaylistInfo } from '@/extensions/song';
 import { router } from '@/router';
-import { useStore, useSongStore, useSongShelfStore } from '@/store';
-import { SongSource } from '@/types';
-import { showLoadingToast, showToast } from 'vant';
-import { ref, triggerRef, onActivated, watch } from 'vue';
-import { debounce } from 'lodash';
+import { useSongShelfStore, useStore } from '@/store';
 import { retryOnFalse, sleep } from '@/utils';
+import { debounce } from 'lodash';
+import { showLoadingToast, showToast } from 'vant';
+import { onActivated, ref, triggerRef, watch } from 'vue';
+import MobilePlaylistDetail from '../mobileView/song/PlaylistDetail.vue';
+import WinPlaylistDetail from '../windowsView/song/PlaylistDetail.vue';
 
 const { playlistId, sourceId } = defineProps({
   playlistId: String,
@@ -63,7 +63,7 @@ const loadData = retryOnFalse({ onFailed: back })(async (pageNo?: number) => {
   const detail = await store.songPlaylistDetail(
     source!,
     playlist.value!,
-    currentPage.value
+    currentPage.value,
   );
   toast.close();
   if (detail) {
@@ -74,12 +74,13 @@ const loadData = retryOnFalse({ onFailed: back })(async (pageNo?: number) => {
     showToast('播放列表为空');
   }
   currentPage.value = detail?.list?.page || 1;
-  if (content.value) content.value.scrollTop = 0;
+  if (content.value)
+    content.value.scrollTop = 0;
   return true;
 });
 const toPage = debounce(loadData, 600);
 
-const playAll = async () => {
+async function playAll() {
   if (!playlist.value) {
     return;
   }
@@ -91,14 +92,15 @@ const playAll = async () => {
   });
   await store.songPlaylistPlayAll(playlist.value);
   t.close();
-};
-const addToShelf = () => {
-  if (!playlist.value) return;
+}
+function addToShelf() {
+  if (!playlist.value)
+    return;
   const res = shelfStore.addPlaylistToShelf(playlist.value);
   if (res) {
     showToast('收藏成功');
   }
-};
+}
 
 watch([() => playlistId, () => sourceId], () => {
   shouldLoad.value = false; // watch这里优先load
@@ -125,7 +127,7 @@ onActivated(async () => {
         @to-page="toPage"
         @play-all="playAll"
         @add-to-shelf="addToShelf"
-      ></MobilePlaylistDetail>
+      />
     </template>
     <template #windows>
       <WinPlaylistDetail
@@ -137,7 +139,7 @@ onActivated(async () => {
         @to-page="toPage"
         @play-all="playAll"
         @add-to-shelf="addToShelf"
-      ></WinPlaylistDetail>
+      />
     </template>
   </PlatformSwitch>
 </template>

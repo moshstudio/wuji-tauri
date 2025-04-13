@@ -1,4 +1,5 @@
-import { setInterval, clearInterval } from 'worker-timers';
+import { clearInterval, setInterval } from 'worker-timers';
+
 let ws: WebSocket;
 let heartbeatInterval: number;
 

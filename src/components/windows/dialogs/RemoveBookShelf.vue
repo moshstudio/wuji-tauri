@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import { useDisplayStore, useBookShelfStore } from '@/store';
+import { useBookShelfStore, useDisplayStore } from '@/store';
 import { showToast } from 'vant';
 
 const displayStore = useDisplayStore();
 const shelfStore = useBookShelfStore();
 
-const removeBookShelf = (name: string) => {
-  if (!name) return;
+function removeBookShelf(name: string) {
+  if (!name)
+    return;
   if (shelfStore.bookShelf.length === 1) {
     showToast('书架至少需要一个');
     return;
   }
   shelfStore.removeBookShelf(name);
   showToast('书架删除成功');
-};
+}
 </script>
 
 <template>
@@ -36,8 +37,7 @@ const removeBookShelf = (name: string) => {
             type="danger"
             round
             @click="removeBookShelf(shelf.id)"
-          >
-          </van-button>
+          />
         </template>
       </van-cell>
     </van-cell-group>

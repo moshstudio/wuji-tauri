@@ -5,13 +5,14 @@ import { showToast } from 'vant';
 const displayStore = useDisplayStore();
 const shelfStore = usePhotoShelfStore();
 
-const removePhotoShelf = (shelfId: string) => {
-  if (!shelfId) return;
+function removePhotoShelf(shelfId: string) {
+  if (!shelfId)
+    return;
   const res = shelfStore.removeShelf(shelfId);
   if (res) {
     showToast('收藏夹删除成功');
   }
-};
+}
 </script>
 
 <template>
@@ -34,8 +35,7 @@ const removePhotoShelf = (shelfId: string) => {
             type="danger"
             round
             @click="removePhotoShelf(shelf.id)"
-          >
-          </van-button>
+          />
         </template>
       </van-cell>
     </van-cell-group>

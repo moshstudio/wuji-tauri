@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia';
-import WinVideo from '../windowsView/video/index.vue';
-import MobileVideo from '../mobileView/video/index.vue';
+import type { VideoItem } from '@/extensions/video';
+import type { VideoSource } from '@/types';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
-import { ref, toRaw, triggerRef } from 'vue';
-import { useDisplayStore, useStore } from '@/store';
-import { VideoSource } from '@/types';
-import _, { debounce } from 'lodash';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { router } from '@/router';
+import { useDisplayStore, useStore } from '@/store';
+import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { debounce } from 'lodash';
+import { storeToRefs } from 'pinia';
 import { showLoadingToast } from 'vant';
-import { VideoItem } from '@/extensions/video';
+import { ref, triggerRef } from 'vue';
+import MobileVideo from '../mobileView/video/index.vue';
+import WinVideo from '../windowsView/video/index.vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -23,12 +23,13 @@ const recommend = createCancellableFunction(
     await Promise.all(
       videoSources.value.map(async (source) => {
         if (!source.list || force) {
-          if (signal.aborted) return;
+          if (signal.aborted)
+            return;
           await store.videoRecommendList(source);
         }
-      })
+      }),
     );
-  }
+  },
 );
 
 const search = createCancellableFunction(async (signal: AbortSignal) => {
@@ -36,27 +37,29 @@ const search = createCancellableFunction(async (signal: AbortSignal) => {
   const t = displayStore.showToast();
   if (!keyword) {
     await recommend(true);
-  } else {
+  }
+  else {
     await Promise.all(
       videoSources.value.map(async (source) => {
-        if (signal.aborted) return;
+        if (signal.aborted)
+          return;
         await store.videoSearch(source, keyword, 1);
-      })
+      }),
     );
   }
   triggerRef(videoSources);
   displayStore.closeToast(t);
 });
-const loadType = async (source: VideoSource, type?: string) => {
+async function loadType(source: VideoSource, type?: string) {
   await store.videoRecommendList(source, 1, type);
-};
+}
 const loadPage = debounce(
   createCancellableFunction(
     async (
       signal: AbortSignal,
       source: VideoSource,
       pageNo?: number,
-      type?: string
+      type?: string,
     ) => {
       const toast = showLoadingToast({
         message: '加载中',
@@ -66,15 +69,16 @@ const loadPage = debounce(
       });
       if (!searchValue.value) {
         await store.videoRecommendList(source, pageNo, type);
-      } else {
+      }
+      else {
         await store.videoSearch(source, searchValue.value, pageNo);
       }
       toast.close();
-    }
+    },
   ),
-  500
+  500,
 );
-const toDetail = (source: VideoSource, item: VideoItem) => {
+function toDetail(source: VideoSource, item: VideoItem) {
   router.push({
     name: 'VideoDetail',
     params: {
@@ -82,14 +86,14 @@ const toDetail = (source: VideoSource, item: VideoItem) => {
       sourceId: source.item.id,
     },
   });
-};
+}
 
-const openBaseUrl = async (source: VideoSource) => {
+async function openBaseUrl(source: VideoSource) {
   const sc = await store.sourceClass(source.item);
   if (sc && sc.baseUrl) {
     // open(sc.baseUrl);
   }
-};
+}
 </script>
 
 <template>
@@ -103,7 +107,7 @@ const openBaseUrl = async (source: VideoSource) => {
         @to-detail="toDetail"
         @open-base-url="openBaseUrl"
         @recommend="recommend"
-      ></MobileVideo>
+      />
     </template>
     <template #windows>
       <WinVideo
@@ -114,7 +118,7 @@ const openBaseUrl = async (source: VideoSource) => {
         @to-detail="toDetail"
         @open-base-url="openBaseUrl"
         @recommend="recommend"
-      ></WinVideo>
+      />
     </template>
   </PlatformSwitch>
 </template>

@@ -1,17 +1,27 @@
 <script setup lang="ts">
-import { ComicChapter, ComicContent, ComicItem } from '@/extensions/comic';
+import type { ComicChapter, ComicContent, ComicItem } from '@/extensions/comic';
 
-import { useComicStore, useDisplayStore } from '@/store';
-import { ComicSource } from '@/types';
+import type { ComicSource } from '@/types';
+import type { PropType } from 'vue';
 import ComicShelfButton from '@/components/ComicShelfButton.vue';
-import ComicShelf from '@/views/comic/ComicShelf.vue';
-import NavBar from '@/components/NavBar.vue';
-import { Icon } from '@iconify/vue';
-import { onActivated, onDeactivated, onMounted, PropType } from 'vue';
-import { useScroll } from '@vueuse/core';
 import LoadImage from '@/components/LoadImage.vue';
-import SwitchComicSourceDialog from '@/components/dialogs/SwitchComicSource.vue';
+import NavBar from '@/components/NavBar.vue';
+import { useComicStore } from '@/store';
+import ComicShelf from '@/views/comic/ComicShelf.vue';
+import { Icon } from '@iconify/vue';
+import { useScroll } from '@vueuse/core';
+import { onActivated, onDeactivated, onMounted } from 'vue';
 
+const emit = defineEmits<{
+  (e: 'back', checkShelf?: boolean): void;
+  (e: 'loadData'): void;
+  (e: 'toChapter', chapter: ComicChapter): void;
+  (e: 'prevChapter'): void;
+  (e: 'nextChapter'): void;
+  (e: 'openChapterPopup'): void;
+  (e: 'searchAllSources', targetComic: ComicItem): void;
+  (e: 'switchSource', newComicItem: ComicItem): void;
+}>();
 const comic = defineModel('comic', { type: Object as PropType<ComicItem> });
 const comicSource = defineModel('comicSource', {
   type: Object as PropType<ComicSource>,
@@ -45,17 +55,6 @@ const showSwitchSourceDialog = defineModel('showSwitchSourceDialog', {
   required: true,
 });
 
-const emit = defineEmits<{
-  (e: 'back', checkShelf?: boolean): void;
-  (e: 'loadData'): void;
-  (e: 'toChapter', chapter: ComicChapter): void;
-  (e: 'prevChapter'): void;
-  (e: 'nextChapter'): void;
-  (e: 'openChapterPopup'): void;
-  (e: 'searchAllSources', targetComic: ComicItem): void;
-  (e: 'switchSource', newComicItem: ComicItem): void;
-}>();
-
 const comicStore = useComicStore();
 
 let savedScrollPosition = 0;
@@ -87,9 +86,9 @@ onMounted(() => {
     <NavBar
       v-model:show="showNavBar"
       left-arrow
-      @click-left="() => emit('back', true)"
       class="absolute w-full h-[70px]"
       target="#read-content"
+      @click-left="() => emit('back', true)"
     >
       <template #title>
         <div class="flex flex-col gap-1 items-center truncate">
@@ -103,7 +102,7 @@ onMounted(() => {
               <van-icon name="user-o" />
               {{ comic?.author }}
             </span>
-            <span class="text-xs text-[--van-text-color-2]" v-if="comicSource">
+            <span v-if="comicSource" class="text-xs text-[--van-text-color-2]">
               <van-icon name="flag-o" />
               {{ comicSource?.item.name }}
             </span>
@@ -118,14 +117,14 @@ onMounted(() => {
     </NavBar>
     <div
       class="scroll-container flex-grow flex flex-col gap-0 items-center overflow-y-auto min-w-[400px] w-[95%] sm:w-[90%] md:w-[85%] lg:w-[75%] focus:outline-none focus:border-none"
+      tabindex="0"
       @keydown.right.stop="() => emit('nextChapter')"
       @keydown.left.stop="() => emit('prevChapter')"
-      tabindex="0"
     >
-      <div class="min-h-[80px]"></div>
+      <div class="min-h-[80px]" />
       <template
-        v-if="readingContent"
         v-for="item in readingContent.photos"
+        v-if="readingContent"
         :key="item.id"
       >
         <div class="w-full text-center leading-none">
@@ -134,8 +133,7 @@ onMounted(() => {
             :headers="readingContent.photosHeaders"
             fit="contain"
             lazy-load
-          >
-          </LoadImage>
+          />
         </div>
       </template>
       <div
@@ -145,7 +143,7 @@ onMounted(() => {
           :comic="comic"
           mode="square"
           :reading-chapter="readingChapter"
-        ></ComicShelfButton>
+        />
         <van-button
           icon="bars"
           square
@@ -225,11 +223,11 @@ onMounted(() => {
         >
           <div class="flex items-center gap-2 flex-nowrap">
             <Icon
+              v-if="readingChapter?.id === item.id"
               icon="iconamoon:eye-thin"
               width="24"
               height="24"
               color="var(--van-primary-color)"
-              v-if="readingChapter?.id === item.id"
             />
             <span
               class="flex-grow flex text-left"
@@ -248,18 +246,22 @@ onMounted(() => {
     <van-dialog
       v-model:show="showSettingDialog"
       titl
-      closeOnClickOverlay
+      close-on-click-overlay
       :show-confirm-button="false"
       class="setting-dialog bg-[#1f1f1f] text-white"
     >
       <template #title>
-        <div class="text-white">界面设置</div>
+        <div class="text-white">
+          界面设置
+        </div>
       </template>
       <div class="flex flex-col p-2 text-sm">
-        <div class="pb-2">字体和样式</div>
+        <div class="pb-2">
+          字体和样式
+        </div>
       </div>
     </van-dialog>
-    <ComicShelf></ComicShelf>
+    <ComicShelf />
     <!-- <SwitchComicSourceDialog
       v-model:show="showSwitchSourceDialog"
       :search-result="allSourceResults || []"

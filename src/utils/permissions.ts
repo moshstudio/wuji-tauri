@@ -1,4 +1,5 @@
-import { invoke, PermissionState } from '@tauri-apps/api/core';
+import type { PermissionState } from '@tauri-apps/api/core';
+import { invoke } from '@tauri-apps/api/core';
 
 export interface MediaSessionPermissions {
   foregroundService: PermissionState;
@@ -12,11 +13,9 @@ export enum MediaSessionPermissionType {
   WakeLock = 'wakeLock',
 }
 
-export const handlePermissionRequest = async (
-  type: MediaSessionPermissionType
-) => {
+export async function handlePermissionRequest(type: MediaSessionPermissionType) {
   const permission = await invoke<MediaSessionPermissions>(
-    'plugin:mediasession|check_permissions'
+    'plugin:mediasession|check_permissions',
   );
 
   const state = permission[type];
@@ -32,4 +31,4 @@ export const handlePermissionRequest = async (
     });
     // return checkPermission(type); // 请求后重新检查
   }
-};
+}

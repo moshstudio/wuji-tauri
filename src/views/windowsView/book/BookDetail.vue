@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { BookChapter, BookItem } from '@/extensions/book';
-import { BookSource } from '@/types';
-import tinycolor from 'tinycolor2';
-import _ from 'lodash';
-import { PropType } from 'vue';
-import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
+import type { BookChapter, BookItem } from '@/extensions/book';
+import type { BookSource } from '@/types';
+import type { PropType } from 'vue';
 import BookShelfButton from '@/components/BookShelfButton.vue';
-import BookShelf from '@/views/book/BookShelf.vue';
+import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
 import { useDisplayStore } from '@/store';
+import BookShelf from '@/views/book/BookShelf.vue';
+import _ from 'lodash';
+import tinycolor from 'tinycolor2';
 
+const emit = defineEmits<{
+  (e: 'back'): void;
+  (e: 'loadData'): void;
+  (e: 'toChapter', chapter: BookChapter): void;
+}>();
 const book = defineModel('book', {
   type: Object as PropType<BookItem>,
 });
@@ -23,12 +28,6 @@ const isAscending = defineModel('isAscending', {
   required: true,
 });
 
-const emit = defineEmits<{
-  (e: 'back'): void;
-  (e: 'loadData'): void;
-  (e: 'toChapter', chapter: BookChapter): void;
-}>();
-
 const displayStore = useDisplayStore();
 </script>
 
@@ -36,9 +35,9 @@ const displayStore = useDisplayStore();
   <div class="relative h-full flex flex-col">
     <van-nav-bar left-arrow @click-left="() => emit('back')" />
     <main
+      v-if="book"
       ref="content"
       class="grow flex flex-col items-center overflow-y-auto p-4 bg-[--van-background-3] select-none"
-      v-if="book"
     >
       <van-row
         justify="center"
@@ -46,12 +45,12 @@ const displayStore = useDisplayStore();
         class="p-2 rounded shadow-md w-[80%]"
       >
         <van-image
+          v-if="book.cover"
           width="80px"
           height="100px"
           radius="4"
           :src="book.cover"
           class="mr-4"
-          v-if="book.cover"
         >
           <template #loading>
             <div
@@ -83,13 +82,15 @@ const displayStore = useDisplayStore();
         </div>
       </van-row>
       <div
-        class="p-2 mt-4 shadow-md rounded text-[--van-text-color] lg:w-[80%]"
         v-if="book.chapters"
+        class="p-2 mt-4 shadow-md rounded text-[--van-text-color] lg:w-[80%]"
       >
         <div class="w-full flex justify-between gap-2 items-center">
-          <p class="font-bold ml-6">共有{{ book.chapters.length }} 章</p>
+          <p class="font-bold ml-6">
+            共有{{ book.chapters.length }} 章
+          </p>
           <div class="flex gap-2 items-center">
-            <BookShelfButton :book="book"></BookShelfButton>
+            <BookShelfButton :book="book" />
             <p class="mr-1">
               <van-button
                 :icon="isAscending ? 'ascending' : 'descending'"
@@ -107,15 +108,15 @@ const displayStore = useDisplayStore();
               ? book.chapters
               : [...book.chapters].reverse()"
             :key="chapter.id"
-            @click="() => emit('toChapter', chapter)"
             class="text-sm p-2 hover:bg-[--van-background] rounded-lg cursor-pointer select-none truncate van-haptics-feedback"
+            @click="() => emit('toChapter', chapter)"
           >
             {{ chapter.title }}
           </div>
         </ResponsiveGrid2>
       </div>
     </main>
-    <BookShelf></BookShelf>
+    <BookShelf />
   </div>
 </template>
 

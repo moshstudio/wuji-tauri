@@ -1,13 +1,20 @@
 <script setup lang="ts">
-import { PlaylistInfo } from '@/extensions/song';
-import { useSongStore, useSongShelfStore, useDisplayStore } from '@/store';
-import { PropType } from 'vue';
+import type { PlaylistInfo } from '@/extensions/song';
+import type { PropType } from 'vue';
 import MobileSongCard from '@/components/card/songCards/MobileSongCard.vue';
-import MobileSongBar from '@/components/mobile/MobileSongBar.vue';
-import SongShelf from '@/views/song/SongShelf.vue';
-import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import LoadImage from '@/components/LoadImage.vue';
+import MobileSongBar from '@/components/mobile/MobileSongBar.vue';
+import SimplePagination from '@/components/pagination/SimplePagination.vue';
+import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
+import SongShelf from '@/views/song/SongShelf.vue';
 
+const emit = defineEmits<{
+  (e: 'back'): void;
+  (e: 'loadData', pageNo?: number): void;
+  (e: 'toPage', pageNo?: number): void;
+  (e: 'playAll'): void;
+  (e: 'addToShelf'): void;
+}>();
 const songStore = useSongStore();
 const displayStore = useDisplayStore();
 const shelfStore = useSongShelfStore();
@@ -17,14 +24,6 @@ const playlist = defineModel('playlist', {
 });
 const currentPage = defineModel('currentPage', { type: Number, default: 1 });
 const content = defineModel('content', { type: HTMLElement });
-
-const emit = defineEmits<{
-  (e: 'back'): void;
-  (e: 'loadData', pageNo?: number): void;
-  (e: 'toPage', pageNo?: number): void;
-  (e: 'playAll'): void;
-  (e: 'addToShelf'): void;
-}>();
 </script>
 
 <template>
@@ -47,7 +46,7 @@ const emit = defineEmits<{
               :src="playlist?.picUrl"
               :headers="playlist?.picHeaders"
             >
-              <template v-slot:loading>
+              <template #loading>
                 <div class="text-center text-lg p-1">
                   {{ playlist.name }}
                 </div>
@@ -68,9 +67,9 @@ const emit = defineEmits<{
         />
       </div>
       <van-row
+        v-if="playlist?.list?.list"
         justify="space-between"
         align="center"
-        v-if="playlist?.list?.list"
         class="bg-[--van-background-2] gap-2"
       >
         <div class="flex gap-2">
@@ -99,22 +98,22 @@ const emit = defineEmits<{
         </div>
 
         <SimplePagination
+          v-if="playlist.list.totalPage"
           v-model="currentPage"
           :page-count="playlist.list.totalPage"
           class="p-1"
           @change="(pageNo) => emit('toPage', pageNo)"
-          v-if="playlist.list.totalPage"
         />
       </van-row>
       <template v-for="item in playlist?.list?.list" :key="item.id">
         <MobileSongCard
           :song="item"
           @play="songStore.setPlayingList(playlist!.list!.list, item)"
-        ></MobileSongCard>
+        />
       </template>
     </div>
-    <MobileSongBar></MobileSongBar>
-    <SongShelf></SongShelf>
+    <MobileSongBar />
+    <SongShelf />
   </div>
 </template>
 

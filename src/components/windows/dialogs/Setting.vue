@@ -1,53 +1,52 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { router } from '@/router/index';
 import { useDisplayStore, useStore } from '@/store';
 import { showToast } from 'vant';
+import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { router } from '@/router/index';
 
 const store = useStore();
 const displayStore = useDisplayStore();
 const route = useRoute();
 const showConfirmClearData = ref(false);
 const activeNames = ref([]);
-const clearData = () => {
+function clearData() {
   store.clearData();
-};
+}
 const tabBarPages = computed(() => {
   return displayStore.tabBarPages.filter((item) => {
     if (displayStore.isMobileView && item.name === 'Home') {
       return false;
-    } else {
+    }
+    else {
       return true;
     }
   });
 });
-const updateTabBarPages = (
-  page: {
-    name: string;
-    chineseName: string;
-    enable: boolean;
-  },
-  checked: boolean
-) => {
-  if (checked === false && tabBarPages.value.every((item) => !item.enable)) {
+function updateTabBarPages(page: {
+  name: string;
+  chineseName: string;
+  enable: boolean;
+}, checked: boolean) {
+  if (checked === false && tabBarPages.value.every(item => !item.enable)) {
     showToast('至少需要保留一个页面');
     page.enable = true;
   }
-};
-const onConfirm = () => {
+}
+function onConfirm() {
   if (
     !tabBarPages.value
-      .filter((item) => item.enable)
-      .find((page) => route.path.includes(page.name.toLowerCase()))
+      .filter(item => item.enable)
+      .find(page => route.path.includes(page.name.toLowerCase()))
   ) {
     router.push({
-      name: tabBarPages.value.filter((item) => item.enable)[0].name,
+      name: tabBarPages.value.filter(item => item.enable)[0].name,
     });
-  } else {
+  }
+  else {
     router.push(route.path);
   }
-};
+}
 </script>
 
 <template>
@@ -70,16 +69,16 @@ const onConfirm = () => {
       <van-collapse-item title="隐藏功能">
         <van-cell-group>
           <van-cell
-            :title="item.chineseName"
             v-for="item in tabBarPages"
             :key="item.name"
+            :title="item.chineseName"
           >
             <template #right-icon>
               <van-checkbox
-                shape="square"
                 v-model="item.enable"
+                shape="square"
                 @change="(v) => updateTabBarPages(item, v)"
-              ></van-checkbox>
+              />
             </template>
           </van-cell>
         </van-cell-group>
@@ -91,11 +90,12 @@ const onConfirm = () => {
         title="清除缓存"
         is-link
         @click="() => store.clearCache()"
-      >
-      </van-cell>
+      />
       <van-cell center is-link @click="showConfirmClearData = true">
         <template #title>
-          <p class="text-red">清空数据</p>
+          <p class="text-red">
+            清空数据
+          </p>
         </template>
       </van-cell>
     </van-cell-group>

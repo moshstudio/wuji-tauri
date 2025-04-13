@@ -1,15 +1,18 @@
 <script setup lang="ts">
+import type {
+  PropType,
+  TeleportProps,
+} from 'vue';
 import { getScrollTop } from '@/utils';
 import { throttle } from 'lodash';
 import {
-  ref,
-  PropType,
-  TeleportProps,
   nextTick,
   onMounted,
   onUnmounted,
+  ref,
   watch,
 } from 'vue';
+
 const { target, immediate, offset, placeholder } = defineProps({
   target: [String, Object] as PropType<TeleportProps['to']>,
   immediate: Boolean,
@@ -28,19 +31,19 @@ const emit = defineEmits<{
 
 const show = ref(false);
 const scrollParent = ref<Window | Element>();
-const onClick = (event: MouseEvent) => {
+function onClick(event: MouseEvent) {
   emit('click', event);
   scrollParent.value?.scrollTo({
     top: 0,
     behavior: immediate ? 'auto' : 'smooth',
   });
-};
-const scroll = () => {
+}
+function scroll() {
   show.value = scrollParent.value
     ? getScrollTop(scrollParent.value) >= +offset
     : false;
-};
-const getTarget = () => {
+}
+function getTarget() {
   if (!target) {
     return window;
   }
@@ -51,19 +54,20 @@ const getTarget = () => {
     }
     if (process.env.NODE_ENV !== 'production') {
       console.error(
-        `[Vant] BackTop: target element "${target}" was not found, the BackTop component will not be rendered.`
+        `[Vant] BackTop: target element "${target}" was not found, the BackTop component will not be rendered.`,
       );
     }
-  } else {
+  }
+  else {
     return target as Element;
   }
-};
-const updateTarget = () => {
+}
+function updateTarget() {
   nextTick(() => {
     scrollParent.value = getTarget();
     scroll();
   });
-};
+}
 
 const throttleScroll = throttle(scroll, 100);
 onMounted(() => {
@@ -81,11 +85,11 @@ watch(() => target, updateTarget);
 
 <template>
   <div
-    @click="onClick"
     v-show="placeholder ? true : show"
     :style="{ opacity: placeholder ? (show ? 1 : 0) : 1 }"
+    @click="onClick"
   >
-    <slot></slot>
+    <slot />
   </div>
 </template>
 

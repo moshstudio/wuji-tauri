@@ -1,169 +1,47 @@
-<template>
-  <div
-    ref="videoWrapper"
-    class="video-container transition-all duration-500 ease-in-out text-center bg-black"
-    :class="
-      fullScreenMode ? 'fixed z-[99999999] w-screen h-screen ' : 'w-full h-auto'
-    "
-    autofocus
-    v-click-separate
-  >
-    <video-player
-      :options="{
-        autoplay: true,
-        controls: false,
-        fluid: false,
-      }"
-      :sources="videoSources"
-      playsinline
-      :loop="false"
-      crossorigin="anonymous"
-      :control-bar="controlBarOptions"
-      :playback-rates="[0.5, 0.75, 1.0, 1.25, 1.5, 2.0]"
-      @loadedmetadata="onLoadedMetadata"
-      @ended="(args) => emit('onPlayFinished', args)"
-      @timeupdate="(args) => emit('timeUpdate', args)"
-      @mounted="handleMounted"
-      @error="onError"
-      @fullscreenchange="onFullScreenChange"
-      class="my-video-player relative w-full flex flex-col items-center justify-center"
-      :class="fullScreenMode ? ' h-full' : 'h-auto'"
-    >
-      <template
-        v-slot="{
-          player,
-          state,
-        }: {
-          player: VideoJsPlayer;
-          state: VideoPlayerState;
-        }"
-      >
-        <div
-          class="absolute top-20 left-[50%] -translate-x-[50%] text-base rounded p-1 text-gray-200 bg-black/50 select-none pointer-events-none"
-          v-if="isDragging && dragDirection"
-        >
-          {{ dragHint }}
-        </div>
-        <div
-          class="absolute bg-mask w-full h-full bg-transparent"
-          v-show="showControls"
-        >
-          <div
-            class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/90 to-transparent pointer-events-none"
-          ></div>
-          <div
-            class="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-black/90 to-transparent pointer-events-none"
-          ></div>
-
-          <div
-            class="top-bar absolute left-0 right-0 top-0 bg-transparent flex p-2 text-sm text-gray-300 select-none truncate"
-          >
-            <div class="flex gap-2 items-center">
-              <Icon
-                icon="ic:round-arrow-back"
-                width="24"
-                height="24"
-                @click.stop="onBack"
-                class="van-haptics-feedback pointer-events-auto"
-              />
-              <p>{{ episode?.title || '' }} - {{ resource?.title || '' }}</p>
-            </div>
-          </div>
-          <MobileQuickSeekButton
-            :seconds="10"
-            :quick-forward="quickForward"
-            :quick-back="quickBackward"
-            class="absolute left-0 right-0 bottom-[50%]"
-            v-show="!videoSrc?.isLive"
-          ></MobileQuickSeekButton>
-          <div
-            class="control-bar absolute left-0 right-0 bottom-0 flex flex-col gap-2 p-2 pointer-events-auto select-none"
-            @click.stop
-          >
-            <VideoProgressBar
-              :state="state"
-              @seek="(time) => player.currentTime(time)"
-              v-show="!videoSrc?.isLive"
-            ></VideoProgressBar>
-
-            <div class="flex gap-2 items-center justify-between">
-              <div class="flex items-center gap-2">
-                <PlayPauseButton
-                  :is-playing="state.playing"
-                  :play-or-pause="
-                    () => {
-                      state.playing ? player.pause() : player.play();
-                    }
-                  "
-                ></PlayPauseButton>
-                <TimeShow :state="state" :is-playing="state.playing"></TimeShow>
-              </div>
-              <div class="flex items-center gap-2">
-                <PlaybackRateButton
-                  :state="state"
-                  :player="player"
-                  v-show="!videoSrc?.isLive"
-                ></PlaybackRateButton>
-                <FullScreenButton
-                  :is-fullscreen="fullScreenMode"
-                  :request-fullscreen="requestFullScreen"
-                  :exit-fullscreen="exitFullScreen"
-                ></FullScreenButton>
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
-    </video-player>
-  </div>
-</template>
-
 <script lang="ts" setup>
-import VideoProgressBar from '@/components/media/win/ProgressBar.vue';
-import PlayPauseButton from '@/components/media/win/PlayPauseButton.vue';
-import TimeShow from '@/components/media/win/TimeShow.vue';
-import PlaybackRateButton from '@/components/media/win/PlaybackRateButton.vue';
+import type {
+  VideoEpisode,
+  VideoResource,
+  VideoUrlMap,
+} from '@/extensions/video';
+import type { VideoPlayerState } from '@videojs-player/vue';
+import type videojs from 'video.js';
+import type { PropType } from 'vue';
 import FullScreenButton from '@/components/media/mobile/MobileFullScreenButton.vue';
 import MobileQuickSeekButton from '@/components/media/mobile/MobileQuickSeekButton.vue';
-import {
-  PropType,
-  ref,
-  shallowRef,
-  computed,
-  onDeactivated,
-  watch,
-  onMounted,
-  onActivated,
-} from 'vue';
-import Hammer from 'hammerjs';
-import videojs from 'video.js';
-import { VideoPlayer, VideoPlayerState } from '@videojs-player/vue';
-import 'video.js/dist/video-js.css';
-import { Icon } from '@iconify/vue';
+import PlaybackRateButton from '@/components/media/win/PlaybackRateButton.vue';
+import PlayPauseButton from '@/components/media/win/PlayPauseButton.vue';
+import VideoProgressBar from '@/components/media/win/ProgressBar.vue';
+import TimeShow from '@/components/media/win/TimeShow.vue';
 import { useDisplayStore } from '@/store';
+import { Icon } from '@iconify/vue';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { VideoPlayer } from '@videojs-player/vue';
+import Hammer from 'hammerjs';
 import { storeToRefs } from 'pinia';
 import {
-  hide_status_bar,
   get_brightness,
   get_system_brightness,
-  set_brightness,
   get_volume,
-  set_volume,
+  hide_status_bar,
+  set_brightness,
   set_screen_orientation,
+  set_volume,
 } from 'tauri-plugin-commands-api';
-import { VideoEpisode, VideoResource, VideoUrlMap } from '@/extensions/video';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { showToast } from 'vant';
+import {
+  computed,
+  onActivated,
+  onDeactivated,
+  onMounted,
+  ref,
+  shallowRef,
+  watch,
+} from 'vue';
+import 'video.js/dist/video-js.css';
 
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
-const displayStore = useDisplayStore();
-const { fullScreenMode, isAndroid, androidOrientation } =
-  storeToRefs(displayStore);
-
-const player = defineModel('player', {
-  type: Object as PropType<VideoJsPlayer>,
-});
 const { videoSources, videoSrc, resource, episode } = defineProps({
   videoSources: {
     type: Array as PropType<import('video.js').default.Tech.SourceObject[]>,
@@ -178,7 +56,6 @@ const { videoSources, videoSrc, resource, episode } = defineProps({
     type: Object as PropType<VideoEpisode>,
   },
 });
-
 const emit = defineEmits<{
   (e: 'canPlay', args: any): void;
   (e: 'onPlayFinished', args: any): void;
@@ -187,7 +64,13 @@ const emit = defineEmits<{
   (e: 'back'): void;
   (e: 'collect'): void;
 }>();
+const displayStore = useDisplayStore();
+const { fullScreenMode, isAndroid, androidOrientation } =
+  storeToRefs(displayStore);
 
+const player = defineModel('player', {
+  type: Object as PropType<VideoJsPlayer>,
+});
 const hammerManager = ref<HammerManager>();
 
 const state = shallowRef<VideoPlayerState>();
@@ -213,22 +96,31 @@ const controlBarOptions = {
   subsCapsButton: false,
   audioTrackButton: false,
 };
-const handleMounted = (payload: any) => {
+function handleMounted(payload: any) {
   state.value = payload.state;
   player.value = payload.player;
   if (displayStore.isAndroid) {
     hammerManager.value = mountAndroidGuesture();
   }
-};
+}
 
 const showControls = ref(false);
-
-const toggleShowControls = () => {
-  showControls.value = !showControls.value;
-};
-const togglePlay = () => {
+let showControlsTimer: NodeJS.Timeout;
+function toggleShowControls() {
+  if (!showControls.value) {
+    clearTimeout(showControlsTimer);
+    showControls.value = !showControls.value;
+    showControlsTimer = setTimeout(() => {
+      showControls.value = !showControls.value;
+    }, 6000);
+  } else {
+    clearTimeout(showControlsTimer);
+    showControls.value = !showControls.value;
+  }
+}
+function togglePlay() {
   player.value?.paused() ? player.value.play() : player.value?.pause();
-};
+}
 const isDragging = ref(false);
 const dragDirection = ref<'Horizontal' | 'VerticalLeft' | 'VerticalRight'>();
 const dragMovement = ref<[number, number]>([0, 0]);
@@ -254,7 +146,7 @@ const dragHint = computed(() => {
   if (dragDirection.value == undefined) return '';
   if (dragDirection.value == 'Horizontal') {
     return `${dragMovement.value[0] > 0 ? '快进' : '快退'} ${Math.abs(
-      Math.floor(dragMovement.value[0])
+      Math.floor(dragMovement.value[0]),
     )} 秒`;
   } else if (dragDirection.value == 'VerticalLeft') {
     return `亮度 ${currentBrightness.value} %`;
@@ -288,16 +180,16 @@ const vClickSeparate = {
   },
 };
 
-const onFullScreenChange = () => {
+function onFullScreenChange() {
   // 快捷键时会触发
   if (player.value?.isFullscreen()) {
     requestFullScreen();
   } else {
     exitFullScreen();
   }
-};
+}
 
-const requestFullScreen = async () => {
+async function requestFullScreen() {
   displayStore.fullScreenMode = true;
   if (displayStore.isAndroid) {
     displayStore.showTabBar = false;
@@ -310,13 +202,14 @@ const requestFullScreen = async () => {
       await set_screen_orientation('landscape');
     } else {
       await set_screen_orientation('portrait');
+      await hide_status_bar();
     }
   } else {
     await getCurrentWindow().setFullscreen(true);
     player.value?.requestFullscreen();
   }
-};
-const exitFullScreen = async () => {
+}
+async function exitFullScreen() {
   displayStore.fullScreenMode = false;
   if (displayStore.isAndroid) {
     displayStore.showTabBar = true;
@@ -324,12 +217,15 @@ const exitFullScreen = async () => {
   } else {
     await getCurrentWindow().setFullscreen(false);
     try {
+      console.log('fullscreen?', player.value?.isFullscreen());
       player.value?.exitFullscreen();
-    } catch (error) {}
+    } catch (error) {
+      console.warn('exitFullScreen error', error);
+    }
   }
-};
+}
 
-const onLoadedMetadata = (args: any) => {
+function onLoadedMetadata(args: any) {
   if (displayStore.isAndroid) {
     if (
       (player.value?.currentHeight() || 0) -
@@ -347,46 +243,37 @@ const onLoadedMetadata = (args: any) => {
   }
   showToast('加载完成');
   emit('canPlay', args);
-};
+}
 
-const quickForward = (seconds: number) => {
+function quickForward(seconds: number) {
   if (player.value) {
     player.value.currentTime(
-      Math.min(player.value.currentTime() + seconds, player.value.duration())
+      Math.min(player.value.currentTime() + seconds, player.value.duration()),
     );
   }
-};
-const quickBackward = (seconds: number) => {
+}
+function quickBackward(seconds: number) {
   if (player.value) {
     player.value.currentTime(Math.max(player.value.currentTime() - seconds, 0));
   }
-};
-const onError = (e: any) => {
+}
+function onError(e: any) {
   player.value!.errorDisplay.contentEl().innerHTML = `
     <div class="vjs-error-display-custom pt-2">
       <div class="text-red">播放失败, 请重试</div>
     </div>
   `;
-};
+}
 
-const onBack = async () => {
-  if (displayStore.isAndroid) {
-    if (displayStore.fullScreenMode) {
-      // 退出全屏
-      displayStore.fullScreenMode = false;
-      displayStore.showTabBar = true;
-    }
+async function onBack() {
+  if (fullScreenMode.value) {
+    exitFullScreen();
   } else {
-    if (displayStore.fullScreenMode) {
-      displayStore.fullScreenMode = false;
-      await getCurrentWindow().setFullscreen(false);
-      player.value?.exitFullscreen();
-    }
+    emit('back');
   }
-  emit('back');
-};
+}
 
-const mountAndroidGuesture = (needPan = true) => {
+function mountAndroidGuesture(needPan = true) {
   const isTargetElement = (e: HTMLElement) => {
     return e.classList.contains('vjs-tech') || e.classList.contains('bg-mask');
   };
@@ -416,7 +303,7 @@ const mountAndroidGuesture = (needPan = true) => {
     manager.add([panHorizontal, panVertical]);
   } else {
     // manager.get('pan').set({ direction: Hammer.DIRECTION_VERTICAL });
-    manager.on('pan', function (event) {
+    manager.on('pan', (event) => {
       if (event.direction === Hammer.DIRECTION_VERTICAL) {
         // 允许垂直滚动
         event.preventDefault();
@@ -458,7 +345,7 @@ const mountAndroidGuesture = (needPan = true) => {
       const currTime = player.value?.currentTime();
       if (currTime && offset != 0) {
         player.value?.currentTime(
-          Math.min(player?.value.duration(), Math.max(0, currTime + offset))
+          Math.min(player?.value.duration(), Math.max(0, currTime + offset)),
         );
       }
       isDragging.value = false;
@@ -498,7 +385,7 @@ const mountAndroidGuesture = (needPan = true) => {
           const distance = Math.ceil(-dragMovement.value[1] / 2); // / 2 来减小变化幅度
           const percentage = Math.max(
             0,
-            Math.min(100, Math.ceil(initBrightness.value + distance))
+            Math.min(100, Math.ceil(initBrightness.value + distance)),
           );
           if (
             currentBrightness.value - percentage >= 5 ||
@@ -513,7 +400,7 @@ const mountAndroidGuesture = (needPan = true) => {
           const volumeDistance = Math.ceil(-dragMovement.value[1] / 2); // / 2 来减小变化幅度
           const volume = Math.max(
             0,
-            Math.min(100, initVolume.value + volumeDistance)
+            Math.min(100, initVolume.value + volumeDistance),
           );
           if (currentVolume.value != volume) {
             currentVolume.value = volume;
@@ -531,12 +418,12 @@ const mountAndroidGuesture = (needPan = true) => {
   }
 
   return manager;
-};
+}
 onMounted(() => {
   exitFullScreen();
 });
 if (displayStore.isAndroid) {
-  /**自动横屏时进入全屏 */
+  /** 自动横屏时进入全屏 */
   watch(androidOrientation, (newValue, oldValue) => {
     if (
       newValue === 'landscape' &&
@@ -559,6 +446,21 @@ onActivated(() => {
     // 直播自动播放
     player.value?.play();
   }
+  if (displayStore.isAndroid) {
+    if (
+      (player.value?.currentHeight() || 0) -
+        (player.value?.currentWidth() || 0) <=
+      20
+    ) {
+      // 宽屏
+      hammerManager.value?.destroy();
+      hammerManager.value = mountAndroidGuesture(true);
+    } else {
+      // 竖屏
+      hammerManager.value?.destroy();
+      hammerManager.value = mountAndroidGuesture(false);
+    }
+  }
 });
 onDeactivated(() => {
   if (displayStore.isAndroid) {
@@ -566,6 +468,128 @@ onDeactivated(() => {
   }
 });
 </script>
+
+<template>
+  <div
+    ref="videoWrapper"
+    v-click-separate
+    class="video-container transition-all duration-500 ease-in-out text-center bg-black"
+    :class="
+      fullScreenMode
+        ? 'absolute z-[99999999] w-screen h-screen '
+        : 'relative w-full h-auto'
+    "
+    autofocus
+  >
+    <VideoPlayer
+      :options="{
+        autoplay: true,
+        controls: false,
+        fluid: false,
+      }"
+      :sources="videoSources"
+      playsinline
+      :loop="false"
+      crossorigin="anonymous"
+      :control-bar="controlBarOptions"
+      :playback-rates="[0.5, 0.75, 1.0, 1.25, 1.5, 2.0]"
+      class="my-video-player relative w-full flex flex-col items-center justify-center"
+      :class="fullScreenMode ? ' h-full' : 'h-auto'"
+      @loadedmetadata="onLoadedMetadata"
+      @ended="(args) => emit('onPlayFinished', args)"
+      @timeupdate="(args) => emit('timeUpdate', args)"
+      @mounted="handleMounted"
+      @error="onError"
+      @fullscreenchange="onFullScreenChange"
+    >
+      <template
+        #default="{
+          player,
+          state,
+        }: {
+          player: VideoJsPlayer;
+          state: VideoPlayerState;
+        }"
+      >
+        <div
+          v-if="isDragging && dragDirection"
+          class="absolute top-20 left-[50%] -translate-x-[50%] text-base rounded p-1 text-gray-200 bg-black/50 select-none pointer-events-none"
+        >
+          {{ dragHint }}
+        </div>
+        <div
+          v-show="showControls"
+          class="absolute bg-mask w-full h-full bg-transparent"
+        >
+          <div
+            class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/90 to-transparent pointer-events-none"
+          />
+          <div
+            class="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-black/90 to-transparent pointer-events-none"
+          />
+
+          <div
+            class="top-bar absolute left-0 right-0 top-0 bg-transparent flex p-2 text-sm text-gray-300 select-none truncate"
+          >
+            <div class="flex gap-2 items-center">
+              <Icon
+                icon="ic:round-arrow-back"
+                width="24"
+                height="24"
+                class="van-haptics-feedback pointer-events-auto"
+                @click.stop="onBack"
+              />
+              <p>{{ episode?.title || '' }} - {{ resource?.title || '' }}</p>
+            </div>
+          </div>
+          <MobileQuickSeekButton
+            v-show="!videoSrc?.isLive"
+            :seconds="10"
+            :quick-forward="quickForward"
+            :quick-back="quickBackward"
+            class="absolute left-0 right-0 bottom-[50%]"
+          />
+          <div
+            class="control-bar absolute left-0 right-0 bottom-0 flex flex-col gap-2 p-2 pointer-events-auto select-none"
+            @click.stop
+          >
+            <VideoProgressBar
+              v-show="!videoSrc?.isLive"
+              :state="state"
+              @seek="(time) => player.currentTime(time)"
+            />
+
+            <div class="flex gap-2 items-center justify-between">
+              <div class="flex items-center gap-2">
+                <PlayPauseButton
+                  :is-playing="state.playing"
+                  :play-or-pause="
+                    () => {
+                      state.playing ? player.pause() : player.play();
+                    }
+                  "
+                />
+                <TimeShow :state="state" :is-playing="state.playing" />
+              </div>
+              <div class="flex items-center gap-2">
+                <PlaybackRateButton
+                  v-show="!videoSrc?.isLive"
+                  :state="state"
+                  :player="player"
+                />
+                <FullScreenButton
+                  :is-fullscreen="fullScreenMode"
+                  :request-fullscreen="requestFullScreen"
+                  :exit-fullscreen="exitFullScreen"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </VideoPlayer>
+  </div>
+</template>
 
 <style lang="less" scoped>
 :deep(.vjs-tech) {

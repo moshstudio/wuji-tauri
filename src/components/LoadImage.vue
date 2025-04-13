@@ -1,25 +1,8 @@
-<template>
-  <van-image
-    :src="processedSrc"
-    :style="loadFinished ? '' : 'min-height: 40px; min-width: 40px;'"
-    v-bind="restProps"
-    v-on="listeners"
-    :class="attrs.class"
-    @load="onLoadFinished"
-  >
-    <slot></slot>
-
-    <!-- 传递具名插槽 -->
-    <template v-for="(_, name) in $slots" #[name]>
-      <slot :name="name"></slot>
-    </template>
-  </van-image>
-</template>
-
 <script setup lang="ts">
-import { ref, watch, onMounted, useAttrs, PropType } from 'vue';
-import { Image as VanImage } from 'vant';
+import type { PropType } from 'vue';
 import { cachedFetch } from '@/utils';
+import { Image as VanImage } from 'vant';
+import { ref, useAttrs, watch } from 'vue';
 
 // 定义 props
 const props = defineProps({
@@ -51,19 +34,17 @@ const loadFinished = ref(false);
 // 定义 processedSrc
 const processedSrc = ref('');
 
-const onLoadFinished = () => {
+function onLoadFinished() {
   loadFinished.value = true;
-};
+}
 // 异步处理 src 的函数
-const processSrc = async (
-  src: string,
-  headers?: Record<string, string>
-): Promise<string> => {
-  if (!headers) return src;
+async function processSrc(src: string, headers?: Record<string, string>): Promise<string> {
+  if (!headers)
+    return src;
   let response: Response;
   try {
     response = await cachedFetch(props.src, {
-      headers: headers,
+      headers,
       verify: false,
       maxRedirections: 0,
     });
@@ -71,9 +52,10 @@ const processSrc = async (
     if (!response.ok) {
       throw new Error('maxRedirections == 0 failed');
     }
-  } catch (error) {
+  }
+  catch (error) {
     response = await cachedFetch(props.src, {
-      headers: headers,
+      headers,
       verify: false,
     });
   }
@@ -84,9 +66,9 @@ const processSrc = async (
   }
   loadFinished.value = true;
   return URL.createObjectURL(
-    new Blob([blob], { type: blob.type || 'image/png' })
+    new Blob([blob], { type: blob.type || 'image/png' }),
   ); // 将二进制数据转换为 URL
-};
+}
 
 // 监听 src 的变化
 watch(
@@ -94,11 +76,29 @@ watch(
   async (newSrc) => {
     processedSrc.value = await processSrc(
       props.src,
-      props.headers || undefined
+      props.headers || undefined,
     );
   },
-  { immediate: true } // 立即执行一次
+  { immediate: true }, // 立即执行一次
 );
 </script>
+
+<template>
+  <VanImage
+    :src="processedSrc"
+    :style="loadFinished ? '' : 'min-height: 40px; min-width: 40px;'"
+    v-bind="restProps"
+    :class="attrs.class"
+    v-on="listeners"
+    @load="onLoadFinished"
+  >
+    <slot />
+
+    <!-- 传递具名插槽 -->
+    <template v-for="(_, name) in $slots" #[name]>
+      <slot :name="name" />
+    </template>
+  </VanImage>
+</template>
 
 <style scoped></style>

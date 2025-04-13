@@ -6,7 +6,7 @@ class TestComicExtension extends ComicExtension {
   version = '0.0.1';
   baseUrl = 'https://www.hdmanhua.com/';
   async getRecommendComics(pageNo, type) {
-    let items = [
+    const items = [
       {
         name: '人气排行',
         tag: 'hot',
@@ -29,7 +29,7 @@ class TestComicExtension extends ComicExtension {
       },
     ];
     if (!type) {
-      return items.map((item) => ({
+      return items.map(item => ({
         type: item.name,
         list: [],
         page: pageNo,
@@ -37,8 +37,9 @@ class TestComicExtension extends ComicExtension {
         sourceId: '',
       }));
     }
-    const item = items.find((item) => item.name === type);
-    if (!item) return null;
+    const item = items.find(item => item.name === type);
+    if (!item)
+      return null;
     pageNo = pageNo || 1;
     let url = `${this.baseUrl}top/${item.tag}/`;
     if (pageNo > 1) {
@@ -56,12 +57,12 @@ class TestComicExtension extends ComicExtension {
     const pageElement = document.querySelector('.page span');
     let totalPage = 1;
     if (pageElement) {
-      totalPage = parseInt(pageElement.textContent.split('/').pop());
+      totalPage = Number.parseInt(pageElement.textContent.split('/').pop());
     }
     return {
       list,
       page: pageNo,
-      totalPage: totalPage,
+      totalPage,
     };
   }
 
@@ -79,18 +80,18 @@ class TestComicExtension extends ComicExtension {
     const pageElement = document.querySelector('.page span');
     let totalPage = 1;
     if (pageElement) {
-      totalPage = parseInt(pageElement.textContent.split('/').pop());
+      totalPage = Number.parseInt(pageElement.textContent.split('/').pop());
     }
     return {
       list,
       page: pageNo,
-      totalPage: totalPage,
+      totalPage,
     };
   }
 
   async getComicDetail(item, pageNo) {
     pageNo ||= 1;
-    let body = await this.fetchDom(item.url);
+    const body = await this.fetchDom(item.url);
     item.intro = body.querySelector('.book-desc').textContent;
     const chapters = await this.queryChapters(body, {
       element: '.book-chapter a',
@@ -100,7 +101,6 @@ class TestComicExtension extends ComicExtension {
   }
 
   async getContent(item, chapter) {
-
     const document = await this.fetchDom(chapter.url);
     const elements = document.querySelectorAll('.images img');
     const photos = [];

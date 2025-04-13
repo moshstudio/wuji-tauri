@@ -1,6 +1,5 @@
-import { SongShelfType } from '@/types/song';
+import type { SongShelfType } from '@/types/song';
 import { Extension, transformResult } from '../baseExtension';
-import _ from 'lodash';
 
 // 歌曲 信息
 export interface SongInfo {
@@ -91,18 +90,18 @@ export interface PlaylistList {
 export type SongSize = '128k' | '320k' | 'flac' | '';
 
 // 歌曲 url，pic 和 bigPic 表示图片和大图
-export type SongUrlMap = {
+export interface SongUrlMap {
   '128k'?: string;
   '128'?: string;
   '320k'?: string;
   '320'?: string;
-  flac?: string;
-  pic?: string;
-  bgPic?: string;
-  lyric?: string;
-  lyricUrl?: string;
-  headers?: Record<string, string>;
-};
+  'flac'?: string;
+  'pic'?: string;
+  'bgPic'?: string;
+  'lyric'?: string;
+  'lyricUrl'?: string;
+  'headers'?: Record<string, string>;
+}
 
 abstract class SongExtension extends Extension {
   hasDetailPage: boolean = true;
@@ -171,7 +170,7 @@ abstract class SongExtension extends Extension {
   // 搜索歌单
   abstract searchPlaylists(
     keyword: string,
-    pageNo?: number
+    pageNo?: number,
   ): Promise<PlaylistList | null>;
 
   @transformResult<SongList | null>((r) => {
@@ -192,7 +191,7 @@ abstract class SongExtension extends Extension {
   // 搜索歌曲
   abstract searchSongs(
     keyword: string,
-    pageNo?: number
+    pageNo?: number,
   ): Promise<SongList | null>;
 
   @transformResult<PlaylistInfo | null>((r) => {
@@ -227,20 +226,20 @@ abstract class SongExtension extends Extension {
   // 获取歌单详情
   abstract getPlaylistDetail(
     item: PlaylistInfo,
-    pageNo?: number
+    pageNo?: number,
   ): Promise<PlaylistInfo | null>;
 
-  @transformResult<SongUrlMap | string | null>((r) => r)
+  @transformResult<SongUrlMap | string | null>(r => r)
   execGetSongUrl(item: SongInfo, size?: SongSize) {
     return this.getSongUrl(item, size);
   }
 
   abstract getSongUrl(
     item: SongInfo,
-    size?: SongSize
+    size?: SongSize,
   ): Promise<SongUrlMap | string | null>;
 
-  @transformResult<string | null>((r) => r)
+  @transformResult<string | null>(r => r)
   execGetLyric(item: SongInfo) {
     return this.getLyric(item);
   }
@@ -249,15 +248,16 @@ abstract class SongExtension extends Extension {
 }
 
 function loadSongExtensionString(
-  codeString: string
+  codeString: string,
 ): SongExtension | undefined {
   try {
     const func = new Function('SongExtension', codeString);
     const extensionclass = func(SongExtension);
     return new extensionclass();
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Error executing code:\n', error);
   }
 }
 
-export { SongExtension, loadSongExtensionString };
+export { loadSongExtensionString, SongExtension };

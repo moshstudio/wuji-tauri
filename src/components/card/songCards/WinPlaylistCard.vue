@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { PlaylistInfo } from '@/extensions/song';
+import type { PlaylistInfo } from '@/extensions/song';
+import type { PropType } from 'vue';
+import LoadImage from '@/components/LoadImage.vue';
 import { router } from '@/router';
-import { PropType, ref } from 'vue';
+import { useDisplayStore, useStore } from '@/store';
 import { Icon } from '@iconify/vue';
 import tinycolor from 'tinycolor2';
-import { useDisplayStore, useStore } from '@/store';
-import LoadImage from '@/components/LoadImage.vue';
+import { ref } from 'vue';
 
 const { playlist } = defineProps({
   playlist: {
@@ -25,12 +26,12 @@ function onMouseLeave() {
   playButtonVisible.value = false;
 }
 
-const onClick = () => {
+function onClick() {
   router.push({
     name: 'SongPlaylist',
     params: { playlistId: playlist.id, sourceId: playlist.sourceId },
   });
-};
+}
 </script>
 
 <template>
@@ -49,18 +50,18 @@ const onClick = () => {
       :headers="playlist.picHeaders"
       class="rounded-t-lg"
     >
-      <template v-slot:loading>
-        <div class="text-center text-lg p-1" :style="{ color: color }">
+      <template #loading>
+        <div class="text-center text-lg p-1" :style="{ color }">
           {{ playlist.name }}
         </div>
       </template>
-      <template v-slot:error>
+      <template #error>
         <Icon icon="mdi:playlist-music" width="60" height="60" />
       </template>
     </LoadImage>
     <p
-      class="text-xs text-center text-[--van-text-color] truncate py-1"
       v-if="playlist.name"
+      class="text-xs text-center text-[--van-text-color] truncate py-1"
     >
       {{ playlist.name }}
     </p>

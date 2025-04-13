@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import WinPhotoDetail from '../windowsView/photo/PhotoDetail.vue';
-import MobilePhotoDetail from '../mobileView/photo/PhotoDetail.vue';
+import type { PhotoDetail as PhotoDetailType, PhotoItem } from '@/extensions/photo';
+import type { PhotoSource } from '@/types';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
-import { PhotoDetail as PhotoDetailType, PhotoItem } from '@/extensions/photo';
 import { router } from '@/router';
-import { ref, watch, onActivated } from 'vue';
-import { useStore, usePhotoShelfStore } from '@/store';
-import { showLoadingToast, showToast } from 'vant';
-import { PhotoSource } from '@/types';
-import _, { debounce } from 'lodash';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { usePhotoShelfStore, useStore } from '@/store';
 import { retryOnFalse, sleep } from '@/utils';
+import { createCancellableFunction } from '@/utils/cancelableFunction';
+import _, { debounce } from 'lodash';
+import { showLoadingToast, showToast } from 'vant';
+import { onActivated, ref, watch } from 'vue';
+import MobilePhotoDetail from '../mobileView/photo/PhotoDetail.vue';
+import WinPhotoDetail from '../windowsView/photo/PhotoDetail.vue';
 
 const { id, sourceId } = defineProps({
   id: String,
@@ -51,21 +51,23 @@ const loadData = retryOnFalse({ onFailed: back })(
     }
     photoSource.value = source;
     const item = await store.getPhotoItem(source, id!);
-    if (signal.aborted) return false;
+    if (signal.aborted)
+      return false;
     if (!item) {
       return false;
     }
     photoItem.value = item;
     if (item.noDetail) {
       photoDetail.value = {
-        item: item,
+        item,
         photos: [..._.castArray(item.cover)],
         totalPage: 1,
         page: 1,
         sourceId: item.sourceId,
       };
       currentPage.value = 1;
-      if (content.value) content.value.scrollTop = 0;
+      if (content.value)
+        content.value.scrollTop = 0;
       return true;
     }
 
@@ -78,35 +80,37 @@ const loadData = retryOnFalse({ onFailed: back })(
     const detail = await store.photoDetail(
       source!,
       photoItem.value!,
-      currentPage.value
+      currentPage.value,
     );
 
     photoDetail.value = detail || undefined;
     currentPage.value = detail?.page || 1;
     toast.close();
-    if (content.value) content.value.scrollTop = 0;
+    if (content.value)
+      content.value.scrollTop = 0;
     return true;
-  })
+  }),
 );
 
 const toPage = debounce(loadData, 600);
 
-const collect = () => {
+function collect() {
   if (!photoItem.value) {
     return;
   }
   if (shelfStore.photoShelf.length === 1) {
     addPhotoToShelf(shelfStore.photoShelf[0].id);
-  } else {
+  }
+  else {
     showAddDialog.value = true;
   }
-};
-const addPhotoToShelf = (shelfId: string) => {
+}
+function addPhotoToShelf(shelfId: string) {
   const res = shelfStore.addPhotoToShelf(photoItem.value!, shelfId);
   if (res) {
     showAddDialog.value = false;
   }
-};
+}
 
 watch([() => id, () => sourceId], () => {
   shouldLoad.value = false; // watch这里优先load
@@ -135,7 +139,7 @@ onActivated(async () => {
         @to-page="toPage"
         @collect="collect"
         @add-photo-to-shelf="addPhotoToShelf"
-      ></MobilePhotoDetail>
+      />
     </template>
     <template #windows>
       <WinPhotoDetail
@@ -149,7 +153,7 @@ onActivated(async () => {
         @to-page="toPage"
         @collect="collect"
         @add-photo-to-shelf="addPhotoToShelf"
-      ></WinPhotoDetail>
+      />
     </template>
   </PlatformSwitch>
 </template>

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import { BookItem, BookItemInShelf } from '@/extensions/book';
-import { Icon } from '@iconify/vue';
-import { ref } from 'vue';
-import LoadImage from '@/components/LoadImage.vue';
+import type { BookItemInShelf } from '@/extensions/book';
 import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
+import LoadImage from '@/components/LoadImage.vue';
 import { useStore } from '@/store';
+import { Icon } from '@iconify/vue';
+import _ from 'lodash';
+import { ref } from 'vue';
 
 const { shelfBook, unread } = defineProps<{
   shelfBook: BookItemInShelf;
@@ -91,7 +91,7 @@ const showMoreOptions = ref(false);
         },
       },
     ]"
-  ></MoreOptionsSheet>
+  />
 </template>
 
 <style scoped lang="less"></style>

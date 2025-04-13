@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { ComicChapter, ComicItem } from '@/extensions/comic';
-import { ComicSource } from '@/types';
-import tinycolor from 'tinycolor2';
-import _ from 'lodash';
-import { PropType } from 'vue';
-import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
+import type { ComicChapter, ComicItem } from '@/extensions/comic';
+import type { ComicSource } from '@/types';
+import type { PropType } from 'vue';
 import ComicShelfButton from '@/components/ComicShelfButton.vue';
-import ComicShelf from '@/views/comic/ComicShelf.vue';
+import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
 import { useDisplayStore } from '@/store';
+import ComicShelf from '@/views/comic/ComicShelf.vue';
+import _ from 'lodash';
+import tinycolor from 'tinycolor2';
 
+const emit = defineEmits<{
+  (e: 'back'): void;
+  (e: 'loadData'): void;
+  (e: 'toChapter', chapter: ComicChapter): void;
+}>();
 const comic = defineModel('comic', {
   type: Object as PropType<ComicItem>,
 });
@@ -23,12 +28,6 @@ const isAscending = defineModel('isAscending', {
   required: true,
 });
 
-const emit = defineEmits<{
-  (e: 'back'): void;
-  (e: 'loadData'): void;
-  (e: 'toChapter', chapter: ComicChapter): void;
-}>();
-
 const displayStore = useDisplayStore();
 </script>
 
@@ -36,18 +35,18 @@ const displayStore = useDisplayStore();
   <div class="relative h-full flex flex-col">
     <van-nav-bar left-arrow @click-left="() => emit('back')" />
     <main
+      v-if="comic"
       ref="content"
       class="grow flex flex-col items-center overflow-y-auto p-4 bg-[--van-background-3] select-none"
-      v-if="comic"
     >
       <van-row justify="center" align="center" class="p-2 shadow-md w-[80%]">
         <van-image
+          v-if="comic.cover"
           width="80px"
           height="100px"
           radius="4"
           :src="comic.cover"
           class="mr-4"
-          v-if="comic.cover"
         >
           <template #loading>
             <div
@@ -82,13 +81,15 @@ const displayStore = useDisplayStore();
         </div>
       </van-row>
       <div
-        class="p-2 mt-4 text-[--van-text-color] lg:w-[80%]"
         v-if="comic.chapters"
+        class="p-2 mt-4 text-[--van-text-color] lg:w-[80%]"
       >
         <div class="w-full flex justify-between gap-2 items-center">
-          <p class="font-bold ml-6">共有{{ comic.chapters.length }} 章</p>
+          <p class="font-bold ml-6">
+            共有{{ comic.chapters.length }} 章
+          </p>
           <div class="flex gap-2 items-center">
-            <ComicShelfButton :comic="comic"></ComicShelfButton>
+            <ComicShelfButton :comic="comic" />
             <p class="mr-1">
               <van-button
                 :icon="isAscending ? 'ascending' : 'descending'"
@@ -106,15 +107,15 @@ const displayStore = useDisplayStore();
               ? comic.chapters
               : [...comic.chapters].reverse()"
             :key="chapter.id"
-            @click="() => emit('toChapter', chapter)"
             class="text-sm p-2 h-9 hover:bg-[--van-background] hover:shadow-md rounded-lg cursor-pointer select-none truncate van-haptics-feedback"
+            @click="() => emit('toChapter', chapter)"
           >
             {{ chapter.title }}
           </p>
         </ResponsiveGrid2>
       </div>
     </main>
-    <ComicShelf></ComicShelf>
+    <ComicShelf />
   </div>
 </template>
 

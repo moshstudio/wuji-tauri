@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import { Icon } from '@iconify/vue';
-import { computed, onMounted, PropType, ref } from 'vue';
-import { useStore } from '@/store';
-import {
+import type {
   VideoEpisode,
   VideoItemInShelf,
   VideoResource,
 } from '@/extensions/video';
-import { router } from '@/router';
+import type { VideoSource } from '@/types';
+import type { PropType } from 'vue';
 import LoadImage from '@/components/LoadImage.vue';
-import { VideoSource } from '@/types';
+import { router } from '@/router';
+import { useStore } from '@/store';
+import { Icon } from '@iconify/vue';
+import { computed, onMounted, ref } from 'vue';
 
 const { shelfVideo, selecteMode } = defineProps({
   shelfVideo: {
@@ -28,7 +28,7 @@ const emit = defineEmits<{
     e: 'click',
     item: VideoItemInShelf,
     episode?: VideoEpisode,
-    resource?: VideoResource
+    resource?: VideoResource,
   ): void;
   (e: 'remove', item: VideoItemInShelf): void;
 }>();
@@ -36,7 +36,7 @@ const emit = defineEmits<{
 const selected = defineModel('selected');
 const source = ref<VideoSource>();
 
-const onClick = () => {
+function onClick() {
   if (selecteMode) {
     selected.value = !selected.value;
     return;
@@ -48,14 +48,15 @@ const onClick = () => {
       sourceId: shelfVideo.video.sourceId,
     },
   });
-};
+}
 
 const lastWatchEpisode = computed((): VideoEpisode | undefined => {
   return shelfVideo.video.resources
     ?.find((resource) => {
       return resource.id === shelfVideo.video.lastWatchResourceId;
     })
-    ?.episodes?.find((episode) => {
+    ?.episodes
+    ?.find((episode) => {
       return episode.id === shelfVideo.video.lastWatchEpisodeId;
     });
 });
@@ -88,8 +89,8 @@ onMounted(() => {
     </LoadImage>
 
     <p
-      class="text-xs text-center text-[var(--van-text-color)] truncate py-1"
       v-if="shelfVideo.video.title"
+      class="text-xs text-center text-[var(--van-text-color)] truncate py-1"
     >
       {{ shelfVideo.video.title }}
     </p>
@@ -105,12 +106,12 @@ onMounted(() => {
       {{ source.item.name }}
     </p>
     <van-checkbox
+      v-if="selecteMode"
       v-model="selected"
       shape="square"
       class="absolute top-2 right-2"
       @click.stop="onClick"
-      v-if="selecteMode"
-    ></van-checkbox>
+    />
   </div>
 </template>
 

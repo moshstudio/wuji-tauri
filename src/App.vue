@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { useDisplayStore, useSongStore } from './store';
-import WinApp from './WinApp.vue';
-import MobileApp from './MobileApp.vue';
 import { storeToRefs } from 'pinia';
-import { h, nextTick, onBeforeMount, onMounted, ref } from 'vue';
-import { router } from './router';
+import { h, nextTick, onMounted, ref } from 'vue';
 import PlatformSwitch from './components/PlatformSwitch.vue';
 import View from './components/View.vue';
+import MobileApp from './MobileApp.vue';
+import { router } from './router';
+import { useDisplayStore } from './store';
 import { checkAndUpdate } from './utils/update';
+import WinApp from './WinApp.vue';
 
 const displayStore = useDisplayStore();
 const { isMobileView, isDark } = storeToRefs(displayStore);
@@ -16,7 +16,6 @@ onMounted(() => {
   // 初始化路径
   nextTick(async () => {
     console.log('routerCurrPath', displayStore.routerCurrPath);
-
     router.replace(displayStore.routerCurrPath);
   });
 });
@@ -43,10 +42,10 @@ const routerView = ref(h(View));
   >
     <PlatformSwitch>
       <template #mobile>
-        <MobileApp :routerView="routerView"></MobileApp>
+        <MobileApp :router-view="routerView" />
       </template>
       <template #windows>
-        <WinApp :routerView="routerView"></WinApp>
+        <WinApp :router-view="routerView" />
       </template>
     </PlatformSwitch>
   </van-config-provider>
@@ -59,30 +58,37 @@ const routerView = ref(h(View));
     width: 8px;
     height: 8px;
   }
+
   ::-webkit-scrollbar-thumb {
     background-color: transparent;
     border-radius: 6px;
   }
+
   :hover::-webkit-scrollbar-thumb {
     background-color: rgba(110, 110, 110, 0.2);
   }
+
   ::-webkit-scrollbar-thumb:hover {
     background-color: rgba(110, 110, 110, 0.6);
   }
 }
+
 .mobile-scrollbar {
   ::-webkit-scrollbar {
     background-color: transparent;
     width: 8px;
     height: 8px;
   }
+
   ::-webkit-scrollbar-thumb {
     background-color: rgba(110, 110, 110, 0.2);
     border-radius: 6px;
   }
+
   :hover::-webkit-scrollbar-thumb {
     background-color: rgba(110, 110, 110, 0.6);
   }
+
   ::-webkit-scrollbar-thumb:hover {
     background-color: rgba(110, 110, 110, 0.8);
   }

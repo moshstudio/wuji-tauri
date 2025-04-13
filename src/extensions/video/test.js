@@ -33,6 +33,7 @@ class TestVideoExtension extends VideoExtension {
       url: 'https://github.moeyy.xyz/https://raw.githubusercontent.com/Guovin/iptv-api/gd/output/ipv4/result.m3u',
     },
   ];
+
   async getRecommendVideos(pageNo, type) {
     const list = [...this.channels];
     return {
@@ -91,11 +92,12 @@ class TestVideoExtension extends VideoExtension {
       const groupTitleMatch = segment.title.match(/group-title="([^"]*)"/);
       const groupTitle = groupTitleMatch ? groupTitleMatch[1] : null;
       if (
-        !tvgName ||
-        tvgName.includes('免费订阅') ||
-        tvgName.includes('查看重要信息')
-      )
+        !tvgName
+        || tvgName.includes('免费订阅')
+        || tvgName.includes('查看重要信息')
+      ) {
         continue;
+      }
       if (!resources[groupTitle]) {
         resources[groupTitle] = {
           id: groupTitle,
@@ -114,7 +116,7 @@ class TestVideoExtension extends VideoExtension {
   }
 
   async getPlayUrl(item, resource, episode) {
-    const channel = this.channels.find((c) => c.id === item.id);
+    const channel = this.channels.find(c => c.id === item.id);
 
     // return {
     //   url: episode.url,

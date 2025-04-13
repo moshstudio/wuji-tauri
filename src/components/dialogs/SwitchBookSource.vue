@@ -1,12 +1,8 @@
 <script setup lang="ts">
-import { BookItem } from '@/extensions/book';
+import type { BookItem } from '@/extensions/book';
 import { useStore } from '@/store';
-import { ref, reactive, watch } from 'vue';
+import { watch } from 'vue';
 
-const show = defineModel('show', {
-  type: Boolean,
-  required: true,
-});
 const { book, searchResult } = defineProps<{
   book: BookItem;
   searchResult: BookItem[];
@@ -15,7 +11,10 @@ const emit = defineEmits<{
   (e: 'search'): void;
   (e: 'select', book: BookItem): void;
 }>();
-
+const show = defineModel('show', {
+  type: Boolean,
+  required: true,
+});
 watch(show, (val) => {
   if (val) {
     if (!searchResult.length) {
@@ -29,8 +28,8 @@ const store = useStore();
 
 <template>
   <van-dialog
-    teleport="body"
     v-model:show="show"
+    teleport="body"
     show-cancel-button
     close-on-click-overlay
     :show-confirm-button="false"
@@ -38,8 +37,10 @@ const store = useStore();
     <template #title>
       <div class="flex gap-2 px-4 justify-between items-center select-none">
         <div class="flex flex-col items-start text-[var(--van-text-color)]">
-          <p class="text-base">{{ book.title }}</p>
-          <p class="text-xs text-gray-500" v-if="book.author">
+          <p class="text-base">
+            {{ book.title }}
+          </p>
+          <p v-if="book.author" class="text-xs text-gray-500">
             {{ book.author }}
           </p>
         </div>
@@ -64,10 +65,12 @@ const store = useStore();
           >
             <template #value>
               <div class="flex flex-shrink gap-2 items-center">
-                <p v-if="item.author">{{ item.author }}</p>
+                <p v-if="item.author">
+                  {{ item.author }}
+                </p>
                 <van-icon
-                  name="success"
                   v-if="book.id === item.id && book.sourceId === item.sourceId"
+                  name="success"
                 />
               </div>
             </template>

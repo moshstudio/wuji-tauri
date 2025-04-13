@@ -1,8 +1,17 @@
+<script setup lang="ts">
+import { Icon } from '@iconify/vue';
+
+const props = defineProps<{
+  isPlaying: boolean;
+  playOrPause: () => void;
+}>();
+</script>
+
 <template>
   <button
-    @click="playOrPause"
     class="relative w-[24px] h-[24px] rounded-full flex items-center justify-center duration-200"
     aria-label="Play/Pause"
+    @click="playOrPause"
   >
     <Transition name="bounce" mode="out-in">
       <Icon
@@ -17,15 +26,6 @@
     </Transition>
   </button>
 </template>
-
-<script setup lang="ts">
-import { Icon } from '@iconify/vue';
-
-const props = defineProps<{
-  isPlaying: boolean;
-  playOrPause: () => void;
-}>();
-</script>
 
 <style lang="less" scoped>
 /* 入场动画 */

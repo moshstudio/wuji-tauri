@@ -1,20 +1,27 @@
 <script setup lang="ts">
-import { useDisplayStore, useSongStore, useStore } from '@/store';
-import { storeToRefs } from 'pinia';
-import _ from 'lodash';
+import type { SongInfo } from '@/extensions/song';
+import type { SongSource } from '@/types';
 import MobilePlaylistCard from '@/components/card/songCards/MobilePlaylistCard.vue';
 import MobileSongCard from '@/components/card/songCards/MobileSongCard.vue';
 import HorizonList from '@/components/HorizonList.vue';
-import SimplePagination from '@/components/pagination/SimplePagination.vue';
-import { SongSource } from '@/types';
-import { SongInfo } from '@/extensions/song';
-import SongShelf from '@/views/song/SongShelf.vue';
 import MobileHeader from '@/components/mobile/MobileHeader.vue';
 import MobileSongBar from '@/components/mobile/MobileSongBar.vue';
+import SimplePagination from '@/components/pagination/SimplePagination.vue';
 import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
-import { ref } from 'vue';
+import { useDisplayStore, useStore } from '@/store';
 import { sleep } from '@/utils';
+import SongShelf from '@/views/song/SongShelf.vue';
+import { storeToRefs } from 'pinia';
+import { ref } from 'vue';
 
+const emit = defineEmits<{
+  (e: 'search'): void;
+  (e: 'recommend', force?: boolean): void;
+  (e: 'playlistToPage', source: SongSource, pageNo: number): void;
+  (e: 'songToPage', source: SongSource, pageNo: number): void;
+  (e: 'playSong', source: SongSource, song: SongInfo): void;
+  (e: 'openBaseUrl', source: SongSource): void;
+}>();
 const store = useStore();
 const displayStore = useDisplayStore();
 const { songSources } = storeToRefs(store);
@@ -32,26 +39,17 @@ const activeTabIndex = defineModel('activeTabIndex', {
   default: 0,
 });
 
-const playSong = (source: SongSource, song: SongInfo) => {
+function playSong(source: SongSource, song: SongInfo) {
   emit('playSong', source, song);
-};
-
-const emit = defineEmits<{
-  (e: 'search'): void;
-  (e: 'recommend', force?: boolean): void;
-  (e: 'playlistToPage', source: SongSource, pageNo: number): void;
-  (e: 'songToPage', source: SongSource, pageNo: number): void;
-  (e: 'playSong', source: SongSource, song: SongInfo): void;
-  (e: 'openBaseUrl', source: SongSource): void;
-}>();
+}
 
 const isRefreshing = ref(false);
-const onRefresh = async () => {
+async function onRefresh() {
   isRefreshing.value = true;
   emit('search');
   await sleep(1000);
   isRefreshing.value = false;
-};
+}
 </script>
 
 <template>
@@ -60,13 +58,13 @@ const onRefresh = async () => {
       v-model:search-value="searchValue"
       @search="() => emit('search')"
       @show-shelf="() => (displayStore.showSongShelf = true)"
-    ></MobileHeader>
+    />
 
     <van-pull-refresh
-      v-remember-scroll
       v-model="isRefreshing"
-      @refresh="onRefresh"
+      v-remember-scroll
       class="main flex-grow overflow-x-hidden overflow-y-auto"
+      @refresh="onRefresh"
     >
       <van-tabs
         v-model:active="activeTabIndex"
@@ -78,15 +76,15 @@ const onRefresh = async () => {
       >
         <van-tab
           v-for="item in songSources.filter((s) => s.playlist || s.songList)"
-          :key="'tab' + item.item.id"
+          :key="`tab${item.item.id}`"
           :title="item.item.name"
           class="p-2"
         >
           <div class="">
             <van-loading v-if="!item.playlist && !item.songList" />
             <van-row
-              justify="space-between"
               v-if="item.playlist && item.playlist.totalPage"
+              justify="space-between"
             >
               <van-button
                 :plain="true"
@@ -104,16 +102,16 @@ const onRefresh = async () => {
             <HorizonList>
               <div
                 v-for="p in item.playlist?.list"
-                :key="'playlist' + p.id"
+                :key="`playlist${p.id}`"
                 class="relative"
               >
-                <MobilePlaylistCard :playlist="p"></MobilePlaylistCard>
+                <MobilePlaylistCard :playlist="p" />
               </div>
             </HorizonList>
-            <div class="h-4"></div>
+            <div class="h-4" />
             <van-row
-              justify="space-between"
               v-if="item.songList && item.songList.totalPage"
+              justify="space-between"
             >
               <van-button
                 :plain="true"
@@ -129,20 +127,20 @@ const onRefresh = async () => {
               />
             </van-row>
             <ResponsiveGrid class="p-[10px]">
-              <template v-for="p in item.songList?.list" :key="'song' + p.id">
+              <template v-for="p in item.songList?.list" :key="`song${p.id}`">
                 <MobileSongCard
                   :song="p"
-                  @play="() => playSong(item, p)"
                   class="max-w-[250px]"
-                ></MobileSongCard>
+                  @play="() => playSong(item, p)"
+                />
               </template>
             </ResponsiveGrid>
           </div>
         </van-tab>
       </van-tabs>
     </van-pull-refresh>
-    <MobileSongBar></MobileSongBar>
-    <SongShelf></SongShelf>
+    <MobileSongBar />
+    <SongShelf />
   </div>
 </template>
 

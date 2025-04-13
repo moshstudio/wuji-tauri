@@ -1,5 +1,5 @@
-import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { check } from '@tauri-apps/plugin-updater';
 import { showConfirmDialog, showDialog } from 'vant';
 
 function calculateProgress(currentBytes: number) {
@@ -7,7 +7,7 @@ function calculateProgress(currentBytes: number) {
   const fileSizeBytes = 20 * 1024 * 1024; // 20M in bytes
   const progress = Math.max(
     0,
-    Math.min((currentBytes / fileSizeBytes) * 100, 99)
+    Math.min((currentBytes / fileSizeBytes) * 100, 99),
   );
   return progress;
 }
@@ -18,11 +18,12 @@ function calculateProgress(currentBytes: number) {
  * @returns {string} 格式化后的字符串
  */
 function formatFileSize(bytes: number) {
-  if (bytes === 0) return '0 B';
+  if (bytes === 0)
+    return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
 }
 
 export async function checkAndUpdate() {
@@ -77,8 +78,8 @@ export async function checkAndUpdate() {
               downloadedBytes += event.data.chunkLength;
               progress = calculateProgress(downloadedBytes);
               const progressBar = document.getElementById('updateProgressBar');
-              const progressText =
-                document.getElementById('updateProgressText');
+              const progressText
+                = document.getElementById('updateProgressText');
               if (progressBar && progressText) {
                 progressBar.style.width = `${progress}%`;
                 progressText.textContent = `${Math.round(progress)}% · 已下载 ${formatFileSize(downloadedBytes)}`;
@@ -90,6 +91,7 @@ export async function checkAndUpdate() {
         });
         await relaunch();
       }
-    } catch (error) {}
+    }
+    catch (error) {}
   }
 }

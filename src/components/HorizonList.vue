@@ -6,7 +6,7 @@
     class="flex overflow-x-auto overflow-y-hidden w-full gap-2 py-2"
     @touchmove.stop
   >
-    <slot></slot>
+    <slot />
   </div>
 </template>
 

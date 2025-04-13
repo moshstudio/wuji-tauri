@@ -1,12 +1,21 @@
 <script setup lang="ts">
-import { PhotoDetail, PhotoItem } from '@/extensions/photo';
-import { PropType, ref, watch } from 'vue';
-import { usePhotoShelfStore } from '@/store';
+import type { PhotoDetail, PhotoItem } from '@/extensions/photo';
+import type { PropType } from 'vue';
+import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
 import LoadImage from '@/components/LoadImage.vue';
 import SimplePagination from '@/components/pagination/SimplePagination.vue';
-import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
+import { usePhotoShelfStore } from '@/store';
 import { downloadFile } from '@/utils';
 import { showNotify } from 'vant';
+import { ref, watch } from 'vue';
+
+const emit = defineEmits<{
+  (e: 'back'): void;
+  (e: 'loadData', pageNo?: number): void;
+  (e: 'toPage', pageNo?: number): void;
+  (e: 'collect'): void;
+  (e: 'addPhotoToShelf', shelfId: string): void;
+}>();
 
 const shelfStore = usePhotoShelfStore();
 
@@ -23,20 +32,12 @@ const showAddDialog = defineModel('showAddDialog', {
   default: false,
 });
 
-const emit = defineEmits<{
-  (e: 'back'): void;
-  (e: 'loadData', pageNo?: number): void;
-  (e: 'toPage', pageNo?: number): void;
-  (e: 'collect'): void;
-  (e: 'addPhotoToShelf', shelfId: string): void;
-}>();
-
 const showMoreOptions = ref(false);
 const clickedItem = ref<string>();
-const showMoreOptionsSheet = async (url: string) => {
+async function showMoreOptionsSheet(url: string) {
   clickedItem.value = url;
   showMoreOptions.value = true;
-};
+}
 const bubbleOffset = ref({
   x: document.querySelector('body')!.clientWidth - 130,
   y: document.querySelector('body')!.clientHeight - 100,
@@ -72,19 +73,18 @@ watch(bubbleOffset, (offset) => {
         />
       </template>
       <van-floating-bubble
+        v-if="photoDetail?.totalPage && photoDetail?.totalPage > 1"
         v-model:offset="bubbleOffset"
         axis="xy"
         magnetic="x"
         :gap="6"
         teleport=".photo-detail"
-        v-if="photoDetail?.totalPage && photoDetail?.totalPage > 1"
       >
         <SimplePagination
           v-model="currentPage"
           :page-count="Number(photoDetail.totalPage)"
           @change="(pageNo) => emit('toPage', pageNo)"
-        >
-        </SimplePagination>
+        />
       </van-floating-bubble>
     </main>
   </div>
@@ -103,8 +103,7 @@ watch(bubbleOffset, (offset) => {
         center
         clickable
         @click="() => emit('addPhotoToShelf', item.id)"
-      >
-      </van-cell>
+      />
     </van-cell-group>
   </van-dialog>
   <MoreOptionsSheet
@@ -122,7 +121,8 @@ watch(bubbleOffset, (offset) => {
           });
           if (!res) {
             showNotify('保存失败');
-          } else {
+          }
+          else {
             showNotify({
               message: '保存成功',
               type: 'success',
@@ -132,7 +132,7 @@ watch(bubbleOffset, (offset) => {
         },
       },
     ]"
-  ></MoreOptionsSheet>
+  />
 </template>
 
 <style scoped lang="less">

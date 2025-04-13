@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { useSongStore, useSongShelfStore, useDisplayStore } from '@/store';
-import { storeToRefs } from 'pinia';
-import { computed, nextTick, ref, watch } from 'vue';
-import { Icon } from '@iconify/vue';
+import { useDisplayStore, useSongStore } from '@/store';
 import PlayView from '@/views/song/PlayView.vue';
+import { Icon } from '@iconify/vue';
+import { storeToRefs } from 'pinia';
+import { watch } from 'vue';
 import PlayingPlaylistSheet from '../actionSheets/PlayingPlaylist.vue';
 import DraggableSongBar from './DraggableSongBar.vue';
 
@@ -15,24 +15,26 @@ const { showPlayView, showPlayingPlaylist } = storeToRefs(displayStore);
 watch(showPlayView, (value) => {
   if (value) {
     showPlayingPlaylist.value = false;
-  } else {
+  }
+  else {
     if (!value && showPlayingPlaylist.value) {
       showPlayingPlaylist.value = false;
       showPlayView.value = true;
     }
   }
 });
-const togglePlay = () => {
+function togglePlay() {
   if (songStore.isPlaying) {
     songStore.onPause();
-  } else {
+  }
+  else {
     songStore.onPlay();
   }
-};
+}
 </script>
 
 <template>
-  <PlayView></PlayView>
+  <PlayView />
   <transition name="fade">
     <div v-if="playingSong" class="flex flex-col select-none h-[60px]">
       <div class="grow flex flex-col z-[1002] bg-[--van-background]">
@@ -52,14 +54,14 @@ const togglePlay = () => {
         >
           <DraggableSongBar
             @click="() => (showPlayView = !showPlayView)"
-          ></DraggableSongBar>
+          />
           <div class="right-buttons flex gap-3 px-2">
             <transition name="transform" mode="out-in">
               <div
                 label="playButton"
-                @click.stop="togglePlay"
                 class="cursor-pointer van-haptics-feedback text-[#1989fa] hover:scale-105"
                 style="touch-action: manipulation"
+                @click.stop="togglePlay"
               >
                 <Icon
                   :icon="
@@ -82,7 +84,7 @@ const togglePlay = () => {
       </div>
     </div>
   </transition>
-  <PlayingPlaylistSheet v-model="showPlayingPlaylist"></PlayingPlaylistSheet>
+  <PlayingPlaylistSheet v-model="showPlayingPlaylist" />
 </template>
 
 <style scoped lang="less">

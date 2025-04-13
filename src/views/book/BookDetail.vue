@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import WinBookDetail from '../windowsView/book/BookDetail.vue';
-import MobileBookDetail from '../mobileView/book/BookDetail.vue';
+import type { BookChapter, BookItem } from '@/extensions/book';
+import type { BookSource } from '@/types';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
 
-import { BookChapter, BookItem } from '@/extensions/book';
 import { router } from '@/router';
-import { useDisplayStore, useStore } from '@/store';
-import { BookSource } from '@/types';
-import { showLoadingToast, showToast } from 'vant';
-import _ from 'lodash';
-import { ref, triggerRef, watch, onActivated } from 'vue';
+import { useStore } from '@/store';
 import { retryOnFalse, sleep } from '@/utils';
-import { storeToRefs } from 'pinia';
+import { showLoadingToast, showToast } from 'vant';
+import { onActivated, ref, triggerRef, watch } from 'vue';
+import MobileBookDetail from '../mobileView/book/BookDetail.vue';
+import WinBookDetail from '../windowsView/book/BookDetail.vue';
 
 const { bookId, sourceId } = defineProps({
   bookId: String,
@@ -62,7 +60,8 @@ const loadData = retryOnFalse({ onFailed: back })(async () => {
   if (!detail?.chapters) {
     showToast('章节列表为空');
   }
-  if (content.value) content.value.scrollTop = 0;
+  if (content.value)
+    content.value.scrollTop = 0;
   triggerRef(book);
   return true;
 });
@@ -71,8 +70,8 @@ function toChapter(chapter: BookChapter) {
   router.push({
     name: 'BookRead',
     params: {
-      bookId: bookId,
-      sourceId: sourceId,
+      bookId,
+      sourceId,
       chapterId: chapter.id,
     },
   });
@@ -102,7 +101,7 @@ onActivated(async () => {
         @back="back"
         @load-data="loadData"
         @to-chapter="toChapter"
-      ></MobileBookDetail>
+      />
     </template>
     <template #windows>
       <WinBookDetail
@@ -113,7 +112,7 @@ onActivated(async () => {
         @back="back"
         @load-data="loadData"
         @to-chapter="toChapter"
-      ></WinBookDetail>
+      />
     </template>
   </PlatformSwitch>
 </template>

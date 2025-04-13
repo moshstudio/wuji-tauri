@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { SongInfo, SongShelf } from '@/extensions/song';
-import { computed, PropType, ref } from 'vue';
-import { useSongStore, useSongShelfStore, useDisplayStore } from '@/store';
-import { Icon } from '@iconify/vue';
-import { joinSongArtists } from '@/utils';
-import SongCardPhoto from '@/components/photos/SongCardPhoto.vue';
+import type { SongInfo, SongShelf } from '@/extensions/song';
+import type { PropType } from 'vue';
 import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
 import SongToFavoriteButton from '@/components/buttons/SongToFavoriteButton.vue';
+import SongCardPhoto from '@/components/photos/SongCardPhoto.vue';
+import { useSongShelfStore, useSongStore } from '@/store';
 import { SongShelfType } from '@/types/song';
+import { joinSongArtists } from '@/utils';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
   song: {
@@ -19,9 +19,8 @@ const props = defineProps({
     required: true,
   },
 });
-const song = props.song;
 const emit = defineEmits(['play']);
-
+const song = props.song;
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
 
@@ -41,19 +40,20 @@ function onMouseLeave() {
   showHint.value = false;
 }
 
-const onPlay = () => {
+function onPlay() {
   emit('play');
-};
-const onPause = () => {
+}
+function onPause() {
   songStore.onPause();
-};
-const onDbClick = () => {
+}
+function onDbClick() {
   if (songStore.playingSong?.id === song.id && songStore.isPlaying) {
     onPause();
-  } else {
+  }
+  else {
     onPlay();
   }
-};
+}
 </script>
 
 <template>
@@ -74,7 +74,7 @@ const onDbClick = () => {
       :height="40"
       @play="onPlay"
       @pause="onPause"
-    ></SongCardPhoto>
+    />
     <div
       class="grow flex flex-col pl-2 text-xs min-w-[10px] justify-around truncate"
     >
@@ -86,16 +86,16 @@ const onDbClick = () => {
       </span>
     </div>
     <div
-      class="absolute right-0 px-2 flex gap-2 h-full items-center justify-center bg-[--van-background]"
       v-if="showHint"
+      class="absolute right-0 px-2 flex gap-2 h-full items-center justify-center bg-[--van-background]"
     >
-      <SongToFavoriteButton :song="song" :size="20"></SongToFavoriteButton>
+      <SongToFavoriteButton :song="song" :size="20" />
       <van-icon
+        v-if="shelf.type !== SongShelfType.playlist"
         name="ellipsis"
         class="clickable text-[--van-text-color]"
         size="16"
         @click="() => (showMoreOptions = true)"
-        v-if="shelf.type !== SongShelfType.playlist"
       />
     </div>
     <MoreOptionsSheet
@@ -111,7 +111,7 @@ const onDbClick = () => {
           },
         },
       ]"
-    ></MoreOptionsSheet>
+    />
   </div>
 </template>
 

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ActionSheetAction } from 'vant';
-const show = defineModel<boolean>();
+import type { ActionSheetAction } from 'vant';
+
 const { actions } = defineProps<{
   actions: ActionSheetAction[];
 }>();
+const show = defineModel<boolean>();
 </script>
 
 <template>

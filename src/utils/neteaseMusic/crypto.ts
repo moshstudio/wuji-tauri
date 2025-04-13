@@ -1,5 +1,6 @@
 import CryptoJS from 'crypto-js';
 import forge from 'node-forge';
+
 const iv = '0102030405060708';
 const presetKey = '0CoJUm6Qyw8W8jud';
 const linuxapiKey = 'rFgB&h#%2?^eDg:Q';
@@ -9,34 +10,23 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
 -----END PUBLIC KEY-----`;
 const eapiKey = 'e82ckenh8dichen8';
 
-const aesEncrypt = (
-  text: string,
-  mode: keyof typeof CryptoJS.mode,
-  key: string,
-  iv: string,
-  format = 'base64'
-) => {
-  let encrypted = CryptoJS.AES.encrypt(
+function aesEncrypt(text: string, mode: keyof typeof CryptoJS.mode, key: string, iv: string, format = 'base64') {
+  const encrypted = CryptoJS.AES.encrypt(
     CryptoJS.enc.Utf8.parse(text),
     CryptoJS.enc.Utf8.parse(key),
     {
       iv: CryptoJS.enc.Utf8.parse(iv),
       mode: CryptoJS.mode[mode],
       padding: CryptoJS.pad.Pkcs7,
-    }
+    },
   );
   if (format === 'base64') {
     return encrypted.toString();
   }
 
   return encrypted.ciphertext.toString().toUpperCase();
-};
-const aesDecrypt = (
-  ciphertext: string,
-  key: string,
-  iv: string,
-  format = 'base64'
-) => {
+}
+function aesDecrypt(ciphertext: string, key: string, iv: string, format = 'base64') {
   let bytes;
   if (format === 'base64') {
     bytes = CryptoJS.AES.decrypt(ciphertext, CryptoJS.enc.Utf8.parse(key), {
@@ -44,7 +34,8 @@ const aesDecrypt = (
       mode: CryptoJS.mode.ECB,
       padding: CryptoJS.pad.Pkcs7,
     });
-  } else {
+  }
+  else {
     bytes = CryptoJS.AES.decrypt(ciphertext, CryptoJS.enc.Utf8.parse(key), {
       iv: CryptoJS.enc.Utf8.parse(iv),
       mode: CryptoJS.mode.ECB,
@@ -52,14 +43,14 @@ const aesDecrypt = (
     });
   }
   return bytes.toString(CryptoJS.enc.Utf8);
-};
-const rsaEncrypt = (str: string, key: string) => {
+}
+function rsaEncrypt(str: string, key: string) {
   const forgePublicKey = forge.pki.publicKeyFromPem(key);
   const encrypted = forgePublicKey.encrypt(str, 'NONE');
   return forge.util.bytesToHex(encrypted);
-};
+}
 
-const weapi = (object: Object) => {
+function weapi(object: object) {
   const text = JSON.stringify(object);
   let secretKey = '';
   for (let i = 0; i < 16; i++) {
@@ -70,20 +61,20 @@ const weapi = (object: Object) => {
       aesEncrypt(text, 'CBC', presetKey, iv),
       'CBC',
       secretKey,
-      iv
+      iv,
     ),
     encSecKey: rsaEncrypt(secretKey.split('').reverse().join(''), publicKey),
   };
-};
+}
 
-const linuxapi = (object: Object) => {
+function linuxapi(object: object) {
   const text = JSON.stringify(object);
   return {
     eparams: aesEncrypt(text, 'ECB', linuxapiKey, '', 'hex'),
   };
-};
+}
 
-const eapi = (url: string, object: Object) => {
+function eapi(url: string, object: object) {
   const text = typeof object === 'object' ? JSON.stringify(object) : object;
   const message = `nobody${url}use${text}md5forencrypt`;
   const digest = CryptoJS.MD5(message).toString();
@@ -91,13 +82,13 @@ const eapi = (url: string, object: Object) => {
   return {
     params: aesEncrypt(data, 'ECB', eapiKey, '', 'hex'),
   };
-};
-const eapiResDecrypt = (encryptedParams: string) => {
+}
+function eapiResDecrypt(encryptedParams: string) {
   // 使用aesDecrypt解密参数
   const decryptedData = aesDecrypt(encryptedParams, eapiKey, '', 'hex');
   return JSON.parse(decryptedData);
-};
-const eapiReqDecrypt = (encryptedParams: string) => {
+}
+function eapiReqDecrypt(encryptedParams: string) {
   // 使用aesDecrypt解密参数
   const decryptedData = aesDecrypt(encryptedParams, eapiKey, '', 'hex');
   // 使用正则表达式解析出URL和数据
@@ -110,14 +101,14 @@ const eapiReqDecrypt = (encryptedParams: string) => {
 
   // 如果没有匹配到，返回null
   return null;
-};
-const decrypt = (cipher: string) => {
+}
+function decrypt(cipher: string) {
   const decipher = CryptoJS.AES.decrypt(cipher, eapiKey, {
     mode: CryptoJS.mode.ECB,
   });
   const decryptedBytes = CryptoJS.enc.Utf8.stringify(decipher);
   return decryptedBytes;
-};
+}
 
 export default {
   weapi,

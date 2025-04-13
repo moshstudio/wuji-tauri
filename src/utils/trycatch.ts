@@ -5,16 +5,18 @@ export interface TryCatchOptions<T> {
 
 export function tryCatch<T>(
   fn: (...args: any[]) => Promise<T>,
-  options?: TryCatchOptions<T>
+  options?: TryCatchOptions<T>,
 ): (...args: any[]) => Promise<T | null> {
   return async (...args: any[]): Promise<T | null> => {
     try {
       return await fn(...args);
-    } catch (e) {
+    }
+    catch (e) {
       if (options?.onCatch) {
         try {
           return await options.onCatch(e);
-        } catch (catchError) {
+        }
+        catch (catchError) {
           console.error('Error in onCatch handler:', catchError);
         }
       }

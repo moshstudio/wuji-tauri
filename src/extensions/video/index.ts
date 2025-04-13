@@ -1,6 +1,6 @@
 import _ from 'lodash';
-import { Extension, transformResult } from '../baseExtension';
 import { nanoid } from 'nanoid';
+import { Extension, transformResult } from '../baseExtension';
 
 export interface VideoUrlMap {
   url: string;
@@ -101,7 +101,7 @@ abstract class VideoExtension extends Extension {
   // 1. 首页推荐
   abstract getRecommendVideos(
     pageNo?: number,
-    type?: string
+    type?: string,
   ): Promise<VideosList | null>;
 
   @transformResult<VideosList | null>((r) => {
@@ -144,11 +144,11 @@ abstract class VideoExtension extends Extension {
           index += 1;
         }
         resource.id = String(
-          resource.id || resource.url || resource.title || nanoid()
+          resource.id || resource.url || resource.title || nanoid(),
         );
         resource.episodes?.forEach((episode) => {
           episode.id = String(
-            episode.id || episode.url || episode.title || nanoid()
+            episode.id || episode.url || episode.title || nanoid(),
           );
         });
       });
@@ -157,11 +157,11 @@ abstract class VideoExtension extends Extension {
       ret.lastWatchResourceId = item.lastWatchResourceId;
       ret.lastWatchEpisodeId = item.lastWatchEpisodeId;
       ret.resources?.forEach((resource) => {
-        const oldResource = item.resources?.find((r) => r.id === resource.id);
+        const oldResource = item.resources?.find(r => r.id === resource.id);
         if (oldResource) {
           resource.episodes?.forEach((episode) => {
             const oldEpisode = oldResource.episodes?.find(
-              (e) => e.id === episode.id
+              e => e.id === episode.id,
             );
             if (oldEpisode) {
               episode.lastWatchPosition = oldEpisode.lastWatchPosition;
@@ -181,7 +181,7 @@ abstract class VideoExtension extends Extension {
   execGetPlayUrl(
     item: VideoItem,
     resource: VideoResource,
-    episode: VideoEpisode
+    episode: VideoEpisode,
   ) {
     return this.getPlayUrl(item, resource, episode);
   }
@@ -189,20 +189,21 @@ abstract class VideoExtension extends Extension {
   abstract getPlayUrl(
     item: VideoItem,
     resource: VideoResource,
-    episode: VideoEpisode
+    episode: VideoEpisode,
   ): Promise<VideoUrlMap | null>;
 }
 
 function loadVideoExtensionString(
-  codeString: string
+  codeString: string,
 ): VideoExtension | undefined {
   try {
     const func = new Function('VideoExtension', codeString);
     const extensionclass = func(VideoExtension);
     return new extensionclass();
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Error executing code:\n', error);
   }
 }
 
-export { VideoExtension, loadVideoExtensionString };
+export { loadVideoExtensionString, VideoExtension };

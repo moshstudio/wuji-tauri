@@ -1,24 +1,35 @@
 <script setup lang="ts">
-import { ComicChapter, ComicContent, ComicItem } from '@/extensions/comic';
+import type { ComicChapter, ComicContent, ComicItem } from '@/extensions/comic';
 
-import { useComicStore, useDisplayStore } from '@/store';
-import { ComicSource } from '@/types';
+import type { ComicSource } from '@/types';
+import type {
+  PropType,
+} from 'vue';
 import ComicShelfButton from '@/components/ComicShelfButton.vue';
+import LoadImage from '@/components/LoadImage.vue';
+import { useComicStore, useDisplayStore } from '@/store';
 import ComicShelf from '@/views/comic/ComicShelf.vue';
 import { Icon } from '@iconify/vue';
+import { useScroll } from '@vueuse/core';
+import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 import {
-  nextTick,
   onActivated,
   onDeactivated,
   onMounted,
-  PropType,
   ref,
   watch,
 } from 'vue';
-import { useScroll } from '@vueuse/core';
-import LoadImage from '@/components/LoadImage.vue';
-import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 
+const emit = defineEmits<{
+  (e: 'back', checkShelf?: boolean): void;
+  (e: 'loadData'): void;
+  (e: 'toChapter', chapter: ComicChapter): void;
+  (e: 'prevChapter'): void;
+  (e: 'nextChapter'): void;
+  (e: 'openChapterPopup'): void;
+  (e: 'searchAllSources', targetComic: ComicItem): void;
+  (e: 'switchSource', newComicItem: ComicItem): void;
+}>();
 const comic = defineModel('comic', { type: Object as PropType<ComicItem> });
 const comicSource = defineModel('comicSource', {
   type: Object as PropType<ComicSource>,
@@ -51,17 +62,6 @@ const showSwitchSourceDialog = defineModel('showSwitchSourceDialog', {
   type: Boolean,
   required: true,
 });
-
-const emit = defineEmits<{
-  (e: 'back', checkShelf?: boolean): void;
-  (e: 'loadData'): void;
-  (e: 'toChapter', chapter: ComicChapter): void;
-  (e: 'prevChapter'): void;
-  (e: 'nextChapter'): void;
-  (e: 'openChapterPopup'): void;
-  (e: 'searchAllSources', targetComic: ComicItem): void;
-  (e: 'switchSource', newComicItem: ComicItem): void;
-}>();
 
 const displayStore = useDisplayStore();
 const comicStore = useComicStore();
@@ -158,7 +158,7 @@ const showMenu = ref(false);
           <ComicShelfButton
             :comic="comic"
             :reading-chapter="readingChapter"
-          ></ComicShelfButton>
+          />
         </div>
       </div>
       <div
@@ -166,8 +166,8 @@ const showMenu = ref(false);
       >
         <span v-if="readingChapter">{{ readingChapter?.title }}</span>
         <div
-          class="p-1 rounded bg-[var(--van-primary-color)] mr-2"
           v-if="comicSource"
+          class="p-1 rounded bg-[var(--van-primary-color)] mr-2"
         >
           {{ comicSource?.item.name }}
         </div>
@@ -175,24 +175,23 @@ const showMenu = ref(false);
     </div>
     <div class="scroll-container flex h-full overflow-y-auto w-full">
       <div
+        v-if="readingContent"
         id="comic-read-content"
         class="w-full relative overflow-y-auto text-justify py-2 leading-[0] text-[--van-text-color]"
         @click="() => (showMenu = !showMenu)"
-        v-if="readingContent"
       >
         <div
-          class="w-full min-h-[50px] text-center leading-[0]"
-          v-if="readingContent"
           v-for="(item, index) in readingContent.photos"
+          v-if="readingContent"
           :key="index"
+          class="w-full min-h-[50px] text-center leading-[0]"
         >
           <LoadImage
             :src="item"
             :headers="readingContent.photosHeaders"
             fit="contain"
             lazy-load
-          >
-          </LoadImage>
+          />
         </div>
 
         <van-floating-bubble
@@ -212,8 +211,7 @@ const showMenu = ref(false);
               size="small"
               class="w-[40px] h-[45px]"
               @click="() => emit('prevChapter')"
-            >
-            </van-button>
+            />
             <van-button
               icon="arrow-down"
               square
@@ -221,8 +219,7 @@ const showMenu = ref(false);
               size="small"
               class="w-[40px] h-[45px]"
               @click="() => emit('nextChapter')"
-            >
-            </van-button>
+            />
           </div>
         </van-floating-bubble>
       </div>
@@ -282,11 +279,11 @@ const showMenu = ref(false);
             "
           >
             <Icon
+              v-if="readingChapter?.id === item.id"
               icon="iconamoon:eye-thin"
               width="24"
               height="24"
               color="var(--van-primary-color)"
-              v-if="readingChapter?.id === item.id"
             />
             <span
               class="flex-grow text-left overflow-hidden text-nowrap text-ellipsis"
@@ -305,15 +302,17 @@ const showMenu = ref(false);
     <van-dialog
       v-model:show="showSettingDialog"
       titl
-      closeOnClickOverlay
+      close-on-click-overlay
       :show-confirm-button="false"
       class="setting-dialog bg-[#1f1f1f] text-white"
     >
       <template #title>
-        <div class="text-white">界面设置</div>
+        <div class="text-white">
+          界面设置
+        </div>
       </template>
       <div class="flex flex-col p-2 text-sm">
-        <van-cell class="bg-[#1f1f1f]" v-if="displayStore.isAndroid">
+        <van-cell v-if="displayStore.isAndroid" class="bg-[#1f1f1f]">
           <template #title>
             <span class="text-white">保持屏幕常亮</span>
           </template>
@@ -324,7 +323,8 @@ const showMenu = ref(false);
                 (v) => {
                   if (v) {
                     keepScreenOn(true);
-                  } else {
+                  }
+                  else {
                     keepScreenOn(false);
                   }
                 }
@@ -334,7 +334,7 @@ const showMenu = ref(false);
         </van-cell>
       </div>
     </van-dialog>
-    <ComicShelf></ComicShelf>
+    <ComicShelf />
     <!-- <SwitchComicSourceDialog
       v-model:show="showSwitchSourceDialog"
       :search-result="allSourceResults || []"

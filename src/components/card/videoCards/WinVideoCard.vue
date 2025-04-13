@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import { Icon } from '@iconify/vue';
+import type { VideoItem } from '@/extensions/video';
 import LoadImage from '@/components/LoadImage.vue';
-import { VideoItem } from '@/extensions/video';
 import { useDisplayStore } from '@/store';
+import _ from 'lodash';
+
 const { videoItem } = defineProps<{
   videoItem: VideoItem;
 }>();
@@ -29,8 +29,8 @@ const displayStore = useDisplayStore();
     />
 
     <p
-      class="text-xs text-[var(--van-text-color)] text-center truncate py-1"
       v-if="videoItem.title"
+      class="text-xs text-[var(--van-text-color)] text-center truncate py-1"
     >
       {{ videoItem.title }}
     </p>

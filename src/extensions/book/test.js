@@ -7,7 +7,7 @@ class TestBookExtension extends BookExtension {
   baseUrl = 'https://hotxww.com/';
 
   async getRecommendBooks(pageNo, type) {
-    let items = [
+    const items = [
       {
         name: '玄幻魔法',
         tag: `sort/xuanhuan/{pageNo}/`,
@@ -38,7 +38,7 @@ class TestBookExtension extends BookExtension {
       },
     ];
     if (!type) {
-      return items.map((item) => ({
+      return items.map(item => ({
         id: item.tag,
         type: item.name,
         list: [],
@@ -46,10 +46,11 @@ class TestBookExtension extends BookExtension {
         sourceId: '',
       }));
     }
-    const item = items.find((item) => item.name === type);
-    if (!item) return null;
+    const item = items.find(item => item.name === type);
+    if (!item)
+      return null;
     pageNo = pageNo || 1;
-    let url = `${this.baseUrl}${item.tag.replace('{pageNo}', pageNo)}`;
+    const url = `${this.baseUrl}${item.tag.replace('{pageNo}', pageNo)}`;
     const document = await this.fetchDom(url);
     const list = await this.queryBookElements(document, {
       element: '.list_center dl',
@@ -96,7 +97,7 @@ class TestBookExtension extends BookExtension {
   }
 
   async getBookDetail(item) {
-    let url = item.url;
+    const url = item.url;
     const document = await this.fetchDom(url);
     item.author = document.querySelector('.p_author a')?.textContent;
     const chapters = await this.queryChapters(document, {
@@ -113,12 +114,13 @@ class TestBookExtension extends BookExtension {
       const document = await this.fetchDom(url);
       const pElements = document.querySelectorAll('#TextContent p');
       pElements.forEach((element) => {
-        res += element.textContent + '\n';
+        res += `${element.textContent}\n`;
       });
       const nextPageElement = document.querySelector('#next_url');
       if (nextPageElement?.textContent === '下一页') {
         url = this.urlJoin(this.baseUrl, nextPageElement.getAttribute('href'));
-      } else {
+      }
+      else {
         url = null;
       }
     } while (url);

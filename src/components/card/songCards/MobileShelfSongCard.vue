@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { SongInfo, SongShelf } from '@/extensions/song';
-import { computed, PropType, ref } from 'vue';
-import { useSongShelfStore, useSongStore } from '@/store';
-import { joinSongArtists } from '@/utils';
-import SongCardPhoto from '@/components/photos/SongCardPhoto.vue';
+import type { SongInfo, SongShelf } from '@/extensions/song';
+import type { PropType } from 'vue';
 import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
+import SongCardPhoto from '@/components/photos/SongCardPhoto.vue';
+import { useSongShelfStore, useSongStore } from '@/store';
 import { SongShelfType } from '@/types/song';
+import { joinSongArtists } from '@/utils';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
   song: {
@@ -17,9 +18,8 @@ const props = defineProps({
     required: true,
   },
 });
-const song = props.song;
 const emit = defineEmits(['play']);
-
+const song = props.song;
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
 
@@ -29,12 +29,12 @@ const isPlayingSong = computed(() => {
   return songStore.playingSong?.id === song.id;
 });
 
-const onPlay = () => {
+function onPlay() {
   emit('play');
-};
-const onPause = () => {
+}
+function onPause() {
   songStore.onPause();
-};
+}
 </script>
 
 <template>
@@ -53,7 +53,7 @@ const onPause = () => {
       :height="40"
       @play="onPlay"
       @pause="onPause"
-    ></SongCardPhoto>
+    />
     <div
       class="grow flex flex-col pl-2 text-xs min-w-[10px] justify-around truncate"
     >
@@ -85,7 +85,7 @@ const onPause = () => {
           },
         },
       ]"
-    ></MoreOptionsSheet>
+    />
   </div>
 </template>
 

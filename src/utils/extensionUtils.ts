@@ -1,15 +1,17 @@
 import { showNotify } from 'vant';
 
 export function toProxyUrl(url?: string | undefined | null): string {
-  if (!url) return '';
+  if (!url)
+    return '';
   return url;
   // return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
 }
 export function maxPageNoFromElements(
   elements?: NodeListOf<Element> | null,
-  onlyKeepNumbers = true
+  onlyKeepNumbers = true,
 ): number | null {
-  if (!elements) return null;
+  if (!elements)
+    return null;
 
   function keepOnlyNumbers(input: string): string {
     // 保留数字、小数点、负号、加号、科学计数法符号
@@ -18,27 +20,28 @@ export function maxPageNoFromElements(
 
   const res = Math.max(
     ...Array.from(elements.values())
-      .map((el) =>
+      .map(el =>
         Number(
           onlyKeepNumbers
             ? keepOnlyNumbers(el.textContent || '')
-            : el.textContent
-        )
+            : el.textContent,
+        ),
       )
-      .filter((v) => !isNaN(v))
+      .filter(v => !isNaN(v)),
   );
-  if (res === Infinity || res === -Infinity) return null;
+  if (res === Infinity || res === -Infinity)
+    return null;
   return res;
 }
 
 export function parseAndExecuteHtml(
   htmlString: string,
-  baseUrl?: string
+  baseUrl?: string,
 ): Promise<HTMLIFrameElement> {
   if (baseUrl) {
     htmlString = htmlString.replace(
       /<head>/,
-      `<head><base href="${baseUrl}" />`
+      `<head><base href="${baseUrl}" />`,
     );
   }
   return new Promise((resolve, reject) => {
@@ -46,15 +49,16 @@ export function parseAndExecuteHtml(
     iframe.style.display = 'none';
     document.body.appendChild(iframe);
 
-    const iframeDocument =
-      iframe.contentDocument || iframe.contentWindow?.document;
+    const iframeDocument
+      = iframe.contentDocument || iframe.contentWindow?.document;
     if (iframeDocument) {
       iframeDocument.open();
       iframeDocument.write(htmlString);
       iframeDocument.close();
 
       resolve(iframe);
-    } else {
+    }
+    else {
       console.log('Failed to load iframe document');
 
       reject(new Error('Failed to load iframe document'));
@@ -75,28 +79,31 @@ export function parseAndExecuteHtml(
   });
 }
 
-export function tryCatchProxy<T extends Object>(target: T): T {
+export function tryCatchProxy<T extends object>(target: T): T {
   // 递归处理原型链
   function proxyPrototype(proto: any) {
-    if (!proto) return;
+    if (!proto)
+      return;
     const propertyNames = Object.getOwnPropertyNames(proto);
     propertyNames.forEach((name) => {
       let condition = false;
       try {
         if (
-          name !== 'constructor' &&
-          proto[name] &&
-          typeof proto[name] === 'function'
+          name !== 'constructor'
+          && proto[name]
+          && typeof proto[name] === 'function'
         ) {
           condition = true;
         }
-      } catch (error) {}
+      }
+      catch (error) {}
       if (condition) {
         const originalMethod = proto[name];
         proto[name] = function (...args: any[]) {
           try {
             return originalMethod.apply(this, args);
-          } catch (e) {
+          }
+          catch (e) {
             console.warn(`Error in ${originalMethod}:`, e);
             showNotify({
               message: `${proto.name} 请求失败`,
@@ -119,10 +126,12 @@ export function tryCatchProxy<T extends Object>(target: T): T {
             return result.catch((e) => {
               // console.warn(`Error in ${originalMethod}:`, e);
             });
-          } else {
+          }
+          else {
             try {
               return result;
-            } catch (e) {
+            }
+            catch (e) {
               console.warn(`Error in ${originalMethod}:`, e);
             }
           }

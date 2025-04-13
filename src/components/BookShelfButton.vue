@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive, watch, PropType } from 'vue';
-import { BookChapter, BookItem } from '@/extensions/book';
+import type { BookChapter, BookItem } from '@/extensions/book';
+import type { PropType } from 'vue';
 import { useBookShelfStore, useDisplayStore } from '@/store';
 import { storeToRefs } from 'pinia';
+import { ref, watch } from 'vue';
 
 const { book, readingChapter, mode } = defineProps({
   book: {
@@ -25,8 +26,9 @@ const { bookShelf } = storeToRefs(shelfStore);
 const numInShelf = ref(0);
 const pickShelfDialog = ref(false);
 
-const calcNumInShelf = () => {
-  if (!book) return;
+function calcNumInShelf() {
+  if (!book)
+    return;
   // 在几个书架中
   let count = 0;
   for (const shelf of bookShelf.value) {
@@ -37,39 +39,42 @@ const calcNumInShelf = () => {
     }
   }
   numInShelf.value = count;
-};
+}
 
-const addToShelf = () => {
-  if (!book) return;
+function addToShelf() {
+  if (!book)
+    return;
   if (bookShelf.value.length === 1) {
     shelfStore.addToBookSelf(book);
     if (readingChapter) {
       shelfStore.updateBookReadInfo(book, readingChapter);
     }
-  } else {
+  }
+  else {
     pickShelfDialog.value = true;
   }
-};
-const selectAddToShelf = (item: { name: string; id: string }) => {
-  if (!book) return;
+}
+function selectAddToShelf(item: { name: string; id: string }) {
+  if (!book)
+    return;
   shelfStore.addToBookSelf(book, item.id);
   if (readingChapter) {
     shelfStore.updateBookReadInfo(book, readingChapter);
   }
   pickShelfDialog.value = false;
-};
+}
 
 watch(
   [bookShelf, () => book],
   () => {
     calcNumInShelf();
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 </script>
 
 <template>
-  <div v-if="!book"></div>
+  <div v-if="!book" />
   <div v-else>
     <div v-if="mode === 'rectangle'">
       <van-badge v-if="numInShelf > 0">
@@ -82,27 +87,27 @@ watch(
           <span class="truncate"> 加入书架 </span>
         </van-button>
       </van-badge>
-      <van-button plain type="primary" size="small" @click="addToShelf" v-else>
+      <van-button v-else plain type="primary" size="small" @click="addToShelf">
         <span class="truncate"> 加入书架 </span>
       </van-button>
     </div>
     <div v-else>
       <van-button
+        v-if="numInShelf === 0"
         icon="plus"
         square
         size="small"
         class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
         @click="addToShelf"
-        v-if="numInShelf === 0"
       >
         <span>书架</span>
       </van-button>
       <van-button
+        v-else
         square
         size="small"
         class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
         @click="() => (displayStore.showBookShelf = true)"
-        v-else
       >
         <span>已加书架</span>
       </van-button>
@@ -111,7 +116,7 @@ watch(
   <van-dialog
     v-model:show="pickShelfDialog"
     show-cancel-button
-    :showConfirmButton="false"
+    :show-confirm-button="false"
     title="选择书架"
   >
     <van-cell-group inset>
@@ -124,8 +129,7 @@ watch(
         title-class="text-center"
         value-class="hidden"
         @click="() => selectAddToShelf({ name: item.name, id: item.id })"
-      >
-      </van-cell>
+      />
     </van-cell-group>
   </van-dialog>
 </template>

@@ -1,9 +1,9 @@
-import { TrayIcon, TrayIconEvent, TrayIconOptions } from '@tauri-apps/api/tray';
-import { invoke } from '@tauri-apps/api/core';
-import { Window } from '@tauri-apps/api/window';
-import { Menu } from '@tauri-apps/api/menu';
-import { Image } from '@tauri-apps/api/image';
+import type { TrayIconEvent, TrayIconOptions } from '@tauri-apps/api/tray';
 import ico from '@/assets/icon.ico';
+import { Image } from '@tauri-apps/api/image';
+import { Menu } from '@tauri-apps/api/menu';
+import { TrayIcon } from '@tauri-apps/api/tray';
+import { Window } from '@tauri-apps/api/window';
 
 export default async function buildTray() {
   const options: TrayIconOptions = {
@@ -26,8 +26,8 @@ export default async function buildTray() {
     action: async (event: TrayIconEvent) => {
       if (event.type === 'DoubleClick') {
         const windows = await Window.getAll();
-        const window =
-          windows.find((window) => window.label === 'main') || windows[0];
+        const window
+          = windows.find(window => window.label === 'main') || windows[0];
 
         window?.show();
         window?.setFocus();

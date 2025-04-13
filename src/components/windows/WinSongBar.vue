@@ -1,15 +1,13 @@
 <script setup lang="ts">
-import { SongInfo } from '@/extensions/song';
-import { useSongStore, useSongShelfStore, useDisplayStore } from '@/store';
-import { storeToRefs } from 'pinia';
-import { ref, watch } from 'vue';
-import { Icon } from '@iconify/vue';
+import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
 import { SongPlayMode } from '@/types/song';
 import { joinSongArtists, transTime } from '@/utils';
-import WinSongCard from '../card/songCards/WinSongCard.vue';
-import VolumeControl from './VolumeControl.vue';
 import PlayView from '@/views/song/PlayView.vue';
+import { Icon } from '@iconify/vue';
+import { storeToRefs } from 'pinia';
+import WinSongCard from '../card/songCards/WinSongCard.vue';
 import LoadImage from '../LoadImage.vue';
+import VolumeControl from './VolumeControl.vue';
 
 const songStore = useSongStore();
 const displayStore = useDisplayStore();
@@ -19,7 +17,7 @@ const { showPlayingPlaylist } = storeToRefs(displayStore);
 </script>
 
 <template>
-  <PlayView></PlayView>
+  <PlayView />
   <div
     class="flex justify-between items-center py-2 px-4 border-t-[1px] select-none flex-nowrap h-[80px] z-[1000] bg-[--van-background]"
   >
@@ -44,12 +42,12 @@ const { showPlayingPlaylist } = storeToRefs(displayStore);
       </LoadImage>
       <div class="flex flex-col justify-center w-[140px]">
         <span
-          class="text-base text-[--van-text-color] truncate"
           v-if="playingSong"
+          class="text-base text-[--van-text-color] truncate"
         >
           {{ playingSong.name }}
         </span>
-        <span class="text-sm text-gray-500 truncate" v-if="playingSong">
+        <span v-if="playingSong" class="text-sm text-gray-500 truncate">
           {{ joinSongArtists(playingSong.artists) }}
         </span>
       </div>
@@ -58,20 +56,20 @@ const { showPlayingPlaylist } = storeToRefs(displayStore);
       <div class="flex gap-4 justify-center items-center mb-1">
         <div class="clickable">
           <Icon
+            v-if="shelfStore.songInLikeShelf(songStore.playingSong)"
             icon="weui:like-filled"
             width="22px"
             height="22px"
             class="cursor-pointer van-haptics-feedback text-red-600"
             @click="() => shelfStore.removeSongFromShelf(songStore.playingSong)"
-            v-if="shelfStore.songInLikeShelf(songStore.playingSong)"
           />
           <Icon
+            v-else
             icon="weui:like-outlined"
             width="22px"
             height="22px"
             class="cursor-pointer van-haptics-feedback text-[--van-text-color]"
             @click="() => shelfStore.addSongToShelf(songStore.playingSong)"
-            v-else
           />
         </div>
         <Icon
@@ -84,20 +82,20 @@ const { showPlayingPlaylist } = storeToRefs(displayStore);
         <div label="playButton">
           <transition name="transform" mode="out-in">
             <Icon
+              v-if="songStore.isPlaying"
               icon="ion:pause-circle"
               width="40px"
               height="40px"
               class="cursor-pointer van-haptics-feedback text-[#fc3d4a] hover:scale-105"
               @click="() => songStore.onPause()"
-              v-if="songStore.isPlaying"
             />
             <Icon
+              v-else
               icon="ion:play-circle"
               width="40px"
               height="40px"
               class="cursor-pointer van-haptics-feedback text-[#fc3d4a] hover:scale-105"
               @click="() => songStore.onPlay()"
-              v-else
             />
           </transition>
         </div>
@@ -111,28 +109,28 @@ const { showPlayingPlaylist } = storeToRefs(displayStore);
         />
         <div label="playMode">
           <Icon
+            v-if="songStore.playMode === SongPlayMode.list"
             icon="ic:round-list"
             width="22px"
             height="22px"
             class="cursor-pointer van-haptics-feedback text-gray-400 hover:text-[--van-text-color]"
             @click="songStore.playMode = SongPlayMode.single"
-            v-if="songStore.playMode === SongPlayMode.list"
           />
           <Icon
+            v-else-if="songStore.playMode === SongPlayMode.single"
             icon="typcn:arrow-loop"
             width="22px"
             height="22px"
             class="cursor-pointer van-haptics-feedback text-gray-400 hover:text-[--van-text-color]"
             @click="songStore.playMode = SongPlayMode.random"
-            v-else-if="songStore.playMode === SongPlayMode.single"
           />
           <Icon
+            v-else
             icon="fe:random"
             width="22px"
             height="22px"
             class="cursor-pointer van-haptics-feedback text-gray-400 hover:text-[--van-text-color]"
             @click="songStore.playMode = SongPlayMode.list"
-            v-else
           />
         </div>
       </div>
@@ -156,7 +154,7 @@ const { showPlayingPlaylist } = storeToRefs(displayStore);
       </div>
     </div>
     <div class="flex gap-4 shrink-0 justify-end w-[120px]">
-      <VolumeControl v-model="audioVolume"></VolumeControl>
+      <VolumeControl v-model="audioVolume" />
       <Icon
         icon="iconamoon:playlist-fill"
         width="22px"
@@ -175,9 +173,9 @@ const { showPlayingPlaylist } = storeToRefs(displayStore);
       <template v-for="item in songStore.playingPlaylist" :key="item.id">
         <WinSongCard
           :song="item"
-          @play="() => songStore.setPlayingList(songStore.playlist, item)"
           :class="item.id === songStore.playingSong?.id ? 'playing-song' : ''"
-        ></WinSongCard>
+          @play="() => songStore.setPlayingList(songStore.playlist, item)"
+        />
       </template>
     </div>
   </van-popup>

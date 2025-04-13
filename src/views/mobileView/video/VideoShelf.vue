@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import { useVideoShelfStore, useDisplayStore } from '@/store';
-import { PropType } from 'vue';
+import type { PropType } from 'vue';
+import MobileShelfVideoCard from '@/components/card/videoCards/MobileShelfVideoCard.vue';
+import LeftPopup from '@/components/mobile/LeftPopup.vue';
+import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
 import AddVideoShelfDialog from '@/components/windows/dialogs/AddVideoShelf.vue';
 import removeVideoShelfDialog from '@/components/windows/dialogs/RemoveVideoShelf.vue';
-import MobileShelfVideoCard from '@/components/card/videoCards/MobileShelfVideoCard.vue';
-import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
-import LeftPopup from '@/components/mobile/LeftPopup.vue';
+import { useDisplayStore, useVideoShelfStore } from '@/store';
 import { storeToRefs } from 'pinia';
 
+const emit = defineEmits<{
+  (e: 'deleteSelected'): void;
+  (e: 'hidePanel'): void;
+}>();
 const displayStore = useDisplayStore();
 const shelfStore = useVideoShelfStore();
 const { videoShelf } = storeToRefs(shelfStore);
@@ -22,11 +25,6 @@ const shelfAnchors = defineModel('shelfAnchors', {
   type: Array as PropType<number[]>,
 });
 const shelfHeight = defineModel('shelfHeight', { type: Number, default: 0 });
-
-const emit = defineEmits<{
-  (e: 'deleteSelected'): void;
-  (e: 'hidePanel'): void;
-}>();
 </script>
 
 <template>
@@ -34,6 +32,8 @@ const emit = defineEmits<{
     v-model:height="shelfHeight"
     :anchors="shelfAnchors"
     :content-draggable="false"
+    class="left-[0px] right-[0px] w-auto rounded-none up-shadow"
+    :style="displayStore.showVideoShelf ? { height: `${shelfHeight}px` } : {}"
     @height-change="
       (height) => {
         if (height.height === 0) {
@@ -41,16 +41,16 @@ const emit = defineEmits<{
         }
       }
     "
-    class="left-[0px] right-[0px] w-auto rounded-none up-shadow"
-    :style="displayStore.showVideoShelf ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
       <div class="flex justify-between items-center p-2 border-b">
         <div class="flex items-center gap-2">
-          <LeftPopup></LeftPopup>
+          <LeftPopup />
           <h2 class="text-lg font-bold">
             <slot name="title">
-              <p class="text-[--van-text-color]">收藏</p>
+              <p class="text-[--van-text-color]">
+                收藏
+              </p>
             </slot>
           </h2>
         </div>
@@ -65,7 +65,7 @@ const emit = defineEmits<{
               emit('hidePanel');
             }
           "
-        ></van-button>
+        />
       </div>
     </template>
     <div class="flex gap-2 m-2 p-1 shrink">
@@ -79,8 +79,7 @@ const emit = defineEmits<{
             displayStore.showAddVideoShelfDialog = true;
           }
         "
-      >
-      </van-button>
+      />
       <van-button
         icon="delete-o"
         size="small"
@@ -91,41 +90,39 @@ const emit = defineEmits<{
             displayStore.showRemoveVideoShelfDialog = true;
           }
         "
-      >
-      </van-button>
+      />
       <van-button
         icon="edit"
         size="small"
         round
         @click="() => (selecteMode = !selecteMode)"
-      >
-      </van-button>
+      />
       <van-button
+        v-if="selecteMode"
         size="small"
         type="danger"
         round
         @click="() => emit('deleteSelected')"
-        v-if="selecteMode"
       >
         删除所选
       </van-button>
     </div>
     <van-tabs shrink animated :active="activeIndex" class="pb-[50px]">
-      <van-tab :title="shelf.name" v-for="shelf in videoShelf" :key="shelf.id">
+      <van-tab v-for="shelf in videoShelf" :key="shelf.id" :title="shelf.name">
         <ResponsiveGrid :base-cols="2" class="p-2">
           <MobileShelfVideoCard
-            :shelf-video="video"
-            v-model:selected="video.video.extra!.selected"
             v-for="video in shelf.videos"
             :key="video.video.id"
-            :selecteMode="selecteMode"
-          ></MobileShelfVideoCard>
+            v-model:selected="video.video.extra!.selected"
+            :shelf-video="video"
+            :selecte-mode="selecteMode"
+          />
         </ResponsiveGrid>
       </van-tab>
     </van-tabs>
   </van-floating-panel>
-  <AddVideoShelfDialog></AddVideoShelfDialog>
-  <removeVideoShelfDialog></removeVideoShelfDialog>
+  <AddVideoShelfDialog />
+  <removeVideoShelfDialog />
 </template>
 
 <style scoped lang="less">

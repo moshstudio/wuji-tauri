@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import WinComicDetail from '../windowsView/comic/ComicDetail.vue';
-import MobileComicDetail from '../mobileView/comic/ComicDetail.vue';
+import type { ComicChapter, ComicItem } from '@/extensions/comic';
+import type { ComicSource } from '@/types';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
 
-import { ComicChapter, ComicItem } from '@/extensions/comic';
 import { router } from '@/router';
-import { useDisplayStore, useStore } from '@/store';
-import { ComicSource } from '@/types';
-import { showLoadingToast, showToast } from 'vant';
-import _ from 'lodash';
-import { ref, triggerRef, watch, onActivated } from 'vue';
+import { useStore } from '@/store';
 import { retryOnFalse, sleep } from '@/utils';
-import { storeToRefs } from 'pinia';
+import { showLoadingToast, showToast } from 'vant';
+import { onActivated, ref, triggerRef, watch } from 'vue';
+import MobileComicDetail from '../mobileView/comic/ComicDetail.vue';
+import WinComicDetail from '../windowsView/comic/ComicDetail.vue';
 
 const { comicId, sourceId } = defineProps({
   comicId: String,
@@ -62,7 +60,8 @@ const loadData = retryOnFalse({ onFailed: back })(async () => {
   if (!detail?.chapters) {
     showToast('章节列表为空');
   }
-  if (content.value) content.value.scrollTop = 0;
+  if (content.value)
+    content.value.scrollTop = 0;
   triggerRef(comic);
   return true;
 });
@@ -71,8 +70,8 @@ function toChapter(chapter: ComicChapter) {
   router.push({
     name: 'ComicRead',
     params: {
-      comicId: comicId,
-      sourceId: sourceId,
+      comicId,
+      sourceId,
       chapterId: chapter.id,
     },
   });
@@ -102,7 +101,7 @@ onActivated(async () => {
         @back="back"
         @load-data="loadData"
         @to-chapter="toChapter"
-      ></MobileComicDetail>
+      />
     </template>
     <template #windows>
       <WinComicDetail
@@ -113,7 +112,7 @@ onActivated(async () => {
         @back="back"
         @load-data="loadData"
         @to-chapter="toChapter"
-      ></WinComicDetail>
+      />
     </template>
   </PlatformSwitch>
 </template>

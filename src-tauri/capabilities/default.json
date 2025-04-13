@@ -60,10 +60,12 @@
     "fs2:allow-appcache-write-recursive",
     "fs2:allow-fetch-and-save",
     {
+
       "identifier": "fs2:scope",
       "allow": [{ "path": "**" }]
     },
     "dialog:default",
-    "keep-screen-on:default"
+    "keep-screen-on:default",
+    "websocket:default"
   ]
 }

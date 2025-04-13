@@ -1,11 +1,12 @@
-import { defineConfig } from 'vite';
+import path from 'node:path';
+import process from 'node:process';
+import { VantResolver } from '@vant/auto-import-resolver';
 import Vue from '@vitejs/plugin-vue';
 import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
-import { VantResolver } from '@vant/auto-import-resolver';
-import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
-import path from 'node:path';
+import { defineConfig } from 'vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
 
 const host = process.env.TAURI_DEV_HOST;
 
@@ -15,7 +16,6 @@ export default defineConfig(async () => ({
     Vue({
       template: { transformAssetUrls },
     }),
-    ,
     AutoImport({
       resolvers: [VantResolver()],
     }),

@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import { useDisplayStore, useComicShelfStore } from '@/store';
+import { useComicShelfStore, useDisplayStore } from '@/store';
 import { showToast } from 'vant';
 
 const displayStore = useDisplayStore();
 const shelfStore = useComicShelfStore();
 
-const removeComicShelf = (name: string) => {
-  if (!name) return;
+function removeComicShelf(name: string) {
+  if (!name)
+    return;
   if (shelfStore.comicShelf.length === 1) {
     showToast('书架至少需要一个');
     return;
   }
   shelfStore.removeComicShelf(name);
   showToast('书架删除成功');
-};
+}
 </script>
 
 <template>
@@ -36,8 +37,7 @@ const removeComicShelf = (name: string) => {
             type="danger"
             round
             @click="removeComicShelf(shelf.id)"
-          >
-          </van-button>
+          />
         </template>
       </van-cell>
     </van-cell-group>

@@ -1,25 +1,25 @@
 <script setup lang="ts">
-import WinBookRead from '../windowsView/book/BookRead.vue';
-import MobileBookRead from '../mobileView/book/BookRead.vue';
+import type { BookChapter, BookItem, BookList } from '@/extensions/book';
+import type { BookSource } from '@/types';
+import type { ReaderResult } from '@/utils/reader/types';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
-import { BookChapter, BookItem, BookList } from '@/extensions/book';
 import { router } from '@/router';
 import {
-  useStore,
-  useDisplayStore,
   useBookShelfStore,
   useBookStore,
+  useDisplayStore,
+  useStore,
 } from '@/store';
-import { BookSource } from '@/types';
 import { purifyText, retryOnFalse, sleep, useElementResize } from '@/utils';
-import Reader from '@/utils/reader/reader-layout';
-import { ReaderResult } from '@/utils/reader/types';
-import { showConfirmDialog, showNotify, showToast } from 'vant';
-import { ref, watch, onActivated, nextTick, onDeactivated } from 'vue';
-import { get_system_font_scale } from 'tauri-plugin-commands-api';
-import _ from 'lodash';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import Reader from '@/utils/reader/reader-layout';
+import _ from 'lodash';
+import { get_system_font_scale } from 'tauri-plugin-commands-api';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
+import { showConfirmDialog, showToast } from 'vant';
+import { nextTick, onActivated, onDeactivated, ref, watch } from 'vue';
+import MobileBookRead from '../mobileView/book/BookRead.vue';
+import WinBookRead from '../windowsView/book/BookRead.vue';
 
 const { chapterId, bookId, sourceId, isPrev } = defineProps({
   chapterId: String,
@@ -62,11 +62,13 @@ const searchAllSources = createCancellableFunction(
     await Promise.all(
       store.bookSources.map(async (bookSource) => {
         await store.bookSearch(bookSource, targetBook.title);
-        if (signal.aborted) return;
+        if (signal.aborted)
+          return;
         if (bookSource.list) {
           for (const b of _.castArray<BookList>(bookSource.list)[0].list) {
             if (b.title === targetBook.title) {
-              if (signal.aborted) return;
+              if (signal.aborted)
+                return;
               const detailedBook = await store.bookDetail(bookSource, b);
               if (detailedBook) {
                 allSourceResults.value.push(detailedBook);
@@ -75,12 +77,12 @@ const searchAllSources = createCancellableFunction(
             }
           }
         }
-      })
+      }),
     );
-  }
+  },
 );
 
-const switchSource = async (newBookItem: BookItem) => {
+async function switchSource(newBookItem: BookItem) {
   if (!readingChapter.value) {
     showToast('请重新加载章节');
     return;
@@ -89,15 +91,15 @@ const switchSource = async (newBookItem: BookItem) => {
     showToast('章节为空');
     return;
   }
-  const chapter =
-    newBookItem.chapters?.find((chapter) => chapter.id === chapterId) ||
-    newBookItem.chapters?.find(
-      (chapter) => chapter.title === readingChapter.value?.title
-    ) ||
-    newBookItem.chapters?.[
-      book.value?.chapters?.findIndex((chapter) => chapter.id === chapterId) ||
-        0
-    ];
+  const chapter
+    = newBookItem.chapters?.find(chapter => chapter.id === chapterId)
+      || newBookItem.chapters?.find(
+        chapter => chapter.title === readingChapter.value?.title,
+      )
+      || newBookItem.chapters?.[
+        book.value?.chapters?.findIndex(chapter => chapter.id === chapterId)
+        || 0
+      ];
   if (!chapter) {
     showToast('章节不存在');
     return;
@@ -114,7 +116,7 @@ const switchSource = async (newBookItem: BookItem) => {
       isPrev: 'false',
     },
   });
-};
+}
 
 async function back(checkShelf: boolean = false) {
   displayStore.showTabBar = true;
@@ -131,7 +133,8 @@ async function back(checkShelf: boolean = false) {
             shelfStore.updateBookReadInfo(book.value, readingChapter.value);
           }
         }
-      } catch (error) {}
+      }
+      catch (error) {}
     }
   }
   shouldLoad.value = true;
@@ -172,7 +175,7 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
     return;
   }
   if (!chapter) {
-    chapter = book.value.chapters?.find((chapter) => chapter.id === chapterId);
+    chapter = book.value.chapters?.find(chapter => chapter.id === chapterId);
   }
   if (!chapter) {
     showToast('章节不存在');
@@ -185,8 +188,8 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
   const t = displayStore.showToast();
   chapterList.value = book.value.chapters || [];
   readingChapter.value = chapter;
-  readingContent.value =
-    (await store.bookRead(bookSource.value!, book.value, chapter, {
+  readingContent.value
+    = (await store.bookRead(bookSource.value!, book.value, chapter, {
       refresh,
     })) || '';
 
@@ -198,17 +201,19 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
   nextTick(async () => {
     await updateReadingElements();
     if (isPrev === 'true') {
-      readingChapterPage.value =
-        (readingPagedContent.value?.content.length || 1) - 1;
-    } else {
+      readingChapterPage.value
+        = (readingPagedContent.value?.content.length || 1) - 1;
+    }
+    else {
       if (
-        readingChapter.value?.readingPage &&
-        readingPagedContent.value &&
-        readingPagedContent.value.content.length >
-          readingChapter.value.readingPage
+        readingChapter.value?.readingPage
+        && readingPagedContent.value
+        && readingPagedContent.value.content.length
+        > readingChapter.value.readingPage
       ) {
         readingChapterPage.value = readingChapter.value?.readingPage;
-      } else {
+      }
+      else {
         readingChapterPage.value = 0;
       }
     }
@@ -245,13 +250,14 @@ async function updateReadingElements() {
   }
 }
 
-const updateReadingPagedContent = async () => {
+async function updateReadingPagedContent() {
   const content = document.querySelector('#read-content');
   if (content) {
     let scale = 1;
     try {
       scale = (await get_system_font_scale()) as number;
-    } catch (error) {
+    }
+    catch (error) {
       console.log(error);
     }
 
@@ -279,11 +285,11 @@ const updateReadingPagedContent = async () => {
       readingChapterPage.value = list.length - 1;
     }
   }
-};
+}
 
 function prevChapter(toLast: boolean = false) {
   const index = chapterList.value.findIndex(
-    (chapter) => chapter.id === readingChapter.value?.id
+    chapter => chapter.id === readingChapter.value?.id,
   );
   if (index === -1) {
     return;
@@ -301,14 +307,15 @@ function prevChapter(toLast: boolean = false) {
         isPrev: toLast ? 'true' : '',
       },
     });
-  } else {
+  }
+  else {
     showToast('没有上一章了');
   }
 }
 
 function nextChapter() {
   const index = chapterList.value.findIndex(
-    (chapter) => chapter.id === readingChapter.value?.id
+    chapter => chapter.id === readingChapter.value?.id,
   );
   if (index === -1) {
     return;
@@ -324,14 +331,15 @@ function nextChapter() {
         isPrev: 'false',
       },
     });
-  } else {
+  }
+  else {
     showToast('没有下一章了');
   }
 }
 
-const resfreshChapter = async () => {
+async function resfreshChapter() {
   await loadChapter(undefined, true);
-};
+}
 function toChapter(chapter: BookChapter) {
   chapter.readingPage = undefined;
 
@@ -373,9 +381,9 @@ watch(
     bookStore.readingBook = b;
     allSourceResults.value = [];
   },
-  { immediate: true }
+  { immediate: true },
 );
-watch(readingChapter, (c) => (bookStore.readingChapter = c), {
+watch(readingChapter, c => (bookStore.readingChapter = c), {
   immediate: true,
 });
 watch(readingChapterPage, (page) => {
@@ -395,7 +403,7 @@ watch(
     () => bookStore.paddingTop,
     () => bookStore.paddingBottom,
   ],
-  _.debounce(updateReadingElements, 500)
+  _.debounce(updateReadingElements, 500),
 );
 
 onActivated(() => {
@@ -436,7 +444,7 @@ onDeactivated(() => {
         @prev-chapter="prevChapter"
         @search-all-sources="searchAllSources"
         @switch-source="switchSource"
-      ></MobileBookRead>
+      />
     </template>
     <template #windows>
       <WinBookRead
@@ -461,7 +469,7 @@ onDeactivated(() => {
         @prev-chapter="prevChapter"
         @search-all-sources="searchAllSources"
         @switch-source="switchSource"
-      ></WinBookRead>
+      />
     </template>
   </PlatformSwitch>
 </template>

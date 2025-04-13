@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue';
+
 const { url, width, height } = defineProps<{
   url?: string;
   width?: number;
   height?: number;
   radius?: number;
 }>();
-const round = (value: number) => {
+function round(value: number) {
   return Math.round(value);
-};
+}
 </script>
 
 <template>
@@ -24,14 +25,14 @@ const round = (value: number) => {
       lazy-load
       :src="url"
     >
-      <template v-slot:loading>
+      <template #loading>
         <Icon
           icon="mingcute:playlist-2-line"
           :width="round((width || 20) / 2)"
           :height="round((height || 20) / 2)"
         />
       </template>
-      <template v-slot:error>
+      <template #error>
         <Icon
           icon="mingcute:playlist-2-line"
           :width="round((width || 20) / 2)"

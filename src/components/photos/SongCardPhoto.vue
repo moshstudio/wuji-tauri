@@ -25,30 +25,30 @@ const emit = defineEmits(['play', 'pause']);
       :src="url || ''"
       :headers="headers"
     >
-      <template v-slot:loading>
+      <template #loading>
         <Icon icon="basil:music-solid" width="22" height="22" />
       </template>
-      <template v-slot:error>
+      <template #error>
         <Icon icon="basil:music-solid" width="22" height="22" />
       </template>
     </LoadImage>
     <div
-      class="absolute leading-[16px] rounded-[50%] bg-black/50 p-1 hover:scale-110 cursor-pointer"
       v-if="isHover || isPlayingSong"
+      class="absolute leading-[16px] rounded-[50%] bg-black/50 p-1 hover:scale-110 cursor-pointer"
     >
       <van-icon
+        v-if="isPlaying && isPlayingSong"
         name="pause"
         class="text-white"
         size="16"
         @click.stop="() => emit('pause')"
-        v-if="isPlaying && isPlayingSong"
       />
       <van-icon
+        v-else
         name="play"
         class="text-white"
         size="16"
         @click.stop="() => emit('play')"
-        v-else
       />
     </div>
   </div>

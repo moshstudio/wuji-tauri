@@ -60,9 +60,9 @@ export async function fetchHotApi(): Promise<HotItem[]> {
   ];
   const result: (HotItem | null)[] = await Promise.all(
     types.map(async (type) => {
-      let url = `${baseUrl}${type}?cache=true`;
+      const url = `${baseUrl}${type}?cache=true`;
       try {
-        let res = await fetch(url);
+        const res = await fetch(url);
         const data = await res.json();
         if (type === 'sspai') {
           data.data.forEach((item: any) => {
@@ -84,18 +84,19 @@ export async function fetchHotApi(): Promise<HotItem[]> {
         ) {
           data.data.forEach((item: any) => {
             if (item.cover) {
-              item.cover =
-                'https://images.weserv.nl/?url=' +
-                encodeURIComponent(item.cover);
+              item.cover
+                = `https://images.weserv.nl/?url=${
+                  encodeURIComponent(item.cover)}`;
             }
           });
         }
         return data;
-      } catch (error) {
+      }
+      catch (error) {
         console.log(`hot api error: ${url}`);
         return null;
       }
-    })
+    }),
   );
-  return result.filter((item) => item !== null);
+  return result.filter(item => item !== null);
 }

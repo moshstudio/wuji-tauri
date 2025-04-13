@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { ComicChapter, ComicItem } from '@/extensions/comic';
-import { ComicSource } from '@/types';
-import tinycolor from 'tinycolor2';
-import _ from 'lodash';
-import { PropType } from 'vue';
+import type { ComicChapter, ComicItem } from '@/extensions/comic';
+import type { ComicSource } from '@/types';
+import type { PropType } from 'vue';
+import ComicShelfButton from '@/components/ComicShelfButton.vue';
 import LoadImage from '@/components/LoadImage.vue';
 import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
-import ComicShelfButton from '@/components/ComicShelfButton.vue';
 import ComicShelf from '@/views/comic/ComicShelf.vue';
+import _ from 'lodash';
+import tinycolor from 'tinycolor2';
 
+const emit = defineEmits<{
+  (e: 'back'): void;
+  (e: 'loadData'): void;
+  (e: 'toChapter', chapter: ComicChapter): void;
+}>();
 const comic = defineModel('comic', { type: Object as PropType<ComicItem> });
 const comicSource = defineModel('comicSource', {
   type: Object as PropType<ComicSource>,
@@ -20,33 +25,27 @@ const isAscending = defineModel('isAscending', {
   type: Boolean,
   required: true,
 });
-
-const emit = defineEmits<{
-  (e: 'back'): void;
-  (e: 'loadData'): void;
-  (e: 'toChapter', chapter: ComicChapter): void;
-}>();
 </script>
 
 <template>
   <div class="relative w-full h-full flex flex-col">
     <van-nav-bar left-arrow @click-left="() => emit('back')" />
     <main
+      v-if="comic"
       ref="content"
       class="grow flex flex-col items-center w-full overflow-y-auto p-2 bg-[--van-background-2] select-none"
-      v-if="comic"
     >
       <div class="flex flex-col gap-1 p-2 w-full shadow-md rounded">
         <div class="flex gap-2 items-center justify-center flex-nowrap w-full">
           <div class="w-[80px] h-[100px]">
             <LoadImage
+              v-if="comic.cover"
               width="80px"
               height="100px"
               radius="4"
               :src="comic.cover"
               :headers="comic.coverHeaders"
               class="mr-4"
-              v-if="comic.cover"
             >
               <template #loading>
                 <div
@@ -85,11 +84,13 @@ const emit = defineEmits<{
         />
       </div>
 
-      <div class="mt-4 w-full text-[--van-text-color]" v-if="comic.chapters">
+      <div v-if="comic.chapters" class="mt-4 w-full text-[--van-text-color]">
         <van-row align="center" justify="space-between">
-          <p class="font-bold ml-6">共有{{ comic.chapters.length }} 章</p>
+          <p class="font-bold ml-6">
+            共有{{ comic.chapters.length }} 章
+          </p>
           <div class="flex gap-2 items-center">
-            <ComicShelfButton :comic="comic"></ComicShelfButton>
+            <ComicShelfButton :comic="comic" />
             <!-- <p>
               <van-button
                 :icon="isAscending ? 'ascending' : 'descending'"
@@ -103,20 +104,20 @@ const emit = defineEmits<{
         </van-row>
         <van-tabs shrink animated>
           <van-tab
-            :title="`${index * 200 + 1}-${Math.min(comic.chapters.length, (index + 1) * 200)}`"
             v-for="index of Array(
-              Math.ceil(comic.chapters.length / 200)
+              Math.ceil(comic.chapters.length / 200),
             ).keys()"
+            :title="`${index * 200 + 1}-${Math.min(comic.chapters.length, (index + 1) * 200)}`"
           >
             <ResponsiveGrid>
               <p
                 v-for="chapter in comic.chapters.slice(
                   index * 200,
-                  Math.min(comic.chapters.length, (index + 1) * 200 - 1)
+                  Math.min(comic.chapters.length, (index + 1) * 200 - 1),
                 )"
                 :key="chapter.id"
-                @click="() => emit('toChapter', chapter)"
                 class="text-sm rounded-lg cursor-pointer select-none truncate van-haptics-feedback"
+                @click="() => emit('toChapter', chapter)"
               >
                 {{ chapter.title }}
               </p>
@@ -126,7 +127,7 @@ const emit = defineEmits<{
       </div>
       <van-back-top bottom="60" right="10" />
     </main>
-    <ComicShelf></ComicShelf>
+    <ComicShelf />
   </div>
 </template>
 

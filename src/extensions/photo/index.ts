@@ -1,6 +1,4 @@
-import { showNotify } from 'vant';
 import { Extension, transformResult } from '../baseExtension';
-import _ from 'lodash';
 
 export interface PhotoItem {
   id: string;
@@ -103,18 +101,19 @@ abstract class PhotoExtension extends Extension {
   // 3. 获取图片详情
   abstract getPhotoDetail(
     item: PhotoItem,
-    pageNo?: number
+    pageNo?: number,
   ): Promise<PhotoDetail | null>;
 }
 
 function loadPhotoExtensionString(
-  codeString: string
+  codeString: string,
 ): PhotoExtension | undefined {
   try {
     const func = new Function('PhotoExtension', codeString);
     const extensionclass = func(PhotoExtension);
     return new extensionclass();
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Error executing code:\n', error);
     // showNotify({
     //   type: 'danger',
@@ -123,4 +122,4 @@ function loadPhotoExtensionString(
   }
 }
 
-export { PhotoExtension, loadPhotoExtensionString };
+export { loadPhotoExtensionString, PhotoExtension };

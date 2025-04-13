@@ -1,7 +1,7 @@
-import CryptoJS from 'crypto-js';
-import encrypt from './crypto';
-import _ from 'lodash';
 import { fetch } from '@/utils/fetch';
+import CryptoJS from 'crypto-js';
+import _ from 'lodash';
+import encrypt from './crypto';
 import deviceIds from './deviceid.txt?raw';
 
 export enum CryptoType {
@@ -17,24 +17,28 @@ export enum OSType {
   iphone = 'iphone',
 }
 function toBoolean(val: any) {
-  if (typeof val === 'boolean') return val;
-  if (val === '') return val;
+  if (typeof val === 'boolean')
+    return val;
+  if (val === '')
+    return val;
   return val === 'true' || val == '1';
 }
 function cookieObjToString(cookie: Record<string, string>) {
   return Object.keys(cookie)
     .map(
-      (key) => `${encodeURIComponent(key)}=${encodeURIComponent(cookie[key])}`
+      key => `${encodeURIComponent(key)}=${encodeURIComponent(cookie[key])}`,
     )
     .join('; ');
 }
 function cookieToJson(cookie: string) {
-  if (!cookie) return {};
-  let cookieArr = cookie.split(';');
-  let obj: Record<string, string> = {};
+  if (!cookie)
+    return {};
+  const cookieArr = cookie.split(';');
+  const obj: Record<string, string> = {};
   cookieArr.forEach((i) => {
-    let arr = i.split('=');
-    if (arr.length == 2) obj[arr[0].trim()] = arr[1].trim();
+    const arr = i.split('=');
+    if (arr.length == 2)
+      obj[arr[0].trim()] = arr[1].trim();
   });
   return obj;
 }
@@ -48,10 +52,11 @@ const APP_CONF = {
 const WNMCID = (function () {
   const characters = 'abcdefghijklmnopqrstuvwxyz';
   let randomString = '';
-  for (let i = 0; i < 6; i++)
+  for (let i = 0; i < 6; i++) {
     randomString += characters.charAt(
-      Math.floor(Math.random() * characters.length)
+      Math.floor(Math.random() * characters.length),
     );
+  }
   return `${randomString}.${Date.now().toString()}.01.0`;
 })();
 
@@ -82,7 +87,7 @@ const osMap: Record<OSType, Record<string, string>> = {
   },
 };
 
-const chooseUserAgent = (crypto: CryptoType, uaType = 'pc') => {
+function chooseUserAgent(crypto: CryptoType, uaType = 'pc') {
   const userAgentMap: Record<CryptoType, Record<string, string>> = {
     weapi: {
       pc: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0',
@@ -102,28 +107,24 @@ const chooseUserAgent = (crypto: CryptoType, uaType = 'pc') => {
     },
   };
   return userAgentMap[crypto][uaType] || '';
-};
-const createRequest = async (
-  uri: string,
-  data: Record<string, string | number | Record<string, string>>,
-  options?: {
-    headers?: HeadersInit;
-    crypto?: CryptoType;
-    cookie?: string | Record<string, string>;
-    ua?: string;
-    proxy?: string;
-    realIP?: string;
-    e_r?: string;
-  }
-) => {
-  let headers = new Headers(options?.headers || {});
+}
+async function createRequest(uri: string, data: Record<string, string | number | Record<string, string>>, options?: {
+  headers?: HeadersInit;
+  crypto?: CryptoType;
+  cookie?: string | Record<string, string>;
+  ua?: string;
+  proxy?: string;
+  realIP?: string;
+  e_r?: string;
+}) {
+  const headers = new Headers(options?.headers || {});
   let cookie = options?.cookie || {};
   if (typeof cookie === 'string') {
     cookie = cookieToJson(cookie);
   }
   if (typeof cookie === 'object') {
-    let _ntes_nuid = CryptoJS.lib.WordArray.random(32).toString();
-    let os = osMap[cookie.os as OSType] || osMap['iphone'];
+    const _ntes_nuid = CryptoJS.lib.WordArray.random(32).toString();
+    const os = osMap[cookie.os as OSType] || osMap.iphone;
     cookie = {
       ...cookie,
       __remember_me: 'true',
@@ -135,13 +136,13 @@ const createRequest = async (
       WEVNSM: cookie.WEVNSM || '1.0.0',
 
       osver: cookie.osver || os.osver,
-      deviceId: cookie.deviceId || _.sample(deviceIds.split('\n')) + '\r' || '',
+      deviceId: cookie.deviceId || `${_.sample(deviceIds.split('\n'))}\r` || '',
       os: cookie.os || os.os,
       channel: cookie.channel || os.channel,
       appver: cookie.appver || os.appver,
     };
-    if (uri.indexOf('login') === -1) {
-      cookie['NMTID'] = CryptoJS.lib.WordArray.random(16).toString();
+    if (!uri.includes('login')) {
+      cookie.NMTID = CryptoJS.lib.WordArray.random(16).toString();
     }
     if (!cookie.MUSIC_U) {
       // 游客
@@ -156,83 +157,86 @@ const createRequest = async (
       ? 'eapi'
       : 'api'
     : options.crypto;
-  const csrfToken = cookie['__csrf'] || '';
+  const csrfToken = cookie.__csrf || '';
   switch (crypto) {
     case 'weapi':
       headers.set('Referer', APP_CONF.domain);
       headers.set(
         'User-Agent',
-        options?.ua || chooseUserAgent(CryptoType.weapi)
+        options?.ua || chooseUserAgent(CryptoType.weapi),
       );
       data.csrf_token = csrfToken;
       encryptData = encrypt.weapi(data);
-      url = APP_CONF.domain + '/weapi/' + uri.substring(5);
+      url = `${APP_CONF.domain}/weapi/${uri.substring(5)}`;
       break;
     case 'linuxapi':
       headers.set(
         'User-Agent',
-        options?.ua || chooseUserAgent(CryptoType.linuxapi, 'linux')
+        options?.ua || chooseUserAgent(CryptoType.linuxapi, 'linux'),
       );
       encryptData = encrypt.linuxapi({
         method: 'POST',
         url: APP_CONF.domain + uri,
         params: data,
       });
-      url = APP_CONF.domain + '/api/linux/forward';
+      url = `${APP_CONF.domain}/api/linux/forward`;
       break;
     case 'eapi':
     case 'api':
       // 两种加密方式，都应生成客户端的cookie
       const header = new Headers({
-        osver: cookie.osver, //系统版本
+        osver: cookie.osver, // 系统版本
         deviceId: cookie.deviceId,
-        os: cookie.os, //系统类型
+        os: cookie.os, // 系统类型
         appver: cookie.appver, // app版本
-        versioncode: cookie.versioncode || '140', //版本号
-        mobilename: cookie.mobilename || '', //设备model
+        versioncode: cookie.versioncode || '140', // 版本号
+        mobilename: cookie.mobilename || '', // 设备model
         buildver: cookie.buildver || Date.now().toString().substr(0, 10),
-        resolution: cookie.resolution || '1920x1080', //设备分辨率
+        resolution: cookie.resolution || '1920x1080', // 设备分辨率
         __csrf: csrfToken,
-        channel: cookie.channel, //下载渠道
+        channel: cookie.channel, // 下载渠道
         requestId: `${Date.now()}_${Math.floor(Math.random() * 1000)
           .toString()
           .padStart(4, '0')}`,
       });
-      if (cookie.MUSIC_U) header.set('MUSIC_U', cookie.MUSIC_U);
-      if (cookie.MUSIC_A) header.set('MUSIC_A', cookie.MUSIC_A);
+      if (cookie.MUSIC_U)
+        header.set('MUSIC_U', cookie.MUSIC_U);
+      if (cookie.MUSIC_A)
+        header.set('MUSIC_A', cookie.MUSIC_A);
       headers.set(
         'Cookie',
         Array.from(header.keys())
           .map(
-            (key) =>
-              encodeURIComponent(key) +
-              '=' +
-              encodeURIComponent(header.get(key)!)
+            key =>
+              `${encodeURIComponent(key)
+              }=${
+                encodeURIComponent(header.get(key)!)}`,
           )
-          .join('; ')
+          .join('; '),
       );
       headers.set(
         'User-Agent',
-        options?.ua || chooseUserAgent(CryptoType.api, 'iphone')
+        options?.ua || chooseUserAgent(CryptoType.api, 'iphone'),
       );
 
       if (crypto === 'eapi') {
         // 使用eapi加密
         data.header = Object.fromEntries(header.entries());
-        data.e_r =
-          options?.e_r != undefined
+        data.e_r
+          = options?.e_r != undefined
             ? options.e_r
             : data.e_r != undefined
               ? data.e_r
               : APP_CONF.encryptResponse.toString(); // 用于加密接口返回值
         // data.e_r = toBoolean(data.e_r);
         encryptData = encrypt.eapi(uri, data);
-        url = APP_CONF.apiDomain + '/eapi/' + uri.substring(5);
-      } else if (crypto === 'api') {
+        url = `${APP_CONF.apiDomain}/eapi/${uri.substring(5)}`;
+      }
+      else if (crypto === 'api') {
         // 不使用任何加密
         url = APP_CONF.apiDomain + uri;
         encryptData = Object.fromEntries(
-          Object.entries(data).map(([key, value]) => [key, String(value)])
+          Object.entries(data).map(([key, value]) => [key, String(value)]),
         );
       }
       break;
@@ -242,11 +246,11 @@ const createRequest = async (
       break;
   }
 
-  return await fetch(url + '?' + new URLSearchParams(encryptData).toString(), {
+  return await fetch(`${url}?${new URLSearchParams(encryptData).toString()}`, {
     method: 'POST',
-    headers: headers,
+    headers,
   });
-};
+}
 
 export { createRequest };
 export default createRequest;

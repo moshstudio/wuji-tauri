@@ -1,27 +1,27 @@
 <script setup lang="ts">
-import WinComicRead from '../windowsView/comic/ComicRead.vue';
-import MobileComicRead from '../mobileView/comic/ComicRead.vue';
-import PlatformSwitch from '@/components/PlatformSwitch.vue';
-import {
+import type {
   ComicChapter,
   ComicContent,
   ComicItem,
   ComicList,
 } from '@/extensions/comic';
+import type { ComicSource } from '@/types';
+import PlatformSwitch from '@/components/PlatformSwitch.vue';
 import { router } from '@/router';
 import {
-  useStore,
-  useDisplayStore,
   useComicShelfStore,
   useComicStore,
+  useDisplayStore,
+  useStore,
 } from '@/store';
-import { ComicSource } from '@/types';
-import { retryOnFalse, sleep, useElementResize } from '@/utils';
-import { showConfirmDialog, showNotify, showToast } from 'vant';
-import { ref, watch, onActivated, nextTick, onDeactivated } from 'vue';
-import _ from 'lodash';
+import { retryOnFalse, sleep } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import _ from 'lodash';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
+import { showConfirmDialog, showToast } from 'vant';
+import { nextTick, onActivated, onDeactivated, ref, watch } from 'vue';
+import MobileComicRead from '../mobileView/comic/ComicRead.vue';
+import WinComicRead from '../windowsView/comic/ComicRead.vue';
 
 const { chapterId, comicId, sourceId } = defineProps({
   chapterId: String,
@@ -58,11 +58,13 @@ const searchAllSources = createCancellableFunction(
     await Promise.all(
       store.comicSources.map(async (comicSource) => {
         await store.comicSearch(comicSource, targetComic.title);
-        if (signal.aborted) return;
+        if (signal.aborted)
+          return;
         if (comicSource.list) {
           for (const b of _.castArray<ComicList>(comicSource.list)[0].list) {
             if (b.title === targetComic.title) {
-              if (signal.aborted) return;
+              if (signal.aborted)
+                return;
               const detailedComic = await store.comicDetail(comicSource, b);
               if (detailedComic) {
                 allSourceResults.value.push(detailedComic);
@@ -71,12 +73,12 @@ const searchAllSources = createCancellableFunction(
             }
           }
         }
-      })
+      }),
     );
-  }
+  },
 );
 
-const switchSource = async (newComicItem: ComicItem) => {
+async function switchSource(newComicItem: ComicItem) {
   if (!readingChapter.value) {
     showToast('请重新加载章节');
     return;
@@ -85,15 +87,15 @@ const switchSource = async (newComicItem: ComicItem) => {
     showToast('章节为空');
     return;
   }
-  const chapter =
-    newComicItem.chapters?.find((chapter) => chapter.id === chapterId) ||
-    newComicItem.chapters?.find(
-      (chapter) => chapter.title === readingChapter.value?.title
-    ) ||
-    newComicItem.chapters?.[
-      comic.value?.chapters?.findIndex((chapter) => chapter.id === chapterId) ||
-        0
-    ];
+  const chapter
+    = newComicItem.chapters?.find(chapter => chapter.id === chapterId)
+      || newComicItem.chapters?.find(
+        chapter => chapter.title === readingChapter.value?.title,
+      )
+      || newComicItem.chapters?.[
+        comic.value?.chapters?.findIndex(chapter => chapter.id === chapterId)
+        || 0
+      ];
   if (!chapter) {
     showToast('章节不存在');
     return;
@@ -109,7 +111,7 @@ const switchSource = async (newComicItem: ComicItem) => {
       sourceId: newComicItem.sourceId,
     },
   });
-};
+}
 
 async function back(checkShelf: boolean = false) {
   displayStore.showTabBar = true;
@@ -126,7 +128,8 @@ async function back(checkShelf: boolean = false) {
             shelfStore.updateComicReadInfo(comic.value, readingChapter.value);
           }
         }
-      } catch (error) {}
+      }
+      catch (error) {}
     }
   }
   shouldLoad.value = true;
@@ -165,7 +168,7 @@ async function loadChapter(chapter?: ComicChapter) {
     return;
   }
   if (!chapter) {
-    chapter = comic.value.chapters?.find((chapter) => chapter.id === chapterId);
+    chapter = comic.value.chapters?.find(chapter => chapter.id === chapterId);
   }
 
   if (!chapter) {
@@ -179,9 +182,9 @@ async function loadChapter(chapter?: ComicChapter) {
   const t = displayStore.showToast();
   chapterList.value = comic.value.chapters || [];
   readingChapter.value = chapter;
-  readingContent.value =
-    (await store.comicRead(comicSource.value!, comic.value, chapter)) ||
-    undefined;
+  readingContent.value
+    = (await store.comicRead(comicSource.value!, comic.value, chapter))
+      || undefined;
   displayStore.closeToast(t);
   if (!readingContent.value) {
     showToast('本章内容为空');
@@ -190,7 +193,7 @@ async function loadChapter(chapter?: ComicChapter) {
 
 function prevChapter(toLast: boolean = false) {
   const index = chapterList.value.findIndex(
-    (chapter) => chapter.id === readingChapter.value?.id
+    chapter => chapter.id === readingChapter.value?.id,
   );
   if (index === -1) {
     return;
@@ -207,14 +210,15 @@ function prevChapter(toLast: boolean = false) {
         sourceId: comic.value?.sourceId,
       },
     });
-  } else {
+  }
+  else {
     showToast('没有上一章了');
   }
 }
 
 function nextChapter() {
   const index = chapterList.value.findIndex(
-    (chapter) => chapter.id === readingChapter.value?.id
+    chapter => chapter.id === readingChapter.value?.id,
   );
   if (index === -1) {
     return;
@@ -229,7 +233,8 @@ function nextChapter() {
         sourceId: comic.value?.sourceId,
       },
     });
-  } else {
+  }
+  else {
     showToast('没有下一章了');
   }
 }
@@ -274,9 +279,9 @@ watch(
     comicStore.readingComic = b;
     allSourceResults.value = [];
   },
-  { immediate: true }
+  { immediate: true },
 );
-watch(readingChapter, (c) => (comicStore.readingChapter = c), {
+watch(readingChapter, c => (comicStore.readingChapter = c), {
   immediate: true,
 });
 
@@ -315,7 +320,7 @@ onDeactivated(() => {
         @prev-chapter="prevChapter"
         @search-all-sources="searchAllSources"
         @switch-source="switchSource"
-      ></MobileComicRead>
+      />
     </template>
     <template #windows>
       <WinComicRead
@@ -338,7 +343,7 @@ onDeactivated(() => {
         @prev-chapter="prevChapter"
         @search-all-sources="searchAllSources"
         @switch-source="switchSource"
-      ></WinComicRead>
+      />
     </template>
   </PlatformSwitch>
 </template>

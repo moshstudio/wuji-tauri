@@ -1,9 +1,8 @@
-import { Extension } from '@/extensions/baseExtension';
-import { SongExtension, SongList, PlaylistList } from '@/extensions/song';
-import { PhotoExtension, PhotoList } from '@/extensions/photo';
-import { BookExtension, BooksList } from '@/extensions/book';
-import { ComicsList } from '@/extensions/comic';
-import { VideosList } from '@/extensions/video';
+import type { BooksList } from '@/extensions/book';
+import type { ComicsList } from '@/extensions/comic';
+import type { PhotoList } from '@/extensions/photo';
+import type { PlaylistList, SongList } from '@/extensions/song';
+import type { VideosList } from '@/extensions/video';
 
 export interface Source {
   item: SubscribeItem;

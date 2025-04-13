@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { useSongStore, useSongShelfStore, useDisplayStore } from '@/store';
-import _ from 'lodash';
-
-import { PropType } from 'vue';
-import AddSongShelfDialog from '@/components/windows/dialogs/AddSongShelf.vue';
-import RemoveSongShelfDialog from '@/components/windows/dialogs/RemoveSongShelf.vue';
-import ImportPlaylistDialog from '@/components/windows/dialogs/ImportPlaylist.vue';
-import { PlaylistInfo, SongShelf } from '@/extensions/song';
-import { Icon } from '@iconify/vue';
+import type { PlaylistInfo } from '@/extensions/song/index';
+import type { PropType } from 'vue';
 import SongShelfSideBar from '@/components/SongShelfSideBar.vue';
+import AddSongShelfDialog from '@/components/windows/dialogs/AddSongShelf.vue';
+import ImportPlaylistDialog from '@/components/windows/dialogs/ImportPlaylist.vue';
+import RemoveSongShelfDialog from '@/components/windows/dialogs/RemoveSongShelf.vue';
+import { useDisplayStore } from '@/store/index';
 import { storeToRefs } from 'pinia';
 
+const emit = defineEmits<{
+  (e: 'loadPage', id: string, pageNo?: number): void;
+  (e: 'playAll', playlist: PlaylistInfo): void;
+  (e: 'hidePanel'): void;
+}>();
 const displayStore = useDisplayStore();
-const songStore = useSongStore();
-const shelfStore = useSongShelfStore();
 
 const shelfAnchors = defineModel('shelfAnchors', {
   type: Array as PropType<number[]>,
@@ -21,11 +21,6 @@ const shelfAnchors = defineModel('shelfAnchors', {
 });
 const shelfHeight = defineModel('shelfHeight', { type: Number, default: 0 });
 
-const emit = defineEmits<{
-  (e: 'loadPage', id: String, pageNo?: number): void;
-  (e: 'playAll', playlist: PlaylistInfo): void;
-  (e: 'hidePanel'): void;
-}>();
 const { selectedSongShelf } = storeToRefs(displayStore);
 </script>
 
@@ -34,6 +29,8 @@ const { selectedSongShelf } = storeToRefs(displayStore);
     v-model:height="shelfHeight"
     :anchors="shelfAnchors"
     :content-draggable="false"
+    class="left-[50px] right-[0px] w-auto rounded-none up-shadow bottom-[80px]"
+    :style="displayStore.showSongShelf ? { height: `${shelfHeight}px` } : {}"
     @height-change="
       (height) => {
         if (height.height === shelfAnchors[0]) {
@@ -41,8 +38,6 @@ const { selectedSongShelf } = storeToRefs(displayStore);
         }
       }
     "
-    class="left-[50px] right-[0px] w-auto rounded-none up-shadow bottom-[80px]"
-    :style="displayStore.showSongShelf ? { height: `${shelfHeight}px` } : {}"
   >
     <template #header>
       <div class="flex justify-between items-center p-4 border-b">
@@ -61,34 +56,31 @@ const { selectedSongShelf } = storeToRefs(displayStore);
           size="small"
           round
           @click="() => (displayStore.showAddSongShelfDialog = true)"
-        >
-        </van-button>
+        />
         <van-button
           icon="delete-o"
           size="small"
           round
           @click="() => (displayStore.showRemoveSongShelfDialog = true)"
-        >
-        </van-button>
+        />
         <van-button
           icon="link-o"
           size="small"
           round
           @click="() => (displayStore.showImportPlaylistDialog = true)"
-        >
-        </van-button>
+        />
       </div>
       <SongShelfSideBar
-        class="w-full h-full flex-grow"
         v-model:selected-shelf="selectedSongShelf"
+        class="w-full h-full flex-grow"
         @load-page="(id, pageNo) => emit('loadPage', id, pageNo)"
         @play-all="(playlist) => emit('playAll', playlist)"
-      ></SongShelfSideBar>
+      />
     </div>
   </van-floating-panel>
-  <AddSongShelfDialog></AddSongShelfDialog>
-  <RemoveSongShelfDialog></RemoveSongShelfDialog>
-  <ImportPlaylistDialog></ImportPlaylistDialog>
+  <AddSongShelfDialog />
+  <RemoveSongShelfDialog />
+  <ImportPlaylistDialog />
 </template>
 
 <style scoped lang="less">

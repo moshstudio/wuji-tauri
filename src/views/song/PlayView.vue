@@ -1,41 +1,43 @@
 <script setup lang="ts">
-import WinPlayView from '../windowsView/song/PlayView.vue';
-import MobilePlayView from '../mobileView/song/PlayView.vue';
+import type { Lyric } from '@/utils/lyric';
+import type {
+  CSSProperties,
+} from 'vue';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
+import { useDisplayStore, useSongStore } from '@/store';
+import { cachedFetch } from '@/utils';
+import { getLyric, parseLyric } from '@/utils/lyric';
+import { storeToRefs } from 'pinia';
 import {
+  computed,
   onMounted,
   onUnmounted,
   ref,
   watch,
-  CSSProperties,
-  computed,
 } from 'vue';
-import { useDisplayStore, useSongStore } from '@/store';
-import { storeToRefs } from 'pinia';
-import { getLyric, Lyric, parseLyric } from '@/utils/lyric';
-import { cachedFetch } from '@/utils';
+import MobilePlayView from '../mobileView/song/PlayView.vue';
+import WinPlayView from '../windowsView/song/PlayView.vue';
 
 const songStore = useSongStore();
 const displayStore = useDisplayStore();
 const { playingSong, isPlaying, audioCurrent } = storeToRefs(songStore);
 const { showPlayView } = storeToRefs(displayStore);
 const lyric = ref<Lyric>();
-const activeIndex = ref<number>(0); //高亮Index
-const transformStyle = ref<string>(''); //偏移量
+const activeIndex = ref<number>(0); // 高亮Index
+const transformStyle = ref<string>(''); // 偏移量
 const panelBackgroundStyle = ref<CSSProperties>({
   'background-color': 'rgba(0, 0, 0, 0.1)',
 });
 
-const backgroundImageUrl = async (
-  url?: string,
-  headers?: Record<string, string>
-): Promise<string | null> => {
-  if (!url) return null;
+async function backgroundImageUrl(url?: string, headers?: Record<string, string>): Promise<string | null> {
+  if (!url)
+    return null;
   if (!headers) {
     return `url(${url})`;
-  } else {
+  }
+  else {
     const response = await cachedFetch(url, {
-      headers: headers,
+      headers,
       verify: false,
     });
     const blob = await response.blob();
@@ -44,11 +46,11 @@ const backgroundImageUrl = async (
       return null;
     }
     const u = URL.createObjectURL(
-      new Blob([blob], { type: blob.type || 'image/png' })
+      new Blob([blob], { type: blob.type || 'image/png' }),
     );
     return `url(${u})`;
   }
-};
+}
 
 watch(
   playingSong,
@@ -68,17 +70,19 @@ watch(
       panelBackgroundStyle.value.backgroundColor = '';
       backgroundImageUrl(
         newSong.bigPicUrl || newSong.picUrl,
-        newSong.picHeaders
+        newSong.picHeaders,
       ).then((url) => {
         if (url) {
           panelBackgroundStyle.value.backgroundImage = url;
-        } else {
+        }
+        else {
           panelBackgroundStyle.value.backgroundImage = '';
         }
       });
-    } else {
-      //background-color: #4158D0;
-      //background-image: linear-gradient(43deg, #4158D0 0%, #C850C0 46%, #FFCC70 100%);
+    }
+    else {
+      // background-color: #4158D0;
+      // background-image: linear-gradient(43deg, #4158D0 0%, #C850C0 46%, #FFCC70 100%);
 
       // 定义渐变方向
       const direction = '43deg';
@@ -90,21 +94,22 @@ watch(
       ];
       panelBackgroundStyle.value.backgroundColor = '#4158D0';
       panelBackgroundStyle.value.backgroundImage = `linear-gradient(${direction}, ${colorStops
-        .map((colorStop) => `${colorStop.color} ${colorStop.position}%`)
+        .map(colorStop => `${colorStop.color} ${colorStop.position}%`)
         .join(', ')})`;
     }
     lyric.value = undefined;
     audioCurrent.value = 0;
     if (newSong.lyric) {
       lyric.value = parseLyric(newSong.lyric);
-    } else if (newSong.name) {
+    }
+    else if (newSong.name) {
       const singer = newSong.artists
-        ?.map((artist) => (typeof artist === 'object' ? artist.name : artist))
+        ?.map(artist => (typeof artist === 'object' ? artist.name : artist))
         .join(',');
       lyric.value = await getLyric(newSong.name, singer);
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 
 watch(audioCurrent, (newVal) => {
@@ -117,14 +122,14 @@ watch(audioCurrent, (newVal) => {
   if (lyric.value) {
     for (let i = 0; i < lyric.value.length; i++) {
       if (
-        lyric.value[i].position < +newVal &&
-        (lyric.value[i + 1]?.position || 9999999999) > +newVal
+        lyric.value[i].position < +newVal
+        && (lyric.value[i + 1]?.position || 9999999999) > +newVal
       ) {
         let offset = 0;
         // 从0到i，计算元素高度
         for (let j = 0; j <= i; j++) {
           const element = document.querySelector(
-            `.lyric-line[data-index="${j}"]`
+            `.lyric-line[data-index="${j}"]`,
           );
           offset += element?.clientHeight || 0;
           offset += 10;
@@ -145,28 +150,29 @@ const shelfAnchors = ref([
   Math.round(window.innerHeight) + offset.value,
 ]);
 const shelfHeight = ref(0);
-const hidePanel = () => {
+function hidePanel() {
   shelfHeight.value = shelfAnchors.value[0];
   showPlayView.value = false;
-};
+}
 watch(
   showPlayView,
   (newValue) => {
     if (newValue) {
       shelfHeight.value = shelfAnchors.value[1];
-    } else {
+    }
+    else {
       shelfHeight.value = shelfAnchors.value[0];
     }
-    panelBackgroundStyle.value.height = `${shelfHeight}px`;
+    panelBackgroundStyle.value.height = `${shelfHeight.value}px`;
   },
-  { immediate: true }
+  { immediate: true },
 );
-const updateAnchors = () => {
+function updateAnchors() {
   shelfAnchors.value[1] = Math.round(window.innerHeight) + offset.value;
   if (showPlayView.value) {
     shelfHeight.value = shelfAnchors.value[1];
   }
-};
+}
 onMounted(() => {
   window.addEventListener('resize', updateAnchors);
 });
@@ -187,7 +193,7 @@ onUnmounted(() => {
         v-model:shelf-anchors="shelfAnchors"
         v-model:shelf-height="shelfHeight"
         @hide-panel="hidePanel"
-      ></MobilePlayView>
+      />
     </template>
     <template #windows>
       <WinPlayView
@@ -199,7 +205,7 @@ onUnmounted(() => {
         v-model:shelf-anchors="shelfAnchors"
         v-model:shelf-height="shelfHeight"
         @hide-panel="hidePanel"
-      ></WinPlayView>
+      />
     </template>
   </PlatformSwitch>
 </template>

@@ -1,3 +1,66 @@
+<script lang="ts" setup>
+import { computed, ref } from 'vue';
+
+interface Props {
+  state: {
+    currentTime: number;
+    duration: number;
+    bufferedPercent: number;
+  };
+  onSeek: (time: number) => void;
+}
+
+const props = defineProps<Props>();
+
+const isDragging = ref(false);
+const hoverTime = ref<number | null>(null);
+const hoverPosition = ref(0);
+
+const currValue = computed(() => {
+  return isDragging.value && hoverTime.value !== null
+    ? hoverTime.value
+    : props.state.currentTime;
+});
+function handleSeek(value: number) {
+  isDragging.value = false;
+  hoverPosition.value = 0;
+  hoverTime.value = null;
+  props.onSeek(value);
+}
+
+function handleHover(e: MouseEvent) {
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const percent = (e.clientX - rect.left) / rect.width;
+  hoverPosition.value = percent;
+  hoverTime.value = percent * props.state.duration;
+}
+function handleTouchMove(e: TouchEvent) {
+  e.preventDefault(); // 阻止默认行为（如页面滚动）
+  const touch = e.touches[0];
+  if (!touch)
+    return;
+
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const percent = (touch.clientX - rect.left) / rect.width;
+  hoverPosition.value = Math.max(0, Math.min(1, percent)); // 确保在0-1范围内
+  hoverTime.value = percent * props.state.duration;
+}
+function handleHoverLeave(e: MouseEvent) {
+  if (!isDragging.value) {
+    hoverPosition.value = 0;
+    hoverTime.value = null;
+  }
+}
+
+function formatTime(seconds: number) {
+  if (isNaN(seconds))
+    return '00:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+</script>
+
 <template>
   <div class="w-full group">
     <!-- 进度条容器 -->
@@ -31,67 +94,6 @@
     </div>
   </div>
 </template>
-
-<script lang="ts" setup>
-import { ref, computed } from 'vue';
-
-interface Props {
-  state: {
-    currentTime: number;
-    duration: number;
-    bufferedPercent: number;
-  };
-  onSeek: (time: number) => void;
-}
-
-const props = defineProps<Props>();
-
-const isDragging = ref(false);
-const hoverTime = ref<number | null>(null);
-const hoverPosition = ref(0);
-
-const currValue = computed(() => {
-  return isDragging.value && hoverTime.value !== null
-    ? hoverTime.value
-    : props.state.currentTime;
-});
-const handleSeek = (value: number) => {
-  isDragging.value = false;
-  hoverPosition.value = 0;
-  hoverTime.value = null;
-  props.onSeek(value);
-};
-
-const handleHover = (e: MouseEvent) => {
-  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-  const percent = (e.clientX - rect.left) / rect.width;
-  hoverPosition.value = percent;
-  hoverTime.value = percent * props.state.duration;
-};
-const handleTouchMove = (e: TouchEvent) => {
-  e.preventDefault(); // 阻止默认行为（如页面滚动）
-  const touch = e.touches[0];
-  if (!touch) return;
-
-  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-  const percent = (touch.clientX - rect.left) / rect.width;
-  hoverPosition.value = Math.max(0, Math.min(1, percent)); // 确保在0-1范围内
-  hoverTime.value = percent * props.state.duration;
-};
-const handleHoverLeave = (e: MouseEvent) => {
-  if (!isDragging.value) {
-    hoverPosition.value = 0;
-    hoverTime.value = null;
-  }
-};
-
-const formatTime = (seconds: number) => {
-  if (isNaN(seconds)) return '00:00';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
-</script>
 
 <style lang="less" scoped>
 :deep(.van-slider__button) {

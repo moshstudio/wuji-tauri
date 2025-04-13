@@ -1,8 +1,16 @@
 <script setup lang="ts">
-import { PhotoDetail, PhotoItem } from '@/extensions/photo';
-import { PropType } from 'vue';
-import { usePhotoShelfStore } from '@/store';
+import type { PhotoDetail, PhotoItem } from '@/extensions/photo';
+import type { PropType } from 'vue';
 import LoadImage from '@/components/LoadImage.vue';
+import { usePhotoShelfStore } from '@/store';
+
+const emit = defineEmits<{
+  (e: 'back'): void;
+  (e: 'loadData', pageNo?: number): void;
+  (e: 'toPage', pageNo?: number): void;
+  (e: 'collect'): void;
+  (e: 'addPhotoToShelf', shelfId: string): void;
+}>();
 
 const shelfStore = usePhotoShelfStore();
 
@@ -18,14 +26,6 @@ const showAddDialog = defineModel('showAddDialog', {
   type: Boolean,
   default: false,
 });
-
-const emit = defineEmits<{
-  (e: 'back'): void;
-  (e: 'loadData', pageNo?: number): void;
-  (e: 'toPage', pageNo?: number): void;
-  (e: 'collect'): void;
-  (e: 'addPhotoToShelf', shelfId: string): void;
-}>();
 </script>
 
 <template>
@@ -42,9 +42,9 @@ const emit = defineEmits<{
       class="grow flex flex-col overflow-y-auto bg-[--van-background-3] select-none"
     >
       <div
-        class="w-full text-center leading-none"
         v-for="(item, index) in photoDetail?.photos"
         :key="index"
+        class="w-full text-center leading-none"
       >
         <LoadImage
           :src="item"
@@ -55,8 +55,8 @@ const emit = defineEmits<{
       </div>
     </main>
     <van-row
-      justify="center"
       v-if="photoDetail?.totalPage && photoDetail?.totalPage > 1"
+      justify="center"
       class="w-full bg-[--van-background-2]"
     >
       <van-pagination
@@ -83,8 +83,7 @@ const emit = defineEmits<{
         center
         clickable
         @click="() => emit('addPhotoToShelf', item.id)"
-      >
-      </van-cell>
+      />
     </van-cell-group>
   </van-dialog>
 </template>

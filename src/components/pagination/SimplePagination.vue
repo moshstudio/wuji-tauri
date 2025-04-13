@@ -1,8 +1,7 @@
 <script setup lang="ts">
+import type { PickerConfirmEventParams } from 'vant';
 import { computed, ref } from 'vue';
-import { PickerConfirmEventParams } from 'vant';
 
-const currentPage = defineModel({ type: Number, required: true });
 const props = defineProps({
   pageCount: {
     type: [Number, String],
@@ -16,7 +15,7 @@ const props = defineProps({
 const emit = defineEmits<{
   (e: 'change', page: number): Promise<void>;
 }>();
-
+const currentPage = defineModel({ type: Number, required: true });
 const showPicker = ref(false);
 const columns = computed(() => {
   const pageCount = Number(props.pageCount);
@@ -27,10 +26,10 @@ const columns = computed(() => {
   return pages;
 });
 
-const toPage = (page: number) => {
+function toPage(page: number) {
   emit('change', page);
-};
-const changePage = (params: PickerConfirmEventParams) => {
+}
+function changePage(params: PickerConfirmEventParams) {
   if (params.selectedValues.length) {
     const newPage = Number(params.selectedValues[0]);
     if (newPage !== currentPage.value) {
@@ -38,7 +37,7 @@ const changePage = (params: PickerConfirmEventParams) => {
     }
   }
   showPicker.value = false;
-};
+}
 </script>
 
 <template>
@@ -48,8 +47,8 @@ const changePage = (params: PickerConfirmEventParams) => {
     <van-button
       :plain="true"
       size="small"
-      @click="() => toPage(currentPage - 1)"
       :disabled="currentPage <= 1"
+      @click="() => toPage(currentPage - 1)"
     >
       <van-icon name="arrow-left" size="14" />
     </van-button>
@@ -59,8 +58,8 @@ const changePage = (params: PickerConfirmEventParams) => {
     <van-button
       :plain="true"
       size="small"
-      @click="() => toPage(currentPage + 1)"
       :disabled="currentPage >= Number(props.pageCount)"
+      @click="() => toPage(currentPage + 1)"
     >
       <van-icon name="arrow" size="14" />
     </van-button>
@@ -74,9 +73,9 @@ const changePage = (params: PickerConfirmEventParams) => {
       <van-picker
         title="选择页码"
         :columns="columns"
+        class="text-[var(--van-text-color)]"
         @cancel="showPicker = false"
         @confirm="changePage"
-        class="text-[var(--van-text-color)]"
       />
     </van-popup>
   </div>

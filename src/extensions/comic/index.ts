@@ -1,6 +1,6 @@
 import _ from 'lodash';
-import { Extension, transformResult } from '../baseExtension';
 import { nanoid } from 'nanoid';
+import { Extension, transformResult } from '../baseExtension';
 
 export interface ComicContent {
   photos: string[];
@@ -92,7 +92,7 @@ abstract class ComicExtension extends Extension {
   // 1. 首页推荐
   abstract getRecommendComics(
     pageNo?: number,
-    type?: string
+    type?: string,
   ): Promise<ComicsList | null>;
 
   @transformResult<ComicsList | null>((r) => {
@@ -148,18 +148,19 @@ abstract class ComicExtension extends Extension {
   // 4. 获取内容
   abstract getContent(
     item: ComicItem,
-    chapter: ComicChapter
+    chapter: ComicChapter,
   ): Promise<ComicContent | null>;
 }
 
 function loadComicExtensionString(
-  codeString: string
+  codeString: string,
 ): ComicExtension | undefined {
   try {
     const func = new Function('ComicExtension', codeString);
     const extensionclass = func(ComicExtension);
     return new extensionclass();
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Error executing code:\n', error);
   }
 }

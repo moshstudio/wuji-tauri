@@ -1,3 +1,11 @@
+<script setup lang="ts">
+import { Icon } from '@iconify/vue';
+import { ref } from 'vue';
+
+const audioVolume = defineModel<number>({ default: 1 });
+const showSlider = ref(false); // 控制条显示状态
+</script>
+
 <template>
   <div class="volume-control">
     <!-- 音量按钮 -->
@@ -43,14 +51,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref } from 'vue';
-import { Icon } from '@iconify/vue';
-
-const audioVolume = defineModel<number>({ default: 1 });
-const showSlider = ref(false); // 控制条显示状态
-</script>
 
 <style scoped>
 .volume-control {
