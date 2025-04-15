@@ -12,8 +12,9 @@ if (typeof globalThis.Buffer === 'undefined') {
 function generateRandomHex(length: number): string {
   const randomValues = new Uint8Array(length);
   window.crypto.getRandomValues(randomValues);
-  return Array.from(randomValues, byte =>
-    `0${byte.toString(16)}`.slice(-2)).join('');
+  return Array.from(randomValues, (byte) =>
+    `0${byte.toString(16)}`.slice(-2),
+  ).join('');
 }
 
 type EventType = 'data' | 'close' | 'end';
@@ -30,7 +31,7 @@ class EventEmitter {
   }
 
   emit(event: EventType, data: any) {
-    this.eventListeners[event].forEach(callback => callback(data));
+    this.eventListeners[event].forEach((callback) => callback(data));
   }
 }
 
@@ -57,10 +58,12 @@ type Metadata = {
   };
 }[];
 
-export class ProsodyOptions {
-  pitch: PITCH | string = '+0Hz';
-  rate: RATE | string | number = 1.0;
-  volume: VOLUME | string | number = 100.0;
+export interface ProsodyOptions {
+  voice: string;
+  voiceLocale: string;
+  pitch?: PITCH | string;
+  rate?: RATE | string | number;
+  volume?: VOLUME | string | number;
 }
 
 export class EdgeTTSClient {
@@ -70,26 +73,22 @@ export class EdgeTTSClient {
   private static VOICES_URL = `https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=${EdgeTTSClient.CLIENT_TOKEN}`;
   private static SYNTH_URL = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${EdgeTTSClient.CLIENT_TOKEN}`;
   private static BINARY_DELIM = 'Path:audio\r\n';
-  private static VOICE_LANG_REGEX = /\w{2}-\w{2}/;
 
   private enableLogging: boolean;
-  private isBrowser: boolean;
+  private closeOnFinish: boolean;
   private ws: WebSocket | null = null;
-  private voice: string | null = null;
-  private voiceLocale: string | null = null;
-  private outputFormat: OUTPUT_FORMAT | null = null;
+  private outputFormat: OUTPUT_FORMAT | null =
+    OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3;
   private requestQueue: Record<string, EventEmitter> = {};
   private connectionStartTime = 0;
 
-  constructor(enableLogging = false) {
+  constructor(enableLogging = false, closeOnFinish = true) {
     this.enableLogging = enableLogging;
-    this.isBrowser
-      = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+    this.closeOnFinish = closeOnFinish;
   }
 
   private log(...args: any[]) {
-    if (this.enableLogging)
-      console.log(...args);
+    if (this.enableLogging) console.log(...args);
   }
 
   private async sendMessage(message: string) {
@@ -98,8 +97,7 @@ export class EdgeTTSClient {
       attempt <= 3 && this.ws?.readyState !== WebSocket.OPEN;
       attempt++
     ) {
-      if (attempt === 1)
-        this.connectionStartTime = Date.now();
+      if (attempt === 1) this.connectionStartTime = Date.now();
       this.log(`Connecting... attempt ${attempt}`);
       await this.initWebSocket();
     }
@@ -108,10 +106,9 @@ export class EdgeTTSClient {
 
   private initWebSocket() {
     this.ws = new WebSocket(
-      `${EdgeTTSClient.SYNTH_URL
-      }&Sec-MS-GEC=${generateSecMsGecToken()}`
-      + `&Sec-MS-GEC-Version=${EdgeTTSClient.SEC_MS_GEC_VERSION}`
-      + `&ConnectionId=${generateRandomHex(16)}`,
+      `${EdgeTTSClient.SYNTH_URL}&Sec-MS-GEC=${generateSecMsGecToken()}` +
+        `&Sec-MS-GEC-Version=${EdgeTTSClient.SEC_MS_GEC_VERSION}` +
+        `&ConnectionId=${generateRandomHex(16)}`,
     );
     this.ws.binaryType = 'arraybuffer';
     const metadataBuffer: Metadata = [];
@@ -126,9 +123,9 @@ export class EdgeTTSClient {
         this.sendMessage(this.getConfigMessage()).then(resolve);
       };
 
-      this.ws!.onmessage = event => this.handleMessage(event, metadataBuffer);
+      this.ws!.onmessage = (event) => this.handleMessage(event, metadataBuffer);
       this.ws!.onclose = () => this.handleClose();
-      this.ws!.onerror = error => reject(`Connection Error: ${error}`);
+      this.ws!.onerror = (error) => reject(`Connection Error: ${error}`);
     });
   }
 
@@ -140,18 +137,17 @@ export class EdgeTTSClient {
 
     if (message.includes('Path:turn.start')) {
       metadataBuffer.length = 0;
-    }
-    else if (message.includes('Path:turn.end')) {
+    } else if (message.includes('Path:turn.end')) {
       this.requestQueue[requestId]?.emit('end', metadataBuffer);
-    }
-    else if (message.includes('Path:audio')) {
+      if (this.closeOnFinish) {
+        this.ws?.close();
+      }
+    } else if (message.includes('Path:audio')) {
       this.cacheAudioData(buffer, requestId);
-    }
-    else if (message.includes('Path:audio.metadata')) {
+    } else if (message.includes('Path:audio.metadata')) {
       const startIndex = message.indexOf('{');
       metadataBuffer.push(JSON.parse(message.slice(startIndex)).Metadata[0]);
-    }
-    else {
+    } else {
       this.log('Unknown Message', message);
     }
   }
@@ -199,8 +195,7 @@ export class EdgeTTSClient {
           break;
         }
       }
-      if (match)
-        return i;
+      if (match) return i;
     }
     return -1;
   }
@@ -229,44 +224,28 @@ export class EdgeTTSClient {
     );
   }
 
-  async setMetadata(
-    voiceName: string,
-    outputFormat: OUTPUT_FORMAT,
-    voiceLocale?: string,
-  ) {
-    this.voice = voiceName;
-    this.outputFormat = outputFormat;
-    this.voiceLocale = voiceLocale || this.inferLocaleFromVoiceName(voiceName);
-
-    if (!this.voiceLocale) {
-      throw new Error('Could not infer voiceLocale from voiceName!');
-    }
-
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      this.connectionStartTime = Date.now();
-      await this.initWebSocket();
-    }
-  }
-
-  private inferLocaleFromVoiceName(voiceName: string): string | null {
-    const match = EdgeTTSClient.VOICE_LANG_REGEX.exec(voiceName);
-    return match ? match[0] : null;
-  }
-
   close() {
     this.ws?.close();
   }
 
-  toStream(
-    text: string,
-    options: ProsodyOptions = new ProsodyOptions(),
-  ): EventEmitter {
-    return this.sendSSMLRequest(this.buildSSML(text, options));
+  async toStream(text: string, options: ProsodyOptions): Promise<EventEmitter> {
+    options.pitch ||= '+0Hz';
+    options.rate ||= 1.0;
+    options.volume ||= 200;
+
+    return this.sendSSMLRequest(await this.buildSSML(text, options));
   }
 
-  private buildSSML(text: string, options: ProsodyOptions): string {
-    return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this.voiceLocale}">
-            <voice name="${this.voice}">
+  private async buildSSML(
+    text: string,
+    options: ProsodyOptions,
+  ): Promise<string> {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      this.connectionStartTime = Date.now();
+      await this.initWebSocket();
+    }
+    return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${options.voiceLocale}">
+            <voice name="${options.voice}">
                 <prosody pitch="${options.pitch}" rate="${options.rate}" volume="${options.volume}">
                     ${text}
                 </prosody>

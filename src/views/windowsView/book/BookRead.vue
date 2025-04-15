@@ -6,8 +6,9 @@ import type { ReaderResult } from '@/utils/reader/types';
 import type { PropType } from 'vue';
 import BookShelfButton from '@/components/BookShelfButton.vue';
 import SwitchBookSourceDialog from '@/components/dialogs/SwitchBookSource.vue';
+import WinBookTTSButton from '@/components/buttons/WinBookTTSButton.vue';
 import NavBar from '@/components/NavBar.vue';
-import { useBookChapterStore, useBookStore } from '@/store';
+import { useBookChapterStore, useBookStore, useTTSStore } from '@/store';
 import BookShelf from '@/views/book/BookShelf.vue';
 import { Icon } from '@iconify/vue';
 import { useScroll } from '@vueuse/core';
@@ -23,6 +24,7 @@ const emit = defineEmits<{
   (e: 'openChapterPopup'): void;
   (e: 'searchAllSources', targetBook: BookItem): void;
   (e: 'switchSource', newBookItem: BookItem): void;
+  (e: 'playTts'): void;
 }>();
 const book = defineModel('book', { type: Object as PropType<BookItem> });
 const bookSource = defineModel('bookSource', {
@@ -38,7 +40,7 @@ const readingPagedContent = defineModel('readingPagedContent', {
   type: Object as PropType<{ isPrev: boolean; content: ReaderResult }>,
 });
 const readingContent = defineModel('readingContent', {
-  type: String,
+  type: Array<{ content: string; index: number }>,
 });
 const showChapters = defineModel('showChapters', {
   type: Boolean,
@@ -62,6 +64,7 @@ const showSwitchSourceDialog = defineModel('showSwitchSourceDialog', {
 
 const bookStore = useBookStore();
 const bookCacheStore = useBookChapterStore();
+const ttsStore = useTTSStore();
 
 let savedScrollPosition = 0;
 
@@ -117,7 +120,10 @@ onMounted(() => {
               class="text-xs text-[--van-text-color-2]"
             >
               <van-icon name="points" />
-              {{ readingContent?.length }} 字
+              {{
+                readingContent?.map((line) => line.content).join('\n').length
+              }}
+              字
             </span>
             <span v-if="bookSource" class="text-xs text-[--van-text-color-2]">
               <van-icon name="flag-o" />
@@ -142,25 +148,46 @@ onMounted(() => {
     >
       <div
         v-if="readingContent"
+        v-remember-scroll
         id="read-content"
         class="pt-[80px] relative overflow-y-auto p-4 text-justify leading-[1.8] text-[--van-text-color]"
         :style="{
-          'fontSize': `${bookStore.fontSize}px`,
-          'fontFamily': `'${bookStore.fontFamily}'`,
-          'lineHeight': bookStore.lineHeight,
+          fontSize: `${bookStore.fontSize}px`,
+          fontFamily: `'${bookStore.fontFamily}'`,
+          lineHeight: bookStore.lineHeight,
           // 'text-indent': bookStore.fontSize * 2 + 'px',
           'text-align': 'justify',
-          'color': bookStore.currTheme.color,
-          'backgroundColor': bookStore.currTheme.bgColor,
-          'textDecoration': bookStore.underline
+          color: bookStore.currTheme.color,
+          backgroundColor: bookStore.currTheme.bgColor,
+          textDecoration: bookStore.underline
             ? 'underline solid 0.5px'
             : 'none',
-          'textUnderlineOffset': bookStore.underline ? '6px' : 'none',
+          textUnderlineOffset: bookStore.underline ? '6px' : 'none',
         }"
-      />
+      >
+        <p
+          v-for="line in readingContent"
+          :key="line.index"
+          :class="`index-${line.index}`"
+          :style="{
+            marginTop: `${bookStore.readPGap}px`,
+            backgroundColor:
+              ttsStore.isReading &&
+              ttsStore.scrollReadingContent?.index === line.index
+                ? 'rgba(128, 128, 128, 0.5)'
+                : '',
+          }"
+        >
+          {{ line.content }}
+        </p>
+      </div>
       <div
         class="read-sidebar absolute right-[8px] bottom-[8px] flex flex-col gap-1 opacity-80 sm:opacity-100 hover:opacity-100"
       >
+        <WinBookTTSButton
+          :reading-content="readingContent || []"
+          :onPlay="() => emit('playTts')"
+        />
         <BookShelfButton
           :book="book"
           mode="square"
@@ -277,14 +304,10 @@ onMounted(() => {
       class="setting-dialog bg-[#1f1f1f] text-white"
     >
       <template #title>
-        <div class="text-white">
-          界面设置
-        </div>
+        <div class="text-white">界面设置</div>
       </template>
       <div class="flex flex-col p-2 text-sm">
-        <div class="pb-2">
-          字体和样式
-        </div>
+        <div class="pb-2">字体和样式</div>
         <van-cell class="bg-[#1f1f1f]">
           <template #title>
             <span class="text-white">字体大小</span>
@@ -331,9 +354,7 @@ onMounted(() => {
             <van-switch v-model="bookStore.underline" />
           </template>
         </van-cell>
-        <div class="pb-2">
-          文字颜色和背景
-        </div>
+        <div class="pb-2">文字颜色和背景</div>
         <div v-horizontal-scroll class="flex gap-2 overflow-x-auto" @wheel.stop>
           <div
             v-for="theme in bookStore.themes"

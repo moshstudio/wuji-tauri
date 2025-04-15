@@ -228,6 +228,7 @@ export function useElementResize(
   callback: (width: number, height: number) => void,
 ) {
   let resizeObserver: ResizeObserver | null = null;
+  let prevSize: { width: number; height: number } | null = null;
 
   onMounted(() => {
     const element = document.querySelector(elementSelector);
@@ -235,6 +236,18 @@ export function useElementResize(
       resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
           const { width, height } = entry.contentRect;
+          if (width === 0 && height === 0) {
+            // 切换了页面，不计做事件
+            prevSize = null;
+            return;
+          }
+          if (prevSize === null) {
+            // 首次不计做事件
+            prevSize = { width, height };
+            return;
+          }
+          console.log('Element resized:', width, height);
+          prevSize = { width, height };
           callback(width, height); // 触发回调，传递尺寸变化
         }
       });

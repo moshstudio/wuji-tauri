@@ -1,15 +1,21 @@
 <script lang="ts" setup>
-import type { BookChapter, BookItem } from "@/extensions/book";
-import type { BookSource } from "@/types";
-import type { LineData, ReaderResult } from "@/utils/reader/types";
-import type { PropType } from "vue";
+import type { BookChapter, BookItem } from '@/extensions/book';
+import type { BookSource } from '@/types';
+import type { LineData, ReaderResult } from '@/utils/reader/types';
+import type { PropType } from 'vue';
 
-import BookShelfButton from "@/components/BookShelfButton.vue";
-import SwitchBookSourceDialog from "@/components/dialogs/SwitchBookSource.vue";
-import { useBookChapterStore, useBookStore, useDisplayStore } from "@/store";
-import { Icon } from "@iconify/vue";
-import { keepScreenOn } from "tauri-plugin-keep-screen-on-api";
-import { showToast } from "vant";
+import BookShelfButton from '@/components/BookShelfButton.vue';
+import MobileBookTTSButton from '@/components/buttons/MobileBookTTSButton.vue';
+import SwitchBookSourceDialog from '@/components/dialogs/SwitchBookSource.vue';
+import {
+  useBookChapterStore,
+  useBookStore,
+  useDisplayStore,
+  useTTSStore,
+} from '@/store';
+import { Icon } from '@iconify/vue';
+import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
+import { showToast } from 'vant';
 import {
   computed,
   onActivated,
@@ -17,59 +23,60 @@ import {
   reactive,
   ref,
   watch,
-} from "vue";
+} from 'vue';
 
 const emit = defineEmits<{
-  (e: "back", checkShelf?: boolean): void;
-  (e: "loadData"): void;
-  (e: "toChapter", chapter: BookChapter): void;
-  (e: "prevChapter", toLast?: boolean): void;
-  (e: "nextChapter"): void;
-  (e: "refreshChapter"): void;
-  (e: "openChapterPopup"): void;
-  (e: "searchAllSources", targetBook: BookItem): void;
-  (e: "switchSource", newBookItem: BookItem): void;
+  (e: 'back', checkShelf?: boolean): void;
+  (e: 'loadData'): void;
+  (e: 'toChapter', chapter: BookChapter): void;
+  (e: 'prevChapter', toLast?: boolean): void;
+  (e: 'nextChapter'): void;
+  (e: 'refreshChapter'): void;
+  (e: 'openChapterPopup'): void;
+  (e: 'searchAllSources', targetBook: BookItem): void;
+  (e: 'switchSource', newBookItem: BookItem): void;
+  (e: 'playTts'): void;
 }>();
-const book = defineModel("book", { type: Object as PropType<BookItem> });
-const bookSource = defineModel("bookSource", {
+const book = defineModel('book', { type: Object as PropType<BookItem> });
+const bookSource = defineModel('bookSource', {
   type: Object as PropType<BookSource>,
 });
-const chapterLists = defineModel("chapterList", {
+const chapterLists = defineModel('chapterList', {
   type: Array as PropType<BookChapter[]>,
 });
-const readingChapter = defineModel("readingChapter", {
+const readingChapter = defineModel('readingChapter', {
   type: Object as PropType<BookChapter>,
 });
-const readingContent = defineModel("readingContent", {
-  type: String,
+const readingContent = defineModel('readingContent', {
+  type: Array<{ content: string; index: number }>,
 });
-const readingPagedContent = defineModel("readingPagedContent", {
+const readingPagedContent = defineModel('readingPagedContent', {
   type: Object as PropType<{ isPrev: boolean; content: ReaderResult }>,
 });
-const chapterPage = defineModel("chapterPage", {
+const chapterPage = defineModel('chapterPage', {
   type: Number,
   required: true,
 });
-const showBookShelf = defineModel("showBookShelf", {
+const showBookShelf = defineModel('showBookShelf', {
   type: Boolean,
   required: true,
 });
-const showChapters = defineModel("showChapters", {
+const showChapters = defineModel('showChapters', {
   type: Boolean,
   required: true,
 });
-const showSettingDialog = defineModel("showSettingDialog", {
+const showSettingDialog = defineModel('showSettingDialog', {
   type: Boolean,
   required: true,
 });
-const showNavBar = defineModel("showNavBar", {
+const showNavBar = defineModel('showNavBar', {
   type: Boolean,
   required: true,
 });
-const allSourceResults = defineModel("allSourceResults", {
+const allSourceResults = defineModel('allSourceResults', {
   type: Array as PropType<BookItem[]>,
 });
-const showSwitchSourceDialog = defineModel("showSwitchSourceDialog", {
+const showSwitchSourceDialog = defineModel('showSwitchSourceDialog', {
   type: Boolean,
   required: true,
 });
@@ -77,6 +84,7 @@ const showSwitchSourceDialog = defineModel("showSwitchSourceDialog", {
 const displayStore = useDisplayStore();
 const bookStore = useBookStore();
 const bookCacheStore = useBookChapterStore();
+const ttsStore = useTTSStore();
 
 /** 显示菜单 */
 const showMenu = ref(false);
@@ -89,7 +97,7 @@ watch(
   },
   {
     immediate: true,
-  }
+  },
 );
 onActivated(() => {
   displayStore.showTabBar = showMenu.value;
@@ -103,7 +111,7 @@ const dragTime = 300;
 /** touch 参数 */
 const touchParams = reactive({
   /** 页面负偏移量（负数） */
-  pageSlideValue: "-102%",
+  pageSlideValue: '-102%',
   /** 触摸位置 */
   touchPosition: 0,
   /** 触摸的位置Y */
@@ -122,18 +130,18 @@ const touchParams = reactive({
 let slideTimer: NodeJS.Timeout | null;
 
 const prevPageStyle = reactive({
-  transform: "-102%",
-  transition: "0s all",
+  transform: '-102%',
+  transition: '0s all',
   zIndex: 3,
 });
 const currPageStyle = reactive({
-  transform: "0px",
-  transition: "0s all",
+  transform: '0px',
+  transition: '0s all',
   zIndex: 2,
 });
 const nextPageStyle = reactive({
-  transform: "0px",
-  transition: "0s all",
+  transform: '0px',
+  transition: '0s all',
   zIndex: 1,
 });
 
@@ -143,8 +151,8 @@ const chapterMax = computed(() => chapterLists.value?.length || 0);
 const chapterIndex = computed(
   () =>
     chapterLists.value?.findIndex(
-      (item) => item.id === readingChapter.value?.id
-    ) || 0
+      (item) => item.id === readingChapter.value?.id,
+    ) || 0,
 );
 
 /** 页面内容列表 */
@@ -159,13 +167,13 @@ const prevPageContent = computed<LineData[]>(() => {
         pIndex: 0,
         lineIndex: 0,
         textIndex: 0,
-        text: "",
+        text: '',
       },
     ];
   }
   if (chapterPage.value === 0) {
     const index = chapterLists.value?.findIndex(
-      (item) => item.id === readingChapter.value?.id
+      (item) => item.id === readingChapter.value?.id,
     );
     if (index && index > 0) {
       return [
@@ -177,7 +185,7 @@ const prevPageContent = computed<LineData[]>(() => {
           pIndex: 0,
           lineIndex: 0,
           textIndex: 0,
-          text: chapterLists.value?.[index - 1].title || "",
+          text: chapterLists.value?.[index - 1].title || '',
         },
       ];
     } else {
@@ -190,53 +198,16 @@ const prevPageContent = computed<LineData[]>(() => {
           pIndex: 0,
           lineIndex: 0,
           textIndex: 0,
-          text: "",
+          text: '',
         },
       ];
     }
   } else {
-    if (typeof readingPagedContent.value === "string") {
-      return [
-        {
-          isTitle: false,
-          center: true,
-          pFirst: false,
-          pLast: false,
-          pIndex: 0,
-          lineIndex: 0,
-          textIndex: 0,
-          text: readingPagedContent.value,
-        },
-      ];
-    } else {
-      return (
-        (readingPagedContent.value?.content[
-          chapterPage.value - 1
-        ] as LineData[]) || []
-      );
-    }
+    return readingPagedContent.value?.content[chapterPage.value - 1] || [];
   }
 });
 const currPageContent = computed<LineData[]>(() => {
-  if (typeof readingPagedContent.value === "string") {
-    return [
-      {
-        isTitle: false,
-        center: true,
-        pFirst: false,
-        pLast: false,
-        pIndex: 0,
-        lineIndex: 0,
-        textIndex: 0,
-        text: readingPagedContent.value,
-      },
-    ];
-  } else {
-    return (
-      (readingPagedContent.value?.content[chapterPage.value] as LineData[]) ||
-      []
-    );
-  }
+  return readingPagedContent.value?.content[chapterPage.value] || [];
 });
 const nextPageContent = computed<LineData[]>(() => {
   if (!readingPagedContent.value) {
@@ -249,13 +220,13 @@ const nextPageContent = computed<LineData[]>(() => {
         pIndex: 0,
         lineIndex: 0,
         textIndex: 0,
-        text: "",
+        text: '',
       },
     ];
   }
   if (chapterPage.value === readingPagedContent.value?.content.length - 1) {
     const index = chapterLists.value?.findIndex(
-      (item) => item.id === readingChapter.value?.id
+      (item) => item.id === readingChapter.value?.id,
     );
     if (index && index < chapterMax.value - 1) {
       return [
@@ -267,7 +238,7 @@ const nextPageContent = computed<LineData[]>(() => {
           pIndex: 0,
           lineIndex: 0,
           textIndex: 0,
-          text: chapterLists.value?.[index + 1].title || "",
+          text: chapterLists.value?.[index + 1].title || '',
         },
       ];
     } else {
@@ -280,20 +251,17 @@ const nextPageContent = computed<LineData[]>(() => {
           pIndex: 0,
           lineIndex: 0,
           textIndex: 0,
-          text: "",
+          text: '',
         },
       ];
     }
   }
-  return (
-    (readingPagedContent.value?.content[chapterPage.value + 1] as LineData[]) ||
-    []
-  );
+  return readingPagedContent.value?.content[chapterPage.value + 1] || [];
 });
 
 /** 是否为第一页 */
 const isFirstPage = computed(
-  () => chapterIndex.value === 0 && chapterPage.value === 0
+  () => chapterIndex.value === 0 && chapterPage.value === 0,
 );
 /** 是否否最后一页 */
 const isLastPage = computed(
@@ -301,12 +269,12 @@ const isLastPage = computed(
     (chapterIndex.value === chapterMax.value - 1 &&
       chapterPage.value ===
         (readingPagedContent.value?.content.length || 0) - 1) ||
-    false
+    false,
 );
 
 function goBack() {
   // uni.navigateBack();
-  emit("back", true);
+  emit('back', true);
 }
 
 /**
@@ -314,42 +282,42 @@ function goBack() {
  * @returns 'left'|'middle'|'right'
  */
 function checkTouchPosition(x: number, y: number) {
-  const element = document.querySelector("#read-content");
+  const element = document.querySelector('#read-content');
   if (!element) {
-    return "middle";
+    return 'middle';
   }
   const rect = element.getBoundingClientRect();
   const width = Math.floor(rect.width * 0.3);
   const height = Math.floor(rect.height * 0.3);
   if (x < width) {
     if (bookStore.fullScreenClickToNext) {
-      return "right";
+      return 'right';
     } else {
-      return "left";
+      return 'left';
     }
   }
-  if (x >= rect.width - width) return "right";
+  if (x >= rect.width - width) return 'right';
   if (y < height) {
     if (bookStore.fullScreenClickToNext) {
-      return "right";
+      return 'right';
     } else {
-      return "left";
+      return 'left';
     }
   }
-  if (y >= rect.height - height) return "right";
-  return "middle";
+  if (y >= rect.height - height) return 'right';
+  return 'middle';
 }
 
 /** 重置页面（位置偏移） */
 function resetPage() {
-  prevPageStyle.transition = "0s all";
+  prevPageStyle.transition = '0s all';
   prevPageStyle.transform = touchParams.pageSlideValue;
 
-  currPageStyle.transition = "0s all";
-  currPageStyle.transform = "0px";
+  currPageStyle.transition = '0s all';
+  currPageStyle.transform = '0px';
 
-  nextPageStyle.transition = "0s all";
-  nextPageStyle.transform = "0px";
+  nextPageStyle.transition = '0s all';
+  nextPageStyle.transform = '0px';
 }
 
 /** 切换到上一页 */
@@ -367,23 +335,31 @@ function pagePrev() {
     if (chapterPage.value > 0) {
       chapterPage.value--;
     } else {
-      emit("prevChapter", true);
+      emit('prevChapter', true);
     }
     resetPage();
     clearTimeout(slideTimer!);
     slideTimer = null;
+    if (ttsStore.isReading) {
+      // 刷新阅读状态
+      console.log('prev page');
+      ttsStore.stop();
+      // 前一页防止pIndex冲突
+      ttsStore.slideReadingContent = undefined;
+      emit('playTts');
+    }
   }, slideTime);
 }
 
 /** 切换到下一页 */
 function pageNext() {
-  prevPageStyle.transition = "0s all";
+  prevPageStyle.transition = '0s all';
   prevPageStyle.transform = touchParams.pageSlideValue;
 
   currPageStyle.transition = `${slideTime}ms all`;
   currPageStyle.transform = touchParams.pageSlideValue;
 
-  nextPageStyle.transition = "0s all";
+  nextPageStyle.transition = '0s all';
   nextPageStyle.transform = `0px`;
 
   slideTimer = setTimeout(() => {
@@ -391,14 +367,30 @@ function pageNext() {
       chapterPage.value ===
       (readingPagedContent.value?.content.length || 1) - 1
     ) {
-      emit("nextChapter");
+      emit('nextChapter');
     } else {
       chapterPage.value++;
     }
     resetPage();
     clearTimeout(slideTimer!);
     slideTimer = null;
+    if (ttsStore.isReading) {
+      // 刷新阅读状态
+      console.log('next page');
+      ttsStore.stop();
+      emit('playTts');
+    }
   }, slideTime);
+}
+
+function toChapterPage(page: number) {
+  chapterPage.value = page;
+  if (ttsStore.isReading) {
+    // 刷新阅读状态
+    console.log('to chapter page');
+    ttsStore.stop();
+    emit('playTts');
+  }
 }
 
 function onTouchStart(e: TouchEvent) {
@@ -418,10 +410,10 @@ function onTouchMove(e: TouchEvent) {
   const slide = pageX - touchParams.touchPosition;
 
   if (slide < 0) {
-    currPageStyle.transition = "0s all";
+    currPageStyle.transition = '0s all';
     currPageStyle.transform = `${slide}px`;
   } else {
-    prevPageStyle.transition = "0s all";
+    prevPageStyle.transition = '0s all';
     prevPageStyle.transform = `calc(${touchParams.pageSlideValue} + ${slide}px)`;
   }
   // console.log("onTouchMove", slide);
@@ -445,27 +437,27 @@ function onTouchEnd(e: TouchEvent) {
     prevPageStyle.transform = touchParams.pageSlideValue;
 
     currPageStyle.transition = `${slideTime}ms all`;
-    currPageStyle.transform = "0px";
+    currPageStyle.transform = '0px';
   };
   // console.log("onTouchEnd", slideX);
   if (Math.abs(slideX) <= 10) {
     // 处理点击事件
     switch (checkTouchPosition(pageX, pageY)) {
-      case "left":
+      case 'left':
         if (isFirstPage.value) {
-          showToast("没有上一页了");
+          showToast('没有上一页了');
         } else {
           pagePrev();
         }
         break;
-      case "right":
+      case 'right':
         if (isLastPage.value) {
-          showToast("当前小说已完结");
+          showToast('当前小说已完结');
         } else {
           pageNext();
         }
         break;
-      case "middle":
+      case 'middle':
         showMenu.value = true;
         break;
     }
@@ -479,7 +471,7 @@ function onTouchEnd(e: TouchEvent) {
       if (slideX > 0) {
         // console.log("向右边滑动");
         if (isFirstPage.value) {
-          showToast("没有上一页了");
+          showToast('没有上一页了');
           backPosition();
         } else {
           pagePrev();
@@ -487,7 +479,7 @@ function onTouchEnd(e: TouchEvent) {
       } else {
         // console.log("向左边滑动");
         if (isLastPage.value) {
-          showToast("当前小说已完结");
+          showToast('当前小说已完结');
           backPosition();
         } else {
           pageNext();
@@ -503,14 +495,14 @@ function onTouchEnd(e: TouchEvent) {
 
 /** 上一章 */
 function chapterPrev() {
-  emit("prevChapter");
+  emit('prevChapter');
 }
 
 /** 下一章 */
 function chapterNext() {
   if (chapterIndex.value === chapterMax.value)
-    return showToast("当前小说已完结");
-  emit("nextChapter");
+    return showToast('当前小说已完结');
+  emit('nextChapter');
 }
 onBeforeUnmount(() => {
   slideTimer && clearTimeout(slideTimer);
@@ -551,10 +543,7 @@ onBeforeUnmount(() => {
             @click="() => (showSwitchSourceDialog = true)"
           />
 
-          <BookShelfButton
-            :book="book"
-            :reading-chapter="readingChapter"
-          />
+          <BookShelfButton :book="book" :reading-chapter="readingChapter" />
         </div>
       </div>
       <div
@@ -631,38 +620,30 @@ onBeforeUnmount(() => {
             :key="JSON.stringify(line) + index"
           >
             <p
-              v-if="line.isTitle"
               :style="{
-                'font-size': `${bookStore.fontSize * 1.3}px`,
+                'font-size': `${bookStore.fontSize * (line.isTitle ? 1.3 : 1)}px`,
                 'font-family': `'${bookStore.fontFamily}'`,
-                'line-height': bookStore.lineHeight * 1.3,
+                'line-height': line.isTitle
+                  ? bookStore.lineHeight * 1.3
+                  : bookStore.lineHeight,
                 'text-indent': line.pFirst
-                  ? `${bookStore.fontSize * 1.3 * 2}px`
+                  ? `${bookStore.fontSize * (line.isTitle ? 1.3 : 1) * 2}px`
                   : '0px',
                 'text-align': 'justify',
                 'text-align-last': line.pLast ? 'auto' : 'justify',
-                // 'padding-top': line.pFirst
-                //   ? bookStore.readPGap * 1.3 + 'px'
-                //   : '0px',
-                'padding-bottom': line.pLast
-                  ? `${bookStore.readPGap * 1.3}px`
-                  : '0px',
-              }"
-            >
-              {{ line.text }}
-            </p>
-            <p
-              v-else
-              :style="{
-                'font-size': `${bookStore.fontSize}px`,
-                'font-family': `'${bookStore.fontFamily}'`,
-                'line-height': bookStore.lineHeight,
-                'text-indent': line.pFirst
-                  ? `${bookStore.fontSize * 2}px`
-                  : '0px',
-                'text-align': 'justify',
-                'text-align-last': line.pLast ? 'auto' : 'justify',
-                'padding-top': line.pFirst ? `${bookStore.readPGap}px` : '0px',
+                'padding-top':
+                  !line.isTitle && line.pFirst
+                    ? `${bookStore.readPGap}px`
+                    : '0px',
+                'padding-bottom':
+                  line.isTitle && line.pLast
+                    ? `${bookStore.readPGap * 1.3}px`
+                    : '0px',
+                backgroundColor:
+                  ttsStore.isReading &&
+                  ttsStore.slideReadingContent?.[0].pIndex === line.pIndex
+                    ? 'rgba(128, 128, 128, 0.5)'
+                    : '',
               }"
             >
               {{ line.text }}
@@ -680,17 +661,13 @@ onBeforeUnmount(() => {
           </p>
           <div class="flex flex-nowrap gap-1">
             <span>
-              {{ pageNo }}/{{
-                typeof readingPagedContent === "string"
-                  ? "1"
-                  : readingPagedContent?.content.length || 1
-              }}
+              {{ pageNo }}/{{ readingPagedContent?.content.length || 1 }}
             </span>
             <span v-if="chapterLists">
               {{
                 (
                   ((chapterLists.findIndex(
-                    (chapter) => chapter.id === readingChapter?.id
+                    (chapter) => chapter.id === readingChapter?.id,
                   ) || 0) /
                     chapterLists.length) *
                   100
@@ -707,10 +684,7 @@ onBeforeUnmount(() => {
       class="bottom fixed bottom-0 left-0 z-[6] w-full flex flex-col p-2 pb-[50px] bg-[#1f1f1f] text-white transition"
     >
       <div class="flex items-center gap-[10px]">
-        <div
-          class="text-sm w-[50px] van-haptics-feedback"
-          @click="chapterPrev"
-        >
+        <div class="text-sm w-[50px] van-haptics-feedback" @click="chapterPrev">
           上一章
         </div>
         <van-slider
@@ -720,12 +694,9 @@ onBeforeUnmount(() => {
           :max="
             readingPagedContent ? readingPagedContent.content.length - 1 : 0
           "
-          @change="(val) => (chapterPage = val)"
+          @change="(val) => toChapterPage(val)"
         />
-        <div
-          class="text-sm w-[50px] van-haptics-feedback"
-          @click="chapterNext"
-        >
+        <div class="text-sm w-[50px] van-haptics-feedback" @click="chapterNext">
           下一章
         </div>
       </div>
@@ -734,33 +705,25 @@ onBeforeUnmount(() => {
           class="flex flex-col gap-1 items-center van-haptics-feedback p-2"
           @click="() => emit('openChapterPopup')"
         >
-          <Icon
-            icon="tabler:list"
-            width="20"
-            height="20"
-          />
+          <Icon icon="tabler:list" width="20" height="20" />
           章节
         </div>
+        <MobileBookTTSButton
+          :reading-paged-content="readingPagedContent?.content || [[]]"
+          :onPlay="() => emit('playTts')"
+        ></MobileBookTTSButton>
         <div
           class="flex flex-col gap-1 items-center van-haptics-feedback p-2"
           @click="() => (showSettingDialog = true)"
         >
-          <Icon
-            icon="ci:font"
-            width="20"
-            height="20"
-          />
+          <Icon icon="ci:font" width="20" height="20" />
           界面
         </div>
         <div
           class="flex flex-col gap-1 items-center van-haptics-feedback p-2"
           @click="() => (showReadSettingDialog = true)"
         >
-          <Icon
-            icon="tabler:settings"
-            width="20"
-            height="20"
-          />
+          <Icon icon="tabler:settings" width="20" height="20" />
           设置
         </div>
       </div>
@@ -776,10 +739,7 @@ onBeforeUnmount(() => {
       }"
     >
       <van-list>
-        <template
-          v-for="item in book?.chapters"
-          :key="item.id"
-        >
+        <template v-for="item in book?.chapters" :key="item.id">
           <div
             class="flex justify-start items-center text-sm gap-2 p-2 flex-nowrap select-none van-haptics-feedback"
             :class="{
@@ -835,11 +795,7 @@ onBeforeUnmount(() => {
             <span class="text-white">字体大小</span>
           </template>
           <template #value>
-            <van-stepper
-              v-model="bookStore.fontSize"
-              min="10"
-              max="40"
-            />
+            <van-stepper v-model="bookStore.fontSize" min="10" max="40" />
           </template>
         </van-cell>
         <van-cell class="bg-[#1f1f1f]">
@@ -861,11 +817,7 @@ onBeforeUnmount(() => {
             <span class="text-white">段间距</span>
           </template>
           <template #value>
-            <van-stepper
-              v-model="bookStore.readPGap"
-              min="0"
-              max="30"
-            />
+            <van-stepper v-model="bookStore.readPGap" min="0" max="30" />
           </template>
         </van-cell>
         <van-cell class="bg-[#1f1f1f]">
@@ -873,11 +825,7 @@ onBeforeUnmount(() => {
             <span class="text-white">左右边距</span>
           </template>
           <template #value>
-            <van-stepper
-              v-model="bookStore.paddingX"
-              min="0"
-              max="60"
-            />
+            <van-stepper v-model="bookStore.paddingX" min="0" max="60" />
           </template>
         </van-cell>
         <van-cell class="bg-[#1f1f1f]">
@@ -889,10 +837,7 @@ onBeforeUnmount(() => {
           </template>
         </van-cell>
         <div class="pb-2">文字颜色和背景</div>
-        <div
-          v-horizontal-scroll
-          class="flex gap-2 overflow-x-auto"
-        >
+        <div v-horizontal-scroll class="flex gap-2 overflow-x-auto">
           <div
             v-for="theme in bookStore.themes"
             :key="JSON.stringify(theme)"
@@ -935,10 +880,7 @@ onBeforeUnmount(() => {
             <van-switch v-model="bookStore.fullScreenClickToNext" />
           </template>
         </van-cell>
-        <van-cell
-          v-if="displayStore.isAndroid"
-          class="bg-[#1f1f1f]"
-        >
+        <van-cell v-if="displayStore.isAndroid" class="bg-[#1f1f1f]">
           <template #title>
             <span class="text-white">保持屏幕常亮</span>
           </template>
