@@ -35,6 +35,7 @@ const displayStore = useDisplayStore();
   <div class="relative h-full flex flex-col">
     <van-nav-bar left-arrow @click-left="() => emit('back')" />
     <main
+      v-remember-scroll
       v-if="book"
       ref="content"
       class="grow flex flex-col items-center overflow-y-auto p-4 bg-[--van-background-3] select-none"
@@ -83,12 +84,10 @@ const displayStore = useDisplayStore();
       </van-row>
       <div
         v-if="book.chapters"
-        class="p-2 mt-4 shadow-md rounded text-[--van-text-color] lg:w-[80%]"
+        class="w-full p-2 mt-4 shadow-md rounded text-[--van-text-color] lg:w-[80%]"
       >
         <div class="w-full flex justify-between gap-2 items-center">
-          <p class="font-bold ml-6">
-            共有{{ book.chapters.length }} 章
-          </p>
+          <p class="font-bold ml-6">共有{{ book.chapters.length }} 章</p>
           <div class="flex gap-2 items-center">
             <BookShelfButton :book="book" />
             <p class="mr-1">

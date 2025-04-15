@@ -217,7 +217,6 @@ async function exitFullScreen() {
   } else {
     await getCurrentWindow().setFullscreen(false);
     try {
-      console.log('fullscreen?', player.value?.isFullscreen());
       player.value?.exitFullscreen();
     } catch (error) {
       console.warn('exitFullScreen error', error);
@@ -353,7 +352,7 @@ function mountAndroidGuesture(needPan = true) {
       dragMovement.value = [0, 0];
     });
     manager.on('panVerticalstart', async (e) => {
-      if (e.center.y < 20) return; // 最顶部不响应
+      if (e.center.y < 100) return; // 最顶部不响应
       if (!isTargetElement(e.target)) return;
       dragMovement.value = [e.deltaX, e.deltaY];
       isDragging.value = true;

@@ -22,6 +22,7 @@ import { router } from './router';
 
 import HorizontalScrollDirective from './utils/directives/horizontalScroll';
 import RememberScrollDirective from './utils/directives/rememberScroll';
+import HoverDelay from './utils/directives/hoverDelay';
 // Vuetify
 import 'vuetify/styles';
 import 'vant/es/toast/style';
@@ -56,4 +57,5 @@ createApp(App)
   .use(router)
   .directive('remember-scroll', RememberScrollDirective)
   .directive('horizontal-scroll', HorizontalScrollDirective)
+  .directive('hover-delay', HoverDelay)
   .mount('#app');

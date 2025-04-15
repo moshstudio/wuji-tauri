@@ -29,7 +29,7 @@
     "store:allow-length",
     "store:allow-reset",
     "fetch-plugin:default",
-    "proxy-plugin:allow-get-proxy-url",
+    "proxy-plugin:allow-get-m3u8-url",
     "os:default",
     "core:window:allow-set-min-size",
     "core:window:allow-destroy",

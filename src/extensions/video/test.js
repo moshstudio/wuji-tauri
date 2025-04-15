@@ -129,7 +129,7 @@ class TestVideoExtension extends VideoExtension {
     //   };
     // }
     return {
-      url: await this.getProxyServerUrl(episode.url, { 'user-agent': this.ua }),
+      url: await this.getM3u8ProxyUrl(episode.url, { 'user-agent': this.ua }),
       isLive: true,
     };
   }

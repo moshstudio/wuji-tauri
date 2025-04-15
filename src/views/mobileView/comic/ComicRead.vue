@@ -2,9 +2,7 @@
 import type { ComicChapter, ComicContent, ComicItem } from '@/extensions/comic';
 
 import type { ComicSource } from '@/types';
-import type {
-  PropType,
-} from 'vue';
+import type { PropType } from 'vue';
 import ComicShelfButton from '@/components/ComicShelfButton.vue';
 import LoadImage from '@/components/LoadImage.vue';
 import { useComicStore, useDisplayStore } from '@/store';
@@ -12,13 +10,7 @@ import ComicShelf from '@/views/comic/ComicShelf.vue';
 import { Icon } from '@iconify/vue';
 import { useScroll } from '@vueuse/core';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
-import {
-  onActivated,
-  onDeactivated,
-  onMounted,
-  ref,
-  watch,
-} from 'vue';
+import { onActivated, onDeactivated, onMounted, ref, watch } from 'vue';
 
 const emit = defineEmits<{
   (e: 'back', checkShelf?: boolean): void;
@@ -91,27 +83,6 @@ function chapterNext() {
   emit('nextChapter');
 }
 
-let savedScrollPosition = 0;
-
-onMounted(() => {
-  const el: HTMLElement | null = document.querySelector(`.scroll-container`);
-  if (el) {
-    const { y } = useScroll(el);
-    // 组件停用时保存滚动位置
-    onDeactivated(() => {
-      savedScrollPosition = y.value;
-    });
-
-    // 组件激活时恢复滚动位置
-    onActivated(() => {
-      el.scrollTo({
-        top: savedScrollPosition,
-        behavior: 'instant',
-      });
-    });
-  }
-});
-
 const showMenu = ref(false);
 // watch(
 //   showMenu,
@@ -155,10 +126,7 @@ const showMenu = ref(false);
             @click="() => (showSwitchSourceDialog = true)"
           />
 
-          <ComicShelfButton
-            :comic="comic"
-            :reading-chapter="readingChapter"
-          />
+          <ComicShelfButton :comic="comic" :reading-chapter="readingChapter" />
         </div>
       </div>
       <div
@@ -173,57 +141,56 @@ const showMenu = ref(false);
         </div>
       </div>
     </div>
-    <div class="scroll-container flex h-full overflow-y-auto w-full">
+    <div
+      v-remember-scroll
+      class="comic-scroll-container flex h-full overflow-y-auto w-full"
+    >
       <div
-        v-if="readingContent"
         id="comic-read-content"
-        class="w-full relative overflow-y-auto text-justify py-2 leading-[0] text-[--van-text-color]"
+        class="w-full relativ text-justify py-2 leading-[0] text-[--van-text-color]"
         @click="() => (showMenu = !showMenu)"
       >
         <div
-          v-for="(item, index) in readingContent.photos"
-          v-if="readingContent"
+          v-for="(item, index) in readingContent?.photos"
           :key="index"
           class="w-full min-h-[50px] text-center leading-[0]"
         >
           <LoadImage
             :src="item"
-            :headers="readingContent.photosHeaders"
+            :headers="readingContent?.photosHeaders"
             fit="contain"
             lazy-load
           />
         </div>
-
-        <van-floating-bubble
-          v-model:offset="bubbleOffset"
-          axis="xy"
-          magnetic="x"
-          :gap="6"
-          teleport=".scroll-container"
-        >
-          <div
-            class="flex flex-col h-[90px] gap-[0px] items-center leading-[0]"
-          >
-            <van-button
-              icon="arrow-up"
-              square
-              hairline
-              size="small"
-              class="w-[40px] h-[45px]"
-              @click="() => emit('prevChapter')"
-            />
-            <van-button
-              icon="arrow-down"
-              square
-              hairline
-              size="small"
-              class="w-[40px] h-[45px]"
-              @click="() => emit('nextChapter')"
-            />
-          </div>
-        </van-floating-bubble>
       </div>
+      <van-floating-bubble
+        v-model:offset="bubbleOffset"
+        axis="xy"
+        magnetic="x"
+        :gap="6"
+        class="h-[90px] w-[40px] border border-[var(--van-border-color)] bg-[color:rgb(var(--van-background)/0.5)] active:opacity-100"
+      >
+        <div class="flex flex-col h-[90px] gap-[0px] items-center leading-[0]">
+          <van-button
+            icon="arrow-up"
+            square
+            hairline
+            size="small"
+            class="w-[40px] h-[45px]"
+            @click="() => emit('prevChapter')"
+          />
+          <van-button
+            icon="arrow-down"
+            square
+            hairline
+            size="small"
+            class="w-[40px] h-[45px]"
+            @click="() => emit('nextChapter')"
+          />
+        </div>
+      </van-floating-bubble>
     </div>
+
     <!-- 底部菜单 -->
     <div
       class="bottom fixed bottom-0 left-0 z-[6] w-full flex flex-col p-2 pb-[50px] bg-[#1f1f1f] text-white transition"
@@ -307,9 +274,7 @@ const showMenu = ref(false);
       class="setting-dialog bg-[#1f1f1f] text-white"
     >
       <template #title>
-        <div class="text-white">
-          界面设置
-        </div>
+        <div class="text-white">界面设置</div>
       </template>
       <div class="flex flex-col p-2 text-sm">
         <van-cell v-if="displayStore.isAndroid" class="bg-[#1f1f1f]">
@@ -323,8 +288,7 @@ const showMenu = ref(false);
                 (v) => {
                   if (v) {
                     keepScreenOn(true);
-                  }
-                  else {
+                  } else {
                     keepScreenOn(false);
                   }
                 }
@@ -360,14 +324,5 @@ const showMenu = ref(false);
   .bottom {
     transform: translateY(100%);
   }
-}
-:deep(.van-floating-bubble) {
-  height: 90px;
-  width: 40px;
-  border: 1px solid var(--van-border-color);
-  background-color: rgb(from var(--van-background) r g b / 50%);
-}
-:deep(.van-floating-bubble:active) {
-  opacity: 1;
 }
 </style>

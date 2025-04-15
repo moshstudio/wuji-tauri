@@ -116,6 +116,7 @@ onMounted(() => {
       </template>
     </NavBar>
     <div
+      v-remember-scroll
       class="scroll-container flex-grow flex flex-col gap-0 items-center overflow-y-auto min-w-[400px] w-[95%] sm:w-[90%] md:w-[85%] lg:w-[75%] focus:outline-none focus:border-none"
       tabindex="0"
       @keydown.right.stop="() => emit('nextChapter')"
@@ -251,14 +252,10 @@ onMounted(() => {
       class="setting-dialog bg-[#1f1f1f] text-white"
     >
       <template #title>
-        <div class="text-white">
-          界面设置
-        </div>
+        <div class="text-white">界面设置</div>
       </template>
       <div class="flex flex-col p-2 text-sm">
-        <div class="pb-2">
-          字体和样式
-        </div>
+        <div class="pb-2">字体和样式</div>
       </div>
     </van-dialog>
     <ComicShelf />

@@ -32,4 +32,4 @@ export interface LineData {
   textIndex: number;
   text: string;
 }
-export type ReaderResult = string | LineData[] | LineData[][];
+export type ReaderResult = LineData[][];

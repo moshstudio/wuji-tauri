@@ -38,6 +38,7 @@ const showAddDialog = defineModel('showAddDialog', {
       @click-right="() => emit('collect')"
     />
     <main
+      v-remember-scroll
       ref="content"
       class="grow flex flex-col overflow-y-auto bg-[--van-background-3] select-none"
     >

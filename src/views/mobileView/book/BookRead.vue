@@ -342,7 +342,6 @@ function pagePrev() {
     slideTimer = null;
     if (ttsStore.isReading) {
       // 刷新阅读状态
-      console.log('prev page');
       ttsStore.stop();
       // 前一页防止pIndex冲突
       ttsStore.slideReadingContent = undefined;
@@ -376,7 +375,6 @@ function pageNext() {
     slideTimer = null;
     if (ttsStore.isReading) {
       // 刷新阅读状态
-      console.log('next page');
       ttsStore.stop();
       emit('playTts');
     }

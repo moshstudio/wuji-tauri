@@ -36,6 +36,7 @@ const displayStore = useDisplayStore();
     <van-nav-bar left-arrow @click-left="() => emit('back')" />
     <main
       v-if="comic"
+      v-remember-scroll
       ref="content"
       class="grow flex flex-col items-center overflow-y-auto p-4 bg-[--van-background-3] select-none"
     >
@@ -82,12 +83,10 @@ const displayStore = useDisplayStore();
       </van-row>
       <div
         v-if="comic.chapters"
-        class="p-2 mt-4 text-[--van-text-color] lg:w-[80%]"
+        class="w-full p-2 mt-4 text-[--van-text-color] lg:w-[80%]"
       >
         <div class="w-full flex justify-between gap-2 items-center">
-          <p class="font-bold ml-6">
-            共有{{ comic.chapters.length }} 章
-          </p>
+          <p class="font-bold ml-6">共有{{ comic.chapters.length }} 章</p>
           <div class="flex gap-2 items-center">
             <ComicShelfButton :comic="comic" />
             <p class="mr-1">

@@ -9,7 +9,7 @@ import {
   toProxyUrl,
 } from '@/utils';
 import { fetch } from '@/utils/fetch';
-import { getProxyServerUrl } from '@/utils/proxyUrl';
+import { getM3u8ProxyUrl } from '@/utils/proxyUrl';
 import CryptoJS from 'crypto-js';
 import * as iconv from 'iconv-lite';
 import _ from 'lodash';
@@ -45,7 +45,7 @@ abstract class Extension {
   fetch: typeof fetch;
   iconv: typeof iconv;
   m3u8Parser: typeof m3u8Parser;
-  getProxyServerUrl: typeof getProxyServerUrl;
+  getM3u8ProxyUrl: typeof getM3u8ProxyUrl;
   _: typeof _;
   fetchDom: (
     input: URL | Request | string,
@@ -179,7 +179,7 @@ abstract class Extension {
     this.forge = forge;
     this.iconv = iconv;
     this.m3u8Parser = m3u8Parser;
-    this.getProxyServerUrl = getProxyServerUrl;
+    this.getM3u8ProxyUrl = getM3u8ProxyUrl;
     this._ = _;
     this.fetch = fetch;
     this.fetchDom = async (

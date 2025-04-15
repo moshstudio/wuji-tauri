@@ -12,7 +12,7 @@ fn main() {
             )
             .plugin(
                 "proxy-plugin",
-                tauri_build::InlinedPlugin::new().commands(&["get_proxy_url"]),
+                tauri_build::InlinedPlugin::new().commands(&["get_m3u8_url"]),
             ),
     )
     .expect("failed to run tauri-build");

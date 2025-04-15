@@ -301,7 +301,6 @@ export const useTTSStore = defineStore('ttsStore', () => {
   };
   const startAutoStopTimer = () => {
     autoStopOptions.startTime = Date.now();
-    console.log('开始自动停止阅读', autoStopOptions.duration, '分钟');
   };
   const stop = () => {
     if (audioPlayer.value) {

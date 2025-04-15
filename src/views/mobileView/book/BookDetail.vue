@@ -33,6 +33,7 @@ const isAscending = defineModel('isAscending', {
     <main
       v-if="book"
       ref="content"
+      v-remember-scroll
       class="grow flex flex-col items-center w-full overflow-y-auto p-2 bg-[--van-background-2] select-none"
     >
       <div class="flex flex-col gap-1 p-2 w-full shadow-md rounded">
@@ -86,9 +87,7 @@ const isAscending = defineModel('isAscending', {
 
       <div v-if="book.chapters" class="mt-4 w-full text-[--van-text-color]">
         <van-row align="center" justify="space-between">
-          <p class="font-bold ml-6">
-            共有{{ book.chapters.length }} 章
-          </p>
+          <p class="font-bold ml-6">共有{{ book.chapters.length }} 章</p>
           <div class="flex gap-2 items-center">
             <BookShelfButton :book="book" />
           </div>

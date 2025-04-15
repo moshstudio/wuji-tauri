@@ -192,10 +192,7 @@ export const useSongStore = defineStore("song", () => {
 
     onMounted() {
       onMounted(() => {
-        audioRef.value = document.createElement("audio");
-        audioRef.value.style.width = "0px";
-        audioRef.value.style.height = "0px";
-        document.body.appendChild(audioRef.value);
+        audioRef.value = new Audio();
         audioRef.value.volume = audioVolume.value;
 
         // audioRef.value.oncanplay = () => {

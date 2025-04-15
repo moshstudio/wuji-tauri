@@ -64,6 +64,10 @@ watch(videoSrc, (_) => {
         type: getStreamType(), // 根据你的直播流类型设置
       },
     ];
+    if (!route.path.includes('/video/detail/')) {
+      // 判断是否还在当前页面
+      videoPlayer.value?.pause();
+    }
   }
 });
 

@@ -219,7 +219,7 @@ fn get_default_http_client() -> reqwest::Client {
 }
 
 #[tauri::command]
-pub(crate) async fn get_proxy_url(
+pub(crate) async fn get_m3u8_url(
     original_url: String,
     headers: HashMap<String, String>,
 ) -> Result<String, String> {

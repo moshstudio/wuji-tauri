@@ -81,8 +81,9 @@ watch(
 
 <template>
   <div
+    v-remember-scroll
     ref="pageBody"
-    class="flex flex-col gap-0 items-center w-full h-full bg-[--van-background-2]"
+    class="flex flex-col gap-0 items-center w-full h-full bg-[--van-background-2] hide-scrollbar"
     :class="[
       displayStore.fullScreenMode
         ? 'overflow-hidden'

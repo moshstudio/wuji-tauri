@@ -52,7 +52,7 @@ let cacheData = {
 };
 
 // 获取指定元素的 CSS 样式
-function getStyle(attr) {
+const getStyle = (attr) => {
   if (!inBrowser) {
     return '';
   }
@@ -60,39 +60,56 @@ function getStyle(attr) {
     return getComputedStyle(document.documentElement)[attr];
   }
   return document.documentElement.currentStyle[attr]; // ie
-}
+};
 
 // 删除字符串中的空格
-function trimAll(str) {
+const trimAll = (str) => {
   if (str) {
-    return String(str).replace(/\s+/g, '');
+    return String(str).replace(/[\s]+/gim, '');
   }
   return '';
-}
+};
+
+const emptyLine = (content) => {
+  return [
+    [
+      {
+        isTitle: false,
+        center: false,
+        pFirst: true,
+        pLast: true,
+        pIndex: 0,
+        lineIndex: 0,
+        textIndex: 0,
+        text: content,
+      },
+    ],
+  ];
+};
 
 /**
  * 把文本内容转化成特定数组输出
  * @param {string} content 章节内容
- * @param {object} option 详细参数
+ * @param {Object} option 详细参数
  * @return {Array} [] 输出转化好的行数组
  */
 function Reader(content, option) {
-  const { type, width, height, fontFamily, fontSize, title, titleSize }
-    = option;
+  const { type, width, height, fontFamily, fontSize, title, titleSize } =
+    option;
   if (!content) {
-    return '无内容';
+    return emptyLine('无内容')
   }
   if (!width || Number(width) <= 0) {
-    return '请传入容器宽度，值需要大于 0';
+    return emptyLine('请传入容器宽度，值需要大于 0')
   }
   if (type === 'page' && (!height || Number(height) <= 0)) {
-    return '请传入容器高度，值需要大于 0';
+    return emptyLine('请传入容器高度，值需要大于 0')
   }
   if (!fontSize || Number(fontSize) <= 0) {
-    return '请传入章节内容字号大小，值需要大于 0';
+    return emptyLine('请传入章节内容字号大小，值需要大于 0')
   }
   if (title && (!titleSize || Number(titleSize) <= 0)) {
-    return '请传入章节标题字号大小，值需要大于 0';
+    return emptyLine('请传入章节标题字号大小，值需要大于 0')
   }
   options = { ...options, ...option };
 
@@ -117,6 +134,7 @@ function Reader(content, option) {
   }
 
   if (type === 'line') {
+    // 不要使用line
     return splitContent2lines(content); // 把内容拆成行数组
   }
 
@@ -144,7 +162,7 @@ function splitContent2lines(content) {
       }
       return trimAll(v);
     })
-    .filter(v => v);
+    .filter((v) => v);
 
   // 内容无标题需要额外加上标题
   if (!hasTitle) {
@@ -189,7 +207,7 @@ function p2line(pText, index, maxLen) {
   const isTitle = pText === title;
   let p = pText;
   let tag = 0;
-  const lines = [];
+  let lines = [];
 
   while (p) {
     tag += 1;
@@ -203,8 +221,7 @@ function p2line(pText, index, maxLen) {
     if (!isTitle && p.length <= sliceLen) {
       // 少于行最大字数直接独立成行
       p = '';
-    }
-    else {
+    } else {
       if (!fast || isTitle) {
         // 计算加速
         lineText = getText(
@@ -265,7 +282,7 @@ function p2line(pText, index, maxLen) {
 
 /**
  * 计算1行刚好能放下的文字
- * @param {object} params 参数
+ * @param {Object} params 参数
  * @param {string} text 文本内容
  * @param {boolean} [base] 是否是最大标准字数计算
  * @param {number} [fontW] 计算出来的行文本宽度
@@ -332,7 +349,7 @@ function getTextWidth(text, fontSize, fontFamily, weight) {
     canvas = document.createElement('canvas');
     ctx = canvas.getContext('2d');
   }
-  ctx.font = `${weight || 'normal'} ${fontSize}px ${fontFamily}`;
+  ctx.font = `${weight ? weight : 'normal'} ${fontSize}px ${fontFamily}`;
   const { width } = ctx.measureText(text);
   return width;
 }
@@ -390,7 +407,7 @@ function joinLine2Pages(lines) {
   // console.log(333, '1页能放多少标准行', cacheData.maxLine)
 
   let pageLines = lines.slice(0);
-  const pages = [];
+  let pages = [];
   while (pageLines.length > 0) {
     const page = getPage(pageLines, cacheData.maxLine);
     pages.push(page);
@@ -501,7 +518,7 @@ function getPageHeight(lines) {
  * 标点符号处理
  * @param {string} line 单行文字
  * @param {string} p 减去 line 的段落文字
- * @return {object} {} 经过标点处理后的对象
+ * @return {Object} {} 经过标点处理后的对象
  */
 function transDot(line, p) {
   let transLine = line; // 转化后的行文字
@@ -534,7 +551,7 @@ function transDot(line, p) {
  * 数字、英文处理
  * @param {string} line 单行文字
  * @param {string} p 减去 line 的段落文字
- * @return {object} {} 经过处理后的对象
+ * @return {Object} {} 经过处理后的对象
  */
 function transNumEn(line, p, center) {
   const pFirst = p.slice(0, 1); // 下行行首字符
@@ -543,7 +560,7 @@ function transNumEn(line, p, center) {
   let transP = p; // 转化过后剩下的段文字
   let canCenter = center; // 是否可两端对齐
 
-  if (/\d/.test(pFirst)) {
+  if (/\d/gi.test(pFirst)) {
     // 下行行首是数字
     const endNum = getEndNum(line); // 本行尾连续数字数量
     if (endNum && endNum.length > 0) {
@@ -553,8 +570,7 @@ function transNumEn(line, p, center) {
         transLen = len;
       }
     }
-  }
-  else if (/[a-z]/i.test(pFirst)) {
+  } else if (/[a-zA-Z]/gi.test(pFirst)) {
     // 下行行首是英文
     const endEn = getEndEn(line); // 本行尾连续英文数量
     if (endEn && endEn.length > 0) {
@@ -628,18 +644,18 @@ function getEndDot(str) {
   // 35 个结束符 ，。：；！？、）》」】, . : ; ! ? ^ ) > } ] … ~ % · ’ ” ` - — _ | \ /
   // 15 个开始符（《「【 ( < { [ ‘ “ @ # ￥ $ & uff08
   return str.match(
-    /[\uFF0C|\u3002\uFF1A\uFF1B\uFF01\uFF1F\u3001\uFF09\u300B\u300D\u3011\u002C\u002E\u003A\u003B\u0021\u003F\u005E\u0029\u003E\u007D\u005D\u2026\u007E\u0025\u00B7\u2019\u201D\u0060\u002D\u2014\u005F\u005C\u002F\uFF08\u300A\u300C\u3010\u0028\u003C\u007B\u005B\u2018\u201C\u0040\u0023\uFFE5\u0024\u0026]+$/g,
+    /[\uff0c|\u3002|\uff1a|\uff1b|\uff01|\uff1f|\u3001|\uff09|\u300b|\u300d|\u3011|\u002c|\u002e|\u003a|\u003b|\u0021|\u003f|\u005e|\u0029|\u003e|\u007d|\u005d|\u2026|\u007e|\u0025|\u00b7|\u2019|\u201d|\u0060|\u002d|\u2014|\u005f|\u007c|\u005c|\u002f\uff08|\u300a|\u300c|\u3010|\u0028|\u003c|\u007b|\u005b|\u2018|\u201c|\u0040|\u0023|\uffe5|\u0024|\u0026]+$/gi,
   );
 }
 
 // 获取字符串结尾连续数字
 function getEndNum(str) {
-  return str.match(/\d+$/g);
+  return str.match(/[0-9]+$/gi);
 }
 
 // 获取字符串结尾连续英文
 function getEndEn(str) {
-  return str.match(/[a-z]+$/gi);
+  return str.match(/[a-zA-Z]+$/gi);
 }
 export default Reader;
 

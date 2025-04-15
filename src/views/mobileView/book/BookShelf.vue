@@ -30,14 +30,12 @@ const { bookShelf, bookChapterRefreshing } = storeToRefs(shelfStore);
 
 // 计算还有多少章没读
 function unreadCount(book: BookItemInShelf): number | undefined {
-  if (!book.lastReadChapter || !book.book.chapters?.length)
-    return undefined;
+  if (!book.lastReadChapter || !book.book.chapters?.length) return undefined;
   const index = book.book.chapters.findIndex(
-    chapter => chapter.id === book.lastReadChapter!.id,
+    (chapter) => chapter.id === book.lastReadChapter!.id,
   );
   const num = book.book.chapters.length - index - 1;
-  if (num <= 0)
-    return undefined;
+  if (num <= 0) return undefined;
   return num;
 }
 function sourceName(book: BookItemInShelf) {
@@ -49,6 +47,7 @@ function sourceName(book: BookItemInShelf) {
 
 <template>
   <van-floating-panel
+    v-remember-scroll="'.van-floating-panel__content'"
     v-model:height="shelfHeight"
     :anchors="shelfAnchors"
     :content-draggable="false"
@@ -68,9 +67,7 @@ function sourceName(book: BookItemInShelf) {
           <LeftPopup />
           <h2 class="text-lg font-bold">
             <slot name="title">
-              <p class="text-[--van-text-color]">
-                书架
-              </p>
+              <p class="text-[--van-text-color]">书架</p>
             </slot>
           </h2>
         </div>

@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import type {
-  VNode,
-} from 'vue';
+import type { VNode } from 'vue';
 import { storeToRefs } from 'pinia';
 import {
   exit_app,
@@ -9,14 +7,7 @@ import {
   set_status_bar,
 } from 'tauri-plugin-commands-api';
 import { showConfirmDialog, showToast } from 'vant';
-import {
-  computed,
-  nextTick,
-  onMounted,
-  reactive,
-  ref,
-  watch,
-} from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { router } from './router';
 import {
@@ -42,8 +33,8 @@ const videoShelfStore = useVideoShelfStore();
 const activeKey = ref(0);
 const route = useRoute();
 
-const { photoPath, songPath, bookPath, comicPath, videoPath, tabBarPages }
-  = storeToRefs(displayStore);
+const { photoPath, songPath, bookPath, comicPath, videoPath, tabBarPages } =
+  storeToRefs(displayStore);
 const _pages = reactive({
   Photo: {
     name: 'Photo',
@@ -78,8 +69,8 @@ const _pages = reactive({
 });
 const pages = computed(() => {
   return tabBarPages.value
-    .filter(page => page.enable && page.name !== 'Home')
-    .map(page => _pages[page.name as keyof typeof _pages]);
+    .filter((page) => page.enable && page.name !== 'Home')
+    .map((page) => _pages[page.name as keyof typeof _pages]);
 });
 
 function updateActiveKey(newPath?: string) {
@@ -94,25 +85,20 @@ function updateActiveKey(newPath?: string) {
   }
   if (newPath.startsWith('/photo')) {
     photoPath.value = newPath;
-    activeKey.value = pages.value.findIndex(page => page.name === 'Photo');
-  }
-  else if (newPath.startsWith('/song')) {
+    activeKey.value = pages.value.findIndex((page) => page.name === 'Photo');
+  } else if (newPath.startsWith('/song')) {
     songPath.value = newPath;
-    activeKey.value = pages.value.findIndex(page => page.name === 'Song');
-  }
-  else if (newPath.startsWith('/book')) {
+    activeKey.value = pages.value.findIndex((page) => page.name === 'Song');
+  } else if (newPath.startsWith('/book')) {
     bookPath.value = newPath;
-    activeKey.value = pages.value.findIndex(page => page.name === 'Book');
-  }
-  else if (newPath.startsWith('/comic')) {
+    activeKey.value = pages.value.findIndex((page) => page.name === 'Book');
+  } else if (newPath.startsWith('/comic')) {
     comicPath.value = newPath;
-    activeKey.value = pages.value.findIndex(page => page.name === 'Comic');
-  }
-  else if (newPath.startsWith('/video')) {
+    activeKey.value = pages.value.findIndex((page) => page.name === 'Comic');
+  } else if (newPath.startsWith('/video')) {
     videoPath.value = newPath;
-    activeKey.value = pages.value.findIndex(page => page.name === 'Video');
-  }
-  else {
+    activeKey.value = pages.value.findIndex((page) => page.name === 'Video');
+  } else {
   }
 }
 // 记录上一次的页面路径
@@ -126,12 +112,10 @@ watch(
     const path = route.name;
     if (path === 'BookRead') {
       set_status_bar('#000000', 'light');
-    }
-    else {
+    } else {
       if (displayStore.isDark) {
         set_status_bar('#000000', 'light');
-      }
-      else {
+      } else {
         set_status_bar('#ffffff', 'dark');
       }
     }
@@ -175,41 +159,33 @@ window.androidBackCallback = async () => {
     if (now - backTs.value > 1000) {
       backTs.value = now;
       showToast('再按一次退出');
-    }
-    else {
+    } else {
       await exit_app();
     }
   };
   const path = route.name?.toString();
   if (path === 'PhotoDetail') {
     router.push({ name: 'Photo' });
-  }
-  else if (path === 'SongPlaylist') {
+  } else if (path === 'SongPlaylist') {
     if (displayStore.showPlayingPlaylist) {
       // 关闭播放列表
       displayStore.showPlayingPlaylist = false;
-    }
-    else if (displayStore.showPlayView) {
+    } else if (displayStore.showPlayView) {
       // 关闭播放页
       displayStore.showPlayView = false;
-    }
-    else if (displayStore.showSongShelf) {
+    } else if (displayStore.showSongShelf) {
       displayStore.showSongShelf = false;
-    }
-    else {
+    } else {
       router.push({ name: 'Song' });
     }
-  }
-  else if (path === 'BookDetail') {
+  } else if (path === 'BookDetail') {
     if (displayStore.showBookShelf) {
       // 关闭书架
       displayStore.showBookShelf = false;
-    }
-    else {
+    } else {
       router.push({ name: 'Book' });
     }
-  }
-  else if (path === 'BookRead') {
+  } else if (path === 'BookRead') {
     if (bookStore.readingBook) {
       if (!bookShelfStore.isBookInShelf(bookStore.readingBook)) {
         try {
@@ -226,23 +202,19 @@ window.androidBackCallback = async () => {
               );
             }
           }
-        }
-        catch (error) {}
+        } catch (error) {}
       }
     }
     displayStore.showTabBar = true;
     router.push({ name: 'Book' });
-  }
-  else if (path === 'ComicDetail') {
+  } else if (path === 'ComicDetail') {
     if (displayStore.showComicShelf) {
       // 关闭书架
       displayStore.showComicShelf = false;
-    }
-    else {
+    } else {
       router.push({ name: 'Comic' });
     }
-  }
-  else if (path === 'ComicRead') {
+  } else if (path === 'ComicRead') {
     if (comicStore.readingComic) {
       if (!comicShelfStore.isComicInShelf(comicStore.readingComic)) {
         try {
@@ -259,78 +231,60 @@ window.androidBackCallback = async () => {
               );
             }
           }
-        }
-        catch (error) {}
+        } catch (error) {}
       }
     }
     displayStore.showTabBar = true;
     router.push({ name: 'Comic' });
-  }
-  else if (path === 'VideoDetail') {
+  } else if (path === 'VideoDetail') {
     if (displayStore.showVideoShelf) {
       // 关闭收藏
       displayStore.showVideoShelf = false;
-    }
-    else {
+    } else {
       router.push({ name: 'Video' });
     }
-  }
-  else if (path === 'Photo') {
+  } else if (path === 'Photo') {
     if (displayStore.showPhotoShelf) {
       displayStore.showPhotoShelf = false;
-    }
-    else {
+    } else {
       await checkBack();
     }
-  }
-  else if (path === 'Song') {
+  } else if (path === 'Song') {
     if (displayStore.showPlayingPlaylist) {
       // 关闭播放列表
       displayStore.showPlayingPlaylist = false;
-    }
-    else if (displayStore.showPlayView) {
+    } else if (displayStore.showPlayView) {
       // 关闭播放页
       displayStore.showPlayView = false;
-    }
-    else if (displayStore.showSongShelfDetail) {
+    } else if (displayStore.showSongShelfDetail) {
       // 收藏的歌单的详情
       displayStore.showSongShelfDetail = false;
-    }
-    else if (displayStore.showSongShelf) {
+    } else if (displayStore.showSongShelf) {
       displayStore.showSongShelf = false;
-    }
-    else {
+    } else {
       await checkBack();
     }
-  }
-  else if (path === 'Book') {
+  } else if (path === 'Book') {
     if (displayStore.showBookShelf) {
       displayStore.showBookShelf = false;
-    }
-    else {
+    } else {
       await checkBack();
     }
-  }
-  else if (path === 'Comic') {
+  } else if (path === 'Comic') {
     if (displayStore.showComicShelf) {
       displayStore.showComicShelf = false;
-    }
-    else {
+    } else {
       await checkBack();
     }
-  }
-  else if (path === 'Video') {
+  } else if (path === 'Video') {
     if (displayStore.showVideoShelf) {
       displayStore.showVideoShelf = false;
-    }
-    else {
+    } else {
       await checkBack();
     }
-  }
-  else if (!path || path === 'Home') {
+  } else if (!path || path === 'Home') {
     await checkBack();
-  }
-  else {
+  } else {
     showToast(`未定义的返回路径 ${route.path}`);
   }
 };
@@ -346,12 +300,12 @@ window.androidBackCallback = async () => {
       </div>
     </transition>
     <transition
-      enter-active-class="transition-all duration-300 ease-out"
-      enter-from-class="opacity-0 scale-95"
-      enter-to-class="opacity-100 scale-100"
-      leave-active-class="transition-all duration-300 ease-in"
-      leave-from-class="opacity-100 scale-100"
-      leave-to-class="opacity-0 scale-95"
+      enter-active-class="transition-all duration-100 ease-out"
+      enter-from-class="opacity-0 transform translate-y-[50px]"
+      enter-to-class="opacity-100 transform translate-y-0"
+      leave-active-class="transition-all duration-100 ease-in"
+      leave-from-class="opacity-100 transform translate-y-0"
+      leave-to-class="opacity-0 transform translate-y-[50px]"
     >
       <van-tabbar
         v-show="showTabBar"

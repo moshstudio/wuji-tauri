@@ -30,6 +30,7 @@ const content = defineModel('content', { type: HTMLElement });
   <div class="flex flex-col h-full">
     <van-nav-bar left-arrow @click-left="() => emit('back')" />
     <div
+      v-remember-scroll
       ref="content"
       class="flex flex-col px-4 pb-12 bg-[--van-background-2] grow gap-2 w-full overflow-y-auto"
     >

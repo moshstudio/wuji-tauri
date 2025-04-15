@@ -44,8 +44,7 @@ watch(
   (newValue) => {
     if (newValue) {
       shelfDetailHeight.value = shelfDetailAnchors.value[1];
-    }
-    else {
+    } else {
       shelfDetailHeight.value = shelfDetailAnchors.value[0];
     }
   },
@@ -67,6 +66,7 @@ onUnmounted(() => {
 
 <template>
   <van-floating-panel
+    v-remember-scroll="'.van-floating-panel__content'"
     v-model:height="shelfHeight"
     :anchors="shelfAnchors"
     :content-draggable="false"
@@ -86,9 +86,7 @@ onUnmounted(() => {
           <LeftPopup />
           <h2 class="text-lg font-bold">
             <slot name="title">
-              <p class="text-[--van-text-color]">
-                乐库
-              </p>
+              <p class="text-[--van-text-color]">乐库</p>
             </slot>
           </h2>
         </div>
@@ -134,8 +132,8 @@ onUnmounted(() => {
         class="flex items-center gap-2 p-1 rounded cursor-pointer hover:bg-[--van-background] text-[--van-text-color]"
         :style="{
           borderBottomColor:
-            selectedSongShelf?.playlist.id
-            === shelfStore.songLikeShelf.playlist.id
+            selectedSongShelf?.playlist.id ===
+            shelfStore.songLikeShelf.playlist.id
               ? '#1989fa'
               : 'transparent',
         }"
@@ -236,11 +234,11 @@ onUnmounted(() => {
     <div class="flex flex-col gap-1 p-2 text-sm">
       <div
         v-if="
-          selectedSongShelf
-            && selectedSongShelf.playlist
-            && selectedSongShelf.type === SongShelfType.playlist
-            && selectedSongShelf.playlist.list
-            && (selectedSongShelf.playlist.list.totalPage || 0) > 1
+          selectedSongShelf &&
+          selectedSongShelf.playlist &&
+          selectedSongShelf.type === SongShelfType.playlist &&
+          selectedSongShelf.playlist.list &&
+          (selectedSongShelf.playlist.list.totalPage || 0) > 1
         "
         class="flex gap-2"
       >

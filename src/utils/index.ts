@@ -246,7 +246,6 @@ export function useElementResize(
             prevSize = { width, height };
             return;
           }
-          console.log('Element resized:', width, height);
           prevSize = { width, height };
           callback(width, height); // 触发回调，传递尺寸变化
         }

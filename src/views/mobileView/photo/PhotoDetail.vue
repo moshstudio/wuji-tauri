@@ -60,6 +60,7 @@ watch(bubbleOffset, (offset) => {
       @click-right="() => emit('collect')"
     />
     <main
+      v-remember-scroll
       ref="content"
       class="photo-detail grow flex flex-col overflow-y-auto bg-[--van-background-3] select-none"
     >
@@ -121,8 +122,7 @@ watch(bubbleOffset, (offset) => {
           });
           if (!res) {
             showNotify('保存失败');
-          }
-          else {
+          } else {
             showNotify({
               message: '保存成功',
               type: 'success',

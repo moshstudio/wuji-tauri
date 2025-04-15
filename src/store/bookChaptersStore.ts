@@ -5,6 +5,7 @@ import _ from 'lodash';
 import { defineStore } from 'pinia';
 import * as fs from 'tauri-plugin-fs-api';
 import { ref, watch } from 'vue';
+import { SimpleLRUCache } from '@/utils/lruCache';
 
 export const useBookChapterStore = defineStore('bookChapterStore', () => {
   const baseDir = fs.BaseDirectory.AppCache;
@@ -22,6 +23,7 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     }[]
   >([]);
   let inited = false;
+  const lruCache = new SimpleLRUCache<string, string>(50);
   const ensureBase = async () => {
     if (!(await fs.exists(dirName, { baseDir }))) {
       await fs.mkdir(dirName, {
@@ -141,6 +143,9 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     }
     const cache_book_id = genBookCacheId(book);
     const cache_chapter_id = genChapterCacheId(book, chapter);
+    if (lruCache.has(cache_book_id + '/' + cache_chapter_id)) {
+      return lruCache.get(cache_book_id + '/' + cache_chapter_id);
+    }
 
     const find = books.value.find(
       (b) =>
@@ -149,11 +154,13 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     );
     if (find) {
       try {
-        return new TextDecoder().decode(
+        const content = new TextDecoder().decode(
           await fs.readFile(`${dirName}/${cache_book_id}/${cache_chapter_id}`, {
             baseDir,
           }),
         );
+        lruCache.set(cache_book_id + '/' + cache_chapter_id, content);
+        return content;
       } catch (error) {}
     }
   };

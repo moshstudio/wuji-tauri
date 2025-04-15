@@ -30,14 +30,12 @@ const { comicShelf, comicChapterRefreshing } = storeToRefs(shelfStore);
 
 // 计算还有多少章没读
 function unreadCount(comic: ComicItemInShelf): number | undefined {
-  if (!comic.lastReadChapter || !comic.comic.chapters?.length)
-    return undefined;
+  if (!comic.lastReadChapter || !comic.comic.chapters?.length) return undefined;
   const index = comic.comic.chapters.findIndex(
-    chapter => chapter.id === comic.lastReadChapter!.id,
+    (chapter) => chapter.id === comic.lastReadChapter!.id,
   );
   const num = comic.comic.chapters.length - index - 1;
-  if (num <= 0)
-    return undefined;
+  if (num <= 0) return undefined;
   return num;
 }
 function sourceName(comic: ComicItemInShelf) {
@@ -49,6 +47,7 @@ function sourceName(comic: ComicItemInShelf) {
 
 <template>
   <van-floating-panel
+    v-remember-scroll="'.van-floating-panel__content'"
     v-model:height="shelfHeight"
     :anchors="shelfAnchors"
     :content-draggable="false"
@@ -68,9 +67,7 @@ function sourceName(comic: ComicItemInShelf) {
           <LeftPopup />
           <h2 class="text-lg font-bold">
             <slot name="title">
-              <p class="text-[--van-text-color]">
-                书架
-              </p>
+              <p class="text-[--van-text-color]">书架</p>
             </slot>
           </h2>
         </div>

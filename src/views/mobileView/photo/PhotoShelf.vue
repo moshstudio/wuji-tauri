@@ -28,6 +28,7 @@ const shelfHeight = defineModel('shelfHeight', { type: Number, default: 0 });
 
 <template>
   <van-floating-panel
+    v-remember-scroll="'.van-floating-panel__content'"
     v-model:height="shelfHeight"
     :anchors="shelfAnchors"
     :content-draggable="false"
@@ -47,9 +48,7 @@ const shelfHeight = defineModel('shelfHeight', { type: Number, default: 0 });
           <LeftPopup />
           <h2 class="text-lg font-bold">
             <slot name="title">
-              <p class="text-[--van-text-color]">
-                图库
-              </p>
+              <p class="text-[--van-text-color]">图库</p>
             </slot>
           </h2>
         </div>

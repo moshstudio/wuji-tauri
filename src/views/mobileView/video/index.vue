@@ -37,9 +37,12 @@ function search() {
 }
 
 const containers = ref<Array<HTMLElement | undefined>>(
-  Array.from({ length: 2000 }).fill(undefined),
+  Array.from<undefined>({ length: 2000 }).fill(undefined),
 );
-function setContainerRef(el: Element | ComponentPublicInstance | null, index: number) {
+function setContainerRef(
+  el: Element | ComponentPublicInstance | null,
+  index: number,
+) {
   if (el) {
     containers.value[index] = el as HTMLElement;
   }

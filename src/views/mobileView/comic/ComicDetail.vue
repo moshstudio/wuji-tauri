@@ -32,6 +32,7 @@ const isAscending = defineModel('isAscending', {
     <van-nav-bar left-arrow @click-left="() => emit('back')" />
     <main
       v-if="comic"
+      v-remember-scroll
       ref="content"
       class="grow flex flex-col items-center w-full overflow-y-auto p-2 bg-[--van-background-2] select-none"
     >
@@ -86,9 +87,7 @@ const isAscending = defineModel('isAscending', {
 
       <div v-if="comic.chapters" class="mt-4 w-full text-[--van-text-color]">
         <van-row align="center" justify="space-between">
-          <p class="font-bold ml-6">
-            共有{{ comic.chapters.length }} 章
-          </p>
+          <p class="font-bold ml-6">共有{{ comic.chapters.length }} 章</p>
           <div class="flex gap-2 items-center">
             <ComicShelfButton :comic="comic" />
             <!-- <p>
