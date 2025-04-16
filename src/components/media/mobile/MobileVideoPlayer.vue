@@ -268,7 +268,7 @@ function quickBackward(seconds: number) {
 }
 function onError(e: any) {
   player.value!.errorDisplay.contentEl().innerHTML = `
-    <div class="vjs-error-display-custom pt-2">
+    <div class="vjs-error-display-custom pt-2" style="pointer-events: none;">
       <div class="text-red">播放失败, 请重试</div>
     </div>
   `;

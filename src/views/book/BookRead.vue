@@ -385,7 +385,6 @@ function openChapterPopup() {
 
 const scrollPlayTTS = () => {
   if (!readingContent.value?.length) {
-    showNotify('没有内容可以播放');
     return;
   }
 
@@ -438,7 +437,6 @@ const scrollPlayTTS = () => {
 
 const slidePlayTTS = () => {
   if (!readingPagedContent.value?.content.length) {
-    showNotify('没有内容可以播放');
     return;
   }
   const toNext = () => {

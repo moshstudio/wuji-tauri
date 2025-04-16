@@ -1,26 +1,15 @@
 import type { HotItem } from '@/apis/hot/apiHot';
 import type { Extension } from '@/extensions/baseExtension';
 
-import type {
-  BookChapter,
-  BookExtension,
-  BookItem,
-} from '@/extensions/book';
+import type { BookChapter, BookExtension, BookItem } from '@/extensions/book';
 import type {
   ComicChapter,
   ComicContent,
   ComicExtension,
   ComicItem,
 } from '@/extensions/comic';
-import type {
-  PhotoExtension,
-  PhotoItem,
-} from '@/extensions/photo';
-import type {
-  PlaylistInfo,
-  SongExtension,
-  SongInfo,
-} from '@/extensions/song';
+import type { PhotoExtension, PhotoItem } from '@/extensions/photo';
+import type { PlaylistInfo, SongExtension, SongInfo } from '@/extensions/song';
 import type {
   VideoEpisode,
   VideoExtension,
@@ -39,29 +28,17 @@ import type {
   SubscribeSource,
   VideoSource,
 } from '@/types';
-import {
-  loadBookExtensionString,
-} from '@/extensions/book';
+import { loadBookExtensionString } from '@/extensions/book';
 import TestBookExtension from '@/extensions/book/test';
-import {
-  loadComicExtensionString,
-} from '@/extensions/comic';
+import { loadComicExtensionString } from '@/extensions/comic';
 import TestComicExtension from '@/extensions/comic/test';
-import {
-  loadPhotoExtensionString,
-} from '@/extensions/photo';
+import { loadPhotoExtensionString } from '@/extensions/photo';
 import TestPhotoExtension from '@/extensions/photo/test';
-import {
-  loadSongExtensionString,
-} from '@/extensions/song';
+import { loadSongExtensionString } from '@/extensions/song';
 import TestSongExtension from '@/extensions/song/test';
-import {
-  loadVideoExtensionString,
-} from '@/extensions/video';
+import { loadVideoExtensionString } from '@/extensions/video';
 import TestVideoExtension from '@/extensions/video/test';
-import {
-  SourceType,
-} from '@/types';
+import { SourceType } from '@/types';
 import { DEFAULT_SOURCE_URL, sleep, tryCatchProxy } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { fetch } from '@/utils/fetch';
@@ -133,8 +110,7 @@ export const useStore = defineStore('store', () => {
     if (!item.code) {
       try {
         item.code = await (await fetch(item.url)).text();
-      }
-      catch (error) {
+      } catch (error) {
         console.log('加载扩展失败:', item);
         sourceClasses.set(item.id, null);
         return null;
@@ -224,8 +200,7 @@ export const useStore = defineStore('store', () => {
 
     if (res) {
       source.list = res;
-    }
-    else {
+    } else {
       showToast(`${source.item.name} 推荐结果为空`);
       source.list = undefined;
     }
@@ -244,8 +219,7 @@ export const useStore = defineStore('store', () => {
 
     if (res) {
       source.list = res;
-    }
-    else {
+    } else {
       showToast(`${source.item.name} 搜索结果为空`);
       source.list = undefined;
     }
@@ -263,15 +237,14 @@ export const useStore = defineStore('store', () => {
     const res = await sc?.execGetPhotoDetail(item, pageNo);
     if (res) {
       return res;
-    }
-    else {
+    } else {
       showNotify(`${source.item.name} 获取内容失败`);
       return null;
     }
   };
 
   const getPhotoSource = (sourceId: string): PhotoSource | undefined => {
-    return photoSources.value.find(item => item.item.id === sourceId);
+    return photoSources.value.find((item) => item.item.id === sourceId);
   };
   /**
    * 根据id获取图片
@@ -291,14 +264,13 @@ export const useStore = defineStore('store', () => {
     };
     const fromSource = () => {
       if (source.list) {
-        return source.list.list.find(item => item.id === itemId);
+        return source.list.list.find((item) => item.id === itemId);
       }
     };
     const shelfStore = usePhotoShelfStore();
     if (shelfStore.photoInShelf(itemId)) {
       return fromShelf();
-    }
-    else {
+    } else {
       return fromSource();
     }
   };
@@ -312,8 +284,7 @@ export const useStore = defineStore('store', () => {
     const res = await sc?.execGetRecommendPlaylists(pageNo);
     if (res) {
       source.playlist = res;
-    }
-    else {
+    } else {
       source.playlist = undefined;
     }
     triggerRef(songSources);
@@ -334,8 +305,7 @@ export const useStore = defineStore('store', () => {
     toast.close();
     if (res) {
       return res;
-    }
-    else {
+    } else {
       showNotify(`${source.item.name} 获取内容失败`);
       return null;
     }
@@ -362,15 +332,13 @@ export const useStore = defineStore('store', () => {
         if (!totalPage || pageNo > totalPage) {
           break;
         }
-      }
-      else {
+      } else {
         break;
       }
     }
     if (!songs) {
       showNotify(`内容为空`);
-    }
-    else {
+    } else {
       const songStore = useSongStore();
       await songStore.setPlayingList(songs, songs[0]);
     }
@@ -380,8 +348,7 @@ export const useStore = defineStore('store', () => {
     const res = await sc?.execGetRecommendSongs(pageNo);
     if (res) {
       source.songList = res;
-    }
-    else {
+    } else {
       source.songList = undefined;
     }
     triggerRef(songSources);
@@ -395,8 +362,7 @@ export const useStore = defineStore('store', () => {
     const res = await sc?.execSearchSongs(keyword, pageNo);
     if (res) {
       source.songList = res;
-    }
-    else {
+    } else {
       source.songList = undefined;
     }
     triggerRef(songSources);
@@ -410,8 +376,7 @@ export const useStore = defineStore('store', () => {
     const res = await sc?.execSearchPlaylists(keyword, pageNo);
     if (res) {
       source.playlist = res;
-    }
-    else {
+    } else {
       source.playlist = undefined;
     }
     triggerRef(songSources);
@@ -420,10 +385,10 @@ export const useStore = defineStore('store', () => {
     source: SongSource,
     playlistId: string,
   ): PlaylistInfo | undefined => {
-    return source.playlist?.list.find(item => item.id === playlistId);
+    return source.playlist?.list.find((item) => item.id === playlistId);
   };
   const getSongSource = (sourceId: string): SongSource | undefined => {
-    return songSources.value.find(source => source.item.id === sourceId);
+    return songSources.value.find((source) => source.item.id === sourceId);
   };
   const __split__2 = () => {};
 
@@ -442,21 +407,18 @@ export const useStore = defineStore('store', () => {
       if (!type) {
         // 1. 获取的不是指定type类型的数据，直接赋值
         source.list = res;
-      }
-      else {
+      } else {
         // 2. 获取的是指定type类型的数据，判断是否已经存在，不存在则添加
         const find = _.castArray(source.list).find(
-          item => item.type === type,
+          (item) => item.type === type,
         );
         if (find) {
           _.assign(find, res);
-        }
-        else {
+        } else {
           source.list = [..._.castArray(source.list), ..._.castArray(res)];
         }
       }
-    }
-    else {
+    } else {
       if (!type) {
         source.list = undefined;
       }
@@ -476,8 +438,7 @@ export const useStore = defineStore('store', () => {
         return;
       }
       source.list = res;
-    }
-    else {
+    } else {
       source.list = undefined;
     }
     triggerRef(bookSources);
@@ -487,8 +448,7 @@ export const useStore = defineStore('store', () => {
     const res = await sc?.execGetBookDetail(book);
     if (res) {
       return res;
-    }
-    else {
+    } else {
       showNotify(`${source.item.name} 获取内容失败`);
       return null;
     }
@@ -541,11 +501,9 @@ export const useStore = defineStore('store', () => {
       book: BookItem,
       chapter: BookChapter,
     ) => {
-      if (!book.chapters)
-        return;
-      const index = book.chapters.findIndex(item => item.id === chapter.id);
-      if (index === -1)
-        return;
+      if (!book.chapters) return;
+      const index = book.chapters.findIndex((item) => item.id === chapter.id);
+      if (index === -1) return;
       let count = 1;
       const bookStore = useBookStore();
       while (count <= bookStore.chapterCacheNum) {
@@ -566,7 +524,7 @@ export const useStore = defineStore('store', () => {
     },
   );
   const getBookSource = (sourceId: string): BookSource | undefined => {
-    return bookSources.value.find(item => item.item.id === sourceId);
+    return bookSources.value.find((item) => item.item.id === sourceId);
   };
   const getBookItem = (
     source: BookSource,
@@ -597,8 +555,7 @@ export const useStore = defineStore('store', () => {
     // 优先从书架中获取
     if (shelfStore.isBookInShelf(bookId)) {
       return checkFromShelf();
-    }
-    else {
+    } else {
       return fromSource();
     }
   };
@@ -616,21 +573,18 @@ export const useStore = defineStore('store', () => {
       if (!type) {
         // 1. 获取的不是指定type类型的数据，直接赋值
         source.list = res;
-      }
-      else {
+      } else {
         // 2. 获取的是指定type类型的数据，判断是否已经存在，不存在则添加
         const find = _.castArray(source.list).find(
-          item => item.type === type,
+          (item) => item.type === type,
         );
         if (find) {
           _.assign(find, res);
-        }
-        else {
+        } else {
           source.list = [..._.castArray(source.list), ..._.castArray(res)];
         }
       }
-    }
-    else {
+    } else {
       if (!type) {
         source.list = undefined;
       }
@@ -650,8 +604,7 @@ export const useStore = defineStore('store', () => {
         return;
       }
       source.list = res;
-    }
-    else {
+    } else {
       source.list = undefined;
     }
     triggerRef(comicSources);
@@ -661,8 +614,7 @@ export const useStore = defineStore('store', () => {
     const res = await sc?.execGetComicDetail(comic);
     if (res) {
       return res;
-    }
-    else {
+    } else {
       showNotify(`${source.item.name} 获取内容失败`);
       return null;
     }
@@ -677,7 +629,7 @@ export const useStore = defineStore('store', () => {
     return res;
   };
   const getComicSource = (sourceId: string): ComicSource | undefined => {
-    return comicSources.value.find(item => item.item.id === sourceId);
+    return comicSources.value.find((item) => item.item.id === sourceId);
   };
   const getComicItem = (
     source: ComicSource,
@@ -708,8 +660,7 @@ export const useStore = defineStore('store', () => {
     // 优先从书架中获取
     if (shelfStore.isComicInShelf(comicId)) {
       return checkFromShelf();
-    }
-    else {
+    } else {
       return fromSource();
     }
   };
@@ -728,21 +679,18 @@ export const useStore = defineStore('store', () => {
       if (!type) {
         // 1. 获取的不是指定type类型的数据，直接赋值
         source.list = res;
-      }
-      else {
+      } else {
         // 2. 获取的是指定type类型的数据，判断是否已经存在，不存在则添加
         const find = _.castArray(source.list).find(
-          item => item.type === type,
+          (item) => item.type === type,
         );
         if (find) {
           _.assign(find, res);
-        }
-        else {
+        } else {
           source.list = [..._.castArray(source.list), ..._.castArray(res)];
         }
       }
-    }
-    else {
+    } else {
       if (!type) {
         source.list = undefined;
       }
@@ -764,8 +712,7 @@ export const useStore = defineStore('store', () => {
         }
       }
       source.list = res;
-    }
-    else {
+    } else {
       source.list = undefined;
     }
   };
@@ -774,8 +721,7 @@ export const useStore = defineStore('store', () => {
     const res = await sc?.execGetVideoDetail(video);
     if (res) {
       return res;
-    }
-    else {
+    } else {
       showNotify(`${source.item.name} 获取内容失败`);
       return null;
     }
@@ -791,7 +737,7 @@ export const useStore = defineStore('store', () => {
     return res;
   };
   const getVideoSource = (sourceId: string): VideoSource | undefined => {
-    return videoSources.value.find(item => item.item.id === sourceId);
+    return videoSources.value.find((item) => item.item.id === sourceId);
   };
   const getVideoItem = (
     source: VideoSource,
@@ -824,8 +770,7 @@ export const useStore = defineStore('store', () => {
     // 优先从书架中获取
     if (shelfStore.isVideoInShelf(videoId)) {
       return checkFromShelf();
-    }
-    else {
+    } else {
       return fromSource();
     }
   };
@@ -850,23 +795,23 @@ export const useStore = defineStore('store', () => {
   const removeSource = (item: SubscribeItem) => {
     switch (item.type) {
       case SourceType.Photo:
-        _.remove(photoSources.value, p => p.item.id === item.id);
+        _.remove(photoSources.value, (p) => p.item.id === item.id);
         triggerRef(photoSources);
         break;
       case SourceType.Song:
-        _.remove(songSources.value, p => p.item.id === item.id);
+        _.remove(songSources.value, (p) => p.item.id === item.id);
         triggerRef(songSources);
         break;
       case SourceType.Book:
-        _.remove(bookSources.value, p => p.item.id === item.id);
+        _.remove(bookSources.value, (p) => p.item.id === item.id);
         triggerRef(bookSources);
         break;
       case SourceType.Comic:
-        _.remove(comicSources.value, p => p.item.id === item.id);
+        _.remove(comicSources.value, (p) => p.item.id === item.id);
         triggerRef(comicSources);
         break;
       case SourceType.Video:
-        _.remove(videoSources.value, p => p.item.id === item.id);
+        _.remove(videoSources.value, (p) => p.item.id === item.id);
         triggerRef(videoSources);
         break;
       default:
@@ -915,29 +860,26 @@ export const useStore = defineStore('store', () => {
             true,
           );
           source.detail.urls.push(item);
-        }
-        catch (error) {
+        } catch (error) {
           showToast(`添加 ${item.name} 订阅源失败`);
         }
       }
       // 同步disable状态
-      if (source.detail.urls.every(item => item.disable)) {
+      if (source.detail.urls.every((item) => item.disable)) {
         source.disable = true;
       }
       source.detail.urls.forEach((item) => {
-        item.disable
-          = oldSource?.detail.urls.find(s => s.id === item.id)?.disable
-            || false;
+        item.disable =
+          oldSource?.detail.urls.find((s) => s.id === item.id)?.disable ||
+          false;
       });
       subscribeSourceStore.addSubscribeSource(source); // 保存
-    }
-    catch (error) {
+    } catch (error) {
       showToast('添加订阅源失败');
       if (raise) {
         throw error;
       }
-    }
-    finally {
+    } finally {
       displayStore.closeToast(t);
     }
   };
@@ -948,8 +890,7 @@ export const useStore = defineStore('store', () => {
     let content: string;
     try {
       content = await fs.readTextFile(path);
-    }
-    catch (error) {
+    } catch (error) {
       showNotify(`读取文件失败:${String(error)}`);
       return;
     }
@@ -1004,7 +945,7 @@ export const useStore = defineStore('store', () => {
         return;
       }
       for (const existSource of subscribeSourceStore.subscribeSources) {
-        if (existSource.detail.urls.find(item => item.id === sc.id)) {
+        if (existSource.detail.urls.find((item) => item.id === sc.id)) {
           showNotify(`${sc.name} 在 ${existSource.detail.name} 已存在`);
           return;
         }
@@ -1017,8 +958,7 @@ export const useStore = defineStore('store', () => {
       );
       source.detail.urls.push(item);
       subscribeSourceStore.addSubscribeSource(source); // 保存
-    }
-    catch (error) {
+    } catch (error) {
       showToast('添加订阅源失败');
     }
   };
@@ -1042,12 +982,10 @@ export const useStore = defineStore('store', () => {
         try {
           if (source.detail.id === localSourceId) {
             await addLocalSubscribeSource(url);
-          }
-          else {
+          } else {
             await addSubscribeSource(url, true);
           }
-        }
-        catch (error) {
+        } catch (error) {
           console.log(error);
           failed.push(source.detail.name);
         }
@@ -1069,8 +1007,7 @@ export const useStore = defineStore('store', () => {
 
     if (failed.length > 0) {
       showNotify(`${failed.join(',')} 订阅源更新失败`);
-    }
-    else {
+    } else {
       showNotify({
         type: 'success',
         message: '更新订阅源成功',
@@ -1090,12 +1027,11 @@ export const useStore = defineStore('store', () => {
     switch (source.item.type.toLowerCase()) {
       case SourceType.Photo:
         index = photoSources.value.findIndex(
-          item => item.item.id === source.item.id,
+          (item) => item.item.id === source.item.id,
         );
         if (index != -1) {
           photoSources.value[index].item = source.item;
-        }
-        else {
+        } else {
           photoSources.value.push(source as PhotoSource);
         }
         triggerRef(photoSources);
@@ -1105,12 +1041,11 @@ export const useStore = defineStore('store', () => {
         break;
       case SourceType.Song:
         index = songSources.value.findIndex(
-          item => item.item.id === source.item.id,
+          (item) => item.item.id === source.item.id,
         );
         if (index != -1) {
           songSources.value[index].item = source.item;
-        }
-        else {
+        } else {
           songSources.value.push(source as SongSource);
         }
         triggerRef(songSources);
@@ -1121,12 +1056,11 @@ export const useStore = defineStore('store', () => {
         break;
       case SourceType.Book:
         index = bookSources.value.findIndex(
-          item => item.item.id === source.item.id,
+          (item) => item.item.id === source.item.id,
         );
         if (index != -1) {
           bookSources.value[index].item = source.item;
-        }
-        else {
+        } else {
           bookSources.value.push(source as BookSource);
         }
         triggerRef(bookSources);
@@ -1136,12 +1070,11 @@ export const useStore = defineStore('store', () => {
         break;
       case SourceType.Comic:
         index = comicSources.value.findIndex(
-          item => item.item.id === source.item.id,
+          (item) => item.item.id === source.item.id,
         );
         if (index != -1) {
           comicSources.value[index].item = source.item;
-        }
-        else {
+        } else {
           comicSources.value.push(source as ComicSource);
         }
         triggerRef(comicSources);
@@ -1151,12 +1084,11 @@ export const useStore = defineStore('store', () => {
         break;
       case SourceType.Video:
         index = videoSources.value.findIndex(
-          item => item.item.id === source.item.id,
+          (item) => item.item.id === source.item.id,
         );
         if (index != -1) {
           videoSources.value[index].item = source.item;
-        }
-        else {
+        } else {
           videoSources.value.push(source as VideoSource);
         }
         triggerRef(videoSources);
@@ -1175,19 +1107,19 @@ export const useStore = defineStore('store', () => {
   const removeFromSource = (itemId: string, sourceType: SourceType) => {
     switch (sourceType) {
       case SourceType.Photo:
-        _.remove(photoSources.value, source => source.item.id === itemId);
+        _.remove(photoSources.value, (source) => source.item.id === itemId);
         break;
       case SourceType.Song:
-        _.remove(songSources.value, source => source.item.id === itemId);
+        _.remove(songSources.value, (source) => source.item.id === itemId);
         break;
       case SourceType.Book:
-        _.remove(bookSources.value, source => source.item.id === itemId);
+        _.remove(bookSources.value, (source) => source.item.id === itemId);
         break;
       case SourceType.Comic:
-        _.remove(comicSources.value, source => source.item.id === itemId);
+        _.remove(comicSources.value, (source) => source.item.id === itemId);
         break;
       case SourceType.Video:
-        _.remove(videoSources.value, source => source.item.id === itemId);
+        _.remove(videoSources.value, (source) => source.item.id === itemId);
         break;
       default:
         console.log('暂未实现 removeFromSource', sourceType);
@@ -1204,8 +1136,7 @@ export const useStore = defineStore('store', () => {
             const found = getSource(item);
             if (found) {
               found.item = item;
-            }
-            else {
+            } else {
               addToSource(
                 {
                   item,
@@ -1214,8 +1145,7 @@ export const useStore = defineStore('store', () => {
               );
             }
             added.push(item.id);
-          }
-          else {
+          } else {
             // const found = getSource(item);
             // if (found) {
             //   removeSource(item);
@@ -1326,8 +1256,7 @@ export const useStore = defineStore('store', () => {
       default:
         break;
     }
-    if (!item.type)
-      return;
+    if (!item.type) return;
     addToSource(
       {
         item: item as SubscribeItem,
@@ -1409,8 +1338,7 @@ export const useStore = defineStore('store', () => {
       //     await updateSubscribeSources();
       //   }
       // } catch (error) {}
-    }
-    else {
+    } else {
       try {
         const dialog = await showConfirmDialog({
           message: '您需要添加订阅源才能正常使用，\n是否立即导入默认订阅源？',
@@ -1419,8 +1347,7 @@ export const useStore = defineStore('store', () => {
           await addSubscribeSource(DEFAULT_SOURCE_URL);
           showToast('默认源已导入');
         }
-      }
-      catch (error) {
+      } catch (error) {
         _;
       }
     }
