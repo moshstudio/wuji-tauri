@@ -38,6 +38,7 @@ import {
   shallowRef,
   watch,
 } from 'vue';
+import { useRoute } from 'vue-router';
 import 'video.js/dist/video-js.css';
 
 type VideoJsPlayer = ReturnType<typeof videojs>;
@@ -65,6 +66,7 @@ const emit = defineEmits<{
   (e: 'collect'): void;
 }>();
 const displayStore = useDisplayStore();
+const route = useRoute();
 const { fullScreenMode, isAndroid, androidOrientation } =
   storeToRefs(displayStore);
 
@@ -124,6 +126,7 @@ function togglePlay() {
 const isDragging = ref(false);
 const dragDirection = ref<'Horizontal' | 'VerticalLeft' | 'VerticalRight'>();
 const dragMovement = ref<[number, number]>([0, 0]);
+const isPressing = ref(false);
 
 const initBrightness = ref(0); // 0-100
 const currentBrightness = ref(0); // 0-100
@@ -224,6 +227,13 @@ async function exitFullScreen() {
   }
 }
 
+function onLoadstart(args: any) {
+  if (route.path.includes('/video/detail/')) {
+    // 判断是否还在当前页面
+    player.value?.play();
+  }
+}
+
 function onLoadedMetadata(args: any) {
   if (displayStore.isAndroid) {
     if (
@@ -299,7 +309,14 @@ function mountAndroidGuesture(needPan = true) {
       event: 'panVertical',
       direction: Hammer.DIRECTION_VERTICAL,
     });
-    manager.add([panHorizontal, panVertical]);
+    // 添加长按识别器
+    const press = new Hammer.Press({
+      event: 'press',
+      time: 500, // 长按时间阈值，单位毫秒（默认是500，可根据需要调整）
+    });
+    manager.add([panHorizontal, panVertical, press]);
+    manager.get('tap').requireFailure('press');
+    manager.get('dbtap').requireFailure('press');
   } else {
     // manager.get('pan').set({ direction: Hammer.DIRECTION_VERTICAL });
     manager.on('pan', (event) => {
@@ -352,7 +369,7 @@ function mountAndroidGuesture(needPan = true) {
       dragMovement.value = [0, 0];
     });
     manager.on('panVerticalstart', async (e) => {
-      if (e.center.y < 100) return; // 最顶部不响应
+      if (fullScreenMode.value && e.center.y < 100) return; // 最顶部不响应
       if (!isTargetElement(e.target)) return;
       dragMovement.value = [e.deltaX, e.deltaY];
       isDragging.value = true;
@@ -396,7 +413,7 @@ function mountAndroidGuesture(needPan = true) {
           break;
         case 'VerticalRight':
           // 音量实时变化
-          const volumeDistance = Math.ceil(-dragMovement.value[1] / 2); // / 2 来减小变化幅度
+          const volumeDistance = Math.ceil(-dragMovement.value[1] / 4); // / 2 来减小变化幅度
           const volume = Math.max(
             0,
             Math.min(100, initVolume.value + volumeDistance),
@@ -413,6 +430,22 @@ function mountAndroidGuesture(needPan = true) {
       isDragging.value = false;
       dragDirection.value = undefined;
       dragMovement.value = [0, 0];
+    });
+    manager.on('press', (e) => {
+      if (!isTargetElement(e.target)) return;
+      if (videoSrc?.isLive) {
+        // 直播不响应快进
+        return;
+      }
+      player.value?.play();
+      player.value?.playbackRate(2.0);
+      isPressing.value = true;
+    });
+
+    manager.on('pressup', (e) => {
+      if (!isTargetElement(e.target)) return;
+      player.value?.playbackRate(1.0);
+      isPressing.value = false;
     });
   }
 
@@ -482,7 +515,7 @@ onDeactivated(() => {
   >
     <VideoPlayer
       :options="{
-        autoplay: true,
+        autoplay: false,
         controls: false,
         fluid: false,
       }"
@@ -494,6 +527,7 @@ onDeactivated(() => {
       :playback-rates="[0.5, 0.75, 1.0, 1.25, 1.5, 2.0]"
       class="my-video-player relative w-full flex flex-col items-center justify-center"
       :class="fullScreenMode ? ' h-full' : 'h-auto'"
+      @loadstart="onLoadstart"
       @loadedmetadata="onLoadedMetadata"
       @ended="(args) => emit('onPlayFinished', args)"
       @timeupdate="(args) => emit('timeUpdate', args)"
@@ -515,6 +549,12 @@ onDeactivated(() => {
           class="absolute top-20 left-[50%] -translate-x-[50%] text-base rounded p-1 text-gray-200 bg-black/50 select-none pointer-events-none"
         >
           {{ dragHint }}
+        </div>
+        <div
+          v-if="isPressing"
+          class="absolute top-5 left-[50%] -translate-x-[50%] text-base rounded p-1 text-gray-200 bg-black/10 select-none pointer-events-none"
+        >
+          <Icon icon="fluent-mdl2:fast-forward-two-x" width="24" height="24" />
         </div>
         <div
           v-show="showControls"
@@ -542,6 +582,7 @@ onDeactivated(() => {
             </div>
           </div>
           <MobileQuickSeekButton
+            v-if="fullScreenMode"
             v-show="!videoSrc?.isLive"
             :seconds="10"
             :quick-forward="quickForward"

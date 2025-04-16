@@ -1,5 +1,9 @@
 <script lang="ts" setup>
-import type { VideoEpisode, VideoResource, VideoUrlMap } from '@/extensions/video';
+import type {
+  VideoEpisode,
+  VideoResource,
+  VideoUrlMap,
+} from '@/extensions/video';
 import type { VideoPlayerState } from '@videojs-player/vue';
 import type videojs from 'video.js';
 import type { PropType } from 'vue';
@@ -13,10 +17,12 @@ import { useDisplayStore } from '@/store';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { VideoPlayer } from '@videojs-player/vue';
 import { onBeforeUnmount, ref, shallowRef } from 'vue';
+import { useRoute } from 'vue-router';
 import { clearTimeout, setTimeout } from 'worker-timers';
 import BrowserFullScreenButton from './BrowserFullScreenButton.vue';
 import PlayNextButton from './PlayNextButton.vue';
 import 'video.js/dist/video-js.css';
+import { showToast } from 'vant';
 
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
@@ -45,6 +51,7 @@ const player = defineModel('player', {
 });
 const isBrowserFullscreen = ref(false);
 const displayStore = useDisplayStore();
+const route = useRoute();
 const state = shallowRef<VideoPlayerState>();
 const controlBarOptions = {
   volumePanel: false,
@@ -72,8 +79,19 @@ function handleMounted(payload: any) {
   player.value = payload.player;
   try {
     player.value?.focus();
+  } catch (error) {}
+}
+
+function onLoadstart(args: any) {
+  if (route.path.includes('/video/detail/')) {
+    // 判断是否还在当前页面
+    player.value?.play();
   }
-  catch (error) {}
+}
+
+function onLoadedMetadata(args: any) {
+  showToast('加载完成');
+  emit('canPlay', args);
 }
 
 const showControls = ref(false);
@@ -124,8 +142,7 @@ function exitBrowserFullscreen() {
   try {
     player.value?.exitFullscreen();
     player.value?.focus();
-  }
-  catch (error) {}
+  } catch (error) {}
 }
 
 function quickForward(seconds: number) {
@@ -163,7 +180,7 @@ onBeforeUnmount(() => {
   >
     <VideoPlayer
       :options="{
-        autoplay: true,
+        autoplay: false,
         controls: false,
         fluid: false,
       }"
@@ -176,7 +193,8 @@ onBeforeUnmount(() => {
       :playback-rates="[0.5, 0.75, 1.0, 1.25, 1.5, 2.0]"
       class="flex w-full h-full items-center"
       @fullscreenchange="onFullScreenChange"
-      @loadedmetadata="(args) => emit('canPlay', args)"
+      @loadstart="onLoadstart"
+      @loadedmetadata="onLoadedMetadata"
       @timeupdate="(args) => emit('timeUpdate', args)"
       @ended="(args) => emit('onPlayFinished', args)"
       @mounted="handleMounted"
@@ -241,10 +259,7 @@ onBeforeUnmount(() => {
                     v-if="resource && (resource.episodes?.length || 0) > 1"
                     :play-next="() => emit('playNext', {})"
                   />
-                  <TimeShow
-                    :state="state"
-                    :is-playing="state.playing"
-                  />
+                  <TimeShow :state="state" :is-playing="state.playing" />
                   <QuickSeekButton
                     :seconds="10"
                     :quick-forward="quickForward"
@@ -252,10 +267,7 @@ onBeforeUnmount(() => {
                   />
                 </div>
                 <div class="flex items-center gap-4">
-                  <PlaybackRateButton
-                    :state="state"
-                    :player="player"
-                  />
+                  <PlaybackRateButton :state="state" :player="player" />
                   <BrowserFullScreenButton
                     :is-fullscreen="displayStore.fullScreenMode"
                     :is-browser-fullscreen="isBrowserFullscreen"
@@ -273,16 +285,6 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </div>
-        <div
-          v-if="!showControls"
-          class="absolute top-0 left-0 right-0 h-[40px] bg-transparent"
-          @mousemove.stop="showControlsAction"
-        />
-        <div
-          v-if="!showControls"
-          class="absolute bottom-0 left-0 right-0 h-[76px] bg-transparent"
-          @mousemove.stop="showControlsAction"
-        />
       </template>
     </VideoPlayer>
   </div>

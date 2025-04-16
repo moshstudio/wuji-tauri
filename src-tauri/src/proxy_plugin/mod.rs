@@ -8,7 +8,7 @@ use tauri::{
     plugin::{Builder, TauriPlugin},
     Manager, Runtime,
 };
-
+mod ad_remove;
 mod commands;
 
 pub fn init<R: Runtime>() -> TauriPlugin<R> {

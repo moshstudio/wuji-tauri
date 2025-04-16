@@ -17,7 +17,7 @@ const props = defineProps<{
       @click.stop="() => quickBack(seconds)"
     >
       <Icon
-        icon="mingcute:rewind-backward-10-line"
+        icon="tabler:rewind-backward-10"
         color="rgb(209 213 219 / var(--tw-text-opacity, 1))"
         :width="40"
         :height="40"
@@ -28,7 +28,7 @@ const props = defineProps<{
       @click.stop="() => quickForward(seconds)"
     >
       <Icon
-        icon="mingcute:rewind-forward-10-line"
+        icon="tabler:rewind-forward-10"
         color="rgb(209 213 219 / var(--tw-text-opacity, 1))"
         :width="40"
         :height="40"

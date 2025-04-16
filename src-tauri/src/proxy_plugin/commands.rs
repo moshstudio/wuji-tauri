@@ -1,5 +1,6 @@
+use crate::proxy_plugin::ad_remove::AdRemover;
 use m3u8_rs::AlternativeMediaType::Audio;
-use m3u8_rs::Playlist;
+use m3u8_rs::{MediaPlaylist, Playlist};
 use reqwest::header::HeaderMap;
 use std::collections::HashMap;
 use std::convert::Infallible;
@@ -86,7 +87,7 @@ async fn get_m3u8_content_async(url: String) -> Result<impl warp::Reply, Infalli
 }
 
 /// process m3u8
-fn process_m3u8(m3u8_path: &String, content: String) -> String {
+fn process_m3u8(m3u8_path: &String, mut content: String) -> String {
     if content.is_empty() {
         return "".to_string();
     }
@@ -112,7 +113,7 @@ fn process_m3u8(m3u8_path: &String, content: String) -> String {
         // dbg!(&pl);
         let mut v: Vec<u8> = Vec::new();
         if let Ok(_) = pl.write_to(&mut v) {
-            return String::from_utf8(v).unwrap();
+            content = String::from_utf8(v).unwrap();
         }
     } else if let Ok(Playlist::MasterPlaylist(mut pl)) =
         m3u8_rs::parse_playlist_res(content.as_bytes())
@@ -156,11 +157,102 @@ fn process_m3u8(m3u8_path: &String, content: String) -> String {
         });
         let mut v: Vec<u8> = Vec::new();
         if let Ok(_) = pl.write_to(&mut v) {
-            return String::from_utf8(v).unwrap();
+            content = String::from_utf8(v).unwrap();
         }
     }
-
     return content;
+    // return AdRemover::new().run(content);
+}
+
+fn remove_m3u8_ad(content: &str) -> Result<String, Box<dyn std::error::Error>> {
+    println!("remove_m3u8_ad {:?}", content);
+    let mut new_playlist = String::new();
+    new_playlist.push_str("#EXTM3U\n");
+    new_playlist.push_str("#EXT-X-VERSION:3\n");
+
+    if let Ok(Playlist::MediaPlaylist(MediaPlaylist {
+        segments,
+        target_duration,
+        ..
+    })) = m3u8_rs::parse_playlist_res(content.as_bytes())
+    {
+        let mut in_ad = false;
+        let mut ad_ranges = Vec::new();
+        let mut current_range_start = 0;
+
+        // 首先识别广告段
+        for (i, segment) in segments.iter().enumerate() {
+            // 检测广告开始的条件
+            if segment.discontinuity
+                || (i > 0 && is_filename_jump(&segments[i - 1].uri, &segment.uri))
+            {
+                if !in_ad {
+                    current_range_start = i;
+                    in_ad = true;
+                }
+            } else if in_ad {
+                println!("Ad range: {}-{} {:?}", current_range_start, i - 1, segment);
+                ad_ranges.push((current_range_start, i - 1));
+                in_ad = false;
+            }
+        }
+
+        if in_ad {
+            ad_ranges.push((current_range_start, segments.len() - 1));
+        }
+
+        // 生成新的播放列表，跳过广告段
+        let mut last_was_discontinuity = false;
+        for (i, segment) in segments.iter().enumerate() {
+            if ad_ranges.iter().any(|&(start, end)| i >= start && i <= end) {
+                continue;
+            }
+
+            // 跳过连续 discontinuity 标记
+            if segment.discontinuity {
+                if last_was_discontinuity {
+                    continue;
+                }
+                last_was_discontinuity = true;
+            } else {
+                last_was_discontinuity = false;
+            }
+
+            // 写入 segment 信息
+            if segment.discontinuity {
+                new_playlist.push_str("#EXT-X-DISCONTINUITY\n");
+            }
+
+            new_playlist.push_str(&format!("#EXTINF:{},\n", segment.duration));
+            new_playlist.push_str(&segment.uri);
+            new_playlist.push('\n');
+        }
+
+        // 更新目标时长
+        new_playlist.push_str(&format!("#EXT-X-TARGETDURATION:{}\n", target_duration));
+        new_playlist.push_str("#EXT-X-ENDLIST\n");
+        Ok(new_playlist)
+    } else {
+        Ok(content.to_string())
+    }
+}
+
+// 检测文件名是否出现跳跃（广告特征）
+fn is_filename_jump(prev: &str, current: &str) -> bool {
+    let extract_number = |s: &str| {
+        s.rsplit('.')
+            .next()
+            .and_then(|name| name.split('_').last())
+            .and_then(|num| num.trim_end_matches(".ts").parse::<u64>().ok())
+    };
+
+    if let (Some(prev_num), Some(curr_num)) = (extract_number(prev), extract_number(current)) {
+        // 如果序号跳跃超过1000，认为是广告
+        println!("prev: {}, curr: {}", prev_num, curr_num);
+        curr_num > prev_num + 1000
+    } else {
+        false
+    }
 }
 
 /// proxy ts
@@ -170,7 +262,7 @@ async fn get_ts_content_async(ts: String) -> Result<impl warp::Reply, Infallible
     // let url = "http://test.8ne5i.10.vs.rxip.sc96655.com/live/8ne5i_sccn,CCTV-6H265_hls_pull_4000K/280/085/429.ts";
     let client = get_default_http_client();
     let result = client.get(&ts).send().await;
-    dbg!(&result);
+    // dbg!(&result);
     if result.is_err() {
         return Ok(Response::builder()
             .status(500)

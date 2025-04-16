@@ -50,7 +50,7 @@ useClickAway(menu, () => {
       leave-to-class="transform opacity-0 scale-95"
     >
       <div
-        v-show="showMenu"
+        v-if="showMenu"
         ref="menu"
         class="absolute bottom-full left-0 -translate-x-5 mb-2 w-20 bg-gray-800/90 rounded-md shadow-lg z-10 overflow-hidden"
         @click.away="showMenu = false"

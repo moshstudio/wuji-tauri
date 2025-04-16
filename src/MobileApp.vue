@@ -16,6 +16,7 @@ import {
   useComicShelfStore,
   useComicStore,
   useDisplayStore,
+  useTTSStore,
   useVideoShelfStore,
 } from './store';
 
@@ -29,6 +30,7 @@ const comicStore = useComicStore();
 const bookShelfStore = useBookShelfStore();
 const comicShelfStore = useComicShelfStore();
 const videoShelfStore = useVideoShelfStore();
+const ttsStore = useTTSStore();
 
 const activeKey = ref(0);
 const route = useRoute();
@@ -186,6 +188,7 @@ window.androidBackCallback = async () => {
       router.push({ name: 'Book' });
     }
   } else if (path === 'BookRead') {
+    ttsStore.stop();
     if (bookStore.readingBook) {
       if (!bookShelfStore.isBookInShelf(bookStore.readingBook)) {
         try {
