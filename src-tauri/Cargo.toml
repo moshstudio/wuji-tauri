@@ -1,8 +1,8 @@
 [package]
 name = "wuji-app"
-version = "0.1.7"
-description = "一款资源聚合软件"
-authors = [ "moshangstudio" ]
+version = "0.1.8"
+description = "一款简洁的资源聚合软件，支持单个应用中轻松浏览图片、音乐、小说，漫画、影视等资源"
+authors = ["moshangstudio"]
 edition = "2021"
 build = "build.rs"
 
@@ -13,26 +13,18 @@ build = "build.rs"
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
 name = "wuji_app_lib"
-crate-type = [
-  "staticlib",
-  "cdylib",
-  "rlib"
-]
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
 http = "1"
-tauri = { version = "2", features = [
-  "tray-icon",
-  "image-ico",
-  "unstable"
-] }
+tauri = { version = "2", features = ["tray-icon", "image-ico", "unstable"] }
 tauri-plugin-shell = "2"
-serde = { version = "1", features = [ "derive" ] }
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tauri-plugin-http = { version = "2", features = [ "unsafe-headers" ] }
+tauri-plugin-http = { version = "2", features = ["unsafe-headers"] }
 tauri-plugin-store = "2"
 # 由于您只有一个使用 OpenSSL （ReqWest） 的依赖项，因此我建议只尝试 Rustls。为此，请禁用 reqwest 的默认功能，并启用 rustls-tls（以及除 openssl 之外的其他默认功能）。
 # 如果将来你需要 openssl 来连接一个不支持切换的 crate，你可以启用 reqwest 的 native-tls-vendored（以及它的默认功能，而不是上面）或 add openssl-sys = { version = "0.9", features = ["vendored"] } （基本上是一样的），它应该可以在 linux 和 macos 主机上工作。
@@ -45,8 +37,8 @@ reqwest = { version = "0.12", default-features = false, features = [
 rand = "0.8"
 regex = "1"
 thiserror = "2"
-tokio = { version = "1", features = [ "full" ] }
-url = { version = "2.5.4", features = [ "serde" ] }
+tokio = { version = "1", features = ["full"] }
+url = { version = "2.5.4", features = ["serde"] }
 urlpattern = "0.3"
 tauri-plugin-os = "2"
 tauri-plugin-fs2 = { path = "../tauri-plugin-fs/" }

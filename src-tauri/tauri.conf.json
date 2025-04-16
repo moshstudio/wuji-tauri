@@ -1,8 +1,8 @@
 {
-  "$schema": "https://schema.tauri.app/config/2.3.1",
+  "$schema": "https://schema.tauri.app/config/2.5.0",
   "productName": "无极",
   "mainBinaryName":"无极",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "identifier": "com.wuji-app.app",
   "build": {
     "beforeDevCommand": "pnpm dev",

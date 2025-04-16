@@ -69,7 +69,7 @@ class Commands(private val activity: Activity) {
     fun setScreenOrientation(orientation: String): Boolean {
         when (orientation) {
             "landscape" -> {
-                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                 hideStatusBar()
                 return true
             }

@@ -6443,7 +6443,7 @@ dependencies = [
 
 [[package]]
 name = "wuji-app"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "http 1.2.0",
  "log",

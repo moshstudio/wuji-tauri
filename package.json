@@ -1,7 +1,7 @@
 {
   "name": "taichi-app",
   "type": "module",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:build": "@powershell -Command \"$env:TAURI_SIGNING_PRIVATE_KEY=Get-Content ./.tauri/myapp.key -Raw; tauri build",
+    "tauri:trace": "@powershell -Command \"$env:RUST_BACKTRACE=1; tauri build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write ."
