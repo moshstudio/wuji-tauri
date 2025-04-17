@@ -1,6 +1,6 @@
 [default]
 description = "Default permissions for the plugin"
-permissions = ["allow-get-m3u8-url"]
+permissions = ["allow-get-m3u8-url", "allow-get-proxy-url"]
 
 [allow]
 http = ['http://*']

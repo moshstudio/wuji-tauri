@@ -9,7 +9,7 @@ import {
   toProxyUrl,
 } from '@/utils';
 import { fetch } from '@/utils/fetch';
-import { getM3u8ProxyUrl } from '@/utils/proxyUrl';
+import { getM3u8ProxyUrl, getProxyUrl } from '@/utils/proxyUrl';
 import CryptoJS from 'crypto-js';
 import * as iconv from 'iconv-lite';
 import _ from 'lodash';
@@ -27,8 +27,7 @@ export function transformResult<T>(func: (result: T) => T) {
         // 调用原始方法
         const result: T = await originalMethod.apply(this, args);
         return func(result);
-      }
-      catch (error) {
+      } catch (error) {
         console.warn(`function ${key} failed`, error);
 
         return null;
@@ -45,6 +44,7 @@ abstract class Extension {
   fetch: typeof fetch;
   iconv: typeof iconv;
   m3u8Parser: typeof m3u8Parser;
+  getProxyUrl: typeof getProxyUrl;
   getM3u8ProxyUrl: typeof getM3u8ProxyUrl;
   _: typeof _;
   fetchDom: (
@@ -179,6 +179,7 @@ abstract class Extension {
     this.forge = forge;
     this.iconv = iconv;
     this.m3u8Parser = m3u8Parser;
+    this.getProxyUrl = getProxyUrl;
     this.getM3u8ProxyUrl = getM3u8ProxyUrl;
     this._ = _;
     this.fetch = fetch;
@@ -198,8 +199,7 @@ abstract class Extension {
           const buffer = await response.arrayBuffer();
           const text = new TextDecoder(encoding || 'utf8').decode(buffer);
           return new DOMParser().parseFromString(text, domType || 'text/html');
-        }
-        catch (error) {
+        } catch (error) {
           console.warn(`function fetchDom failed retry:`, error);
         }
       } while (maxRetry-- > 0);
@@ -238,48 +238,46 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(cover);
-        let coverE
-          = img?.getAttribute('data-original')
-            || img?.getAttribute('data-src')
-            || img?.getAttribute('src')
-            || img?.getAttribute('data-setbg')
-            || (img as HTMLElement)?.style.backgroundImage?.replace(
-              /url\(["']?(.*?)["']?\)/,
-              '$1',
-            );
+        let coverE =
+          img?.getAttribute('data-original') ||
+          img?.getAttribute('data-src') ||
+          img?.getAttribute('src') ||
+          img?.getAttribute('data-setbg') ||
+          (img as HTMLElement)?.style.backgroundImage?.replace(
+            /url\(["']?(.*?)["']?\)/,
+            '$1',
+          );
 
         if (coverE) {
           if (!coverE.startsWith('http')) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
-            }
-            else {
+            } else {
               coverE = this.urlJoin(coverDomain ?? this.baseUrl, coverE);
             }
           }
         }
-        const titleE
-          = (!title
+        const titleE =
+          (!title
             ? element.textContent || element.getAttribute('title')
-            : null)
-          || element.querySelector(title)?.textContent
-          || element.querySelector(title)?.getAttribute('title');
+            : null) ||
+          element.querySelector(title)?.textContent ||
+          element.querySelector(title)?.getAttribute('title');
         const introE = element.querySelector(intro)?.textContent;
         const authorE = element.querySelector(author)?.textContent;
         const tagsE = Array.from(element.querySelectorAll(tags).values())
-          .map(item => item.textContent)
+          .map((item) => item.textContent)
           .filter((item): item is string => !!item);
         const statusE = element.querySelector(status)?.textContent;
-        const latestChapterE
-          = element.querySelector(latestChapter)?.textContent;
+        const latestChapterE =
+          element.querySelector(latestChapter)?.textContent;
         const latestUpdateE = element.querySelector(latestUpdate)?.textContent;
 
-        const urlE
-          = (!url ? element.getAttribute('href') : null)
-            || element.querySelector(url)?.getAttribute('href')
-            || element.querySelector(title)?.getAttribute('href');
-        if (!titleE)
-          continue;
+        const urlE =
+          (!url ? element.getAttribute('href') : null) ||
+          element.querySelector(url)?.getAttribute('href') ||
+          element.querySelector(title)?.getAttribute('href');
+        if (!titleE) continue;
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           title: titleE.trim(),
@@ -326,22 +324,21 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(cover);
-        let coverE
-          = img?.getAttribute('data-original')
-            || img?.getAttribute('data-src')
-            || img?.getAttribute('src')
-            || img?.getAttribute('data-setbg')
-            || (img as HTMLElement)?.style.backgroundImage?.replace(
-              /url\(["']?(.*?)["']?\)/,
-              '$1',
-            );
+        let coverE =
+          img?.getAttribute('data-original') ||
+          img?.getAttribute('data-src') ||
+          img?.getAttribute('src') ||
+          img?.getAttribute('data-setbg') ||
+          (img as HTMLElement)?.style.backgroundImage?.replace(
+            /url\(["']?(.*?)["']?\)/,
+            '$1',
+          );
 
         if (coverE) {
           if (!coverE.startsWith('http')) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
-            }
-            else {
+            } else {
               coverE = this.urlJoin(
                 coverDomain ?? baseUrl ?? this.baseUrl,
                 coverE,
@@ -349,12 +346,12 @@ abstract class Extension {
             }
           }
         }
-        const titleE
-          = (!title
+        const titleE =
+          (!title
             ? element.textContent || element.getAttribute('title')
-            : null)
-          || element.querySelector(title)?.textContent
-          || element.querySelector(title)?.getAttribute('title');
+            : null) ||
+          element.querySelector(title)?.textContent ||
+          element.querySelector(title)?.getAttribute('title');
         const introE = element.querySelector(intro)?.textContent;
         const releaseDateE = element.querySelector(releaseDate)?.textContent;
         const countryE = element.querySelector(country)?.textContent;
@@ -362,17 +359,16 @@ abstract class Extension {
         const directorE = element.querySelector(director)?.textContent;
         const castE = element.querySelector(cast)?.textContent;
         const tagsE = Array.from(element.querySelectorAll(tags).values())
-          .map(item => item.textContent)
+          .map((item) => item.textContent)
           .filter((item): item is string => !!item);
         const statusE = element.querySelector(status)?.textContent;
         const latestUpdateE = element.querySelector(latestUpdate)?.textContent;
 
-        const urlE
-          = (!url ? element.getAttribute('href') : null)
-            || element.querySelector(url)?.getAttribute('href')
-            || element.querySelector(title)?.getAttribute('href');
-        if (!titleE)
-          continue;
+        const urlE =
+          (!url ? element.getAttribute('href') : null) ||
+          element.querySelector(url)?.getAttribute('href') ||
+          element.querySelector(title)?.getAttribute('href');
+        if (!titleE) continue;
         list.push({
           id: urlE
             ? this.urlJoin(baseUrl ?? this.baseUrl, urlE)
@@ -419,22 +415,21 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(cover);
-        const coverE
-          = img?.getAttribute('data-original')
-            || img?.getAttribute('data-src')
-            || img?.getAttribute('src');
-        const titleE
-          = element.querySelector(title)?.textContent
-            || element.querySelector(title)?.getAttribute('title')
-            || element.querySelector(title)?.getAttribute('alt');
+        const coverE =
+          img?.getAttribute('data-original') ||
+          img?.getAttribute('data-src') ||
+          img?.getAttribute('src');
+        const titleE =
+          element.querySelector(title)?.textContent ||
+          element.querySelector(title)?.getAttribute('title') ||
+          element.querySelector(title)?.getAttribute('alt');
         const descE = element.querySelector(desc)?.textContent;
         const authorE = element.querySelector(author)?.textContent;
         const datetimeE = element.querySelector(datetime)?.textContent;
         const hotE = element.querySelector(hot)?.textContent;
         const viewE = element.querySelector(view)?.textContent;
         const urlE = element.querySelector(url)?.getAttribute('href')?.trim();
-        if (!titleE)
-          continue;
+        if (!titleE) continue;
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           title: titleE?.trim() || '',
@@ -470,21 +465,20 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(picUrl);
-        const coverE
-          = img?.getAttribute('data-original')
-            || img?.getAttribute('data-src')
-            || img?.getAttribute('src');
-        const titleE
-          = element.querySelector(name)?.textContent
-            || element.querySelector(name)?.getAttribute('title')
-            || element.querySelector(name)?.getAttribute('alt');
+        const coverE =
+          img?.getAttribute('data-original') ||
+          img?.getAttribute('data-src') ||
+          img?.getAttribute('src');
+        const titleE =
+          element.querySelector(name)?.textContent ||
+          element.querySelector(name)?.getAttribute('title') ||
+          element.querySelector(name)?.getAttribute('alt');
         const descE = element.querySelector(desc)?.textContent;
         const authorE = element.querySelector(creator)?.textContent;
         const datetimeE = element.querySelector(createTime)?.textContent;
         const updateTimeE = element.querySelector(updateTime)?.textContent;
         const urlE = element.querySelector(url)?.getAttribute('href')?.trim();
-        if (!titleE)
-          continue;
+        if (!titleE) continue;
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           name: titleE?.trim() || '',
@@ -519,14 +513,14 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(picUrl);
-        const coverE
-          = img?.getAttribute('data-original')
-            || img?.getAttribute('data-src')
-            || img?.getAttribute('src');
-        const titleE
-          = element.querySelector(name)?.textContent
-            || element.querySelector(name)?.getAttribute('title')
-            || element.querySelector(name)?.getAttribute('alt');
+        const coverE =
+          img?.getAttribute('data-original') ||
+          img?.getAttribute('data-src') ||
+          img?.getAttribute('src');
+        const titleE =
+          element.querySelector(name)?.textContent ||
+          element.querySelector(name)?.getAttribute('title') ||
+          element.querySelector(name)?.getAttribute('alt');
         const authorE = Array.from(element.querySelectorAll(artists).values());
         const durationE = element.querySelector(duration)?.textContent;
         const lyricE = element.querySelector(lyric)?.textContent;
@@ -535,8 +529,7 @@ abstract class Extension {
           .querySelector(playUrl)
           ?.getAttribute('href')
           ?.trim();
-        if (!titleE)
-          continue;
+        if (!titleE) continue;
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           name: titleE?.trim() || '',
@@ -544,7 +537,7 @@ abstract class Extension {
             ? this.urlJoin(coverDomain ?? this.baseUrl, coverE)
             : '',
           artists: authorE
-            ? authorE.map(a => a.textContent || '')
+            ? authorE.map((a) => a.textContent || '')
             : undefined,
           duration: durationE?.trim() ? Number(durationE.trim()) : undefined,
           lyric: lyricE?.trim() || undefined,
@@ -563,8 +556,8 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const href = element.getAttribute('href');
-        const title
-          = element.textContent?.trim() || element.getAttribute('title');
+        const title =
+          element.textContent?.trim() || element.getAttribute('title');
         if (href) {
           list.push({
             id: this.urlJoin(this.baseUrl, href),
@@ -576,14 +569,12 @@ abstract class Extension {
       return list;
     };
     this.getContentText = (element?: HTMLElement) => {
-      if (!element)
-        return '';
+      if (!element) return '';
       let text = '';
       for (const child of element.childNodes) {
         if (child.nodeType === Node.TEXT_NODE) {
           text += `${child.textContent}\n`;
-        }
-        else if (child.nodeType === Node.ELEMENT_NODE) {
+        } else if (child.nodeType === Node.ELEMENT_NODE) {
           text += `${this.getContentText(child as HTMLElement)}\n`;
         }
       }

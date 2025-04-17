@@ -5,6 +5,7 @@ import { Extension, transformResult } from '../baseExtension';
 export interface VideoUrlMap {
   url: string;
   headers?: Record<string, string> | null;
+  type?: 'm3u8' | 'mp4' | 'hls' | 'dash' | 'rtmp';
   isLive?: boolean;
   extra?: Record<string, any>;
 }
@@ -88,6 +89,7 @@ abstract class VideoExtension extends Extension {
     return r;
   })
   async execGetRecommendVideos(pageNo?: number, type?: string) {
+    pageNo = pageNo || 1;
     const ret = await this.getRecommendVideos(pageNo, type);
     if (ret) {
       _.castArray(ret).forEach((videoList) => {
@@ -116,6 +118,7 @@ abstract class VideoExtension extends Extension {
     return r;
   })
   async execSearch(keyword: string, pageNo?: number) {
+    pageNo = pageNo || 1;
     const ret = await this.search(keyword, pageNo);
     if (ret) {
       _.castArray(ret).forEach((videoList) => {

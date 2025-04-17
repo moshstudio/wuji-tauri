@@ -10,7 +10,7 @@ use reqwest::{redirect::Policy, NoProxy};
 use serde::{Deserialize, Serialize};
 use tauri::{
     async_runtime::Mutex,
-    ipc::{CommandScope, GlobalScope},
+    ipc::{Channel, CommandScope, GlobalScope},
     Manager, ResourceId, ResourceTable, Runtime, State, Webview,
 };
 use tokio::sync::oneshot::{channel, Receiver, Sender};
@@ -339,8 +339,9 @@ pub async fn fetch<R: Runtime>(
             //     }
             //     Ok((response, redirect_history))
             // };
-
             let fut = async move { request.send().await.map_err(Into::into) };
+
+            // let fut = async move { request.send().await.map_err(Into::into) };
             let mut resources_table = webview.resources_table();
             let rid = resources_table.add_request(Box::pin(fut));
 
@@ -440,16 +441,30 @@ pub async fn fetch_send<R: Runtime>(
 }
 
 #[tauri::command]
-pub(crate) async fn fetch_read_body<R: Runtime>(
+pub async fn fetch_read_body<R: Runtime>(
     webview: Webview<R>,
     rid: ResourceId,
-) -> crate::fetch_plugin::Result<tauri::ipc::Response> {
+    stream_channel: Channel<tauri::ipc::InvokeResponseBody>,
+) -> crate::fetch_plugin::Result<()> {
     let res = {
         let mut resources_table = webview.resources_table();
         resources_table.take::<ReqwestResponse>(rid)?
     };
-    let res = Arc::into_inner(res).unwrap().0;
-    Ok(tauri::ipc::Response::new(res.bytes().await?.to_vec()))
+
+    let mut res = Arc::into_inner(res).unwrap().0;
+
+    // send response through IPC channel
+    while let Some(chunk) = res.chunk().await? {
+        let mut chunk = chunk.to_vec();
+        // append 0 to indicate we are not done yet
+        chunk.push(0);
+        stream_channel.send(tauri::ipc::InvokeResponseBody::Raw(chunk))?;
+    }
+
+    // send 1 to indicate we are done
+    stream_channel.send(tauri::ipc::InvokeResponseBody::Raw(vec![1]))?;
+
+    Ok(())
 }
 
 fn _is_unsafe_header(header: &HeaderName) -> bool {

@@ -44,6 +44,20 @@ const videoSources = ref<import('video.js').default.Tech.SourceObject[]>([]);
 watch(videoSrc, (_) => {
   if (videoSrc.value) {
     function getStreamType(): string {
+      if (videoSrc.value?.type) {
+        switch (videoSrc.value?.type) {
+          case 'm3u8':
+            return 'application/x-mpegURL';
+          case 'mp4':
+            return 'video/mp4';
+          case 'hls':
+            return 'application/x-mpegURL';
+          case 'dash':
+            return 'application/dash+xml';
+          case 'rtmp':
+            return 'rtmp/flv';
+        }
+      }
       const url = videoSrc.value?.url || '';
       if (url.includes('.m3u8')) {
         return 'application/x-mpegURL'; // HLS

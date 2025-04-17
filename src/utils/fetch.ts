@@ -26,7 +26,7 @@
  * @module
  */
 
-import { invoke } from '@tauri-apps/api/core';
+import { Channel, invoke } from '@tauri-apps/api/core';
 
 const STATIC_CHROME_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
@@ -160,8 +160,8 @@ export async function _fetch(
 
   const req = new Request(input, init);
   const buffer = await req.arrayBuffer();
-  const data
-    = buffer.byteLength !== 0 ? Array.from(new Uint8Array(buffer)) : null;
+  const data =
+    buffer.byteLength !== 0 ? Array.from(new Uint8Array(buffer)) : null;
 
   // append new headers created by the browser `Request` implementation,
   // if not already declared by the caller of this function
@@ -176,8 +176,8 @@ export async function _fetch(
     // navigator.userAgent
   }
 
-  const headersArray
-    = headers instanceof Headers
+  const headersArray =
+    headers instanceof Headers
       ? Array.from(headers.entries())
       : Array.isArray(headers)
         ? headers
@@ -242,24 +242,43 @@ export async function _fetch(
     rid,
   });
 
-  const body = await invoke<ArrayBuffer | number[]>(
-    'plugin:fetch-plugin|fetch_read_body',
-    {
-      rid: responseRid,
-    },
-  );
+  const readableStreamBody = new ReadableStream({
+    start: (controller) => {
+      const streamChannel = new Channel<ArrayBuffer | number[]>();
+      streamChannel.onmessage = (res: ArrayBuffer | number[]) => {
+        // close early if aborted
+        if (signal?.aborted) {
+          controller.error(ERROR_REQUEST_CANCELLED);
+          return;
+        }
 
-  const res = new Response(
-    body instanceof ArrayBuffer && body.byteLength !== 0
-      ? body
-      : Array.isArray(body) && body.length > 0
-        ? new Uint8Array(body)
-        : null,
-    {
-      status,
-      statusText,
+        const resUint8 = new Uint8Array(res);
+        const lastByte = resUint8[resUint8.byteLength - 1];
+        const actualRes = resUint8.slice(0, resUint8.byteLength - 1);
+
+        // close when the signal to close (last byte is 1) is sent from the IPC.
+        if (lastByte == 1) {
+          controller.close();
+          return;
+        }
+
+        controller.enqueue(actualRes);
+      };
+
+      // run a non-blocking body stream fetch
+      invoke('plugin:fetch-plugin|fetch_read_body', {
+        rid: responseRid,
+        streamChannel,
+      }).catch((e) => {
+        controller.error(e);
+      });
     },
-  );
+  });
+
+  const res = new Response(readableStreamBody, {
+    status,
+    statusText,
+  });
 
   // url and headers are read only properties
   // but seems like we can set them like this
@@ -289,8 +308,7 @@ export async function fetch(
       }
     }
     return response;
-  }
-  catch (error) {
+  } catch (error) {
     console.error('fetch error:', error);
     return Response.error();
   }
