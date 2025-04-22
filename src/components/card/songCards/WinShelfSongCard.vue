@@ -104,7 +104,7 @@ function onDbClick() {
         {
           name: '从当前收藏夹移除',
           subname: song.name,
-          color: '#1989fa',
+          color: '#E74C3C',
           callback: () => {
             showMoreOptions = false;
             shelfStore.removeSongFromShelf(song, shelf.playlist.id);

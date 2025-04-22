@@ -5,7 +5,9 @@ import type { PropType } from 'vue';
 import LoadImage from '@/components/LoadImage.vue';
 import { router } from '@/router';
 import { useStore } from '@/store';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+
+const store = useStore();
 
 const { item, selecteMode } = defineProps({
   item: {
@@ -18,7 +20,6 @@ const { item, selecteMode } = defineProps({
   },
 });
 const selected = defineModel('selected');
-const source = ref<PhotoSource>();
 
 function onClick() {
   if (selecteMode) {
@@ -31,9 +32,9 @@ function onClick() {
   });
 }
 
-onMounted(() => {
-  const store = useStore();
-  source.value = store.getPhotoSource(item.sourceId);
+const sourceName = computed(() => {
+  const source = store.getPhotoSource(item.sourceId);
+  return source?.item.name || '';
 });
 </script>
 
@@ -58,10 +59,10 @@ onMounted(() => {
       {{ item.title }}
     </p>
     <p
-      v-if="source && selecteMode"
+      v-if="selecteMode && sourceName"
       class="absolute top-2 left-2 p-1 text-white bg-black rounded text-xs"
     >
-      {{ source.item.name }}
+      {{ sourceName }}
     </p>
     <van-checkbox
       v-if="selecteMode"

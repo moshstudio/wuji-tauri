@@ -230,11 +230,12 @@ const showMenu = ref(false);
         top: 'calc(50% - 25px)',
         backgroundColor: '#1f1f1f',
       }"
+      class="scrollbar scrollbar-thumb-gray-400/60 scrollbar-track-transparent"
     >
       <van-list>
         <template v-for="item in comic?.chapters" :key="item.id">
           <div
-            class="flex justify-start items-center text-sm gap-2 p-2 flex-nowrap select-none van-haptics-feedback"
+            class="mobile-scrollbar flex justify-start items-center text-sm gap-2 p-2 flex-nowrap select-none van-haptics-feedback"
             :class="{
               'bg-black reading-chapter': readingChapter?.id === item.id,
             }"
@@ -323,6 +324,26 @@ const showMenu = ref(false);
   }
   .bottom {
     transform: translateY(100%);
+  }
+}
+:deep(.van-list) {
+  ::-webkit-scrollbar {
+    background-color: transparent;
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(110, 110, 110, 0.2);
+    border-radius: 6px;
+  }
+
+  :hover::-webkit-scrollbar-thumb {
+    background-color: rgba(110, 110, 110, 0.6);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(110, 110, 110, 0.8);
   }
 }
 </style>

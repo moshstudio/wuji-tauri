@@ -222,6 +222,7 @@ async function onPlayFinished(args: any) {
   ) {
     return;
   }
+  updateVideoPlayInfo(0);
   const index = playingResource.value.episodes.findIndex(
     (item) => item.id == playingEpisode.value!.id,
   );
@@ -238,14 +239,12 @@ function onTimeUpdate(args: any) {
 }
 
 const updateVideoPlayInfo = _.throttle(
-  () => {
-    const position = videoPlayer.value?.currentTime();
-    if (
-      position &&
-      videoItem.value &&
-      playingEpisode.value &&
-      playingResource.value
-    ) {
+  (position?: number) => {
+    if (position === undefined) {
+      position = videoPlayer.value?.currentTime();
+    }
+    if (videoItem.value && playingEpisode.value && playingResource.value) {
+      playingEpisode.value.lastWatchPosition = position;
       shelfStore.updateVideoPlayInfo(videoItem.value, {
         resource: playingResource.value,
         episode: playingEpisode.value,

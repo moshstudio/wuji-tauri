@@ -5,16 +5,15 @@ import CDSVG from '@/assets/cd.svg';
 import MoreOptionsSheet from '@/components/actionSheets/MoreOptions.vue';
 import SongSelectShelfSheet from '@/components/actionSheets/SongSelectShelf.vue';
 import LoadImage from '@/components/LoadImage.vue';
-import { useSongShelfStore, useSongStore } from '@/store';
+import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
 import { transTime } from '@/utils';
 import { storeToRefs } from 'pinia';
 import { ref } from 'vue';
 
-const emit = defineEmits<{
-  (e: 'hidePanel'): void;
-}>();
 const songStore = useSongStore();
+const displayStore = useDisplayStore();
 const { playingSong, isPlaying } = storeToRefs(songStore);
+const { showPlayView } = storeToRefs(displayStore);
 
 const show = defineModel('show', { type: Boolean, default: false });
 const lyric = defineModel('lyric', { type: Object as PropType<Lyric> });
@@ -27,11 +26,6 @@ const panelBackgroundStyle = defineModel('panelBackgroundStyle', {
   type: Object as PropType<CSSProperties>,
   default: { 'background-color': 'rgba(0, 0, 0, 0.1)' },
 });
-const shelfAnchors = defineModel('shelfAnchors', {
-  type: Array as PropType<number[]>,
-  required: true,
-});
-const shelfHeight = defineModel('shelfHeight', { type: Number, default: 0 });
 
 const shelfStore = useSongShelfStore();
 
@@ -48,29 +42,20 @@ function addSongToShelf(shelfId: string) {
 </script>
 
 <template>
-  <van-floating-panel
-    v-model:height="shelfHeight"
-    :anchors="shelfAnchors"
-    :content-draggable="false"
-    class="z-[1000] left-[0px] right-[0px] w-auto h-full rounded-none up-shadow bottom-[110px] overflow-hidden playing-bg"
-    :style="show ? { height: `${shelfHeight}px` } : {}"
-    @height-change="
-      (height) => {
-        if (height.height === shelfAnchors[0]) {
-          show = false;
-        }
-      }
-    "
+  <van-popup
+    v-model:show="showPlayView"
+    position="bottom"
+    :z-index="1000"
+    class="playing-bg overflow-hidden absolute insert-0 w-full h-full"
+    :overlay="false"
   >
-    <template #header>
-      <van-row class="absolute p-4 z-[1001]">
-        <van-icon
-          name="arrow-left"
-          class="text-white van-haptics-feedback"
-          @click.self="() => (show = false)"
-        />
-      </van-row>
-    </template>
+    <van-row class="absolute p-4 pt-6 z-[1001]">
+      <van-icon
+        name="arrow-left"
+        class="text-white van-haptics-feedback"
+        @click.self="() => (show = false)"
+      />
+    </van-row>
     <div
       v-if="playingSong"
       class="flip-card overflow-hidden"
@@ -97,9 +82,7 @@ function addSongToShelf(shelfId: string) {
             </LoadImage>
           </div>
 
-          <span
-            class="mask absolute top-0 left-0 w-full h-full bg-cover"
-          />
+          <span class="mask absolute top-0 left-0 w-full h-full bg-cover" />
         </div>
         <div class="flex gap-2 px-4 w-full items-center justify-between mt-12">
           <div class="left flex gap-1 items-center text-xs text-gray-400">
@@ -158,9 +141,7 @@ function addSongToShelf(shelfId: string) {
             </li>
           </ul>
         </div>
-        <div v-else class="text-sm text-white mt-[30vh]">
-          没有歌词
-        </div>
+        <div v-else class="text-sm text-white mt-[30vh]">没有歌词</div>
       </div>
     </div>
     <MoreOptionsSheet
@@ -185,7 +166,7 @@ function addSongToShelf(shelfId: string) {
       teleport="body"
       show-cancel-button
     />
-  </van-floating-panel>
+  </van-popup>
 </template>
 
 <style scoped lang="less">
@@ -204,10 +185,10 @@ function addSongToShelf(shelfId: string) {
   &::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: -10%;
+    left: -10%;
+    width: 120%;
+    height: 120%;
     background-size: cover;
     background-position: center;
     background-image: v-bind('panelBackgroundStyle.backgroundImage');
@@ -225,7 +206,7 @@ function addSongToShelf(shelfId: string) {
   height: 100%;
   background: linear-gradient(
     135deg,
-    #4b6cb7 0%,
+    #4b6cb7 20%,
     #182848 100%
   ); /* 变暗效果，0.5表示50%的透明度 */
   opacity: 0.5;
@@ -234,7 +215,7 @@ function addSongToShelf(shelfId: string) {
 .dark .playing-bg::after {
   background: linear-gradient(
     135deg,
-    #1e3c72 0%,
+    #1e3c72 20%,
     #2a5298 100%
   ); /* 变暗效果，0.5表示50%的透明度 */
 }

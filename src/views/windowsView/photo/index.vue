@@ -17,6 +17,7 @@ const emit = defineEmits<{
 const store = useStore();
 const displayStore = useDisplayStore();
 const { photoSources } = storeToRefs(store);
+const { showPhotoShelf } = storeToRefs(displayStore);
 
 const searchValue = defineModel('searchValue', { type: String, default: '' });
 </script>
@@ -24,7 +25,8 @@ const searchValue = defineModel('searchValue', { type: String, default: '' });
 <template>
   <div
     v-remember-scroll
-    class="w-full h-full overflow-x-hidden overflow-y-auto"
+    class="relative w-full h-full overflow-x-hidden"
+    :class="showPhotoShelf ? 'overflow-y-hidden' : 'overflow-y-auto'"
   >
     <div class="flex items-center justify-between px-4 py-2">
       <div class="placeholder" />

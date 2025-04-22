@@ -735,6 +735,7 @@ onBeforeUnmount(() => {
         top: 'calc(50% - 25px)',
         backgroundColor: '#1f1f1f',
       }"
+      class="scrollbar scrollbar-thumb-gray-400/60 scrollbar-track-transparent"
     >
       <van-list>
         <template v-for="item in book?.chapters" :key="item.id">
@@ -772,6 +773,7 @@ onBeforeUnmount(() => {
               icon="material-symbols-light:download-done-rounded"
               width="20"
               height="20"
+              class="text-gray-400"
             />
           </div>
         </template>

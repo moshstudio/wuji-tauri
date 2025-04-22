@@ -9,61 +9,38 @@ import { storeToRefs } from 'pinia';
 
 const emit = defineEmits<{
   (e: 'deleteSelected'): void;
-  (e: 'hidePanel'): void;
 }>();
 const displayStore = useDisplayStore();
 const shelfStore = useVideoShelfStore();
 const { videoShelf } = storeToRefs(shelfStore);
+const { showVideoShelf } = storeToRefs(displayStore);
 
 const activeIndex = defineModel('activeIndex', { type: Number, default: 0 });
 const selecteMode = defineModel('selecteMode', {
   type: Boolean,
   default: false,
 });
-const shelfAnchors = defineModel('shelfAnchors', {
-  type: Array as PropType<number[]>,
-});
-const shelfHeight = defineModel('shelfHeight', { type: Number, default: 0 });
 </script>
-
 <template>
-  <van-floating-panel
-    v-model:height="shelfHeight"
-    :anchors="shelfAnchors"
-    :content-draggable="false"
-    class="left-[50px] right-[0px] w-auto rounded-none up-shadow"
-    :style="displayStore.showVideoShelf ? { height: `${shelfHeight}px` } : {}"
-    @height-change="
-      (height) => {
-        if (height.height === 0) {
-          displayStore.showVideoShelf = false;
-        }
-      }
-    "
+  <van-popup
+    v-model:show="showVideoShelf"
+    position="bottom"
+    :overlay="false"
+    :z-index="1000"
+    class="overflow-hidden sticky left-0 top-0 right-0 bottom-0 w-full h-full"
   >
-    <template #header>
-      <div class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-lg font-semibold">
-          <slot name="title">
-            <p class="text-[--van-text-color]">
-              视频收藏
-            </p>
-          </slot>
-        </h2>
-        <div
-          class="text-button"
-          @click="
-            () => {
-              selecteMode = false;
-              emit('hidePanel');
-            }
-          "
-        >
-          关闭收藏
-        </div>
-      </div>
-    </template>
-    <div class="flex gap-2 m-2 p-1 shrink">
+    <div
+      class="shrink-0 w-full flex justify-between items-center px-4 h-[46px] border-b"
+    >
+      <h2 class="text-lg font-semibold text-[--van-text-color]">影库</h2>
+      <van-icon
+        name="cross"
+        size="24"
+        @click="showVideoShelf = false"
+        class="van-haptics-feedback text-[--van-text-color]"
+      />
+    </div>
+    <div class="shrink-0 w-full flex gap-2 px-4 pt-2 h-[44px]">
       <van-button
         icon="plus"
         size="small"
@@ -102,7 +79,14 @@ const shelfHeight = defineModel('shelfHeight', { type: Number, default: 0 });
         删除所选
       </van-button>
     </div>
-    <van-tabs shrink animated :active="activeIndex">
+    <van-tabs
+      shrink
+      animated
+      sticky
+      :offset-top="90"
+      :active="activeIndex"
+      class="w-full h-full overflow-y-scroll"
+    >
       <van-tab v-for="shelf in videoShelf" :key="shelf.id" :title="shelf.name">
         <ResponsiveGrid :base-cols="2" class="p-2">
           <WinShelfVideoCard
@@ -115,7 +99,7 @@ const shelfHeight = defineModel('shelfHeight', { type: Number, default: 0 });
         </ResponsiveGrid>
       </van-tab>
     </van-tabs>
-  </van-floating-panel>
+  </van-popup>
   <AddVideoShelfDialog />
   <removeVideoShelfDialog />
 </template>

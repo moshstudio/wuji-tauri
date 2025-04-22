@@ -14,8 +14,6 @@ const displayStore = useDisplayStore();
 const songStore = useSongStore();
 const { songSources } = storeToRefs(store);
 
-const showPlayView = ref(false);
-
 const searchValue = ref('');
 let playlistTimer: NodeJS.Timeout;
 let songTimer: NodeJS.Timeout;
@@ -104,7 +102,6 @@ async function openBaseUrl(source: SongSource) {
   <PlatformSwitch>
     <template #mobile>
       <MobileSong
-        v-model:show-play-view="showPlayView"
         v-model:search-value="searchValue"
         v-model:active-tab-index="activeTabIndex"
         @search="search"
@@ -117,7 +114,6 @@ async function openBaseUrl(source: SongSource) {
     </template>
     <template #windows>
       <WinSong
-        v-model:show-play-view="showPlayView"
         v-model:search-value="searchValue"
         v-model:active-tab-index="activeTabIndex"
         @search="search"

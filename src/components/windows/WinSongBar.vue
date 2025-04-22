@@ -17,7 +17,6 @@ const { showPlayingPlaylist } = storeToRefs(displayStore);
 </script>
 
 <template>
-  <PlayView />
   <div
     class="flex justify-between items-center py-2 px-4 border-t-[1px] select-none flex-nowrap h-[80px] z-[1000] bg-[--van-background]"
   >

@@ -11,100 +11,43 @@ import RemoveSongShelfDialog from '@/components/windows/dialogs/RemoveSongShelf.
 import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
 import { SongShelfType } from '@/types/song';
 import { storeToRefs } from 'pinia';
-import { onMounted, onUnmounted, ref, watch } from 'vue';
 
 const emit = defineEmits<{
   (e: 'loadPage', id: string, pageNo?: number): void;
   (e: 'playAll', playlist: PlaylistInfo): void;
-  (e: 'hidePanel'): void;
 }>();
 const displayStore = useDisplayStore();
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
-
-const shelfAnchors = defineModel('shelfAnchors', {
-  type: Array as PropType<number[]>,
-  default: () => [0, 100],
-});
-const shelfHeight = defineModel('shelfHeight', { type: Number, default: 0 });
+const { showSongShelf } = storeToRefs(displayStore);
 
 const { showSongShelfDetail, selectedSongShelf } = storeToRefs(displayStore);
-const offset = 0;
-const shelfDetailAnchors = ref([
-  offset,
-  Math.round(window.innerHeight) + offset,
-]);
-const shelfDetailHeight = ref(0);
-function hideDetailPanel() {
-  shelfDetailHeight.value = shelfDetailAnchors.value[0];
-  showSongShelfDetail.value = false;
-}
-watch(
-  showSongShelfDetail,
-  (newValue) => {
-    if (newValue) {
-      shelfDetailHeight.value = shelfDetailAnchors.value[1];
-    } else {
-      shelfDetailHeight.value = shelfDetailAnchors.value[0];
-    }
-  },
-  { immediate: true },
-);
-function updateAnchors() {
-  shelfDetailAnchors.value[1] = Math.round(window.innerHeight) + offset;
-  if (showSongShelfDetail.value) {
-    shelfDetailHeight.value = shelfDetailAnchors.value[1];
-  }
-}
-onMounted(async () => {
-  window.addEventListener('resize', updateAnchors);
-});
-onUnmounted(() => {
-  window.removeEventListener('resize', updateAnchors);
-});
 </script>
 
 <template>
-  <van-floating-panel
-    v-remember-scroll="'.van-floating-panel__content'"
-    v-model:height="shelfHeight"
-    :anchors="shelfAnchors"
-    :content-draggable="false"
-    class="left-[0px] right-[0px] bottom-[80px] w-auto rounded-none up-shadow"
-    :style="displayStore.showSongShelf ? { height: `${shelfHeight}px` } : {}"
-    @height-change="
-      (height) => {
-        if (height.height === shelfAnchors[0]) {
-          displayStore.showSongShelf = false;
-        }
-      }
-    "
+  <van-popup
+    v-model:show="showSongShelf"
+    position="bottom"
+    :overlay="false"
+    :z-index="1000"
+    class="absolute inset-0 w-full h-full flex flex-col overflow-hidden"
   >
-    <template #header>
-      <div class="flex justify-between items-center p-2 border-b">
-        <div class="flex items-center gap-2">
-          <LeftPopup />
-          <h2 class="text-lg font-bold">
-            <slot name="title">
-              <p class="text-[--van-text-color]">乐库</p>
-            </slot>
-          </h2>
-        </div>
-        <van-button
-          icon="arrow-down"
-          size="small"
-          plain
-          round
-          @click="
-            () => {
-              emit('hidePanel');
-            }
-          "
-        />
+    <div
+      class="shrink-0 w-full flex justify-between items-center px-4 h-[46px] border-b"
+    >
+      <div class="flex items-center gap-2">
+        <LeftPopup />
+        <h2 class="text-lg font-semibold text-[--van-text-color]">乐库</h2>
       </div>
-    </template>
+      <van-icon
+        name="cross"
+        size="24"
+        @click="showSongShelf = false"
+        class="van-haptics-feedback text-[--van-text-color]"
+      />
+    </div>
 
-    <div class="flex gap-2 m-2 p-1 shrink">
+    <div class="shrink-0 w-full flex gap-2 px-4 pt-2 h-[44px]">
       <van-button
         icon="plus"
         size="small"
@@ -124,10 +67,7 @@ onUnmounted(() => {
         @click="() => (displayStore.showImportPlaylistDialog = true)"
       />
     </div>
-    <div
-      class="flex flex-col gap-1 px-2 text-sm overflow-hidden"
-      :class="songStore.playingSong ? 'mb-[45px]' : ''"
-    >
+    <div class="flex flex-col w-full h-full gap-1 px-2 text-sm overflow-y-auto">
       <div
         class="flex items-center gap-2 p-1 rounded cursor-pointer hover:bg-[--van-background] text-[--van-text-color]"
         :style="{
@@ -210,28 +150,20 @@ onUnmounted(() => {
         </span>
       </div>
     </div>
-  </van-floating-panel>
-  <van-floating-panel
-    v-model:height="shelfDetailHeight"
-    class="song-shelf-detail pb-[110px]"
-    :anchors="shelfDetailAnchors"
-    :content-draggable="false"
-    @height-change="
-      (height) => {
-        if (height.height === shelfDetailAnchors[0]) {
-          showSongShelfDetail = false;
-        }
-      }
-    "
+  </van-popup>
+  <van-popup
+    v-model:show="showSongShelfDetail"
+    position="bottom"
+    :overlay="false"
+    :z-index="1000"
+    class="overflow-hidden absolute insert-0 w-ull h-full flex flex-col"
   >
-    <template #header>
-      <van-nav-bar
-        :title="selectedSongShelf?.playlist.name || '详情'"
-        left-arrow
-        @click-left="hideDetailPanel"
-      />
-    </template>
-    <div class="flex flex-col gap-1 p-2 text-sm">
+    <van-nav-bar
+      :title="selectedSongShelf?.playlist.name || '详情'"
+      left-arrow
+      @click-left="showSongShelfDetail = false"
+    />
+    <div class="flex flex-col w-full h-full overflow-y-auto gap-1 p-2 text-sm">
       <div
         v-if="
           selectedSongShelf &&
@@ -276,7 +208,7 @@ onUnmounted(() => {
         />
       </template>
     </div>
-  </van-floating-panel>
+  </van-popup>
   <AddSongShelfDialog />
   <RemoveSongShelfDialog />
   <ImportPlaylistDialog />

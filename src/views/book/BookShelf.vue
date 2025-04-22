@@ -13,6 +13,7 @@ const displayStore = useDisplayStore();
 const shelfStore = useBookShelfStore();
 const { showBookShelf } = storeToRefs(displayStore);
 
+const activeIndex = ref(0);
 async function refreshChapters() {
   await shelfStore.bookRefreshChapters();
 }
@@ -56,60 +57,24 @@ async function toBook(book: BookItemInShelf, chapterId?: string) {
 function removeBookFromShelf(book: BookItemInShelf, shelfId: string) {
   shelfStore.removeBookFromShelf(book.book, shelfId);
 }
-
-// 书架展示相关
-const shelfAnchors = ref([0, Math.round(window.innerHeight)]);
-const shelfHeight = ref(0);
-function hidePanel() {
-  shelfHeight.value = shelfAnchors.value[0];
-  showBookShelf.value = false;
-}
-watch(
-  showBookShelf,
-  (newValue) => {
-    if (newValue) {
-      shelfHeight.value = shelfAnchors.value[1];
-    }
-    else {
-      shelfHeight.value = shelfAnchors.value[0];
-    }
-  },
-  { immediate: true },
-);
-function updateAnchors() {
-  shelfAnchors.value[1] = Math.round(window.innerHeight);
-  if (showBookShelf.value) {
-    shelfHeight.value = shelfAnchors.value[1];
-  }
-}
-onMounted(() => {
-  window.addEventListener('resize', updateAnchors);
-});
-onUnmounted(() => {
-  window.removeEventListener('resize', updateAnchors);
-});
 </script>
 
 <template>
   <PlatformSwitch>
     <template #mobile>
       <MobileBookShelf
-        v-model:shelf-anchors="shelfAnchors"
-        v-model:shelf-height="shelfHeight"
+        v-model:active-index="activeIndex"
         @refresh-chapters="refreshChapters"
         @to-book="toBook"
         @remove-book-from-shelf="removeBookFromShelf"
-        @hide-panel="hidePanel"
       />
     </template>
     <template #windows>
       <WinBookShelf
-        v-model:shelf-anchors="shelfAnchors"
-        v-model:shelf-height="shelfHeight"
+        v-model:active-index="activeIndex"
         @refresh-chapters="refreshChapters"
         @to-book="toBook"
         @remove-book-from-shelf="removeBookFromShelf"
-        @hide-panel="hidePanel"
       />
     </template>
   </PlatformSwitch>

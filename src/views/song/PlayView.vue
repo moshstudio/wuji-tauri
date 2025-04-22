@@ -1,20 +1,12 @@
 <script setup lang="ts">
 import type { Lyric } from '@/utils/lyric';
-import type {
-  CSSProperties,
-} from 'vue';
+import type { CSSProperties } from 'vue';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
 import { useDisplayStore, useSongStore } from '@/store';
 import { cachedFetch } from '@/utils';
 import { getLyric, parseLyric } from '@/utils/lyric';
 import { storeToRefs } from 'pinia';
-import {
-  computed,
-  onMounted,
-  onUnmounted,
-  ref,
-  watch,
-} from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import MobilePlayView from '../mobileView/song/PlayView.vue';
 import WinPlayView from '../windowsView/song/PlayView.vue';
 
@@ -29,13 +21,14 @@ const panelBackgroundStyle = ref<CSSProperties>({
   'background-color': 'rgba(0, 0, 0, 0.1)',
 });
 
-async function backgroundImageUrl(url?: string, headers?: Record<string, string>): Promise<string | null> {
-  if (!url)
-    return null;
+async function backgroundImageUrl(
+  url?: string,
+  headers?: Record<string, string>,
+): Promise<string | null> {
+  if (!url) return null;
   if (!headers) {
     return `url(${url})`;
-  }
-  else {
+  } else {
     const response = await cachedFetch(url, {
       headers,
       verify: false,
@@ -74,13 +67,11 @@ watch(
       ).then((url) => {
         if (url) {
           panelBackgroundStyle.value.backgroundImage = url;
-        }
-        else {
+        } else {
           panelBackgroundStyle.value.backgroundImage = '';
         }
       });
-    }
-    else {
+    } else {
       // background-color: #4158D0;
       // background-image: linear-gradient(43deg, #4158D0 0%, #C850C0 46%, #FFCC70 100%);
 
@@ -94,17 +85,16 @@ watch(
       ];
       panelBackgroundStyle.value.backgroundColor = '#4158D0';
       panelBackgroundStyle.value.backgroundImage = `linear-gradient(${direction}, ${colorStops
-        .map(colorStop => `${colorStop.color} ${colorStop.position}%`)
+        .map((colorStop) => `${colorStop.color} ${colorStop.position}%`)
         .join(', ')})`;
     }
     lyric.value = undefined;
     audioCurrent.value = 0;
     if (newSong.lyric) {
       lyric.value = parseLyric(newSong.lyric);
-    }
-    else if (newSong.name) {
+    } else if (newSong.name) {
       const singer = newSong.artists
-        ?.map(artist => (typeof artist === 'object' ? artist.name : artist))
+        ?.map((artist) => (typeof artist === 'object' ? artist.name : artist))
         .join(',');
       lyric.value = await getLyric(newSong.name, singer);
     }
@@ -122,8 +112,8 @@ watch(audioCurrent, (newVal) => {
   if (lyric.value) {
     for (let i = 0; i < lyric.value.length; i++) {
       if (
-        lyric.value[i].position < +newVal
-        && (lyric.value[i + 1]?.position || 9999999999) > +newVal
+        lyric.value[i].position < +newVal &&
+        (lyric.value[i + 1]?.position || 9999999999) > +newVal
       ) {
         let offset = 0;
         // 从0到i，计算元素高度
@@ -141,44 +131,6 @@ watch(audioCurrent, (newVal) => {
   }
 });
 
-// 展示相关
-const offset = computed(() => {
-  return displayStore.isMobileView ? -100 : -80;
-});
-const shelfAnchors = ref([
-  offset.value,
-  Math.round(window.innerHeight) + offset.value,
-]);
-const shelfHeight = ref(0);
-function hidePanel() {
-  shelfHeight.value = shelfAnchors.value[0];
-  showPlayView.value = false;
-}
-watch(
-  showPlayView,
-  (newValue) => {
-    if (newValue) {
-      shelfHeight.value = shelfAnchors.value[1];
-    }
-    else {
-      shelfHeight.value = shelfAnchors.value[0];
-    }
-    panelBackgroundStyle.value.height = `${shelfHeight.value}px`;
-  },
-  { immediate: true },
-);
-function updateAnchors() {
-  shelfAnchors.value[1] = Math.round(window.innerHeight) + offset.value;
-  if (showPlayView.value) {
-    shelfHeight.value = shelfAnchors.value[1];
-  }
-}
-onMounted(() => {
-  window.addEventListener('resize', updateAnchors);
-});
-onUnmounted(() => {
-  window.removeEventListener('resize', updateAnchors);
-});
 </script>
 
 <template>
@@ -190,9 +142,6 @@ onUnmounted(() => {
         v-model:transform-style="transformStyle"
         v-model:panel-background-style="panelBackgroundStyle"
         v-model:show="showPlayView"
-        v-model:shelf-anchors="shelfAnchors"
-        v-model:shelf-height="shelfHeight"
-        @hide-panel="hidePanel"
       />
     </template>
     <template #windows>
@@ -202,9 +151,6 @@ onUnmounted(() => {
         v-model:transform-style="transformStyle"
         v-model:panel-background-style="panelBackgroundStyle"
         v-model:show="showPlayView"
-        v-model:shelf-anchors="shelfAnchors"
-        v-model:shelf-height="shelfHeight"
-        @hide-panel="hidePanel"
       />
     </template>
   </PlatformSwitch>

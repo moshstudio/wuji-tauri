@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { BookItemInShelf } from '@/extensions/book';
-import type { PropType } from 'vue';
 import MobileShelfBookCard from '@/components/card/bookCards/MobileShelfBookCard.vue';
 import LeftPopup from '@/components/mobile/LeftPopup.vue';
 import AddBookShelfDialog from '@/components/windows/dialogs/AddBookShelf.vue';
@@ -13,13 +12,9 @@ const emit = defineEmits<{
   (e: 'refreshChapters'): void;
   (e: 'toBook', book: BookItemInShelf, chapterId?: string): void;
   (e: 'removeBookFromShelf', book: BookItemInShelf, shelfId: string): void;
-  (e: 'hidePanel'): void;
 }>();
-const shelfAnchors = defineModel('shelfAnchors', {
-  type: Array as PropType<number[]>,
-  required: true,
-});
-const shelfHeight = defineModel('shelfHeight', {
+
+const activeIndex = defineModel('activeIndex', {
   type: Number,
   required: true,
 });
@@ -27,6 +22,7 @@ const shelfHeight = defineModel('shelfHeight', {
 const displayStore = useDisplayStore();
 const shelfStore = useBookShelfStore();
 const { bookShelf, bookChapterRefreshing } = storeToRefs(shelfStore);
+const { showBookShelf } = storeToRefs(displayStore);
 
 // 计算还有多少章没读
 function unreadCount(book: BookItemInShelf): number | undefined {
@@ -46,46 +42,28 @@ function sourceName(book: BookItemInShelf) {
 </script>
 
 <template>
-  <van-floating-panel
-    v-remember-scroll="'.van-floating-panel__content'"
-    v-model:height="shelfHeight"
-    :anchors="shelfAnchors"
-    :content-draggable="false"
-    class="left-[0px] right-[0px] w-auto rounded-none up-shadow"
-    :style="displayStore.showBookShelf ? { height: `${shelfHeight}px` } : {}"
-    @height-change="
-      (height) => {
-        if (height.height === 0) {
-          displayStore.showBookShelf = false;
-        }
-      }
-    "
+  <van-popup
+    v-model:show="showBookShelf"
+    position="bottom"
+    :overlay="false"
+    :z-index="1000"
+    class="absolute inset-0 w-full h-full flex flex-col overflow-hidden"
   >
-    <template #header>
-      <div class="flex justify-between items-center p-2 border-b">
-        <div class="flex items-center gap-2">
-          <LeftPopup />
-          <h2 class="text-lg font-bold">
-            <slot name="title">
-              <p class="text-[--van-text-color]">书架</p>
-            </slot>
-          </h2>
-        </div>
-
-        <van-button
-          icon="arrow-down"
-          size="small"
-          plain
-          round
-          @click="
-            () => {
-              emit('hidePanel');
-            }
-          "
-        />
+    <div
+      class="shrink-0 w-full flex justify-between items-center px-4 h-[46px] border-b"
+    >
+      <div class="flex items-center gap-2">
+        <LeftPopup />
+        <h2 class="text-lg font-semibold text-[--van-text-color]">书架</h2>
       </div>
-    </template>
-    <div class="flex gap-2 m-2 p-1 shrink">
+      <van-icon
+        name="cross"
+        size="24"
+        @click="showBookShelf = false"
+        class="van-haptics-feedback text-[--van-text-color]"
+      />
+    </div>
+    <div class="shrink-0 w-full flex gap-2 px-4 pt-2 h-[44px]">
       <van-button
         icon="replay"
         size="small"
@@ -110,7 +88,14 @@ function sourceName(book: BookItemInShelf) {
       />
     </div>
 
-    <van-tabs shrink animated class="pb-[50px]">
+    <van-tabs
+      shrink
+      animated
+      sticky
+      :offset-top="90"
+      :active="activeIndex"
+      class="w-full h-full overflow-y-scroll"
+    >
       <van-tab v-for="shelf in bookShelf" :key="shelf.id" :title="shelf.name">
         <transition name="list" tag="ul">
           <van-list class="p-2">
@@ -133,7 +118,7 @@ function sourceName(book: BookItemInShelf) {
         </transition>
       </van-tab>
     </van-tabs>
-  </van-floating-panel>
+  </van-popup>
   <AddBookShelfDialog />
   <DeleteBookShelfDialog />
 </template>

@@ -79,6 +79,7 @@ abstract class ComicExtension extends Extension {
     return r;
   })
   async execGetRecommendComics(pageNo?: number, type?: string) {
+    pageNo = pageNo || 1;
     const ret = await this.getRecommendComics(pageNo, type);
     if (ret) {
       _.castArray(ret).forEach((comicList) => {
@@ -107,6 +108,7 @@ abstract class ComicExtension extends Extension {
     return r;
   })
   async execSearch(keyword: string, pageNo?: number) {
+    pageNo = pageNo || 1;
     const ret = await this.search(keyword, pageNo);
     if (ret) {
       _.castArray(ret).forEach((comicList) => {

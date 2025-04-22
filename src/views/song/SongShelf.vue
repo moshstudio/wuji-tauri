@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import type { PlaylistInfo } from '@/extensions/song';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
-import {
-  useDisplayStore,
-  useSongShelfStore,
-  useStore,
-} from '@/store';
+import { useDisplayStore, useSongShelfStore, useStore } from '@/store';
 import { SongShelfType } from '@/types/song';
 import { sleep } from '@/utils';
 import { storeToRefs } from 'pinia';
@@ -20,9 +16,8 @@ const { showSongShelf, selectedSongShelf } = storeToRefs(displayStore);
 const shelfStore = useSongShelfStore();
 
 async function loadPage(id: string, pageNo?: number) {
-  const shelf = shelfStore.songPlaylistShelf.find(s => s.playlist.id === id);
-  if (!shelf)
-    return;
+  const shelf = shelfStore.songPlaylistShelf.find((s) => s.playlist.id === id);
+  if (!shelf) return;
   const source = store.getSongSource(shelf.playlist.sourceId);
   if (!source) {
     showToast('找不到歌曲源');
@@ -51,42 +46,13 @@ async function playAll(playlist: PlaylistInfo) {
   t.close();
 }
 
-// 收藏展示相关
-const offset = -80;
-const shelfAnchors = ref([offset, Math.round(window.innerHeight) + offset]);
-const shelfHeight = ref(0);
-function hidePanel() {
-  shelfHeight.value = shelfAnchors.value[0];
-  showSongShelf.value = false;
-}
-watch(
-  showSongShelf,
-  (newValue) => {
-    if (newValue) {
-      shelfHeight.value = shelfAnchors.value[1];
-    }
-    else {
-      shelfHeight.value = shelfAnchors.value[0];
-    }
-  },
-  { immediate: true },
-);
-function updateAnchors() {
-  shelfAnchors.value[1] = Math.round(window.innerHeight) + offset;
-  if (showSongShelf.value) {
-    shelfHeight.value = shelfAnchors.value[1];
-  }
-}
 onMounted(async () => {
-  window.addEventListener('resize', updateAnchors);
-  await sleep(1000);
+  await sleep(500);
   if (showSongShelf && !selectedSongShelf.value) {
     selectedSongShelf.value = shelfStore.songLikeShelf;
   }
 });
-onUnmounted(() => {
-  window.removeEventListener('resize', updateAnchors);
-});
+
 watch(
   selectedSongShelf,
   async (shelf) => {
@@ -100,8 +66,7 @@ watch(
           const source = store.getSongSource(shelf.playlist.sourceId);
           if (!source) {
             showToast('歌曲源不存在或未启用');
-          }
-          else {
+          } else {
             const detail = await store.songPlaylistDetail(
               source,
               shelf.playlist,
@@ -121,22 +86,10 @@ watch(
 <template>
   <PlatformSwitch>
     <template #mobile>
-      <MobileSongShelf
-        v-model:shelf-anchors="shelfAnchors"
-        v-model:shelf-height="shelfHeight"
-        @load-page="loadPage"
-        @play-all="playAll"
-        @hide-panel="hidePanel"
-      />
+      <MobileSongShelf @load-page="loadPage" @play-all="playAll" />
     </template>
     <template #windows>
-      <WinSongShelf
-        v-model:shelf-anchors="shelfAnchors"
-        v-model:shelf-height="shelfHeight"
-        @load-page="loadPage"
-        @play-all="playAll"
-        @hide-panel="hidePanel"
-      />
+      <WinSongShelf @load-page="loadPage" @play-all="playAll" />
     </template>
   </PlatformSwitch>
 </template>

@@ -36,22 +36,10 @@ async function onRefresh() {
 function search() {
   emit('search');
 }
-
-const containers = ref<Array<HTMLElement | undefined>>(
-  Array.from<undefined>({ length: 2000 }).fill(undefined),
-);
-function setContainerRef(
-  el: Element | ComponentPublicInstance | null,
-  index: number,
-) {
-  if (el) {
-    containers.value[index] = el as HTMLElement;
-  }
-}
 </script>
 
 <template>
-  <div class="w-full h-full flex flex-col">
+  <div class="relative w-full h-full">
     <MobileHeader
       v-model:search-value="searchValue"
       @search="search"
@@ -60,23 +48,16 @@ function setContainerRef(
     <van-pull-refresh
       v-model="isRefreshing"
       v-remember-scroll
-      class="main grow overflow-x-hidden overflow-y-auto"
+      class="photo-main-container main grow w-full h-full flex flex-col overflow-x-hidden overflow-y-auto"
       @refresh="onRefresh"
     >
       <van-collapse v-model="displayStore.photoCollapse">
-        <div
-          v-for="(item, index) in photoSources"
-          :key="item.item.id"
-          :ref="(el) => setContainerRef(el, index)"
-        >
-          <van-collapse-item v-show="item.list" :name="item.item.name">
-            <template #title>
-              <van-sticky offset-top="50" :container="containers[index]">
-                <span class="rounded-br-lg px-2 py-1">
-                  {{ item.item.name }}
-                </span>
-              </van-sticky>
-            </template>
+        <div v-for="(item, index) in photoSources" :key="item.item.id">
+          <van-collapse-item
+            v-show="item.list"
+            :name="item.item.name"
+            :title="item.item.name"
+          >
             <div class="flex flex-nowrap px-2">
               <SimplePagination
                 v-if="item.list && item.list.totalPage"
@@ -96,9 +77,8 @@ function setContainerRef(
           </van-collapse-item>
         </div>
       </van-collapse>
-      <van-back-top bottom="60" right="10" />
+      <van-back-top bottom="60" right="10" target=".photo-main-container" />
     </van-pull-refresh>
-
     <PhotoShelf />
   </div>
 </template>

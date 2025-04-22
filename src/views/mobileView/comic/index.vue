@@ -35,22 +35,10 @@ async function onRefresh() {
 function search() {
   emit('search');
 }
-
-const containers = ref<Array<HTMLElement | undefined>>(
-  Array.from<undefined>({ length: 2000 }).fill(undefined),
-);
-function setContainerRef(
-  el: Element | ComponentPublicInstance | null,
-  index: number,
-) {
-  if (el) {
-    containers.value[index] = el as HTMLElement;
-  }
-}
 </script>
 
 <template>
-  <div class="w-full h-full flex flex-col">
+  <div class="relative w-full h-full">
     <MobileHeader
       v-model:search-value="searchValue"
       @search="search"
@@ -59,28 +47,18 @@ function setContainerRef(
     <van-pull-refresh
       v-model="isRefreshing"
       v-remember-scroll
-      class="main grow overflow-x-hidden overflow-y-auto"
+      class="comic-main-container main grow w-full h-full flex flex-col overflow-x-hidden overflow-y-auto"
       @refresh="onRefresh"
     >
       <van-collapse v-model="displayStore.comicCollapse">
-        <div
-          v-for="(item, index) in comicSources"
-          :key="item.item.id"
-          :ref="(el) => setContainerRef(el, index)"
-        >
+        <div v-for="(item, index) in comicSources" :key="item.item.id">
           <van-collapse-item
             v-show="
               item.list && !(!Array.isArray(item.list) && !item.list?.list)
             "
             :name="item.item.name"
+            :title="item.item.name"
           >
-            <template #title>
-              <van-sticky offset-top="50" :container="containers[index]">
-                <span class="rounded-br-lg px-2 py-1">
-                  {{ item.item.name }}
-                </span>
-              </van-sticky>
-            </template>
             <MobileComicsTab
               :source="item"
               @on-load="(source, type) => emit('loadType', source, type)"
@@ -92,7 +70,7 @@ function setContainerRef(
           </van-collapse-item>
         </div>
       </van-collapse>
-      <van-back-top bottom="60" right="10" />
+      <van-back-top bottom="60" right="10" target=".comic-main-container" />
     </van-pull-refresh>
     <ComicShelf />
   </div>

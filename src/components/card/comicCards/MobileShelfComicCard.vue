@@ -81,7 +81,7 @@ const showMoreOptions = ref(false);
     :actions="[
       {
         name: '从当前收藏夹移除',
-        color: '#1989fa',
+        color: '#E74C3C',
         callback: () => {
           showMoreOptions = false;
           emit('remove', shelfComic);

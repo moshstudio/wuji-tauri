@@ -56,6 +56,7 @@ const options = [
   />
   <van-popup
     v-model:show="displayStore.showLeftPopup"
+    z-index="1002"
     position="left"
     :style="{ width: '150px', height: '100%' }"
   >
@@ -63,9 +64,7 @@ const options = [
       <!-- Logo 和软件名 -->
       <div class="flex flex-col justify-center items-center mb-5">
         <van-image width="50" height="50" radius="4" :src="logo" />
-        <div class="text-lg font-bold text-[--van-text-color]">
-          无极
-        </div>
+        <div class="text-lg font-bold text-[--van-text-color]">无极</div>
       </div>
       <van-cell-group>
         <van-cell

@@ -58,7 +58,7 @@ const showMoreOptions = ref(false);
         <span class="min-w-0 truncate">
           {{ shelfBook.book.author || '佚名' }}
         </span>
-        <span v-if="unread" class="min-w-0 truncate"> {{ unread }}章未读 </span>
+        <span v-if="unread" class="min-w-0 truncate">{{ unread }}章未读</span>
       </p>
       <p class="text-xs line-clamp-1">
         {{ shelfBook.lastReadChapter?.title || '未开始阅读' }}
@@ -83,7 +83,7 @@ const showMoreOptions = ref(false);
     :actions="[
       {
         name: '从当前收藏夹移除',
-        color: '#1989fa',
+        color: '#E74C3C',
         subname: shelfBook.book.title,
         callback: () => {
           showMoreOptions = false;

@@ -17,14 +17,17 @@ const songStore = useSongStore();
 const selectedShelf = defineModel('selectedShelf', {
   type: Object as PropType<SongShelf>,
 });
-const c
-  = 'flex gap-1 p-1 items-center cursor-pointer rounded w-[120px] text-[--van-text-color] border-b-2 hover:bg-[var(--van-background)] ';
+const c =
+  'flex gap-1 p-1 items-center cursor-pointer rounded w-[120px] text-[--van-text-color] border-b-2 hover:bg-[var(--van-background)] ';
 </script>
 
 <template>
-  <div class="flex w-full h-full">
+  <div
+    class="flex-grow flex w-full h-full"
+    :class="songStore.playingSong ? 'pb-[90px]' : ''"
+  >
     <div
-      class="song-shelf-side flex flex-col w-[150px] text-[12px] p-1 gap-1 rounded overflow-x-hidden overflow-y-auto"
+      class="song-shelf-side flex flex-col w-[150px] h-full text-[12px] p-1 gap-1 rounded overflow-x-hidden overflow-y-auto"
     >
       <div
         :class="c"
@@ -100,14 +103,14 @@ const c
     </div>
     <van-divider vertical class="h-full" />
     <div
-      class="song-shelf-main w-full overflow-x-hidden overflow-y-auto mb-[80px]"
+      class="song-shelf-main w-full h-full overflow-x-hidden overflow-y-auto box-border"
     >
       <div
         v-if="
-          selectedShelf
-            && selectedShelf.type === SongShelfType.playlist
-            && selectedShelf.playlist.list
-            && (selectedShelf.playlist.list.totalPage || 0) > 1
+          selectedShelf &&
+          selectedShelf.type === SongShelfType.playlist &&
+          selectedShelf.playlist.list &&
+          (selectedShelf.playlist.list.totalPage || 0) > 1
         "
         class="flex gap-2"
       >

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { ComicItemInShelf } from '@/extensions/comic';
-import type { PropType } from 'vue';
 import WinShelfComicCard from '@/components/card/comicCards/WinShelfComicCard.vue';
 import ResponsiveGrid2 from '@/components/ResponsiveGrid2.vue';
 import AddComicShelfDialog from '@/components/windows/dialogs/AddComicShelf.vue';
@@ -13,13 +12,9 @@ const emit = defineEmits<{
   (e: 'refreshChapters'): void;
   (e: 'toComic', comic: ComicItemInShelf, chapterId?: string): void;
   (e: 'removeComicFromShelf', comic: ComicItemInShelf, shelfId: string): void;
-  (e: 'hidePanel'): void;
 }>();
-const shelfAnchors = defineModel('shelfAnchors', {
-  type: Array as PropType<number[]>,
-  required: true,
-});
-const shelfHeight = defineModel('shelfHeight', {
+
+const activeIndex = defineModel('activeIndex', {
   type: Number,
   required: true,
 });
@@ -27,22 +22,20 @@ const shelfHeight = defineModel('shelfHeight', {
 const displayStore = useDisplayStore();
 const shelfStore = useComicShelfStore();
 const { comicShelf, comicChapterRefreshing } = storeToRefs(shelfStore);
+const { showComicShelf } = storeToRefs(displayStore);
 
 function lastChapter(comic: ComicItemInShelf) {
-  if (!comic.comic.chapters?.length)
-    return null;
+  if (!comic.comic.chapters?.length) return null;
   return comic.comic.chapters[comic.comic.chapters.length - 1];
 }
 // 计算还有多少章没读
 function unreadCount(comic: ComicItemInShelf): number | undefined {
-  if (!comic.lastReadChapter || !comic.comic.chapters?.length)
-    return undefined;
+  if (!comic.lastReadChapter || !comic.comic.chapters?.length) return undefined;
   const index = comic.comic.chapters.findIndex(
-    chapter => chapter.id === comic.lastReadChapter!.id,
+    (chapter) => chapter.id === comic.lastReadChapter!.id,
   );
   const num = comic.comic.chapters.length - index - 1;
-  if (num <= 0)
-    return undefined;
+  if (num <= 0) return undefined;
   return num;
 }
 function sourceName(comic: ComicItemInShelf) {
@@ -53,35 +46,25 @@ function sourceName(comic: ComicItemInShelf) {
 </script>
 
 <template>
-  <van-floating-panel
-    v-model:height="shelfHeight"
-    :anchors="shelfAnchors"
-    :content-draggable="false"
-    class="left-[50px] right-[0px] w-auto rounded-none up-shadow"
-    :style="displayStore.showComicShelf ? { height: `${shelfHeight}px` } : {}"
-    @height-change="
-      (height) => {
-        if (height.height === 0) {
-          displayStore.showComicShelf = false;
-        }
-      }
-    "
+  <van-popup
+    v-model:show="showComicShelf"
+    position="bottom"
+    :overlay="false"
+    :z-index="1000"
+    class="overflow-hidden sticky left-0 top-0 right-0 bottom-0 w-full h-full"
   >
-    <template #header>
-      <div class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-lg font-semibold">
-          <slot name="title">
-            <p class="text-[--van-text-color]">
-              书架
-            </p>
-          </slot>
-        </h2>
-        <div class="text-button" @click="() => emit('hidePanel')">
-          关闭书架
-        </div>
-      </div>
-    </template>
-    <div class="flex gap-2 m-2 p-1 shrink">
+    <div
+      class="shrink-0 w-full flex justify-between items-center px-4 h-[46px] border-b"
+    >
+      <h2 class="text-lg font-semibold text-[--van-text-color]">书架</h2>
+      <van-icon
+        name="cross"
+        size="24"
+        @click="showComicShelf = false"
+        class="van-haptics-feedback text-[--van-text-color]"
+      />
+    </div>
+    <div class="shrink-0 w-full flex gap-2 px-4 pt-2 h-[44px]">
       <van-button
         icon="replay"
         size="small"
@@ -106,7 +89,14 @@ function sourceName(comic: ComicItemInShelf) {
       />
     </div>
 
-    <van-tabs shrink animated>
+    <van-tabs
+      shrink
+      animated
+      sticky
+      :offset-top="90"
+      :active="activeIndex"
+      class="w-full h-full overflow-y-scroll"
+    >
       <van-tab v-for="shelf in comicShelf" :key="shelf.id" :title="shelf.name">
         <ResponsiveGrid2>
           <template
@@ -127,7 +117,7 @@ function sourceName(comic: ComicItemInShelf) {
         </ResponsiveGrid2>
       </van-tab>
     </van-tabs>
-  </van-floating-panel>
+  </van-popup>
   <AddComicShelfDialog />
   <DeleteComicShelfDialog />
 </template>

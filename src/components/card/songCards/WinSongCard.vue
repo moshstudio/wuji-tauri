@@ -46,8 +46,7 @@ function onPause() {
 function onDbClick() {
   if (songStore.playingSong?.id === song.id && songStore.isPlaying) {
     onPause();
-  }
-  else {
+  } else {
     onPlay();
   }
 }

@@ -122,6 +122,7 @@ abstract class SongExtension extends Extension {
     return r;
   })
   async execGetRecommendPlaylists(pageNo?: number) {
+    pageNo = pageNo || 1;
     const ret = await this.getRecommendPlaylists(pageNo);
     ret?.list.forEach((item) => {
       item.sourceId = String(this.id);
@@ -140,6 +141,7 @@ abstract class SongExtension extends Extension {
     return r;
   })
   async execGetRecommendSongs(pageNo?: number) {
+    pageNo = pageNo || 1;
     const ret = await this.getRecommendSongs(pageNo);
     ret?.list.forEach((item) => {
       item.sourceId = String(this.id);
@@ -161,6 +163,7 @@ abstract class SongExtension extends Extension {
     return r;
   })
   async execSearchPlaylists(keyword: string, pageNo?: number) {
+    pageNo = pageNo || 1;
     const ret = await this.searchPlaylists(keyword, pageNo);
     ret?.list.forEach((item) => {
       item.sourceId = String(this.id);
@@ -182,6 +185,7 @@ abstract class SongExtension extends Extension {
     return r;
   })
   async execSearchSongs(keyword: string, pageNo?: number) {
+    pageNo = pageNo || 1;
     const ret = await this.searchSongs(keyword, pageNo);
     ret?.list.forEach((item) => {
       item.sourceId = String(this.id);
@@ -210,6 +214,7 @@ abstract class SongExtension extends Extension {
     return r;
   })
   async execGetPlaylistDetail(item: PlaylistInfo, pageNo?: number) {
+    pageNo = pageNo || 1;
     const ret = await this.getPlaylistDetail(item, pageNo);
     if (ret) {
       ret.sourceId = this.id;

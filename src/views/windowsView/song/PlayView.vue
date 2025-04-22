@@ -6,9 +6,6 @@ import LoadImage from '@/components/LoadImage.vue';
 import { useSongStore } from '@/store';
 import { storeToRefs } from 'pinia';
 
-const emit = defineEmits<{
-  (e: 'hidePanel'): void;
-}>();
 const songStore = useSongStore();
 const { playingSong, isPlaying } = storeToRefs(songStore);
 
@@ -23,38 +20,19 @@ const panelBackgroundStyle = defineModel('panelBackgroundStyle', {
   type: Object as PropType<CSSProperties>,
   default: { 'background-color': 'rgba(0, 0, 0, 0.1)' },
 });
-const shelfAnchors = defineModel('shelfAnchors', {
-  type: Array as PropType<number[]>,
-  required: true,
-});
-const shelfHeight = defineModel('shelfHeight', { type: Number, default: 0 });
 </script>
 
 <template>
-  <van-floating-panel
-    v-model:height="shelfHeight"
-    :anchors="shelfAnchors"
-    :content-draggable="false"
-    class="left-[50px] right-[0px] w-auto rounded-none up-shadow bottom-[80px] playing-bg"
-    :style="show ? { height: `${shelfHeight}px` } : {}"
-    @height-change="
-      (height) => {
-        if (height.height === shelfAnchors[0]) {
-          show = false;
-        }
-      }
-    "
+  <van-popup
+    v-model:show="show"
+    position="bottom"
+    z-index="1000"
+    class="playing-bg overflow-hidden sticky left-0 top-0 right-0 bottom-0 w-full h-full"
+    :overlay="false"
   >
-    <template #header>
-      <div class="flex px-6 pt-3 absolute">
-        <van-button
-          icon="arrow-down"
-          plain
-          size="small"
-          @click="() => emit('hidePanel')"
-        />
-      </div>
-    </template>
+    <div class="flex px-6 pt-3 absolute">
+      <van-button icon="arrow-down" plain size="small" @click="show = false" />
+    </div>
     <template v-if="playingSong">
       <div
         class="flex w-full h-full justify-around px-10 overflow-hidden select-none"
@@ -89,9 +67,7 @@ const shelfHeight = defineModel('shelfHeight', { type: Number, default: 0 });
               </LoadImage>
             </div>
 
-            <span
-              class="mask absolute top-0 left-0 w-full h-full bg-cover"
-            />
+            <span class="mask absolute top-0 left-0 w-full h-full bg-cover" />
           </div>
         </div>
         <div v-if="lyric" class="w-[80%] sm:w-[50%]">
@@ -123,7 +99,7 @@ const shelfHeight = defineModel('shelfHeight', { type: Number, default: 0 });
         {{ lyric }}
       </div>
     </template>
-  </van-floating-panel>
+  </van-popup>
 </template>
 
 <style scoped lang="less">

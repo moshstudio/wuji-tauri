@@ -90,163 +90,152 @@ onMounted(() => {
 
 <template>
   <div
-    class="relative flex flex-col w-full h-full overflow-hidden items-center"
+    class="w-full h-full flex flex-col items-center overflow-hidden"
     :style="{
       backgroundColor: bookStore.currTheme.bgColor,
       color: bookStore.currTheme.color,
     }"
   >
-    <NavBar
-      v-model:show="showNavBar"
-      left-arrow
-      class="absolute w-full h-[70px]"
-      target="#read-content"
-      @click-left="() => emit('back', true)"
-    >
-      <template #title>
-        <div class="flex flex-col gap-2 items-center truncate">
-          <span class="text-xl">{{ readingChapter?.title }}</span>
-          <div class="flex gap-2">
-            <span class="text-xs text-[--van-text-color-2]">
-              <van-icon name="orders-o" />
-              {{ book?.title }}
-            </span>
-            <span class="text-xs text-[--van-text-color-2]">
-              <van-icon name="user-o" />
-              {{ book?.author }}
-            </span>
-            <span
-              v-if="readingContent?.length"
-              class="text-xs text-[--van-text-color-2]"
-            >
-              <van-icon name="points" />
-              {{
-                readingContent?.map((line) => line.content).join('\n').length
-              }}
-              字
-            </span>
-            <span v-if="bookSource" class="text-xs text-[--van-text-color-2]">
-              <van-icon name="flag-o" />
-              {{ bookSource?.item.name }}
-            </span>
-            <van-icon
-              name="exchange"
-              class="text-[--van-text-color-2] van-haptics-feedback"
-              @click="() => (showSwitchSourceDialog = true)"
-            />
-            <van-icon
-              name="replay"
-              class="text-[--van-text-color-2] van-haptics-feedback"
-              @click="() => emit('refreshChapter')"
-            />
-          </div>
-        </div>
-      </template>
-    </NavBar>
-    <div
-      class="scroll-container flex h-full overflow-y-auto min-w-[400px] w-[95%] sm:w-[90%] md:w-[75%] lg:w-[60%]"
-    >
-      <div
-        v-if="readingContent"
-        v-remember-scroll
-        id="read-content"
-        class="pt-[80px] relative overflow-y-auto p-4 text-justify leading-[1.8] text-[--van-text-color]"
-        :style="{
-          fontSize: `${bookStore.fontSize}px`,
-          fontFamily: `'${bookStore.fontFamily}'`,
-          lineHeight: bookStore.lineHeight,
-          // 'text-indent': bookStore.fontSize * 2 + 'px',
-          'text-align': 'justify',
-          color: bookStore.currTheme.color,
-          backgroundColor: bookStore.currTheme.bgColor,
-          textDecoration: bookStore.underline
-            ? 'underline solid 0.5px'
-            : 'none',
-          textUnderlineOffset: bookStore.underline ? '6px' : 'none',
-        }"
+    <div class="relative grow w-full h-full overflow-hidden">
+      <NavBar
+        v-model:show="showNavBar"
+        left-arrow
+        class="absolute w-full h-[70px]"
+        target="#read-content"
+        @click-left="() => emit('back', true)"
       >
-        <p
-          v-for="line in readingContent"
-          :key="line.index"
-          :class="`index-${line.index}`"
+        <template #title>
+          <div class="flex flex-col gap-2 items-center truncate">
+            <span class="text-xl">{{ readingChapter?.title }}</span>
+            <div class="flex gap-2">
+              <span class="text-xs text-[--van-text-color-2]">
+                <van-icon name="orders-o" />
+                {{ book?.title }}
+              </span>
+              <span class="text-xs text-[--van-text-color-2]">
+                <van-icon name="user-o" />
+                {{ book?.author }}
+              </span>
+              <span
+                v-if="readingContent?.length"
+                class="text-xs text-[--van-text-color-2]"
+              >
+                <van-icon name="points" />
+                {{
+                  readingContent?.map((line) => line.content).join('\n').length
+                }}
+                字
+              </span>
+              <span v-if="bookSource" class="text-xs text-[--van-text-color-2]">
+                <van-icon name="flag-o" />
+                {{ bookSource?.item.name }}
+              </span>
+              <van-icon
+                name="exchange"
+                class="text-[--van-text-color-2] van-haptics-feedback"
+                @click="() => (showSwitchSourceDialog = true)"
+              />
+              <van-icon
+                name="replay"
+                class="text-[--van-text-color-2] van-haptics-feedback"
+                @click="() => emit('refreshChapter')"
+              />
+            </div>
+          </div>
+        </template>
+      </NavBar>
+      <div
+        class="scroll-container flex flex-col items-center w-full h-full overflow-y-auto"
+      >
+        <div
+          v-if="readingContent"
+          v-remember-scroll
+          id="read-content"
+          class="pt-[80px] relative overflow-y-auto p-4 text-justify leading-[1.8] text-[--van-text-color] min-w-[400px] w-[95%] sm:w-[90%] md:w-[75%] lg:w-[60%]"
           :style="{
-            marginTop: `${bookStore.readPGap}px`,
-            backgroundColor:
-              ttsStore.isReading &&
-              ttsStore.scrollReadingContent?.index === line.index
-                ? 'rgba(128, 128, 128, 0.5)'
-                : '',
+            fontSize: `${bookStore.fontSize}px`,
+            fontFamily: `'${bookStore.fontFamily}'`,
+            lineHeight: bookStore.lineHeight,
+            // 'text-indent': bookStore.fontSize * 2 + 'px',
+            'text-align': 'justify',
+            color: bookStore.currTheme.color,
+            backgroundColor: bookStore.currTheme.bgColor,
+            textDecoration: bookStore.underline
+              ? 'underline solid 0.5px'
+              : 'none',
+            textUnderlineOffset: bookStore.underline ? '6px' : 'none',
           }"
         >
-          {{ line.content }}
-        </p>
-      </div>
-      <div
-        class="read-sidebar absolute right-[8px] bottom-[8px] flex flex-col gap-1 opacity-80 sm:opacity-100 hover:opacity-100"
-      >
-        <WinBookTTSButton
-          :reading-content="readingContent || []"
-          :onPlay="() => emit('playTts')"
-        />
-        <BookShelfButton
-          :book="book"
-          mode="square"
-          :reading-chapter="readingChapter"
-        />
-        <van-button
-          icon="bars"
-          square
-          size="small"
-          class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
-          @click="() => emit('openChapterPopup')"
+          <p
+            v-for="line in readingContent"
+            :key="line.index"
+            :class="`index-${line.index}`"
+            :style="{
+              marginTop: `${bookStore.readPGap}px`,
+              backgroundColor:
+                ttsStore.isReading &&
+                ttsStore.scrollReadingContent?.index === line.index
+                  ? 'rgba(128, 128, 128, 0.5)'
+                  : '',
+            }"
+          >
+            {{ line.content }}
+          </p>
+        </div>
+        <div
+          class="read-sidebar absolute right-[8px] bottom-[8px] flex flex-col gap-1 opacity-80 sm:opacity-100 hover:opacity-100"
         >
-          <span>章节</span>
-        </van-button>
-        <van-button
-          icon="arrow-up"
-          square
-          size="small"
-          class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
-          @click="() => emit('prevChapter')"
-        >
-          <span>上章</span>
-        </van-button>
-        <van-button
-          icon="arrow-down"
-          square
-          type="primary"
-          size="small"
-          class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
-          @click="() => emit('nextChapter')"
-        >
-          <span class="font-bold">下章</span>
-        </van-button>
-        <van-button
-          icon="setting"
-          square
-          size="small"
-          class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
-          @click="showSettingDialog = true"
-        >
-          <span>设置</span>
-        </van-button>
-        <!-- <PositionBackTop
-          target=".scroll-container"
-          placeholder
-          class="w-[46px] h-[46px] flex items-center justify-center"
-        >
+          <WinBookTTSButton
+            :reading-content="readingContent || []"
+            :onPlay="() => emit('playTts')"
+          />
+          <BookShelfButton
+            :book="book"
+            mode="square"
+            :reading-chapter="readingChapter"
+          />
           <van-button
+            icon="bars"
             square
             size="small"
             class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
+            @click="() => emit('openChapterPopup')"
           >
-            <template #icon>
-              <van-icon name="back-top" size="20" />
-            </template>
+            <span>章节</span>
           </van-button>
-        </PositionBackTop> -->
+          <van-button
+            icon="arrow-up"
+            square
+            size="small"
+            class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
+            @click="() => emit('prevChapter')"
+          >
+            <span>上章</span>
+          </van-button>
+          <van-button
+            icon="arrow-down"
+            square
+            type="primary"
+            size="small"
+            class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
+            @click="() => emit('nextChapter')"
+          >
+            <span class="font-bold">下章</span>
+          </van-button>
+          <van-button
+            icon="setting"
+            square
+            size="small"
+            class="w-[46px] h-[46px] opacity-50 hover:opacity-100"
+            @click="showSettingDialog = true"
+          >
+            <span>设置</span>
+          </van-button>
+        </div>
       </div>
+      <BookShelf />
     </div>
+
     <van-popup
       v-model:show="showChapters"
       position="right"
@@ -291,6 +280,7 @@ onMounted(() => {
               icon="material-symbols-light:download-done-rounded"
               width="20"
               height="20"
+              class="text-gray-400"
             />
           </div>
         </template>
@@ -380,7 +370,6 @@ onMounted(() => {
         </div>
       </div>
     </van-dialog>
-    <BookShelf />
     <SwitchBookSourceDialog
       v-if="book"
       v-model:show="showSwitchSourceDialog"

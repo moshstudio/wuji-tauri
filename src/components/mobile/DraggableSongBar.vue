@@ -5,6 +5,7 @@ import { joinSongArtists } from '@/utils';
 import { storeToRefs } from 'pinia';
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { computed, reactive } from 'vue';
+import { Icon } from '@iconify/vue';
 import LoadImage from '../LoadImage.vue';
 
 import 'swiper/css';
@@ -14,32 +15,26 @@ const { playingSong, playingPlaylist } = storeToRefs(songStore);
 
 // 获取相邻歌曲信息
 const previousSong = computed(() => {
-  if (!playingSong.value || !playingPlaylist.value.length)
-    return null;
+  if (!playingSong.value || !playingPlaylist.value.length) return null;
   const index = playingPlaylist.value.findIndex(
-    item => item.id === playingSong.value?.id,
+    (item) => item.id === playingSong.value?.id,
   );
-  if (index === -1)
-    return null;
+  if (index === -1) return null;
   if (index === 0) {
     return playingPlaylist.value[playingPlaylist.value.length - 1];
-  }
-  else {
+  } else {
     return playingPlaylist.value[index - 1];
   }
 });
 const nextSong = computed(() => {
-  if (!playingSong.value || !playingPlaylist.value.length)
-    return null;
+  if (!playingSong.value || !playingPlaylist.value.length) return null;
   const index = playingPlaylist.value.findIndex(
-    item => item.id === playingSong.value?.id,
+    (item) => item.id === playingSong.value?.id,
   );
-  if (index === -1)
-    return null;
+  if (index === -1) return null;
   if (index === playingPlaylist.value.length - 1) {
     return playingPlaylist.value[0];
-  }
-  else {
+  } else {
     return playingPlaylist.value[index + 1];
   }
 });
@@ -101,7 +96,7 @@ async function onSwipeChange(swiper: SwiperClass) {
         <div class="flex flex-col justify-center truncate">
           <span class="text-xs font-bold text-[--van-text-color]">
             <span>{{ song.value.name }}</span>
-            <span v-if="song.value.artists"> - </span>
+            <span v-if="song.value.artists">-</span>
             <span>{{ joinSongArtists(song.value.artists) }}</span>
           </span>
         </div>

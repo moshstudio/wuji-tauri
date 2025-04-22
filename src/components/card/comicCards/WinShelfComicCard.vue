@@ -84,7 +84,7 @@ const showMoreOptions = ref(false);
       {
         name: '从当前收藏夹移除',
         subname: shelfComic.comic.title,
-        color: '#1989fa',
+        color: '#E74C3C',
         callback: () => {
           showMoreOptions = false;
           emit('remove', shelfComic);

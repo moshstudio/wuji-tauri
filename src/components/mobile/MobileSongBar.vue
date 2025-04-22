@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { useDisplayStore, useSongStore } from '@/store';
-import PlayView from '@/views/song/PlayView.vue';
 import { Icon } from '@iconify/vue';
 import { storeToRefs } from 'pinia';
 import { watch } from 'vue';
-import PlayingPlaylistSheet from '../actionSheets/PlayingPlaylist.vue';
 import DraggableSongBar from './DraggableSongBar.vue';
 
 const songStore = useSongStore();
@@ -15,8 +13,7 @@ const { showPlayView, showPlayingPlaylist } = storeToRefs(displayStore);
 watch(showPlayView, (value) => {
   if (value) {
     showPlayingPlaylist.value = false;
-  }
-  else {
+  } else {
     if (!value && showPlayingPlaylist.value) {
       showPlayingPlaylist.value = false;
       showPlayView.value = true;
@@ -26,17 +23,15 @@ watch(showPlayView, (value) => {
 function togglePlay() {
   if (songStore.isPlaying) {
     songStore.onPause();
-  }
-  else {
+  } else {
     songStore.onPlay();
   }
 }
 </script>
 
 <template>
-  <PlayView />
   <transition name="fade">
-    <div v-if="playingSong" class="flex flex-col select-none h-[60px]">
+    <div v-if="playingSong" class="shrink-0 flex flex-col select-none h-[60px]">
       <div class="grow flex flex-col z-[1002] bg-[--van-background]">
         <div class="w-full h-[6px] z-[1003]">
           <van-slider
@@ -52,9 +47,7 @@ function togglePlay() {
         <div
           class="relative flex-grow flex flex-nowrap h-[58px] items-center justify-between px-2 z-[1002]"
         >
-          <DraggableSongBar
-            @click="() => (showPlayView = !showPlayView)"
-          />
+          <DraggableSongBar @click="() => (showPlayView = !showPlayView)" />
           <div class="right-buttons flex gap-3 px-2">
             <transition name="transform" mode="out-in">
               <div
@@ -84,7 +77,6 @@ function togglePlay() {
       </div>
     </div>
   </transition>
-  <PlayingPlaylistSheet v-model="showPlayingPlaylist" />
 </template>
 
 <style scoped lang="less">

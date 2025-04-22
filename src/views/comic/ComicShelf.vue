@@ -13,6 +13,7 @@ const displayStore = useDisplayStore();
 const shelfStore = useComicShelfStore();
 const { showComicShelf } = storeToRefs(displayStore);
 
+const activeIndex = ref(0);
 async function refreshChapters() {
   await shelfStore.comicRefreshChapters();
 }
@@ -54,60 +55,24 @@ async function toComic(comic: ComicItemInShelf, chapterId?: string) {
 function removeComicFromShelf(comic: ComicItemInShelf, shelfId: string) {
   shelfStore.removeComicFromShelf(comic.comic, shelfId);
 }
-
-// 书架展示相关
-const shelfAnchors = ref([0, Math.round(window.innerHeight)]);
-const shelfHeight = ref(0);
-function hidePanel() {
-  shelfHeight.value = shelfAnchors.value[0];
-  showComicShelf.value = false;
-}
-watch(
-  showComicShelf,
-  (newValue) => {
-    if (newValue) {
-      shelfHeight.value = shelfAnchors.value[1];
-    }
-    else {
-      shelfHeight.value = shelfAnchors.value[0];
-    }
-  },
-  { immediate: true },
-);
-function updateAnchors() {
-  shelfAnchors.value[1] = Math.round(window.innerHeight);
-  if (showComicShelf.value) {
-    shelfHeight.value = shelfAnchors.value[1];
-  }
-}
-onMounted(() => {
-  window.addEventListener('resize', updateAnchors);
-});
-onUnmounted(() => {
-  window.removeEventListener('resize', updateAnchors);
-});
 </script>
 
 <template>
   <PlatformSwitch>
     <template #mobile>
       <MobileComicShelf
-        v-model:shelf-anchors="shelfAnchors"
-        v-model:shelf-height="shelfHeight"
+        v-model:active-index="activeIndex"
         @refresh-chapters="refreshChapters"
         @to-comic="toComic"
         @remove-comic-from-shelf="removeComicFromShelf"
-        @hide-panel="hidePanel"
       />
     </template>
     <template #windows>
       <WinComicShelf
-        v-model:shelf-anchors="shelfAnchors"
-        v-model:shelf-height="shelfHeight"
+        v-model:active-index="activeIndex"
         @refresh-chapters="refreshChapters"
         @to-comic="toComic"
         @remove-comic-from-shelf="removeComicFromShelf"
-        @hide-panel="hidePanel"
       />
     </template>
   </PlatformSwitch>

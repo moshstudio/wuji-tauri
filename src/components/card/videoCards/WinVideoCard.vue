@@ -36,7 +36,7 @@ const displayStore = useDisplayStore();
     </p>
     <p
       v-if="videoItem.tags"
-      class="absolute text-xs rounded left-0 bottom-6 p-1 truncate bg-gray-800/60 text-gray-200"
+      class="absolute text-xs rounded left-0 bottom-6 p-1 truncate bg-gray-800/60 text-gray-200 max-w-[140px]"
     >
       {{ _.castArray(videoItem.tags).join(',') }}
     </p>

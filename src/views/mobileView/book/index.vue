@@ -35,18 +35,6 @@ async function onRefresh() {
 function search() {
   emit('search');
 }
-
-const containers = ref<Array<HTMLElement | undefined>>(
-  Array.from<undefined>({ length: 2000 }).fill(undefined),
-);
-function setContainerRef(
-  el: Element | ComponentPublicInstance | null,
-  index: number,
-) {
-  if (el) {
-    containers.value[index] = el as HTMLElement;
-  }
-}
 </script>
 
 <template>
@@ -63,24 +51,14 @@ function setContainerRef(
       @refresh="onRefresh"
     >
       <van-collapse v-model="displayStore.bookCollapse">
-        <div
-          v-for="(item, index) in bookSources"
-          :key="item.item.id"
-          :ref="(el) => setContainerRef(el, index)"
-        >
+        <div v-for="(item, index) in bookSources" :key="item.item.id">
           <van-collapse-item
             v-show="
               item.list && !(!Array.isArray(item.list) && !item.list?.list)
             "
             :name="item.item.name"
+            :title="item.item.name"
           >
-            <template #title>
-              <van-sticky offset-top="50" :container="containers[index]">
-                <span class="rounded-br-lg px-2 py-1">
-                  {{ item.item.name }}
-                </span>
-              </van-sticky>
-            </template>
             <MobileBooksTab
               :source="item"
               @on-load="(source, type) => emit('loadType', source, type)"
