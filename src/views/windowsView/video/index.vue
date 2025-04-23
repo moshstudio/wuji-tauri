@@ -26,7 +26,7 @@ const { videoSources } = storeToRefs(store);
 <template>
   <div
     v-remember-scroll
-    class="relative w-full h-full overflow-x-hidden overflow-y-auto"
+    class="relative w-full h-full overflow-x-hidden"
     :class="
       displayStore.showVideoShelf ? 'overflow-y-hidden' : 'overflow-y-auto'
     "

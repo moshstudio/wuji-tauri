@@ -1043,7 +1043,7 @@ dependencies = [
  "rustc_version",
  "toml",
  "vswhom",
- "winreg",
+ "winreg 0.52.0",
 ]
 
 [[package]]
@@ -4678,6 +4678,7 @@ dependencies = [
  "tauri",
  "tauri-plugin",
  "thiserror 2.0.12",
+ "winreg 0.55.0",
 ]
 
 [[package]]
@@ -6377,6 +6378,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "winreg"
+version = "0.55.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb5a765337c50e9ec252c2069be9bf91c7df47afb103b642ba3a53bf8101be97"
+dependencies = [
+ "cfg-if",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "wit-bindgen-rt"
 version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6448,6 +6459,7 @@ dependencies = [
  "http 1.2.0",
  "log",
  "m3u8-rs",
+ "once_cell",
  "rand 0.8.5",
  "regex",
  "reqwest",
@@ -6471,6 +6483,7 @@ dependencies = [
  "tauri-plugin-websocket",
  "thiserror 2.0.12",
  "tokio",
+ "unicase",
  "url",
  "urlencoding",
  "urlpattern",

@@ -4,71 +4,61 @@ class TestVideoExtension extends VideoExtension {
   id = 'testVideo';
   name = 'testVideo';
   version = '0.0.1';
-  baseUrl = 'https://jiandantv.com/';
+  baseUrl = 'https://www.hhlqilongzhu.cn/api/duanju_hema.php';
   async getRecommendVideos(pageNo, type) {
-    return null;
+    return await this.search('系统', pageNo);
   }
 
   async search(keyword, pageNo) {
-    pageNo ||= 1;
-    const url = `${this.baseUrl}?key=${keyword}`;
-    const document = await this.fetchDom(url);
-    const list = await this.queryVideoElements(document, {
-      element: '.notifications-container',
-      cover: 'img',
-      title: 'h1 a',
-      url: 'h1 a',
-      intro: '.scc',
-      tags: '.scc1',
-      latestUpdate: '.success-prompt-prompt p:nth-child(2)',
+    const url = `${this.baseUrl}?name=${keyword}&page=${pageNo}`;
+    const response = await this.fetch(url);
+    const json = await response.json();
+    const list = [];
+    json.data.forEach((element) => {
+      list.push({
+        id: element.book_id,
+        title: element.title,
+        intro: element.intro,
+        cover: element.cover,
+        cast: element.author,
+        tags: element.type?.map((v) => v.name).join(','),
+      });
     });
-
-    list.forEach((item) => {
-      if (item?.latestUpdate.includes('|')) {
-        item.latestUpdate = item.latestUpdate.split('|').pop().trim();
-      }
-    });
-
     return {
       list,
       page: pageNo,
-      totalPage: 1,
+      totalPage: json.total_page,
     };
   }
 
   async getVideoDetail(item, pageNo) {
-    pageNo ||= 1;
-    const document = await this.fetchDom(item.url);
-    const element = document.querySelector('.videolists');
-    const sourceName = element.querySelector('.listclass span')?.textContent;
-    const episodeElements = element.querySelectorAll(
-      '.listcontent a[data-url]',
-    );
-    const episodes = [];
-    episodeElements.forEach((a) => {
-      const url = a.getAttribute('data-url');
-      if (url) {
-        episodes.push({
-          id: url,
-          title: a.textContent,
-          url: url,
-        });
-      }
-    });
-    item.resources = [
+    const url = `${this.baseUrl}?book_id=${item.id}`;
+    const response = await this.fetch(url);
+    const json = await response.json();
+    const resources = [
       {
-        id: sourceName,
-        title: sourceName,
-        episodes: episodes,
+        id: item.id,
+        title: '播放列表',
+        episodes: [],
       },
     ];
+    json.data.forEach((e) => {
+      resources[0].episodes.push({
+        id: e.video_id,
+        title: e.title,
+        url: e.url_mp4,
+      });
+    });
+
+    item.resources = resources;
     return item;
   }
 
   async getPlayUrl(item, resource, episode) {
-    console.log(episode.url);
-
-    return { url: await this.getM3u8ProxyUrl(episode.url) };
+    const response = await this.fetch(episode.url);
+    return {
+      url: await this.getProxyUrl(response.url, { referer: response.url }),
+    };
   }
 }
 

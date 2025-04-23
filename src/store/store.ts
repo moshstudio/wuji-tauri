@@ -1170,7 +1170,7 @@ export const useStore = defineStore('store', () => {
       }
     }
     if (load) {
-      sleep(4500).then(async () => {
+      sleep(2000).then(async () => {
         await Promise.all(
           [
             photoSources,
@@ -1360,6 +1360,7 @@ export const useStore = defineStore('store', () => {
 
     loadSubscribeSources(true);
   });
+
   return {
     sourceClasses,
     sourceClass,

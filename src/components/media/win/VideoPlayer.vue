@@ -83,15 +83,18 @@ function handleMounted(payload: any) {
 }
 
 function onLoadstart(args: any) {
-  if (route.path.includes('/video/detail/')) {
-    // 判断是否还在当前页面
-    player.value?.play();
-  }
+  emit('canPlay', args);
+  // if (route.path.includes('/video/detail/')) {
+  //   // 判断是否还在当前页面
+  //   console.log('onLoadStart');
+
+  //   player.value?.play();
+  // }
 }
 
 function onLoadedMetadata(args: any) {
-  showToast('加载完成');
-  emit('canPlay', args);
+  // 刚刚加载过的视频将不会重复触发，但是onLoadstart会，所以放到那里去执行
+  // emit('canPlay', args);
 }
 
 const showControls = ref(false);

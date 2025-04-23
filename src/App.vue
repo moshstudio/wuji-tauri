@@ -38,7 +38,7 @@ const routerView = ref(h(View));
 <template>
   <van-config-provider
     :theme="isDark ? 'dark' : 'light'"
-    :class="isMobileView ? 'mobile-scrollbar' : 'not-mobile-scrollbar'"
+    :class="isMobileView ? 'hide-vertical-scrollbar' : 'not-mobile-scrollbar'"
   >
     <PlatformSwitch>
       <template #mobile>
@@ -90,6 +90,28 @@ const routerView = ref(h(View));
   }
 
   ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(110, 110, 110, 0.8);
+  }
+}
+
+.hide-vertical-scrollbar {
+  ::-webkit-scrollbar {
+    background-color: transparent;
+    width: 0; /* 隐藏纵向滚动条 */
+    height: 8px; /* 保留横向滚动条高度 */
+  }
+
+  /* 横向滚动条相关样式 */
+  ::-webkit-scrollbar-thumb:horizontal {
+    background-color: rgba(110, 110, 110, 0.2);
+    border-radius: 6px;
+  }
+
+  :hover::-webkit-scrollbar-thumb:horizontal {
+    background-color: rgba(110, 110, 110, 0.6);
+  }
+
+  ::-webkit-scrollbar-thumb:horizontal:hover {
     background-color: rgba(110, 110, 110, 0.8);
   }
 }

@@ -32,6 +32,7 @@ import 'vant/es/image-preview/style';
 import '@vant/touch-emulator';
 import '@/styles/index.css';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
+import 'animate.css';
 
 createApp(App)
   .use(createPinia())

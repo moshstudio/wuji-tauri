@@ -17,12 +17,20 @@
   }
 }
 @layer utilities {
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
+  .mobile-scrollbar::-webkit-scrollbar {
+    background-color: transparent;
+    width: 8px;
+    height: 8px;
   }
-  .hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  .mobile-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(110, 110, 110, 0.2);
+    border-radius: 6px;
+  }
+  .mobile-scrollbar:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(110, 110, 110, 0.6);
+  }
+  .mobile-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(110, 110, 110, 0.8);
   }
 }
 
