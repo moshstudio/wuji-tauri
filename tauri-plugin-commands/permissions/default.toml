@@ -12,6 +12,7 @@ permissions = [
   "allow-set-brightness",
   "allow-get-volume",
   "allow-set-volume",
+  "allow-get-device-id",
   "allow-register-listener",
   "allow-remove-listener",
   "allow-check-permissions",

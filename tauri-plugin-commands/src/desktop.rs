@@ -58,4 +58,21 @@ impl<R: Runtime> Commands<R> {
     pub fn set_volume(&self, payload: SetVolumeRequest) -> crate::Result<BoolResponse> {
         Ok(BoolResponse { res: Some(true) })
     }
+    pub fn get_device_id(&self, payload: EmptyRequest) -> crate::Result<StringResponse> {
+        use winreg::enums::HKEY_LOCAL_MACHINE;
+        use winreg::RegKey;
+
+        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+        let subkey = hklm
+            .open_subkey("SOFTWARE\\Microsoft\\Cryptography")
+            .map_err(crate::Error::from)?;
+
+        let machine_guid: String = subkey
+            .get_value("MachineGuid")
+            .map_err(crate::Error::from)?;
+
+        Ok(StringResponse {
+            value: machine_guid,
+        })
+    }
 }

@@ -31,6 +31,7 @@
     "fetch-plugin:default",
     "proxy-plugin:default",
     "os:default",
+    "os:allow-hostname",
     "core:window:allow-set-min-size",
     "core:window:allow-destroy",
     "core:window:allow-hide",

@@ -92,3 +92,9 @@ export async function set_volume(value: number): Promise<Boolean | null> {
     },
   }).then((r) => (r.value ? r.value : null));
 }
+
+export async function get_device_id(): Promise<string> {
+  return await invoke<{ value?: String }>('plugin:commands|get_device_id', {
+    payload: {},
+  }).then((r) => String(r.value));
+}

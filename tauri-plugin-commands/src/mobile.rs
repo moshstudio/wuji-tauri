@@ -87,4 +87,9 @@ impl<R: Runtime> Commands<R> {
             .run_mobile_plugin("setVolume", payload)
             .map_err(Into::into)
     }
+    pub fn get_device_id(&self, payload: EmptyRequest) -> crate::Result<StringResponse> {
+        self.0
+            .run_mobile_plugin("getAndroidId", payload)
+            .map_err(Into::into)
+    }
 }

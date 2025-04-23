@@ -29,16 +29,14 @@ export const useDisplayStore = defineStore('display', () => {
     showTabBar.value = true;
     if (isAndroid.value) {
       await commands.set_screen_orientation('portrait');
-    }
-    else {
+    } else {
       await getCurrentWindow().setFullscreen(false);
     }
   });
 
   const checkMobile = (event: MediaQueryListEvent) => {
     // 全屏状态下就不刷新`isMobile`了
-    if (fullScreenMode.value)
-      return;
+    if (fullScreenMode.value) return;
     isMobileView.value = osType() == 'android' || event.matches;
   };
   const checklanscape = (event: MediaQueryListEvent) => {
@@ -116,13 +114,11 @@ export const useDisplayStore = defineStore('display', () => {
     {
       serializer: {
         read: async (raw: string) => {
-          if (!raw)
-            return undefined;
+          if (!raw) return undefined;
           return JSON.parse(raw);
         },
         write: async (value: SongShelf | undefined) => {
-          if (!value)
-            return '';
+          if (!value) return '';
           return JSON.stringify(value);
         },
       },
@@ -137,6 +133,7 @@ export const useDisplayStore = defineStore('display', () => {
   const showVideoShelf = useStorageAsync('showVideoShelf', false);
   const showPlayView = useStorageAsync('showPlayView', false);
   const showPlayingPlaylist = useStorageAsync('showPlayingPlaylist', false);
+  const showUserPage = useStorageAsync('showUserPage', false);
 
   watch(
     showPlayingPlaylist,
@@ -303,6 +300,8 @@ export const useDisplayStore = defineStore('display', () => {
     showVideoShelf,
     showPlayView,
     showPlayingPlaylist,
+
+    showUserPage,
 
     searchHistories,
 

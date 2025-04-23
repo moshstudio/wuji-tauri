@@ -194,5 +194,13 @@ class Commands(private val activity: Activity) {
         }
     }
 
+    fun getAndroidId(): String {
+        val androidId = Settings.Secure.getString(
+            activity.contentResolver,
+            Settings.Secure.ANDROID_ID
+        )
+        val buildInfo = "${Build.BRAND}-${Build.MODEL}-${Build.MANUFACTURER}-${Build.HARDWARE}"
+        return "$androidId-${buildInfo}"
+    }
 
 }

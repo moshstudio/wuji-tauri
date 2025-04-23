@@ -25,6 +25,12 @@ pub struct NumberResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct StringResponse {
+    pub value: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SetScreenOrientationRequest {
     pub orientation: String,
 }

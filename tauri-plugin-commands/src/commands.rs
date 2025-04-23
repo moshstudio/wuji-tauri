@@ -84,3 +84,11 @@ pub(crate) async fn set_volume<R: Runtime>(
 ) -> Result<BoolResponse> {
     app.commands().set_volume(payload)
 }
+
+#[command]
+pub(crate) async fn get_device_id<R: Runtime>(
+    app: AppHandle<R>,
+    payload: EmptyRequest,
+) -> Result<StringResponse> {
+    app.commands().get_device_id(payload)
+}

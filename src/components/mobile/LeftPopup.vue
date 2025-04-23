@@ -5,6 +5,7 @@ import AboutDialog from '../dialogs/About.vue';
 import ImportSubscribeDialog from '../windows/dialogs/ImportSubscribe.vue';
 import ManageSubscribeDialog from '../windows/dialogs/ManageSubscribe.vue';
 import SettingDialog from '../windows/dialogs/Setting.vue';
+import Login from '@/views/auth/Login.vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -66,6 +67,8 @@ const options = [
         <van-image width="50" height="50" radius="4" :src="logo" />
         <div class="text-lg font-bold text-[--van-text-color]">无极</div>
       </div>
+      <Login />
+
       <van-cell-group>
         <van-cell
           v-for="(option, index) in options"

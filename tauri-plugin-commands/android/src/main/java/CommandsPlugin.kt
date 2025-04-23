@@ -167,4 +167,12 @@ class CommandsPlugin(private val activity: Activity) : Plugin(activity) {
         val ret = JSObject()
         invoke.resolve(ret)
     }
+
+    @Command
+    fun getAndroidId(invoke: Invoke) {
+        val aId = implementation.getAndroidId()
+        val ret = JSObject()
+        ret.put("value", aId)
+        invoke.resolve(ret)
+    }
 }
