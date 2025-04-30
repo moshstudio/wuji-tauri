@@ -25,64 +25,25 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
 pub struct Mediasession<R: Runtime>(PluginHandle<R>);
 
 impl<R: Runtime> Mediasession<R> {
-    pub fn set_playlist(&self, payload: SetPlaylistRequest) -> crate::Result<BooleanResponse> {
+    pub fn set_metadata(&self, payload: PlayMusicItemRequest) -> crate::Result<BooleanResponse> {
         self.0
-            .run_mobile_plugin("setPlaylist", payload)
+            .run_mobile_plugin("setMetadata", payload)
             .map_err(Into::into)
     }
-
-    pub fn update_playlist_order(
+    pub fn set_playback_state(
         &self,
-        payload: UpdatePlaylistOrderRequest,
+        payload: PlaybackStateRequest,
     ) -> crate::Result<BooleanResponse> {
         self.0
-            .run_mobile_plugin("updatePlaylistOrder", payload)
+            .run_mobile_plugin("setPlaybackState", payload)
             .map_err(Into::into)
     }
-
-    pub fn play_target_music(&self, payload: PlayMusicItem) -> crate::Result<BooleanResponse> {
-        self.0
-            .run_mobile_plugin("playTargetMusic", payload)
-            .map_err(Into::into)
-    }
-
-    pub fn update_music_item(
+    pub fn set_position_state(
         &self,
-        payload: UpdateMusicItemRequest,
+        payload: PositionStateRequest,
     ) -> crate::Result<BooleanResponse> {
         self.0
-            .run_mobile_plugin("updateMusicItem", payload)
-            .map_err(Into::into)
-    }
-
-    pub fn play(&self, payload: PlayRequest) -> crate::Result<BooleanResponse> {
-        self.0
-            .run_mobile_plugin("play", payload)
-            .map_err(Into::into)
-    }
-    pub fn pause(&self, payload: PauseRequest) -> crate::Result<BooleanResponse> {
-        self.0
-            .run_mobile_plugin("pause", payload)
-            .map_err(Into::into)
-    }
-    pub fn stop(&self, payload: StopRequest) -> crate::Result<BooleanResponse> {
-        self.0
-            .run_mobile_plugin("stop", payload)
-            .map_err(Into::into)
-    }
-    pub fn set_volume(&self, payload: SetVolumeRequest) -> crate::Result<BooleanResponse> {
-        self.0
-            .run_mobile_plugin("setVolume", payload)
-            .map_err(Into::into)
-    }
-    pub fn seek_to(&self, payload: SeekToRequest) -> crate::Result<BooleanResponse> {
-        self.0
-            .run_mobile_plugin("seekTo", payload)
-            .map_err(Into::into)
-    }
-    pub fn set_play_mode(&self, payload: PlayModeRequest) -> crate::Result<BooleanResponse> {
-        self.0
-            .run_mobile_plugin("setPlayMode", payload)
+            .run_mobile_plugin("setPositionState", payload)
             .map_err(Into::into)
     }
 }

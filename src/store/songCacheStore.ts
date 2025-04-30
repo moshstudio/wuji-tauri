@@ -347,9 +347,9 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
       }))
     ) {
       try {
-        if (displayStore.isAndroid) {
-          return `file://${dirName}/${find.cache_song_id}`;
-        }
+        // if (displayStore.isAndroid) {
+        //   return `file://${dirName}/${find.cache_song_id}`;
+        // }
 
         const buffer = await fsApi.readFile(
           `${dirName}/${find.cache_song_id}`,

@@ -36,16 +36,9 @@ impl<R: Runtime, T: Manager<R>> crate::MediasessionExt<R> for T {
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("mediasession")
         .invoke_handler(tauri::generate_handler![
-            commands::set_playlist,
-            commands::update_playlist_order,
-            commands::play_target_music,
-            commands::update_music_item,
-            commands::play,
-            commands::pause,
-            commands::stop,
-            commands::set_volume,
-            commands::seek_to,
-            commands::set_play_mode,
+            commands::set_metadata,
+            commands::set_playback_state,
+            commands::set_position_state,
         ])
         .setup(|app, api| {
             #[cfg(mobile)]

@@ -27,6 +27,7 @@ channelHelperVersion = "1.2.8"
 mpAndroidChartVersion = "v3.1.0"
 verticalseekbarVersion = "1.0.0"
 crollerVersion = "1.0.3"
+media3Session = "1.6.1"
 
 [libraries]
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompatVersion" }
@@ -64,6 +65,7 @@ channel-helper-processor = { group = "com.github.jrfeng.channel-helper", name = 
 mpAndroidChart = { group = "com.github.PhilJay", name = "MPAndroidChart", version.ref = "mpAndroidChartVersion" }
 verticalseekbar = { group = "com.h6ah4i.android.widget.verticalseekbar", name = "verticalseekbar", version.ref = "verticalseekbarVersion" }
 croller = { group = "com.github.Lundez", name = "Croller", version.ref = "crollerVersion" }
+androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3Session" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

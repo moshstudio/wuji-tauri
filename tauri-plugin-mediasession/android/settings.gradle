@@ -32,6 +32,4 @@ dependencyResolutionManagement {
 
 include ':tauri-android'
 project(':tauri-android').projectDir = new File('./.tauri/tauri-api')
-//include ':player'
-//project(':player').projectDir = new File('./player')
 

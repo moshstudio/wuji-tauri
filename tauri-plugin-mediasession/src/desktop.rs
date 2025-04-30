@@ -14,40 +14,16 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
 pub struct Mediasession<R: Runtime>(AppHandle<R>);
 
 impl<R: Runtime> Mediasession<R> {
-    pub fn set_playlist(&self, payload: SetPlaylistRequest) -> crate::Result<BooleanResponse> {
+    pub fn set_metadata(&self, payload: PlayMusicItemRequest) -> crate::Result<BooleanResponse> {
         Ok(BooleanResponse { value: Some(true) })
     }
-    pub fn update_playlist_order(
+    pub fn set_playback_state(
         &self,
-        payload: UpdatePlaylistOrderRequest,
+        payload: PlaybackStateRequest,
     ) -> crate::Result<BooleanResponse> {
         Ok(BooleanResponse { value: Some(true) })
     }
-    pub fn play_target_music(&self, payload: PlayMusicItem) -> crate::Result<BooleanResponse> {
-        Ok(BooleanResponse { value: Some(true) })
-    }
-    pub fn update_music_item(
-        &self,
-        payload: UpdateMusicItemRequest,
-    ) -> crate::Result<BooleanResponse> {
-        Ok(BooleanResponse { value: Some(true) })
-    }
-    pub fn play(&self, payload: PlayRequest) -> crate::Result<BooleanResponse> {
-        Ok(BooleanResponse { value: Some(true) })
-    }
-    pub fn pause(&self, payload: PauseRequest) -> crate::Result<BooleanResponse> {
-        Ok(BooleanResponse { value: Some(true) })
-    }
-    pub fn stop(&self, payload: StopRequest) -> crate::Result<BooleanResponse> {
-        Ok(BooleanResponse { value: Some(true) })
-    }
-    pub fn set_volume(&self, payload: SetVolumeRequest) -> crate::Result<BooleanResponse> {
-        Ok(BooleanResponse { value: Some(true) })
-    }
-    pub fn seek_to(&self, payload: SeekToRequest) -> crate::Result<BooleanResponse> {
-        Ok(BooleanResponse { value: Some(true) })
-    }
-    pub fn set_play_mode(&self, payload: PlayModeRequest) -> crate::Result<BooleanResponse> {
+    pub fn set_position_state(&self, payload: PositionStateRequest) -> crate::Result<BooleanResponse> {
         Ok(BooleanResponse { value: Some(true) })
     }
 }

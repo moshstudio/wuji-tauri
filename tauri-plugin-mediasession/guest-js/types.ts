@@ -1,25 +1,15 @@
-export interface MusicItem {
-  id: string;
+export interface PlayMusicItem {
   title: string;
   artist?: string;
   album?: string;
-  duration?: number;
-  uri: string;
-  forbidSeek?: boolean;
-  iconUri?: string;
-  extra?: String;
+  cover?: string;
 }
-export interface Playlist {
-  name: string;
-  musics: MusicItem[];
-  position?: number;
-  extra?: String;
-  playImmediately?: boolean;
+export interface PlaybackState {
+  state: 'playing' | 'paused' | 'stopped';
 }
 
-export enum PlayMode {
-  playlistLoop = 0,
-  loop = 1,
-  shuffle = 2,
-  singleOnce = 3,
+export interface PositionState {
+  duration?: number;
+  position?: number;
+  playbackRate?: number;
 }

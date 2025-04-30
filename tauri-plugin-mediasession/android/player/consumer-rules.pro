@@ -1,2 +1,0 @@
--keep class snow.player.helper.VolumeEaseHelper { *; }
--keep class snow.player.helper.VolumeEaseHelper$Callback { *; }

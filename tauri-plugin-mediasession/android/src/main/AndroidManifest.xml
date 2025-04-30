@@ -9,13 +9,12 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <application>
         <service
-            android:name="tauri.plugin.mediasession.MyPlayerService"
+            android:name=".MediaSessionService"
             android:enabled="true"
             android:exported="true"
-            android:foregroundServiceType="mediaPlayback"
-            tools:ignore="MissingClass">
+            android:foregroundServiceType="mediaPlayback">
             <intent-filter>
-                <action android:name="android.media.browse.MediaBrowserService" />
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
         </service>
         <receiver
