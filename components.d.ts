@@ -25,7 +25,6 @@ declare module 'vue' {
     HorizonList: typeof import('./src/components/HorizonList.vue')['default']
     ImportPlaylist: typeof import('./src/components/windows/dialogs/ImportPlaylist.vue')['default']
     ImportSubscribe: typeof import('./src/components/windows/dialogs/ImportSubscribe.vue')['default']
-    InputDialog: typeof import('./src/components/dialogs/inputDialog.vue')['default']
     LeftPopup: typeof import('./src/components/mobile/LeftPopup.vue')['default']
     LoadImage: typeof import('./src/components/LoadImage.vue')['default']
     ManageSubscribe: typeof import('./src/components/windows/dialogs/ManageSubscribe.vue')['default']

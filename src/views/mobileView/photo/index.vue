@@ -39,7 +39,7 @@ function search() {
 </script>
 
 <template>
-  <div class="relative w-full h-full">
+  <div class="relative w-full h-full flex flex-col">
     <MobileHeader
       v-model:search-value="searchValue"
       @search="search"

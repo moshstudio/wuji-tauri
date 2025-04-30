@@ -22,7 +22,7 @@ import { clearTimeout, setTimeout } from 'worker-timers';
 import BrowserFullScreenButton from './BrowserFullScreenButton.vue';
 import PlayNextButton from './PlayNextButton.vue';
 import 'video.js/dist/video-js.css';
-import { showToast } from 'vant';
+import { getErrorDisplayHTML } from '../error';
 
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
@@ -161,11 +161,12 @@ function quickBackward(seconds: number) {
   }
 }
 function onError(e: any) {
-  player.value!.errorDisplay.contentEl().innerHTML = `
-    <div class="vjs-error-display-custom pt-2">
-      <div class="text-red">播放失败, 请重试</div>
-    </div>
-  `;
+  const error = player.value?.error();
+  if (error) {
+    player.value!.errorDisplay.contentEl().innerHTML = getErrorDisplayHTML(
+      error.code,
+    );
+  }
 }
 
 // 组件卸载时清除定时器
@@ -215,7 +216,7 @@ onBeforeUnmount(() => {
         }"
       >
         <div
-          class="bg-mask absolute top-0 w-full h-full bg-transparent"
+          class="bg-mask absolute left-0 top-0 w-full h-full bg-transparent"
           @click="
             () => {
               state.playing ? player.pause() : player.play();

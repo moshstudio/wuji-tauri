@@ -55,8 +55,7 @@ const lastWatchEpisode = computed((): VideoEpisode | undefined => {
     ?.find((resource) => {
       return resource.id === shelfVideo.video.lastWatchResourceId;
     })
-    ?.episodes
-    ?.find((episode) => {
+    ?.episodes?.find((episode) => {
       return episode.id === shelfVideo.video.lastWatchEpisodeId;
     });
 });
@@ -90,18 +89,18 @@ onMounted(() => {
 
     <p
       v-if="shelfVideo.video.title"
-      class="text-xs text-center text-[var(--van-text-color)] truncate py-1"
+      class="text-xs text-center text-[var(--van-text-color)] truncate py-1 max-w-full"
     >
       {{ shelfVideo.video.title }}
     </p>
     <p
-      class="absolute text-xs text-gray-200 bg-slate-600/80 p-1 bottom-6 left-1 truncate"
+      class="absolute text-xs text-gray-200 bg-slate-600/80 p-1 bottom-6 truncate max-w-full"
     >
       {{ lastWatchEpisode?.title || '未观看' }}
     </p>
     <p
       v-if="source && selecteMode"
-      class="absolute top-2 left-2 p-1 text-white bg-black rounded text-xs"
+      class="absolute top-0 left-0 p-1 text-white bg-black rounded text-xs max-w-full"
     >
       {{ source.item.name }}
     </p>
@@ -109,7 +108,7 @@ onMounted(() => {
       v-if="selecteMode"
       v-model="selected"
       shape="square"
-      class="absolute top-2 right-2"
+      class="absolute top-0 right-0"
       @click.stop="onClick"
     />
   </div>

@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { PhotoDetail as PhotoDetailType, PhotoItem } from '@/extensions/photo';
+import type {
+  PhotoDetail as PhotoDetailType,
+  PhotoItem,
+} from '@/extensions/photo';
 import type { PhotoSource } from '@/types';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
 import { router } from '@/router';
@@ -51,8 +54,7 @@ const loadData = retryOnFalse({ onFailed: back })(
     }
     photoSource.value = source;
     const item = await store.getPhotoItem(source, id!);
-    if (signal.aborted)
-      return false;
+    if (signal.aborted) return false;
     if (!item) {
       return false;
     }
@@ -66,8 +68,7 @@ const loadData = retryOnFalse({ onFailed: back })(
         sourceId: item.sourceId,
       };
       currentPage.value = 1;
-      if (content.value)
-        content.value.scrollTop = 0;
+      if (content.value) content.value.scrollTop = 0;
       return true;
     }
 
@@ -86,8 +87,7 @@ const loadData = retryOnFalse({ onFailed: back })(
     photoDetail.value = detail || undefined;
     currentPage.value = detail?.page || 1;
     toast.close();
-    if (content.value)
-      content.value.scrollTop = 0;
+    if (content.value) content.value.scrollTop = 0;
     return true;
   }),
 );
@@ -100,8 +100,7 @@ function collect() {
   }
   if (shelfStore.photoShelf.length === 1) {
     addPhotoToShelf(shelfStore.photoShelf[0].id);
-  }
-  else {
+  } else {
     showAddDialog.value = true;
   }
 }
@@ -111,12 +110,17 @@ function addPhotoToShelf(shelfId: string) {
     showAddDialog.value = false;
   }
 }
+console.log('setup action');
 
 watch([() => id, () => sourceId], () => {
+  console.log('watch change');
+
   shouldLoad.value = false; // watch这里优先load
   loadData();
 });
 onActivated(async () => {
+  console.log('on activivated');
+
   await sleep(200);
   if (shouldLoad.value) {
     shouldLoad.value = false;

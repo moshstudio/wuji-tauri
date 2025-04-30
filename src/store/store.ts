@@ -1,12 +1,18 @@
 import type { HotItem } from '@/apis/hot/apiHot';
 import type { Extension } from '@/extensions/baseExtension';
 
-import type { BookChapter, BookExtension, BookItem } from '@/extensions/book';
+import type {
+  BookChapter,
+  BookExtension,
+  BookItem,
+  BooksList,
+} from '@/extensions/book';
 import type {
   ComicChapter,
   ComicContent,
   ComicExtension,
   ComicItem,
+  ComicsList,
 } from '@/extensions/comic';
 import type { PhotoExtension, PhotoItem } from '@/extensions/photo';
 import type { PlaylistInfo, SongExtension, SongInfo } from '@/extensions/song';
@@ -15,6 +21,7 @@ import type {
   VideoExtension,
   VideoItem,
   VideoResource,
+  VideosList,
   VideoUrlMap,
 } from '@/extensions/video';
 import type {
@@ -67,15 +74,26 @@ import { useSubscribeSourceStore } from './subscribeSourceStore';
 
 import { createKVStore } from './utils';
 import { useVideoShelfStore } from './videoShelfStore';
+import { useServerStore } from './serverStore';
+import { useTTSStore } from './ttsStore';
 
 export const useStore = defineStore('store', () => {
   const hotItems = ref<HotItem[]>([]); // 热搜榜
 
-  const subscribeSourceStore = useSubscribeSourceStore();
-  const songStore = useSongStore();
   const kvStorage = createKVStore();
   const bookChapterStore = useBookChapterStore();
-  const bookShelfStore = useBookShelfStore();
+  const bookShelfStore = usePhotoShelfStore();
+  const bookStore = useBookStore();
+  const comicShelfStore = useComicShelfStore();
+  const displayStore = useDisplayStore();
+  const photoShelfStore = usePhotoShelfStore();
+  const serverStore = useServerStore();
+  const songCacheStore = useSongCacheStore();
+  const songShelfStore = useSongShelfStore();
+  const songStore = useSongStore();
+  const subscribeSourceStore = useSubscribeSourceStore();
+  const ttsStore = useTTSStore();
+  const videoShelfStore = useVideoShelfStore();
 
   const sourceClasses = new Map<string, Extension | null>();
   const sourceClass = async (
@@ -472,8 +490,8 @@ export const useStore = defineStore('store', () => {
     if (!options.refresh) {
       const content = await bookChapterStore.getBookChapter(book, chapter);
       if (content) {
-        if (options.cacheMoreChapters && bookShelfStore.isBookInShelf(book)) {
-          // 只缓存在书架中的书
+        if (options.cacheMoreChapters) {
+          // 缓存书籍
           cacheBookChapters(source, book, chapter);
         }
         return content;
@@ -483,12 +501,10 @@ export const useStore = defineStore('store', () => {
     const sc = (await sourceClass(source.item)) as BookExtension;
     const res = await sc?.execGetContent(book, chapter);
     if (res) {
-      if (bookShelfStore.isBookInShelf(book)) {
-        // 只缓存在书架中的书
-        await bookChapterStore.saveBookChapter(book, chapter, res);
-        if (options.cacheMoreChapters) {
-          cacheBookChapters(source, book, chapter);
-        }
+      await bookChapterStore.saveBookChapter(book, chapter, res);
+      if (options.cacheMoreChapters) {
+        // 缓存书籍
+        cacheBookChapters(source, book, chapter);
       }
     }
 
@@ -1141,7 +1157,7 @@ export const useStore = defineStore('store', () => {
                 {
                   item,
                 },
-                load,
+                false,
               );
             }
             added.push(item.id);
@@ -1170,7 +1186,13 @@ export const useStore = defineStore('store', () => {
       }
     }
     if (load) {
-      sleep(2000).then(async () => {
+      const bookHasContent = (a?: BooksList): boolean =>
+        a != null && (Array.isArray(a) ? !!a.length : !!a.list?.length);
+      const comicHasContent = (a?: ComicsList): boolean =>
+        a != null && (Array.isArray(a) ? !!a.length : !!a.list?.length);
+      const videoHasContent = (a?: VideosList): boolean =>
+        a != null && (Array.isArray(a) ? !!a.length : !!a.list?.length);
+      sleep(4000).then(async () => {
         await Promise.all(
           [
             photoSources,
@@ -1183,36 +1205,35 @@ export const useStore = defineStore('store', () => {
               sources.value.map(async (source) => {
                 switch (source.item.type) {
                   case SourceType.Photo:
-                    if (!(source as PhotoSource).list) {
+                    if (!(source as PhotoSource).list?.list.length) {
                       console.log(`初始化加载photo ${source.item.name}`);
                       await photoRecommendList(source as PhotoSource);
                     }
                     break;
                   case SourceType.Song:
-                    if (!(source as SongSource).playlist) {
+                    if (!(source as SongSource).playlist?.list.length) {
                       console.log(`初始化加载playlist ${source.item.name}`);
                       await songRecommendPlayist(source);
                     }
-                    if (!(source as SongSource).songList) {
+                    if (!(source as SongSource).songList?.list.length) {
                       console.log(`初始化加载song ${source.item.name}`);
                       await songRecommendSong(source);
                     }
                     break;
                   case SourceType.Book:
-                    if (!(source as BookSource).list) {
+                    if (!bookHasContent((source as BookSource).list)) {
                       console.log(`初始化加载book ${source.item.name}`);
                       await bookRecommendList(source as BookSource);
                     }
-
                     break;
                   case SourceType.Comic:
-                    if (!(source as ComicSource).list) {
+                    if (!comicHasContent((source as ComicSource).list)) {
                       console.log(`初始化加载comic ${source.item.name}`);
                       await comicRecommendList(source as ComicSource);
                     }
                     break;
                   case SourceType.Video:
-                    if (!(source as VideoSource).list) {
+                    if (!videoHasContent((source as VideoSource).list)) {
                       console.log(`初始化加载video ${source.item.name}`);
                       await videoRecommendList(source as VideoSource);
                     }

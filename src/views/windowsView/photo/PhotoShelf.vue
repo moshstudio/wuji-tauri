@@ -36,7 +36,7 @@ const selecteMode = defineModel('selecteMode', {
     >
       <h2 class="text-lg font-semibold text-[--van-text-color]">图片收藏</h2>
       <van-icon
-        name="cross"
+        name="arrow-down"
         size="24"
         @click="showPhotoShelf = false"
         class="van-haptics-feedback text-[--van-text-color]"

@@ -57,7 +57,7 @@ function sourceName(book: BookItemInShelf) {
         <h2 class="text-lg font-semibold text-[--van-text-color]">书架</h2>
       </div>
       <van-icon
-        name="cross"
+        name="arrow-down"
         size="24"
         @click="showBookShelf = false"
         class="van-haptics-feedback text-[--van-text-color]"

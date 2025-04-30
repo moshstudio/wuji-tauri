@@ -20,6 +20,7 @@
   <van-popup
     v-model:show="showLogin"
     round
+    destroy-on-close
     safe-area-inset-bottom
     position="bottom"
     teleport="body"

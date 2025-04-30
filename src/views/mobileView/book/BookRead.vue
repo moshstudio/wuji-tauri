@@ -681,8 +681,11 @@ onBeforeUnmount(() => {
     <div
       class="bottom fixed bottom-0 left-0 z-[6] w-full flex flex-col p-2 pb-[50px] bg-[#1f1f1f] text-white transition"
     >
-      <div class="flex items-center gap-[10px]">
-        <div class="text-sm w-[50px] van-haptics-feedback" @click="chapterPrev">
+      <div class="flex items-center gap-2">
+        <div
+          class="shrink-0 text-nowrap text-sm van-haptics-feedback px-2"
+          @click="chapterPrev"
+        >
           上一章
         </div>
         <van-slider
@@ -694,7 +697,10 @@ onBeforeUnmount(() => {
           "
           @change="(val) => toChapterPage(val)"
         />
-        <div class="text-sm w-[50px] van-haptics-feedback" @click="chapterNext">
+        <div
+          class="shrink-0 text-nowrap text-sm van-haptics-feedback px-2"
+          @click="chapterNext"
+        >
           下一章
         </div>
       </div>
@@ -781,27 +787,19 @@ onBeforeUnmount(() => {
     </van-popup>
     <van-dialog
       v-model:show="showSettingDialog"
+      title="界面设置"
       close-on-click-overlay
       :show-confirm-button="false"
-      class="setting-dialog bg-[#1f1f1f] text-white"
+      class="setting-dialog"
     >
-      <template #title>
-        <div class="text-white">界面设置</div>
-      </template>
       <div class="flex flex-col p-2 text-sm">
-        <div class="pb-2">字体和样式</div>
-        <van-cell class="bg-[#1f1f1f]">
-          <template #title>
-            <span class="text-white">字体大小</span>
-          </template>
+        <div class="pb-2 text-gray-400">字体和样式</div>
+        <van-cell title="字体大小">
           <template #value>
             <van-stepper v-model="bookStore.fontSize" min="10" max="40" />
           </template>
         </van-cell>
-        <van-cell class="bg-[#1f1f1f]">
-          <template #title>
-            <span class="text-white">行间距</span>
-          </template>
+        <van-cell title="行间距">
           <template #value>
             <van-stepper
               v-model="bookStore.lineHeight"
@@ -812,32 +810,23 @@ onBeforeUnmount(() => {
             />
           </template>
         </van-cell>
-        <van-cell class="bg-[#1f1f1f]">
-          <template #title>
-            <span class="text-white">段间距</span>
-          </template>
+        <van-cell title="段间距">
           <template #value>
             <van-stepper v-model="bookStore.readPGap" min="0" max="30" />
           </template>
         </van-cell>
-        <van-cell class="bg-[#1f1f1f]">
-          <template #title>
-            <span class="text-white">左右边距</span>
-          </template>
+        <van-cell title="左右边距">
           <template #value>
             <van-stepper v-model="bookStore.paddingX" min="0" max="60" />
           </template>
         </van-cell>
-        <van-cell class="bg-[#1f1f1f]">
-          <template #title>
-            <span class="text-white">下划线</span>
-          </template>
+        <van-cell title="下划线">
           <template #value>
             <van-switch v-model="bookStore.underline" />
           </template>
         </van-cell>
-        <div class="pb-2">文字颜色和背景</div>
-        <div v-horizontal-scroll class="flex gap-2 overflow-x-auto">
+        <div class="pb-2 text-gray-400">文字颜色和背景</div>
+        <div v-horizontal-scroll class="flex gap-2 py-2 overflow-x-auto">
           <div
             v-for="theme in bookStore.themes"
             :key="JSON.stringify(theme)"
@@ -864,26 +853,18 @@ onBeforeUnmount(() => {
     </van-dialog>
     <van-dialog
       v-model:show="showReadSettingDialog"
+      title="阅读设置"
       close-on-click-overlay
       :show-confirm-button="false"
-      class="setting-dialog bg-[#1f1f1f]"
+      class="setting-dialog"
     >
-      <template #title>
-        <div class="text-white">阅读设置</div>
-      </template>
       <div class="flex flex-col gap-2 p-2 text-sm">
-        <van-cell class="bg-[#1f1f1f]">
-          <template #title>
-            <span class="text-white">全屏点击向下翻页</span>
-          </template>
+        <van-cell title="全屏点击向下翻页">
           <template #value>
             <van-switch v-model="bookStore.fullScreenClickToNext" />
           </template>
         </van-cell>
-        <van-cell v-if="displayStore.isAndroid" class="bg-[#1f1f1f]">
-          <template #title>
-            <span class="text-white">保持屏幕常亮</span>
-          </template>
+        <van-cell v-if="displayStore.isAndroid" title="保持屏幕常亮">
           <template #value>
             <van-switch
               v-model="displayStore.bookKeepScreenOn"

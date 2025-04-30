@@ -235,16 +235,13 @@ onMounted(() => {
     </van-popup>
     <van-dialog
       v-model:show="showSettingDialog"
-      titl
+      title="界面设置"
       close-on-click-overlay
       :show-confirm-button="false"
-      class="setting-dialog bg-[#1f1f1f] text-white"
+      class="setting-dialog"
     >
-      <template #title>
-        <div class="text-white">界面设置</div>
-      </template>
-      <div class="flex flex-col p-2 text-sm">
-        <div class="pb-2">字体和样式</div>
+      <div class="flex flex-col p-2 text-sm text-gray-400">
+        <div class="pb-2">暂无设置</div>
       </div>
     </van-dialog>
   </div>

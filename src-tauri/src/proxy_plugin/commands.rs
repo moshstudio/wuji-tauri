@@ -546,7 +546,7 @@ fn find_available_port(start_port: u16) -> Option<u16> {
 }
 
 pub(crate) fn start_proxy_server() -> std::io::Result<()> {
-    let port = find_available_port(9998).ok_or_else(|| {
+    let port = find_available_port(1430).ok_or_else(|| {
         std::io::Error::new(std::io::ErrorKind::AddrInUse, "No available port found")
     })?;
 

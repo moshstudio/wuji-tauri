@@ -19,26 +19,22 @@ const emit = defineEmits<{
 const active = ref(0);
 const tabKey = ref(nanoid()); // 修改此值来重新渲染组件
 function load(index: number) {
-  if (!source.list)
-    return;
+  if (!source.list) return;
   let t: ComicList;
   if (Array.isArray(source.list)) {
     t = source.list[index];
-  }
-  else {
+  } else {
     t = source.list;
   }
   emit('onLoad', source, t.type);
 }
 
 function changePage(index: number, pageNo?: number) {
-  if (!source.list)
-    return;
+  if (!source.list) return;
   let t: ComicList;
   if (Array.isArray(source.list)) {
     t = source.list[index];
-  }
-  else {
+  } else {
     t = source.list;
   }
   emit('loadPage', source, pageNo, t.type);
@@ -64,8 +60,8 @@ watch(
 </script>
 
 <template>
-  <template v-if="!source.list" />
-  <template v-else-if="Array.isArray(source.list)">
+  <div v-if="!source.list" />
+  <div v-else-if="Array.isArray(source.list)">
     <van-tabs
       :key="tabKey"
       v-model:active="active"
@@ -87,15 +83,15 @@ watch(
           />
         </div>
         <van-loading v-if="!item.list.length" class="p-2" />
-        <HorizonList>
+        <HorizonList v-else>
           <template v-for="comic in item.list" :key="comic.id">
             <WinComicCard :comic-item="comic" @click="toDetail" />
           </template>
         </HorizonList>
       </van-tab>
     </van-tabs>
-  </template>
-  <template v-else>
+  </div>
+  <div v-else>
     <div class="flex pl-2 pt-1">
       <SimplePagination
         v-if="
@@ -111,7 +107,7 @@ watch(
         <WinComicCard :comic-item="comic" @click="toDetail" />
       </template>
     </HorizonList>
-  </template>
+  </div>
 </template>
 
 <style scoped lang="less"></style>

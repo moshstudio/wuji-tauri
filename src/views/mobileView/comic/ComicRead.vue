@@ -59,8 +59,8 @@ const displayStore = useDisplayStore();
 const comicStore = useComicStore();
 
 const bubbleOffset = ref({
-  x: document.querySelector('body')!.clientWidth - 50,
-  y: document.querySelector('body')!.clientHeight - 160,
+  x: 10,
+  y: document.querySelector('body')!.clientHeight - 260,
 });
 watch(bubbleOffset, (offset) => {
   const ch = document.querySelector('body')!.clientHeight;
@@ -168,7 +168,7 @@ const showMenu = ref(false);
         axis="xy"
         magnetic="x"
         :gap="6"
-        class="h-[90px] w-[40px] border border-[var(--van-border-color)] bg-[color:rgb(var(--van-background)/0.5)] active:opacity-100"
+        class="!h-[90px] !w-[40px] !border !border-[var(--van-border-color)] !bg-[color:rgb(var(--van-background)/0.5)] active:!opacity-100"
       >
         <div class="flex flex-col h-[90px] gap-[0px] items-center leading-[0]">
           <van-button
@@ -269,19 +269,13 @@ const showMenu = ref(false);
     </van-popup>
     <van-dialog
       v-model:show="showSettingDialog"
-      titl
+      title="界面设置"
       close-on-click-overlay
       :show-confirm-button="false"
-      class="setting-dialog bg-[#1f1f1f] text-white"
+      class="setting-dialog"
     >
-      <template #title>
-        <div class="text-white">界面设置</div>
-      </template>
       <div class="flex flex-col p-2 text-sm">
-        <van-cell v-if="displayStore.isAndroid" class="bg-[#1f1f1f]">
-          <template #title>
-            <span class="text-white">保持屏幕常亮</span>
-          </template>
+        <van-cell v-if="displayStore.isAndroid" title="保持屏幕常亮">
           <template #value>
             <van-switch
               v-model="displayStore.comicKeepScreenOn"

@@ -25,14 +25,14 @@ const { selectedSongShelf } = storeToRefs(displayStore);
     position="bottom"
     :overlay="false"
     :z-index="1000"
-    class="overflow-hidden sticky left-0 top-0 right-0 bottom-0 w-full h-full"
+    class="overflow-hidden sticky left-0 top-0 right-0 bottom-0 w-full h-full flex flex-col"
   >
     <div
       class="shrink-0 w-full flex justify-between items-center px-4 h-[46px] border-b"
     >
       <h2 class="text-lg font-semibold text-[--van-text-color]">音乐收藏</h2>
       <van-icon
-        name="cross"
+        name="arrow-down"
         size="24"
         @click="showSongShelf = false"
         class="van-haptics-feedback text-[--van-text-color]"

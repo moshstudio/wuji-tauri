@@ -5,10 +5,11 @@ import PlatformSwitch from './components/PlatformSwitch.vue';
 import View from './components/View.vue';
 import MobileApp from './MobileApp.vue';
 import { router } from './router';
-import { useDisplayStore } from './store';
+import { useDisplayStore, useStore } from './store';
 import { checkAndUpdate } from './utils/update';
 import WinApp from './WinApp.vue';
 
+useStore();
 const displayStore = useDisplayStore();
 const { isMobileView, isDark } = storeToRefs(displayStore);
 
@@ -22,7 +23,11 @@ onMounted(() => {
 
 onMounted(async () => {
   if (!displayStore.isAndroid) {
-    await checkAndUpdate();
+    try {
+      await checkAndUpdate();
+    } catch (error) {
+      console.warn('checkAndUpdate error', error);
+    }
   }
   // forwardConsoleLog();
   // // 启用 TargetKind::Webview 后，这个函数将把日志打印到浏览器控制台

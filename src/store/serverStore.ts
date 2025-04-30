@@ -55,10 +55,6 @@ export const useServerStore = defineStore('serverStore', () => {
     if (accessToken.value && accessToken.value !== 'undefined') {
       headers.set('Authorization', `Bearer ${accessToken.value}`);
     }
-    console.log('发送请求', `${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
@@ -117,12 +113,12 @@ export const useServerStore = defineStore('serverStore', () => {
     // 简单的浏览器检测
     if (userAgent.includes('Firefox')) {
       browser = 'Firefox';
+    } else if (userAgent.includes('Edg')) {
+      browser = 'Edg';
     } else if (userAgent.includes('Chrome')) {
       browser = 'Chrome';
     } else if (userAgent.includes('Safari')) {
       browser = 'Safari';
-    } else if (userAgent.includes('Edge')) {
-      browser = 'Edge';
     }
 
     return {
@@ -263,7 +259,6 @@ export const useServerStore = defineStore('serverStore', () => {
 
       if (response.ok) {
         userInfo.value = await response.json();
-        console.log('userInfo', userInfo.value);
       } else {
         handleError(response);
       }

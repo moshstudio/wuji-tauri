@@ -166,9 +166,7 @@ watch([() => route.path, pages], ([newPath, newPages]) => {
 });
 
 onMounted(() => {
-  setTimeout(() => {
-    updateActiveKey();
-  }, 500);
+  updateActiveKey(displayStore.routerCurrPath);
 });
 
 onMounted(async () => {
@@ -203,7 +201,7 @@ onBeforeUnmount(async () => {
             </template>
           </van-sidebar-item>
         </van-sidebar>
-        <div class="flex flex-col gap-2 justify-center items-center pb-2">
+        <div class="flex flex-col gap-4 justify-center items-center pb-2">
           <!-- <div class="cursor-pointer hover:scale-105" @click="toggleDark()">
             <Icon
               icon="pepicons-pop:moon-circle"
@@ -253,11 +251,10 @@ onBeforeUnmount(async () => {
           </van-popover>
         </div>
       </div>
-      <transition name="slide">
-        <div class="content grow w-full h-full overflow-hidden">
-          <Component :is="routerView" />
-        </div>
-      </transition>
+
+      <div class="content grow w-full h-full overflow-hidden">
+        <Component :is="routerView" />
+      </div>
     </div>
     <div class="absolute top-0 w-screen z-[999999999]">
       <v-progress-linear
@@ -269,13 +266,12 @@ onBeforeUnmount(async () => {
         @click="() => displayStore.closeToast()"
       />
     </div>
-  </div>
-
-  <div class="dialogs">
-    <ImportSubscribeDialog />
-    <ManageSubscribeDialog />
-    <AboutDialog />
-    <SettingDialog />
+    <div class="dialogs">
+      <ImportSubscribeDialog />
+      <ManageSubscribeDialog />
+      <AboutDialog />
+      <SettingDialog />
+    </div>
   </div>
 </template>
 

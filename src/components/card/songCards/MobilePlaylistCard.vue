@@ -36,7 +36,7 @@ function onClick() {
 
 <template>
   <div
-    class="w-[100px] flex flex-col rounded-lg transform transition-all duration-100 cursor-pointer select-none active:scale-[0.98]"
+    class="w-[100px] flex flex-col items-center rounded-lg transform transition-all duration-100 cursor-pointer select-none active:scale-[0.98]"
     @click="onClick"
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
@@ -62,7 +62,7 @@ function onClick() {
     <p
       v-if="playlist.name"
       :rows="1"
-      class="text-xs text-[--van-text-color] truncate py-1"
+      class="w-full text-center text-xs text-[--van-text-color] truncate py-1"
     >
       {{ playlist.name }}
     </p>

@@ -23,7 +23,7 @@ const showMoreOptions = ref(false);
 <template>
   <div
     class="flex gap-2 p-2 rounded-lg transform transition-all duration-100 cursor-pointer select-none active:bg-[--van-background]"
-    @click="() => emit('click', shelfComic)"
+    @click="() => emit('click', shelfComic, shelfComic.lastReadChapter?.id)"
   >
     <div class="w-[80px] h-[100px]">
       <LoadImage
@@ -58,7 +58,7 @@ const showMoreOptions = ref(false);
         <span v-if="shelfComic.comic.author" class="truncate">
           {{ shelfComic.comic.author }}
         </span>
-        <span v-if="unread" class="truncate"> {{ unread }}章未读 </span>
+        <span v-if="unread" class="truncate">{{ unread }}章未读</span>
       </p>
       <p class="text-xs line-clamp-1">
         {{ shelfComic.lastReadChapter?.title }}

@@ -111,6 +111,7 @@ const remainingTime = computed(() => {
         }
       }
     "
+    @wheel.stop
   >
     <van-cell
       title="语音"

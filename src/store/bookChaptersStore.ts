@@ -6,8 +6,10 @@ import { defineStore } from 'pinia';
 import * as fs from 'tauri-plugin-fs-api';
 import { ref, watch } from 'vue';
 import { SimpleLRUCache } from '@/utils/lruCache';
+import { useBookShelfStore } from './bookShelfStore';
 
 export const useBookChapterStore = defineStore('bookChapterStore', () => {
+  const shelfStore = useBookShelfStore();
   const baseDir = fs.BaseDirectory.AppCache;
   const dirName = 'book_cache';
   const baseFile = 'books.json';
@@ -23,7 +25,7 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     }[]
   >([]);
   let inited = false;
-  const lruCache = new SimpleLRUCache<string, string>(50);
+  const lruCache = new SimpleLRUCache<string, string>(100);
   const ensureBase = async () => {
     if (!(await fs.exists(dirName, { baseDir }))) {
       await fs.mkdir(dirName, {
@@ -52,6 +54,16 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
         ),
       );
     }
+    for (const cacheBookId of [
+      ...new Set(books.value.map((book) => book.cache_book_id)),
+    ]) {
+      const bookId = books.value.find(
+        (book) => book.cache_book_id === cacheBookId,
+      )?.book_id;
+      if (bookId && !shelfStore.isBookInShelf(bookId)) {
+        await removeBookCache2(cacheBookId);
+      }
+    }
     inited = true;
   };
   watch(
@@ -78,14 +90,15 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
 
   const genBookCacheId = (book: BookItem) => {
     return (
-      CryptoJS.MD5(`${book.sourceId}_${book.id}`).toString() +
+      CryptoJS.MD5(`${book.sourceId}_${book.id}`).toString().substring(0, 8) +
       sanitizePathName(book.title)
     );
   };
   const genChapterCacheId = (book: BookItem, chapter: BookChapter) => {
     return (
-      CryptoJS.MD5(`${book.sourceId}_${book.id}_${chapter.id}`).toString() +
-      sanitizePathName(chapter.title)
+      CryptoJS.MD5(`${book.sourceId}_${book.id}_${chapter.id}`)
+        .toString()
+        .substring(0, 8) + sanitizePathName(chapter.title)
     );
   };
   const saveBookChapter = async (
@@ -109,19 +122,6 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
       // 已经有了，不需要重复保存
       return;
     }
-    if (!(await fs.exists(`${dirName}/${cache_book_id}`, { baseDir }))) {
-      await fs.mkdir(`${dirName}/${cache_book_id}`, {
-        baseDir,
-        recursive: true,
-      });
-    }
-    await fs.writeFile(
-      `${dirName}/${cache_book_id}/${cache_chapter_id}`,
-      new TextEncoder().encode(content),
-      {
-        baseDir,
-      },
-    );
     if (!find) {
       books.value.unshift({
         book_id: book.id,
@@ -132,6 +132,29 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
         cache_book_id,
         cache_chapter_id,
       });
+    }
+    try {
+      if (!(await fs.exists(`${dirName}/${cache_book_id}`, { baseDir }))) {
+        await fs.mkdir(`${dirName}/${cache_book_id}`, {
+          baseDir,
+          recursive: true,
+        });
+      }
+      await fs.writeFile(
+        `${dirName}/${cache_book_id}/${cache_chapter_id}`,
+        new TextEncoder().encode(content),
+        {
+          baseDir,
+        },
+      );
+    } catch (error) {
+      // 保存失败，进行回退
+      _.remove(
+        books.value,
+        (b) =>
+          b.cache_book_id === cache_book_id &&
+          b.cache_chapter_id === cache_chapter_id,
+      );
     }
   };
   const getBookChapter = async (
@@ -177,7 +200,20 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
           recursive: true,
         });
       } catch (error) {
-        console.warn('删除章节缓存失败:', JSON.stringify(book));
+        console.warn('删除书籍缓存失败:', JSON.stringify(book));
+      }
+    }
+  };
+  const removeBookCache2 = async (cacheBookId: string) => {
+    books.value = books.value.filter((b) => b.cache_book_id !== cacheBookId);
+    if (await fs.exists(`${dirName}/${cacheBookId}`, { baseDir })) {
+      try {
+        await fs.remove(`${dirName}/${cacheBookId}`, {
+          baseDir,
+          recursive: true,
+        });
+      } catch (error) {
+        console.warn('删除书籍缓存失败:', cacheBookId);
       }
     }
   };

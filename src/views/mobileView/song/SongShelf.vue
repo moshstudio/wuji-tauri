@@ -40,7 +40,7 @@ const { showSongShelfDetail, selectedSongShelf } = storeToRefs(displayStore);
         <h2 class="text-lg font-semibold text-[--van-text-color]">乐库</h2>
       </div>
       <van-icon
-        name="cross"
+        name="arrow-down"
         size="24"
         @click="showSongShelf = false"
         class="van-haptics-feedback text-[--van-text-color]"

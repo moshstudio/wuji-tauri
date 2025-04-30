@@ -144,12 +144,16 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     }
   };
   const updateBookReadInfo = (bookItem: BookItem, chapter: BookChapter) => {
+    console.log('updateBookReadInfo', bookItem, chapter);
+    
     if (!bookShelf.value)
       return;
     for (const shelf of bookShelf.value) {
       for (const book of shelf.books) {
         if (book.book.id === bookItem.id) {
           if (book.book.chapters?.find(item => item.id === chapter.id)) {
+            console.log('lastReadChapter save', chapter);
+            
             book.lastReadChapter = chapter;
             book.lastReadTime = Date.now();
           }

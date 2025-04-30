@@ -40,6 +40,7 @@ import {
 } from 'vue';
 import { useRoute } from 'vue-router';
 import 'video.js/dist/video-js.css';
+import { getErrorDisplayHTML } from '../error';
 
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
@@ -114,7 +115,7 @@ function toggleShowControls() {
     showControls.value = !showControls.value;
     showControlsTimer = setTimeout(() => {
       showControls.value = !showControls.value;
-    }, 6000);
+    }, 60000);
   } else {
     clearTimeout(showControlsTimer);
     showControls.value = !showControls.value;
@@ -267,11 +268,12 @@ function quickBackward(seconds: number) {
   }
 }
 function onError(e: any) {
-  player.value!.errorDisplay.contentEl().innerHTML = `
-    <div class="vjs-error-display-custom pt-2" style="pointer-events: none;">
-      <div class="text-red">播放失败, 请重试</div>
-    </div>
-  `;
+  const error = player.value?.error();
+  if (error) {
+    player.value!.errorDisplay.contentEl().innerHTML = getErrorDisplayHTML(
+      error.code,
+    );
+  }
 }
 
 async function onBack() {
@@ -558,7 +560,7 @@ onDeactivated(() => {
         </div>
         <div
           v-show="showControls"
-          class="absolute bg-mask w-full h-full bg-transparent"
+          class="absolute left-0 top-0 bg-mask w-full h-full bg-transparent"
         >
           <div
             class="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"

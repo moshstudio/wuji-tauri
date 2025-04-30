@@ -4,7 +4,7 @@ import type { PluginListener } from '@tauri-apps/api/core';
 
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { type as osType } from '@tauri-apps/plugin-os';
-import { useDark, useStorageAsync, useToggle } from '@vueuse/core';
+import { useDark, useStorage, useStorageAsync, useToggle } from '@vueuse/core';
 import { defineStore } from 'pinia';
 import * as commands from 'tauri-plugin-commands-api';
 
@@ -97,7 +97,7 @@ export const useDisplayStore = defineStore('display', () => {
   const comicCollapse = useStorageAsync('comicCollapse', []);
   const videoCollapse = useStorageAsync('videoCollapse', []);
 
-  const routerCurrPath = useStorageAsync('routerCurrPath', '/');
+  const routerCurrPath = useStorage('routerCurrPath', '/');
   const photoPath = useStorageAsync('photoPath', '/photo');
   const songPath = useStorageAsync('songPath', '/song');
   const bookPath = useStorageAsync('bookPath', '/book');

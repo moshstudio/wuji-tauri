@@ -19,6 +19,7 @@ import {
   useTTSStore,
   useVideoShelfStore,
 } from './store';
+import View from './components/View.vue';
 
 const { routerView } = defineProps<{
   routerView: VNode;
@@ -128,16 +129,13 @@ watch(
 );
 
 onMounted(() => {
-  nextTick(async () => {
+  updateActiveKey(displayStore.routerCurrPath);
+  nextTick(() => {
     // 移动版是没有home页面的
     if (route.path.startsWith('/home')) {
       router.push(pages.value[0].to);
     }
   });
-  setTimeout(() => {
-    // 还原上次的路径
-    updateActiveKey();
-  }, 500);
 });
 
 // 保持竖屏模式
@@ -297,11 +295,9 @@ window.androidBackCallback = async () => {
   <div
     class="flex flex-col w-screen h-screen overflow-hidden bg-[var(--van-background-2)]"
   >
-    <transition name="slide">
-      <div class="content flex-1 w-full h-full overflow-hidden">
-        <Component :is="routerView" />
-      </div>
-    </transition>
+    <div class="content flex-grow w-full h-full overflow-hidden">
+      <Component :is="routerView" />
+    </div>
     <transition
       enter-active-class="transition-all duration-100 ease-out"
       enter-from-class="opacity-0 transform translate-y-[50px]"
@@ -314,7 +310,7 @@ window.androidBackCallback = async () => {
         v-show="showTabBar"
         v-model="activeKey"
         placeholder
-        class="z-[1002] h-[50px]"
+        class="shrink-0 z-[1002] h-[50px]"
         active-color="var(--van-text-color)"
       >
         <van-tabbar-item
@@ -345,6 +341,19 @@ window.androidBackCallback = async () => {
 </template>
 
 <style scoped lang="less">
-:deep(.van-collapse-item__content) {
+/* 滑动效果 */
+.slide-enter-active {
+  transition: all 0.3s ease-out;
+}
+.slide-leave-active {
+  transition: all 0.3s ease-in;
+}
+.slide-enter-from {
+  transform: translateX(20px);
+  opacity: 0;
+}
+.slide-leave-to {
+  transform: translateX(-20px);
+  opacity: 0;
 }
 </style>

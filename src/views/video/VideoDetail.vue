@@ -59,17 +59,20 @@ watch(videoSrc, (_) => {
         }
       }
       const url = videoSrc.value?.url || '';
-      if (url.includes('.m3u8')) {
-        return 'application/x-mpegURL'; // HLS
-      } else if (url.includes('.mpd')) {
-        return 'application/dash+xml'; // DASH
-      } else if (url.includes('rtmp://')) {
-        return 'rtmp/flv'; // RTMP
-      } else if (videoSrc.value?.isLive) {
-        return 'application/x-mpegURL'; // HLS
-      } else if (url.includes('mp4')) {
-        return 'video/mp4';
+      if (typeof url === 'string') {
+        if (url.includes('.m3u8')) {
+          return 'application/x-mpegURL'; // HLS
+        } else if (url.includes('.mpd')) {
+          return 'application/dash+xml'; // DASH
+        } else if (url.includes('rtmp://')) {
+          return 'rtmp/flv'; // RTMP
+        } else if (videoSrc.value?.isLive) {
+          return 'application/x-mpegURL'; // HLS
+        } else if (url.includes('mp4')) {
+          return 'video/mp4';
+        }
       }
+
       return 'application/x-mpegURL'; // 默认
     }
     videoSources.value = [

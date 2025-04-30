@@ -171,8 +171,13 @@ export async function _fetch(
     }
   }
   if (!headers.has('user-agent') && !headers.has('User-Agent')) {
-    const randomIndex = Math.floor(Math.random() * STATIC_CHROME_AGENTS.length);
-    headers.set('user-agent', STATIC_CHROME_AGENTS[randomIndex]);
+    // const randomIndex = Math.floor(Math.random() * STATIC_CHROME_AGENTS.length);
+    let ua = navigator.userAgent;
+    if (!ua.includes('Edg')){
+      // 使用edge ua
+      ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0'
+    }
+    headers.set('user-agent', ua);
     // navigator.userAgent
   }
 

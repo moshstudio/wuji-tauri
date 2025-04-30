@@ -39,7 +39,7 @@ const selecteMode = defineModel('selecteMode', {
         <h2 class="text-lg font-semibold text-[--van-text-color]">影库</h2>
       </div>
       <van-icon
-        name="cross"
+        name="arrow-down"
         size="24"
         @click="showVideoShelf = false"
         class="van-haptics-feedback text-[--van-text-color]"

@@ -18,8 +18,7 @@ function calculateProgress(currentBytes: number) {
  * @returns {string} 格式化后的字符串
  */
 function formatFileSize(bytes: number) {
-  if (bytes === 0)
-    return '0 B';
+  if (bytes === 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -78,8 +77,8 @@ export async function checkAndUpdate() {
               downloadedBytes += event.data.chunkLength;
               progress = calculateProgress(downloadedBytes);
               const progressBar = document.getElementById('updateProgressBar');
-              const progressText
-                = document.getElementById('updateProgressText');
+              const progressText =
+                document.getElementById('updateProgressText');
               if (progressBar && progressText) {
                 progressBar.style.width = `${progress}%`;
                 progressText.textContent = `${Math.round(progress)}% · 已下载 ${formatFileSize(downloadedBytes)}`;
@@ -91,7 +90,6 @@ export async function checkAndUpdate() {
         });
         await relaunch();
       }
-    }
-    catch (error) {}
+    } catch (error) {}
   }
 }

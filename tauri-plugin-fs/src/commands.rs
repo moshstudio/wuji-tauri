@@ -388,6 +388,7 @@ pub async fn fetch_and_save<R: Runtime>(
     command_scope: CommandScope<Entry>,
     options: ClientSaveConfig,
 ) -> CommandResult<bool> {
+    println!("fetch_and_save {:?}", options);
     let base_dir = options.base_dir.clone();
     let safe_path = SafeFilePath::from_str(&options.path.clone()).map_err(CommandError::from)?;
     let builder = reqwest::ClientBuilder::new();
