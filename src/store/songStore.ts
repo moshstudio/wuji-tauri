@@ -446,18 +446,14 @@ export const useSongStore = defineStore('song', () => {
     androidPlugins: PluginListener[] = [];
     onMounted() {
       onMounted(async () => {
-        tauriAddPluginListener('mediasession', 'play', async (payload: any) => {
+        tauriAddPluginListener('mediasession', 'play', async (_: any) => {
           await this.onPlay();
         }).then((listener) => {
           this.androidPlugins.push(listener);
         });
-        tauriAddPluginListener(
-          'mediasession',
-          'pause',
-          async (payload: any) => {
-            await this.onPause();
-          },
-        ).then((listener) => {
+        tauriAddPluginListener('mediasession', 'pause', async (_: any) => {
+          await this.onPause();
+        }).then((listener) => {
           this.androidPlugins.push(listener);
         });
 
@@ -480,7 +476,7 @@ export const useSongStore = defineStore('song', () => {
         tauriAddPluginListener(
           'mediasession',
           'seekbackward',
-          async (payload: any) => {
+          async (_: any) => {
             audioRef.value!.currentTime = Math.max(
               0,
               audioRef.value!.currentTime - 30,
@@ -492,7 +488,7 @@ export const useSongStore = defineStore('song', () => {
         tauriAddPluginListener(
           'mediasession',
           'seekforward',
-          async (payload: any) => {
+          async (_: any) => {
             audioRef.value!.currentTime = Math.min(
               audioRef.value!.duration,
               audioRef.value!.currentTime + 30,
@@ -504,22 +500,18 @@ export const useSongStore = defineStore('song', () => {
         tauriAddPluginListener(
           'mediasession',
           'previoustrack',
-          async (payload: any) => {
+          async (_: any) => {
             await this.prevSong();
           },
         ).then((listener) => {
           this.androidPlugins.push(listener);
         });
-        tauriAddPluginListener(
-          'mediasession',
-          'nexttrack',
-          async (payload: any) => {
-            await this.nextSong();
-          },
-        ).then((listener) => {
+        tauriAddPluginListener('mediasession', 'nexttrack', async (_: any) => {
+          await this.nextSong();
+        }).then((listener) => {
           this.androidPlugins.push(listener);
         });
-        tauriAddPluginListener('mediasession', 'stop', async (payload: any) => {
+        tauriAddPluginListener('mediasession', 'stop', async (_: any) => {
           await this.onPause();
         }).then((listener) => {
           this.androidPlugins.push(listener);
@@ -617,7 +609,6 @@ export const useSongStore = defineStore('song', () => {
           title: playingSong.value.name || '未知歌曲',
           artist: joinSongArtists(playingSong.value.artists),
           album: playingSong.value.album?.name,
-          cover: playingSong.value.picUrl,
         });
       }
 

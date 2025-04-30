@@ -136,10 +136,9 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
 
     @Throws(IOException::class)
     private fun urlToBitmap(url: String): Bitmap? {
-        Log.e("urlToBitmap", url)
         val blobUrl = url.startsWith("blob:")
         if (blobUrl) {
-            Log.i(TAG, "Converting Blob URLs to Bitmap for media artwork is not yet supported")
+            Log.e(TAG, "Converting Blob URLs to Bitmap for media artwork is not yet supported")
         }
 
         val httpUrl = url.startsWith("http")
@@ -156,7 +155,6 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
             val cacheDir = activity.cacheDir
             val relativePath = url.substring("file://".length)
             val file = File(cacheDir, relativePath)
-            Log.e(TAG, "$cacheDir $relativePath")
             return BitmapFactory.decodeFile(file.absolutePath)
         }
 

@@ -346,7 +346,12 @@ class MediaSessionService : Service() {
         if (notificationUpdate) {
             notificationBuilder?.apply {
                 setContentTitle(title)
-                setContentText("$artist - $album")
+                setContentText(
+                    when {
+                        album.isBlank() -> artist
+                        else -> "$artist - $album"
+                    }
+                )
                 setLargeIcon(cover)
             }
             notificationManager?.notify(NOTIFICATION_ID, notificationBuilder?.build())
