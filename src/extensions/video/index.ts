@@ -118,6 +118,9 @@ abstract class VideoExtension extends Extension {
     return r;
   })
   async execSearch(keyword: string, pageNo?: number) {
+    if (keyword === '') {
+      return await this.execGetRecommendVideos(pageNo);
+    }
     pageNo = pageNo || 1;
     const ret = await this.search(keyword, pageNo);
     if (ret) {

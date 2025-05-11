@@ -95,12 +95,12 @@ export interface SongUrlMap {
   '128'?: string;
   '320k'?: string;
   '320'?: string;
-  'flac'?: string;
-  'pic'?: string;
-  'bgPic'?: string;
-  'lyric'?: string;
-  'lyricUrl'?: string;
-  'headers'?: Record<string, string>;
+  flac?: string;
+  pic?: string;
+  bgPic?: string;
+  lyric?: string;
+  lyricUrl?: string;
+  headers?: Record<string, string>;
 }
 
 abstract class SongExtension extends Extension {
@@ -163,6 +163,9 @@ abstract class SongExtension extends Extension {
     return r;
   })
   async execSearchPlaylists(keyword: string, pageNo?: number) {
+    if (keyword === '') {
+      return await this.execGetRecommendPlaylists(pageNo);
+    }
     pageNo = pageNo || 1;
     const ret = await this.searchPlaylists(keyword, pageNo);
     ret?.list.forEach((item) => {
@@ -185,6 +188,9 @@ abstract class SongExtension extends Extension {
     return r;
   })
   async execSearchSongs(keyword: string, pageNo?: number) {
+    if (keyword === '') {
+      return await this.execGetRecommendSongs(pageNo);
+    }
     pageNo = pageNo || 1;
     const ret = await this.searchSongs(keyword, pageNo);
     ret?.list.forEach((item) => {
@@ -234,7 +240,7 @@ abstract class SongExtension extends Extension {
     pageNo?: number,
   ): Promise<PlaylistInfo | null>;
 
-  @transformResult<SongUrlMap | string | null>(r => r)
+  @transformResult<SongUrlMap | string | null>((r) => r)
   execGetSongUrl(item: SongInfo, size?: SongSize) {
     return this.getSongUrl(item, size);
   }
@@ -244,7 +250,7 @@ abstract class SongExtension extends Extension {
     size?: SongSize,
   ): Promise<SongUrlMap | string | null>;
 
-  @transformResult<string | null>(r => r)
+  @transformResult<string | null>((r) => r)
   execGetLyric(item: SongInfo) {
     return this.getLyric(item);
   }
@@ -259,8 +265,7 @@ function loadSongExtensionString(
     const func = new Function('SongExtension', codeString);
     const extensionclass = func(SongExtension);
     return new extensionclass();
-  }
-  catch (error) {
+  } catch (error) {
     console.error('Error executing code:\n', error);
   }
 }

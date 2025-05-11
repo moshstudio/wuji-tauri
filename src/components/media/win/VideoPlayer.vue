@@ -7,6 +7,7 @@ import type {
 import type { VideoPlayerState } from '@videojs-player/vue';
 import type videojs from 'video.js';
 import type { PropType } from 'vue';
+import { Icon } from '@iconify/vue';
 import FullScreenButton from '@/components/media/win/FullScreenButton.vue';
 import PlaybackRateButton from '@/components/media/win/PlaybackRateButton.vue';
 import PlayPauseButton from '@/components/media/win/PlayPauseButton.vue';
@@ -45,6 +46,7 @@ const emit = defineEmits<{
   (e: 'onPlayFinished', args: any): void;
   (e: 'timeUpdate', args: any): void;
   (e: 'playNext', args: any): void;
+  (e: 'back'): void;
 }>();
 const player = defineModel('player', {
   type: Object as PropType<VideoJsPlayer>,
@@ -169,6 +171,16 @@ function onError(e: any) {
   }
 }
 
+async function onBack() {
+  if (displayStore.fullScreenMode) {
+    exitFullScreen();
+  } else if (isBrowserFullscreen.value) {
+    exitBrowserFullscreen();
+  } else {
+    emit('back');
+  }
+}
+
 // 组件卸载时清除定时器
 onBeforeUnmount(() => {
   if (hideTimer) {
@@ -231,11 +243,20 @@ onBeforeUnmount(() => {
               class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/90 to-transparent pointer-events-none"
             />
             <div
-              class="top-bar absolute left-0 right-0 top-0 h-[40px] bg-transparent p-2 text-base text-gray-300 select-none truncate"
+              class="top-bar absolute left-0 right-0 top-0 flex bg-transparent p-2 select-none"
               @mousemove.stop="showControlsAction"
               @click.stop
             >
-              {{ episode?.title || '' }} - {{ resource?.title || '' }}
+              <Icon
+                icon="ic:round-arrow-back"
+                width="24"
+                height="24"
+                class="shrink-0 van-haptics-feedback pointer-events-auto"
+                @click.stop="onBack"
+              />
+              <span class="text-base text-gray-300 truncate">
+                {{ episode?.title || '' }} - {{ resource?.title || '' }}
+              </span>
             </div>
 
             <div

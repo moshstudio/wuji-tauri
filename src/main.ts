@@ -1,14 +1,7 @@
 import { GesturePlugin } from '@vueuse/gesture';
 import { createPinia } from 'pinia';
 import { Lazyload } from 'vant';
-// Toast
-import { Toast } from 'vant';
-// Dialog
-import { Dialog } from 'vant';
-// Notify
-import { Notify } from 'vant';
-// ImagePreview
-import { ImagePreview } from 'vant';
+import { Toast, Dialog, Notify, ImagePreview, Sticky } from 'vant';
 
 import { createApp } from 'vue';
 import { createVuetify } from 'vuetify';
@@ -23,11 +16,12 @@ import { router } from './router';
 import HorizontalScrollDirective from './utils/directives/horizontalScroll';
 import RememberScrollDirective from './utils/directives/rememberScroll';
 import HoverDelay from './utils/directives/hoverDelay';
-// Vuetify
+
 import 'vuetify/styles';
 import 'vant/es/toast/style';
 import 'vant/es/dialog/style';
 import 'vant/es/notify/style';
+import 'vant/es/sticky/style';
 import 'vant/es/image-preview/style';
 import '@vant/touch-emulator';
 import '@/styles/index.css';
@@ -53,6 +47,7 @@ createApp(App)
   .use(Toast)
   .use(Dialog)
   .use(Notify)
+  .use(Sticky)
   .use(ImagePreview)
   .use(GesturePlugin)
   .use(router)

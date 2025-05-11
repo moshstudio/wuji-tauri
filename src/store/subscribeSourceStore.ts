@@ -29,6 +29,16 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     _.remove(subscribeSources, (s) => s.detail.id === source.detail.id);
     await saveSubscribeSources();
   };
+  const removeItemFromSubscribeSource = async (
+    itemId: string,
+    sourceId: string,
+  ) => {
+    const source = subscribeSources.find((s) => s.detail.id === sourceId);
+    if (source) {
+      _.remove(source.detail.urls, (item) => item.id === itemId);
+      await saveSubscribeSources();
+    }
+  };
   const getSubscribeSource = (
     sourceId: string,
   ): SubscribeSource | undefined => {
@@ -49,6 +59,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     subscribeSources,
     addSubscribeSource,
     removeSubscribeSource,
+    removeItemFromSubscribeSource,
     getSubscribeSource,
     saveSubscribeSources,
     clearSubscribeSources,

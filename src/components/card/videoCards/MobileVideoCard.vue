@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import _ from 'lodash';
 import type { VideoItem } from '@/extensions/video';
 import LoadImage from '@/components/LoadImage.vue';
 import { useDisplayStore } from '@/store';
@@ -27,6 +28,12 @@ const displayStore = useDisplayStore();
 
     <p v-if="videoItem.title" class="text-xs text-center truncate py-1">
       {{ videoItem.title }}
+    </p>
+    <p
+      v-if="videoItem.tags"
+      class="absolute text-xs rounded left-0 bottom-6 p-1 truncate bg-gray-800/60 text-gray-200 max-w-full"
+    >
+      {{ _.castArray(videoItem.tags).join(',') }}
     </p>
   </div>
 </template>

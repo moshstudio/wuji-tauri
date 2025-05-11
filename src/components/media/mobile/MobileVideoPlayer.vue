@@ -115,7 +115,7 @@ function toggleShowControls() {
     showControls.value = !showControls.value;
     showControlsTimer = setTimeout(() => {
       showControls.value = !showControls.value;
-    }, 60000);
+    }, 6000);
   } else {
     clearTimeout(showControlsTimer);
     showControls.value = !showControls.value;

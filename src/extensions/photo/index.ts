@@ -77,6 +77,9 @@ abstract class PhotoExtension extends Extension {
     return r;
   })
   async execSearch(keyword: string, pageNo?: number) {
+    if (keyword === '') {
+      return await this.execGetRecommendList(pageNo);
+    }
     pageNo = pageNo || 1;
     const ret = await this.search(keyword, pageNo);
     ret?.list.forEach((item) => {

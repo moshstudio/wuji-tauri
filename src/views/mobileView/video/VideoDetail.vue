@@ -12,6 +12,7 @@ import MobileVideoPlayer from '@/components/media/mobile/MobileVideoPlayer.vue';
 import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
 import { useDisplayStore, useVideoShelfStore } from '@/store';
 import { ref, watch } from 'vue';
+import { nanoid } from 'nanoid';
 
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
@@ -66,6 +67,9 @@ const pageBody = defineModel('pageBody', {
 const displayStore = useDisplayStore();
 const shelfStore = useVideoShelfStore();
 const activeResource = ref('');
+
+const tabKey = ref(nanoid()); // 修改此值来重新渲染组件
+
 watch(
   () => playingResource,
   (newValue) => {
@@ -75,6 +79,14 @@ watch(
   },
   {
     immediate: true,
+  },
+);
+watch(
+  () => videoSrc,
+  (newValue) => {
+    if (newValue) {
+      tabKey.value = nanoid();
+    }
   },
 );
 </script>
@@ -119,11 +131,13 @@ watch(
           type="primary"
           @click="() => emit('collect')"
         >
-          {{
-            videoItem && shelfStore.isVideoInShelf(videoItem)
-              ? '已收藏'
-              : '收藏'
-          }}
+          <span class="text-nowrap">
+            {{
+              videoItem && shelfStore.isVideoInShelf(videoItem)
+                ? '已收藏'
+                : '收藏'
+            }}
+          </span>
         </van-button>
       </div>
 
@@ -157,7 +171,13 @@ watch(
       />
     </div>
     <div class="flex w-full">
-      <van-tabs v-model:active="activeResource" shrink animated class="w-full">
+      <van-tabs
+        :key="tabKey"
+        v-model:active="activeResource"
+        shrink
+        animated
+        class="w-full"
+      >
         <van-tab
           v-for="(resource, index) in videoItem?.resources"
           :key="index"

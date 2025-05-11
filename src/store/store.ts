@@ -1430,6 +1430,7 @@ export const useStore = defineStore('store', () => {
     getVideoItem,
 
     addSubscribeSource,
+    localSourceId,
     addLocalSubscribeSource,
     loadSubscribeSources,
     updateSubscribeSources,

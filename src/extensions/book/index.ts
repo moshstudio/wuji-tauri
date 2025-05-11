@@ -104,6 +104,9 @@ abstract class BookExtension extends Extension {
     return r;
   })
   async execSearch(keyword: string, pageNo?: number) {
+    if (keyword === '') {
+      return await this.execGetRecommendBooks(pageNo);
+    }
     pageNo = pageNo || 1;
     const ret = await this.search(keyword, pageNo);
     if (ret) {
@@ -130,9 +133,19 @@ abstract class BookExtension extends Extension {
     return r;
   })
   async execGetBookDetail(item: BookItem) {
+    const origin = _.cloneDeep(item);
     const ret = await this.getBookDetail(item);
     if (ret) {
       ret.sourceId = String(this.id);
+      if (origin.chapters) {
+        // 同步 readingPage
+        ret.chapters?.forEach((c) => {
+          const originC = origin.chapters?.find((c2) => c2.id === c.id);
+          if (originC && originC.readingPage) {
+            c.readingPage = originC.readingPage;
+          }
+        });
+      }
     }
     return ret;
   }
@@ -143,7 +156,7 @@ abstract class BookExtension extends Extension {
     return r;
   })
   execGetContent(item: BookItem, chapter: BookChapter) {
-    return this.getContent(item, chapter).then(r =>
+    return this.getContent(item, chapter).then((r) =>
       r ? purifyText(r) : null,
     );
   }
@@ -161,8 +174,7 @@ function loadBookExtensionString(
     const func = new Function('BookExtension', codeString);
     const extensionclass = func(BookExtension);
     return new extensionclass();
-  }
-  catch (error) {
+  } catch (error) {
     console.error('Error executing code:\n', error);
   }
 }

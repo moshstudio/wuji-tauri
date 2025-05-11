@@ -108,6 +108,9 @@ abstract class ComicExtension extends Extension {
     return r;
   })
   async execSearch(keyword: string, pageNo?: number) {
+    if (keyword === '') {
+      return await this.execGetRecommendComics(pageNo);
+    }
     pageNo = pageNo || 1;
     const ret = await this.search(keyword, pageNo);
     if (ret) {
@@ -161,8 +164,7 @@ function loadComicExtensionString(
     const func = new Function('ComicExtension', codeString);
     const extensionclass = func(ComicExtension);
     return new extensionclass();
-  }
-  catch (error) {
+  } catch (error) {
     console.error('Error executing code:\n', error);
   }
 }

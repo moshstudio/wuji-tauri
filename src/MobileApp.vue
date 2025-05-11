@@ -19,7 +19,11 @@ import {
   useTTSStore,
   useVideoShelfStore,
 } from './store';
-import View from './components/View.vue';
+import AboutDialog from '@/components/dialogs/About.vue';
+import ImportSubscribeDialog from '@/components/windows/dialogs/ImportSubscribe.vue';
+import SettingDialog from '@/components/windows/dialogs/Setting.vue';
+import SourcePopup from '@/views/source/index.vue';
+import CreateSourcePopup from './views/source/CreateSource.vue';
 
 const { routerView } = defineProps<{
   routerView: VNode;
@@ -336,6 +340,13 @@ window.androidBackCallback = async () => {
         height="4"
         @click="() => displayStore.closeToast()"
       />
+    </div>
+    <div class="dialogs">
+      <ImportSubscribeDialog />
+      <SettingDialog />
+      <AboutDialog />
+      <SourcePopup />
+      <CreateSourcePopup />
     </div>
   </div>
 </template>

@@ -1,6 +1,8 @@
 import type { ClientOptions } from '@/utils/fetch';
 import type { BookItem } from './book';
 import type { PhotoItem } from './photo';
+import type { ComicItem } from './comic';
+import type { VideoItem } from './video';
 import type { PlaylistInfo, SongInfo } from './song';
 import {
   maxPageNoFromElements,
@@ -85,7 +87,7 @@ abstract class Extension {
       latestChapter?: string;
       latestUpdate?: string;
     },
-  ) => Promise<BookItem[]>;
+  ) => Promise<ComicItem[]>;
 
   queryVideoElements: (
     body: Document,
@@ -106,7 +108,7 @@ abstract class Extension {
       coverDomain?: string;
       baseUrl?: string;
     },
-  ) => Promise<BookItem[]>;
+  ) => Promise<VideoItem[]>;
 
   queryPhotoElements: (
     body: Document,
@@ -166,7 +168,7 @@ abstract class Extension {
   urlJoin: (...parts: (string | null | undefined)[]) => string;
   maxPageNoFromElements: typeof maxPageNoFromElements;
   parseAndExecuteHtml: typeof parseAndExecuteHtml;
-  toProxyUrl: typeof toProxyUrl;
+  toProxyUrl: typeof toProxyUrl; // 已弃用
 
   abstract id: string;
   abstract name: string;

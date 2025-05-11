@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import _ from 'lodash';
 import type {
   VideoEpisode,
   VideoItemInShelf,
@@ -97,6 +98,12 @@ onMounted(() => {
       class="absolute text-xs text-gray-200 bg-slate-600/80 p-1 bottom-6 truncate max-w-full"
     >
       {{ lastWatchEpisode?.title || '未观看' }}
+    </p>
+    <p
+      v-if="shelfVideo.video.tags"
+      class="absolute text-xs rounded left-0 bottom-6 p-1 truncate bg-gray-800/60 text-gray-200 max-w-full"
+    >
+      {{ _.castArray(shelfVideo.video.tags).join(',') }}
     </p>
     <p
       v-if="source && selecteMode"

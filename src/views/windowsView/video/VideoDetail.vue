@@ -12,6 +12,7 @@ import VideoPlayer from '@/components/media/win/VideoPlayer.vue';
 import ResponsiveGrid from '@/components/ResponsiveGrid.vue';
 import { useVideoShelfStore } from '@/store';
 import { ref, watch } from 'vue';
+import { nanoid } from 'nanoid';
 
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
@@ -65,6 +66,17 @@ const pageBody = defineModel('pageBody', {
 
 const shelfStore = useVideoShelfStore();
 const activeResource = ref('');
+
+const tabKey = ref(nanoid()); // 修改此值来重新渲染组件
+watch(
+  () => videoSrc,
+  (newValue) => {
+    if (newValue) {
+      tabKey.value = nanoid();
+    }
+  }
+);
+
 watch(
   () => playingResource,
   (newValue) => {
@@ -103,6 +115,7 @@ watch(
           @can-play="(args) => emit('canPlay', args)"
           @play-next="(args) => emit('playNext', args)"
           @on-play-finished="(args) => emit('onPlayFinished', args)"
+          @back="() => emit('back')"
         />
       </div>
       <div class="flex flex-col gap-2 px-2 text-[var(--van-text-color)]">
@@ -140,7 +153,7 @@ watch(
       </div>
     </div>
     <div class="flex-grow flex w-full">
-      <van-tabs v-model:active="activeResource" shrink animated class="w-full">
+      <van-tabs :key="tabKey" v-model:active="activeResource" shrink animated class="w-full">
         <van-tab
           v-for="(resource, index) in videoItem?.resources"
           :key="index"

@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import logo from '@/assets/wuji.svg';
 import { useDisplayStore, useStore } from '@/store';
-import AboutDialog from '../dialogs/About.vue';
-import ImportSubscribeDialog from '../windows/dialogs/ImportSubscribe.vue';
-import ManageSubscribeDialog from '../windows/dialogs/ManageSubscribe.vue';
-import SettingDialog from '../windows/dialogs/Setting.vue';
 import Login from '@/views/auth/Login.vue';
 
 const store = useStore();
@@ -82,10 +78,6 @@ const options = [
       </van-cell-group>
     </div>
   </van-popup>
-  <ImportSubscribeDialog />
-  <ManageSubscribeDialog />
-  <SettingDialog />
-  <AboutDialog />
 </template>
 
 <style scoped lang="less"></style>

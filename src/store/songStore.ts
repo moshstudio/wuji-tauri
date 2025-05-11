@@ -120,7 +120,13 @@ export const useSongStore = defineStore('song', () => {
         if (typeof newUrl === 'string') {
           src = newUrl;
         } else if (newUrl instanceof Object) {
-          src = newUrl['128k'] || newUrl['320k'] || newUrl.flac || '';
+          src =
+            newUrl['128k'] ||
+            newUrl['128'] ||
+            newUrl['320k'] ||
+            newUrl['320'] ||
+            newUrl.flac ||
+            '';
           headers = newUrl.headers || null;
           if (newUrl.lyric) {
             song.lyric = newUrl.lyric;

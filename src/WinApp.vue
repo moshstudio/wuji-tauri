@@ -2,6 +2,8 @@
 import type { Ref, VNode } from 'vue';
 import AboutDialog from '@/components/dialogs/About.vue';
 import ImportSubscribeDialog from '@/components/windows/dialogs/ImportSubscribe.vue';
+import SourcePopup from '@/views/source/index.vue';
+import CreateSourcePopup from './views/source/CreateSource.vue';
 import { Icon } from '@iconify/vue';
 import { TrayIcon } from '@tauri-apps/api/tray';
 import { storeToRefs } from 'pinia';
@@ -14,7 +16,6 @@ import {
   watch,
 } from 'vue';
 import { useRoute } from 'vue-router';
-import ManageSubscribeDialog from './components/windows/dialogs/ManageSubscribe.vue';
 import SettingDialog from './components/windows/dialogs/Setting.vue';
 import LoginButton from '@/views/auth/Login.vue';
 import { useDisplayStore, useStore } from './store';
@@ -85,7 +86,15 @@ const activeKey = ref('0');
 
 const route = useRoute();
 const showSettingPopover = ref(false);
+
+const showSourcePopover = ref(false);
 const settingActions = [
+  {
+    text: '设置',
+    onClick: () => {
+      displayStore.showSettingDialog = true;
+    },
+  },
   {
     text: '关于',
     onClick: () => {
@@ -93,7 +102,6 @@ const settingActions = [
     },
   },
 ];
-const showSourcePopover = ref(false);
 const sourceActions = [
   {
     text: '导入订阅源',
@@ -114,9 +122,9 @@ const sourceActions = [
     },
   },
   {
-    text: '设置',
+    text: '创建订阅源',
     onClick: () => {
-      displayStore.showSettingDialog = true;
+      displayStore.showCreateSubscribeDialog = true;
     },
   },
 ];
@@ -219,10 +227,11 @@ onBeforeUnmount(async () => {
           </div> -->
 
           <LoginButton />
+
           <van-popover
-            v-model:show="showSourcePopover"
+            v-model:show="showSettingPopover"
             placement="right-end"
-            :actions="sourceActions"
+            :actions="settingActions"
             @select="onClickAction"
           >
             <template #reference>
@@ -235,14 +244,14 @@ onBeforeUnmount(async () => {
             </template>
           </van-popover>
           <van-popover
-            v-model:show="showSettingPopover"
+            v-model:show="showSourcePopover"
             placement="right-end"
-            :actions="settingActions"
+            :actions="sourceActions"
             @select="onClickAction"
           >
             <template #reference>
               <Icon
-                icon="si:info-line"
+                icon="tabler:source-code"
                 width="26px"
                 height="26px"
                 class="text-[var(--van-text-color)] cursor-pointer hover:scale-105"
@@ -268,9 +277,10 @@ onBeforeUnmount(async () => {
     </div>
     <div class="dialogs">
       <ImportSubscribeDialog />
-      <ManageSubscribeDialog />
       <AboutDialog />
       <SettingDialog />
+      <SourcePopup />
+      <CreateSourcePopup />
     </div>
   </div>
 </template>

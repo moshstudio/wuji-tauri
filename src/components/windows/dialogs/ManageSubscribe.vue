@@ -13,7 +13,7 @@ const checked = ref([]);
 const showClearPopover = ref(false);
 
 function isDisable(item: SubscribeSource) {
-  return item.detail?.urls.every(url => url.disable === true) || false;
+  return item.detail?.urls.every((url) => url.disable === true) || false;
 }
 
 function sourceSwitch(item: SubscribeSource, value: boolean) {
@@ -25,8 +25,7 @@ function sourceSwitch(item: SubscribeSource, value: boolean) {
     item.detail?.urls.forEach((url) => {
       url.disable = true;
     });
-  }
-  else {
+  } else {
     // 启用此source
     item.detail?.urls.forEach((url) => {
       url.disable = false;
@@ -40,11 +39,10 @@ function urlSwitch(item: SubscribeSource, url: SubscribeItem, value: boolean) {
   if (value) {
     // 禁用此url
     url.disable = true;
-    if (item.detail?.urls.every(url => url.disable)) {
+    if (item.detail?.urls.every((url) => url.disable)) {
       item.disable = true;
     }
-  }
-  else {
+  } else {
     // 启用此url
     url.disable = false;
     item.disable = false;
@@ -75,9 +73,7 @@ function clearSources() {
           确认清空?
         </van-button>
         <template #reference>
-          <van-button size="small">
-            清空
-          </van-button>
+          <van-button size="small">清空</van-button>
         </template>
       </van-popover>
     </van-row>
@@ -105,7 +101,7 @@ function clearSources() {
                   确认删除?
                 </van-button>
                 <template #reference>
-                  <span class="text-button-2 mr-[12px] text-xs"> 删除 </span>
+                  <span class="text-button-2 mr-[12px] text-xs">删除</span>
                 </template>
               </van-popover>
               <van-switch

@@ -60,7 +60,8 @@ export const useDisplayStore = defineStore('display', () => {
   const toggleDark = useToggle(isDark);
 
   const showAddSubscribeDialog = ref(false);
-  const showManageSubscribeDialog = ref(false);
+  const showManageSubscribeDialog = useStorageAsync('manageSubscribe', false);
+  const showCreateSubscribeDialog = useStorageAsync('createSubscribe', false);
 
   const showAddBookShelfDialog = ref(false);
   const showRemoveBookShelfDialog = ref(false);
@@ -248,6 +249,7 @@ export const useDisplayStore = defineStore('display', () => {
     showTabBar,
     showAddSubscribeDialog,
     showManageSubscribeDialog,
+    showCreateSubscribeDialog,
 
     showAddBookShelfDialog,
     showRemoveBookShelfDialog,
