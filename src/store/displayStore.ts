@@ -6,10 +6,12 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { useDark, useStorage, useStorageAsync, useToggle } from '@vueuse/core';
 import { defineStore } from 'pinia';
+import { showToast as vanShowToast } from 'vant';
 import * as commands from 'tauri-plugin-commands-api';
 
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { tauriAddPluginListener } from './utils';
+import _ from 'lodash';
 
 export const useDisplayStore = defineStore('display', () => {
   const showTabBar = ref(true);
@@ -236,6 +238,51 @@ export const useDisplayStore = defineStore('display', () => {
     });
   }
 
+  const _backTs = ref(Date.now());
+  const checkExitApp = async () => {
+    const now = Date.now();
+    if (now - _backTs.value > 1000) {
+      _backTs.value = now;
+      vanShowToast('再按一次返回');
+    } else {
+      await commands.return_to_home();
+    }
+  };
+
+  // 进行返回时的调用
+  const backCallbacks: Record<string, Function[]> = {};
+  const addBackCallback = (pathName: string, cb: Function) => {
+    backCallbacks[pathName] = backCallbacks[pathName] || [];
+    if (backCallbacks[pathName].includes(cb)) {
+      return;
+    }
+    backCallbacks[pathName].push(cb);
+  };
+  const removeBackCallback = (pathName: string, cb: Function) => {
+    if (!backCallbacks[pathName]) {
+      return;
+    }
+    _.remove(backCallbacks[pathName], (item) => item === cb);
+  };
+  const triggerBackCallbacks = async (pathName: string) => {
+    if (!backCallbacks[pathName]) {
+      return;
+    }
+
+    for (const callback of backCallbacks[pathName]) {
+      try {
+        await Promise.resolve(callback());
+      } catch (error) {
+        console.error(`Error executing callback for ${pathName}:`, error);
+      }
+    }
+  };
+  onUnmounted(() => {
+    Object.keys(backCallbacks).forEach((key) => {
+      delete backCallbacks[key];
+    });
+  });
+
   return {
     fullScreenMode,
     isMobileView,
@@ -308,5 +355,10 @@ export const useDisplayStore = defineStore('display', () => {
     searchHistories,
 
     tabBarPages,
+
+    checkExitApp,
+    addBackCallback,
+    removeBackCallback,
+    triggerBackCallbacks,
   };
 });

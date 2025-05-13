@@ -1,5 +1,6 @@
 const COMMANDS: &[&str] = &[
     "exit_app",
+    "return_to_home",
     "set_status_bar",
     "hide_status_bar",
     "get_system_font_scale",

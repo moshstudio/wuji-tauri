@@ -17,6 +17,9 @@ impl<R: Runtime> Commands<R> {
     pub fn exit_app(&self) -> crate::Result<()> {
         Ok(())
     }
+    pub fn return_to_home(&self) -> crate::Result<()> {
+        Ok(())
+    }
     pub fn set_status_bar(
         &self,
         payload: SetStatusBarRequest,

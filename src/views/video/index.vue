@@ -8,7 +8,7 @@ import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { debounce } from 'lodash';
 import { storeToRefs } from 'pinia';
 import { showLoadingToast } from 'vant';
-import { ref, triggerRef } from 'vue';
+import { onMounted, ref, triggerRef } from 'vue';
 import MobileVideo from '../mobileView/video/index.vue';
 import WinVideo from '../windowsView/video/index.vue';
 
@@ -23,8 +23,7 @@ const recommend = createCancellableFunction(
     await Promise.all(
       videoSources.value.map(async (source) => {
         if (!source.list || force) {
-          if (signal.aborted)
-            return;
+          if (signal.aborted) return;
           await store.videoRecommendList(source);
         }
       }),
@@ -37,12 +36,10 @@ const search = createCancellableFunction(async (signal: AbortSignal) => {
   const t = displayStore.showToast();
   if (!keyword) {
     await recommend(true);
-  }
-  else {
+  } else {
     await Promise.all(
       videoSources.value.map(async (source) => {
-        if (signal.aborted)
-          return;
+        if (signal.aborted) return;
         await store.videoSearch(source, keyword, 1);
       }),
     );
@@ -69,8 +66,7 @@ const loadPage = debounce(
       });
       if (!searchValue.value) {
         await store.videoRecommendList(source, pageNo, type);
-      }
-      else {
+      } else {
         await store.videoSearch(source, searchValue.value, pageNo);
       }
       toast.close();
@@ -94,6 +90,15 @@ async function openBaseUrl(source: VideoSource) {
     // open(sc.baseUrl);
   }
 }
+onMounted(() => {
+  displayStore.addBackCallback('Video', async () => {
+    if (displayStore.showVideoShelf) {
+      displayStore.showVideoShelf = false;
+    } else {
+      await displayStore.checkExitApp();
+    }
+  });
+});
 </script>
 
 <template>

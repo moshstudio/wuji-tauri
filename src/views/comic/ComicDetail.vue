@@ -4,10 +4,10 @@ import type { ComicSource } from '@/types';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
 
 import { router } from '@/router';
-import { useStore } from '@/store';
+import { useDisplayStore, useStore } from '@/store';
 import { retryOnFalse, sleep } from '@/utils';
 import { showLoadingToast, showToast } from 'vant';
-import { onActivated, ref, triggerRef, watch } from 'vue';
+import { onActivated, onMounted, ref, triggerRef, watch } from 'vue';
 import MobileComicDetail from '../mobileView/comic/ComicDetail.vue';
 import WinComicDetail from '../windowsView/comic/ComicDetail.vue';
 
@@ -17,6 +17,7 @@ const { comicId, sourceId } = defineProps({
 });
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const comicSource = ref<ComicSource>();
 const comic = ref<ComicItem>();
 const content = ref<HTMLElement>();
@@ -60,8 +61,7 @@ const loadData = retryOnFalse({ onFailed: back })(async () => {
   if (!detail?.chapters) {
     showToast('章节列表为空');
   }
-  if (content.value)
-    content.value.scrollTop = 0;
+  if (content.value) content.value.scrollTop = 0;
   triggerRef(comic);
   return true;
 });
@@ -87,6 +87,16 @@ onActivated(async () => {
     shouldLoad.value = false;
     loadData();
   }
+});
+onMounted(() => {
+  displayStore.addBackCallback('ComicDetail', async () => {
+    if (displayStore.showComicShelf) {
+      // 关闭书架
+      displayStore.showComicShelf = false;
+    } else {
+      router.push({ name: 'Comic' });
+    }
+  });
 });
 </script>
 

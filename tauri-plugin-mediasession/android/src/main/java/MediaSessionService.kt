@@ -259,9 +259,9 @@ class MediaSessionService : Service() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-        stopForeground(true)
-        stopSelf()
+        super.onDestroy()  // 先调用父类方法
+        stopForeground(STOP_FOREGROUND_REMOVE)  // 移除通知
+        stopSelf()  // 停止服务（如果还没停止）
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

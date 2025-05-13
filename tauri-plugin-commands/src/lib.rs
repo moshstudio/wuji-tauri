@@ -37,6 +37,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("commands")
         .invoke_handler(tauri::generate_handler![
             commands::exit_app,
+            commands::return_to_home,
             commands::set_status_bar,
             commands::hide_status_bar,
             commands::get_system_font_scale,

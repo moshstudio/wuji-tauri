@@ -4,10 +4,10 @@ import type { BookSource } from '@/types';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
 
 import { router } from '@/router';
-import { useStore } from '@/store';
+import { useDisplayStore, useStore } from '@/store';
 import { retryOnFalse, sleep } from '@/utils';
 import { showLoadingToast, showToast } from 'vant';
-import { onActivated, ref, triggerRef, watch } from 'vue';
+import { onActivated, onMounted, ref, triggerRef, watch } from 'vue';
 import MobileBookDetail from '../mobileView/book/BookDetail.vue';
 import WinBookDetail from '../windowsView/book/BookDetail.vue';
 
@@ -17,6 +17,7 @@ const { bookId, sourceId } = defineProps({
 });
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const bookSource = ref<BookSource>();
 const book = ref<BookItem>();
 const content = ref<HTMLElement>();
@@ -60,8 +61,7 @@ const loadData = retryOnFalse({ onFailed: back })(async () => {
   if (!detail?.chapters) {
     showToast('章节列表为空');
   }
-  if (content.value)
-    content.value.scrollTop = 0;
+  if (content.value) content.value.scrollTop = 0;
   triggerRef(book);
   return true;
 });
@@ -87,6 +87,16 @@ onActivated(async () => {
     shouldLoad.value = false;
     loadData();
   }
+});
+onMounted(() => {
+  displayStore.addBackCallback('BookDetail', async () => {
+    if (displayStore.showBookShelf) {
+      // 关闭书架
+      displayStore.showBookShelf = false;
+    } else {
+      router.push({ name: 'Book' });
+    }
+  });
 });
 </script>
 

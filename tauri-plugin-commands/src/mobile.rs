@@ -28,6 +28,9 @@ impl<R: Runtime> Commands<R> {
     pub fn exit_app(&self) -> crate::Result<()> {
         self.0.run_mobile_plugin("exitApp", ()).map_err(Into::into)
     }
+    pub fn return_to_home(&self) -> crate::Result<()> {
+        self.0.run_mobile_plugin("returnToHome", ()).map_err(Into::into)
+    }
     pub fn set_status_bar(
         &self,
         payload: SetStatusBarRequest,

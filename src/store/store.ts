@@ -903,6 +903,9 @@ export const useStore = defineStore('store', () => {
   const localSourceId = 'localSource-wuji';
 
   const addLocalSubscribeSource = async (path: string) => {
+    if (!path) {
+      return;
+    }
     let content: string;
     try {
       content = await fs.readTextFile(path);
@@ -1346,7 +1349,7 @@ export const useStore = defineStore('store', () => {
     await subscribeSourceStore.init();
     if (!subscribeSourceStore.isEmpty) {
       // 更新订阅源
-      if (Date.now() - latestUpdateSource.value > 1000 * 60 * 60 * 24) {
+      if (Date.now() - latestUpdateSource.value > 1000 * 60 * 60 * 24 * 3) {
         await updateSubscribeSources();
         latestUpdateSource.value = Date.now();
       }

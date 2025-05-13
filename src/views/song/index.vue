@@ -5,7 +5,7 @@ import PlatformSwitch from '@/components/PlatformSwitch.vue';
 import { useDisplayStore, useSongStore, useStore } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { storeToRefs } from 'pinia';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import MobileSong from '../mobileView/song/index.vue';
 import WinSong from '../windowsView/song/index.vue';
 
@@ -24,17 +24,14 @@ const search = createCancellableFunction(async (signal: AbortSignal) => {
   const t = displayStore.showToast();
   if (!keyword) {
     await recommend(true);
-  }
-  else {
+  } else {
     await Promise.all([
       ...songSources.value.map(async (source) => {
-        if (signal.aborted)
-          return;
+        if (signal.aborted) return;
         await store.songSearchPlaylist(source, keyword, 1);
       }),
       ...songSources.value.map(async (source) => {
-        if (signal.aborted)
-          return;
+        if (signal.aborted) return;
         await store.songSearchSong(source, keyword, 1);
       }),
     ]);
@@ -68,16 +65,14 @@ async function recommend(force: boolean = false) {
 async function playlistToPage(source: SongSource, pageNo: number) {
   if (!searchValue.value) {
     await store.songRecommendPlayist(source, pageNo);
-  }
-  else {
+  } else {
     await store.songSearchPlaylist(source, searchValue.value, pageNo);
   }
 }
 async function songToPage(source: SongSource, pageNo: number) {
   if (!searchValue.value) {
     await store.songRecommendSong(source, pageNo);
-  }
-  else {
+  } else {
     await store.songSearchSong(source, searchValue.value, pageNo);
   }
 }
@@ -96,6 +91,24 @@ async function openBaseUrl(source: SongSource) {
     // open(sc.baseUrl);
   }
 }
+onMounted(() => {
+  displayStore.addBackCallback('Song', async () => {
+    if (displayStore.showPlayingPlaylist) {
+      // 关闭播放列表
+      displayStore.showPlayingPlaylist = false;
+    } else if (displayStore.showPlayView) {
+      // 关闭播放页
+      displayStore.showPlayView = false;
+    } else if (displayStore.showSongShelfDetail) {
+      // 收藏的歌单的详情
+      displayStore.showSongShelfDetail = false;
+    } else if (displayStore.showSongShelf) {
+      displayStore.showSongShelf = false;
+    } else {
+      await displayStore.checkExitApp();
+    }
+  });
+});
 </script>
 
 <template>

@@ -3,11 +3,11 @@ import type { PlaylistInfo } from '@/extensions/song';
 import type { SongSource } from '@/types';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
 import { router } from '@/router';
-import { useSongShelfStore, useStore } from '@/store';
+import { useDisplayStore, useSongShelfStore, useStore } from '@/store';
 import { retryOnFalse, sleep } from '@/utils';
 import { debounce } from 'lodash';
 import { showLoadingToast, showToast } from 'vant';
-import { onActivated, ref, triggerRef, watch } from 'vue';
+import { onActivated, onMounted, ref, triggerRef, watch } from 'vue';
 import MobilePlaylistDetail from '../mobileView/song/PlaylistDetail.vue';
 import WinPlaylistDetail from '../windowsView/song/PlaylistDetail.vue';
 
@@ -17,6 +17,7 @@ const { playlistId, sourceId } = defineProps({
 });
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const shelfStore = useSongShelfStore();
 const songSource = ref<SongSource>();
 const playlist = ref<PlaylistInfo>();
@@ -74,8 +75,7 @@ const loadData = retryOnFalse({ onFailed: back })(async (pageNo?: number) => {
     showToast('播放列表为空');
   }
   currentPage.value = detail?.list?.page || 1;
-  if (content.value)
-    content.value.scrollTop = 0;
+  if (content.value) content.value.scrollTop = 0;
   return true;
 });
 const toPage = debounce(loadData, 600);
@@ -94,8 +94,7 @@ async function playAll() {
   t.close();
 }
 function addToShelf() {
-  if (!playlist.value)
-    return;
+  if (!playlist.value) return;
   const res = shelfStore.addPlaylistToShelf(playlist.value);
   if (res) {
     showToast('收藏成功');
@@ -112,6 +111,21 @@ onActivated(async () => {
     shouldLoad.value = false;
     loadData();
   }
+});
+onMounted(() => {
+  displayStore.addBackCallback('SongPlaylist', async () => {
+    if (displayStore.showPlayingPlaylist) {
+      // 关闭播放列表
+      displayStore.showPlayingPlaylist = false;
+    } else if (displayStore.showPlayView) {
+      // 关闭播放页
+      displayStore.showPlayView = false;
+    } else if (displayStore.showSongShelf) {
+      displayStore.showSongShelf = false;
+    } else {
+      router.push({ name: 'Song' });
+    }
+  });
 });
 </script>
 

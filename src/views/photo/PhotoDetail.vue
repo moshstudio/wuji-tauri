@@ -6,12 +6,12 @@ import type {
 import type { PhotoSource } from '@/types';
 import PlatformSwitch from '@/components/PlatformSwitch.vue';
 import { router } from '@/router';
-import { usePhotoShelfStore, useStore } from '@/store';
+import { useDisplayStore, usePhotoShelfStore, useStore } from '@/store';
 import { retryOnFalse, sleep } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 import _, { debounce } from 'lodash';
 import { showLoadingToast, showToast } from 'vant';
-import { onActivated, ref, watch } from 'vue';
+import { onActivated, onMounted, ref, watch } from 'vue';
 import MobilePhotoDetail from '../mobileView/photo/PhotoDetail.vue';
 import WinPhotoDetail from '../windowsView/photo/PhotoDetail.vue';
 
@@ -21,6 +21,7 @@ const { id, sourceId } = defineProps({
 });
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const shelfStore = usePhotoShelfStore();
 const photoSource = ref<PhotoSource>();
 const photoItem = ref<PhotoItem>();
@@ -110,7 +111,6 @@ function addPhotoToShelf(shelfId: string) {
     showAddDialog.value = false;
   }
 }
-console.log('setup action');
 
 watch([() => id, () => sourceId], () => {
   console.log('watch change');
@@ -126,6 +126,11 @@ onActivated(async () => {
     shouldLoad.value = false;
     loadData();
   }
+});
+onMounted(() => {
+  displayStore.addBackCallback('PhotoDetail', async () => {
+    router.push({ name: 'Photo' });
+  });
 });
 </script>
 

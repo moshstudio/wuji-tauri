@@ -8,7 +8,7 @@ import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { debounce } from 'lodash';
 import { storeToRefs } from 'pinia';
 import { showLoadingToast } from 'vant';
-import { ref, triggerRef } from 'vue';
+import { onMounted, ref, triggerRef } from 'vue';
 import MobileBook from '../mobileView/book/index.vue';
 import WinBook from '../windowsView/book/index.vue';
 
@@ -23,8 +23,7 @@ const recommend = createCancellableFunction(
     await Promise.all(
       bookSources.value.map(async (source) => {
         if (!source.list || force) {
-          if (signal.aborted)
-            return;
+          if (signal.aborted) return;
           await store.bookRecommendList(source);
         }
       }),
@@ -38,12 +37,10 @@ const search = createCancellableFunction(async (signal: AbortSignal) => {
   if (!keyword) {
     await recommend(true);
     triggerRef(bookSources);
-  }
-  else {
+  } else {
     await Promise.all(
       bookSources.value.map(async (bookSources) => {
-        if (signal.aborted)
-          return;
+        if (signal.aborted) return;
         await store.bookSearch(bookSources, keyword, 1);
       }),
     );
@@ -69,8 +66,7 @@ const loadPage = debounce(
       });
       if (!searchValue.value) {
         await store.bookRecommendList(source, pageNo, type);
-      }
-      else {
+      } else {
         await store.bookSearch(source, searchValue.value, pageNo);
       }
       toast.close();
@@ -94,6 +90,15 @@ async function openBaseUrl(source: BookSource) {
     // open(sc.baseUrl);
   }
 }
+onMounted(() => {
+  displayStore.addBackCallback('Book', async () => {
+    if (displayStore.showBookShelf) {
+      displayStore.showBookShelf = false;
+    } else {
+      await displayStore.checkExitApp();
+    }
+  });
+});
 </script>
 
 <template>

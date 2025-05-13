@@ -2,6 +2,7 @@
 description = "Default permissions for the plugin"
 permissions = [
   "allow-exit-app",
+  "allow-return-to-home",
   "allow-set-status-bar",
   "allow-hide-status-bar",
   "allow-get-system-font-scale",

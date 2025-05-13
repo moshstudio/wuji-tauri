@@ -1,6 +1,11 @@
 package tauri.plugin.commands
 
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.ActivityManager
+import android.app.NotificationManager
+import android.content.Context
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Color
@@ -15,13 +20,23 @@ import android.view.WindowManager
 import androidx.annotation.RequiresApi
 import androidx.core.view.WindowCompat
 import kotlin.math.roundToInt
+import kotlin.system.exitProcess
 
 class Commands(private val activity: Activity) {
-    fun exit_app() {
-        // 关闭所有 Activity
+    fun exitApp() {
         activity.finishAffinity()
-        // 终止进程
-        System.exit(0)
+        android.os.Process.killProcess(android.os.Process.myPid())
+//        // 关闭所有 Activity
+//        activity.finishAffinity()
+//        // 终止进程
+//        System.exit(0)
+    }
+
+    fun returnToHome() {
+        val intent = Intent(Intent.ACTION_MAIN)
+        intent.addCategory(Intent.CATEGORY_HOME)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        activity.startActivity(intent)
     }
 
     @Suppress("DEPRECATION")

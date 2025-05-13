@@ -18,7 +18,7 @@ import _ from 'lodash';
 import { get_system_font_scale } from 'tauri-plugin-commands-api';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 import { showConfirmDialog, showNotify, showToast } from 'vant';
-import { nextTick, onActivated, onDeactivated, ref, watch } from 'vue';
+import { nextTick, onActivated, onDeactivated, onMounted, ref, watch } from 'vue';
 import MobileBookRead from '../mobileView/book/BookRead.vue';
 import WinBookRead from '../windowsView/book/BookRead.vue';
 import { useRoute } from 'vue-router';
@@ -141,6 +141,7 @@ async function back(checkShelf: boolean = false) {
     }
   }
   shouldLoad.value = true;
+  displayStore.showTabBar = true;
   router.push({ name: 'Book' });
 }
 
@@ -589,6 +590,11 @@ onDeactivated(() => {
   if (displayStore.isAndroid && displayStore.bookKeepScreenOn) {
     keepScreenOn(false);
   }
+});
+onMounted(() => {
+  displayStore.addBackCallback('BookRead', async () => {
+    back(true);
+  });
 });
 </script>
 

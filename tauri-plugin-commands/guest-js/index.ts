@@ -4,6 +4,10 @@ export async function exit_app(): Promise<void> {
   return await invoke<void>('plugin:commands|exit_app');
 }
 
+export async function return_to_home(): Promise<void> {
+  return await invoke<void>('plugin:commands|return_to_home');
+}
+
 export async function set_status_bar(
   bg: string,
   text?: 'dark' | 'light'

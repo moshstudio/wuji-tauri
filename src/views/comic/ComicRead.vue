@@ -19,7 +19,14 @@ import { createCancellableFunction } from '@/utils/cancelableFunction';
 import _ from 'lodash';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 import { showConfirmDialog, showToast } from 'vant';
-import { nextTick, onActivated, onDeactivated, ref, watch } from 'vue';
+import {
+  nextTick,
+  onActivated,
+  onDeactivated,
+  ref,
+  watch,
+  onMounted,
+} from 'vue';
 import MobileComicRead from '../mobileView/comic/ComicRead.vue';
 import WinComicRead from '../windowsView/comic/ComicRead.vue';
 
@@ -58,13 +65,11 @@ const searchAllSources = createCancellableFunction(
     await Promise.all(
       store.comicSources.map(async (comicSource) => {
         await store.comicSearch(comicSource, targetComic.title);
-        if (signal.aborted)
-          return;
+        if (signal.aborted) return;
         if (comicSource.list) {
           for (const b of _.castArray<ComicList>(comicSource.list)[0].list) {
             if (b.title === targetComic.title) {
-              if (signal.aborted)
-                return;
+              if (signal.aborted) return;
               const detailedComic = await store.comicDetail(comicSource, b);
               if (detailedComic) {
                 allSourceResults.value.push(detailedComic);
@@ -87,15 +92,15 @@ async function switchSource(newComicItem: ComicItem) {
     showToast('章节为空');
     return;
   }
-  const chapter
-    = newComicItem.chapters?.find(chapter => chapter.id === chapterId)
-      || newComicItem.chapters?.find(
-        chapter => chapter.title === readingChapter.value?.title,
-      )
-      || newComicItem.chapters?.[
-        comic.value?.chapters?.findIndex(chapter => chapter.id === chapterId)
-        || 0
-      ];
+  const chapter =
+    newComicItem.chapters?.find((chapter) => chapter.id === chapterId) ||
+    newComicItem.chapters?.find(
+      (chapter) => chapter.title === readingChapter.value?.title,
+    ) ||
+    newComicItem.chapters?.[
+      comic.value?.chapters?.findIndex((chapter) => chapter.id === chapterId) ||
+        0
+    ];
   if (!chapter) {
     showToast('章节不存在');
     return;
@@ -128,8 +133,7 @@ async function back(checkShelf: boolean = false) {
             shelfStore.updateComicReadInfo(comic.value, readingChapter.value);
           }
         }
-      }
-      catch (error) {}
+      } catch (error) {}
     }
   }
   shouldLoad.value = true;
@@ -168,7 +172,7 @@ async function loadChapter(chapter?: ComicChapter) {
     return;
   }
   if (!chapter) {
-    chapter = comic.value.chapters?.find(chapter => chapter.id === chapterId);
+    chapter = comic.value.chapters?.find((chapter) => chapter.id === chapterId);
   }
 
   if (!chapter) {
@@ -182,9 +186,9 @@ async function loadChapter(chapter?: ComicChapter) {
   const t = displayStore.showToast();
   chapterList.value = comic.value.chapters || [];
   readingChapter.value = chapter;
-  readingContent.value
-    = (await store.comicRead(comicSource.value!, comic.value, chapter))
-      || undefined;
+  readingContent.value =
+    (await store.comicRead(comicSource.value!, comic.value, chapter)) ||
+    undefined;
   displayStore.closeToast(t);
   if (!readingContent.value) {
     showToast('本章内容为空');
@@ -193,7 +197,7 @@ async function loadChapter(chapter?: ComicChapter) {
 
 function prevChapter(toLast: boolean = false) {
   const index = chapterList.value.findIndex(
-    chapter => chapter.id === readingChapter.value?.id,
+    (chapter) => chapter.id === readingChapter.value?.id,
   );
   if (index === -1) {
     return;
@@ -210,15 +214,14 @@ function prevChapter(toLast: boolean = false) {
         sourceId: comic.value?.sourceId,
       },
     });
-  }
-  else {
+  } else {
     showToast('没有上一章了');
   }
 }
 
 function nextChapter() {
   const index = chapterList.value.findIndex(
-    chapter => chapter.id === readingChapter.value?.id,
+    (chapter) => chapter.id === readingChapter.value?.id,
   );
   if (index === -1) {
     return;
@@ -233,8 +236,7 @@ function nextChapter() {
         sourceId: comic.value?.sourceId,
       },
     });
-  }
-  else {
+  } else {
     showToast('没有下一章了');
   }
 }
@@ -281,7 +283,7 @@ watch(
   },
   { immediate: true },
 );
-watch(readingChapter, c => (comicStore.readingChapter = c), {
+watch(readingChapter, (c) => (comicStore.readingChapter = c), {
   immediate: true,
 });
 
@@ -294,6 +296,11 @@ onDeactivated(() => {
   if (displayStore.isAndroid && displayStore.comicKeepScreenOn) {
     keepScreenOn(false);
   }
+});
+onMounted(() => {
+  displayStore.addBackCallback('ComicRead', async () => {
+    back(true);
+  });
 });
 </script>
 

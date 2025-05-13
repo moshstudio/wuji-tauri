@@ -2,7 +2,6 @@
 import type { VNode } from 'vue';
 import { storeToRefs } from 'pinia';
 import {
-  exit_app,
   set_screen_orientation,
   set_status_bar,
 } from 'tauri-plugin-commands-api';
@@ -150,147 +149,14 @@ onMounted(async () => {
 const { showTabBar } = storeToRefs(displayStore);
 
 // 安卓返回的回调
-const backTs = ref(Date.now());
 window.androidBackCallback = async () => {
-  if (displayStore.fullScreenMode) {
-    displayStore.fullScreenMode = false;
-    displayStore.showTabBar = true;
-    await set_screen_orientation('portrait');
+  if (displayStore.showManageSubscribeDialog) {
+    displayStore.showManageSubscribeDialog = false;
     return;
   }
-  const checkBack = async () => {
-    const now = Date.now();
-    if (now - backTs.value > 1000) {
-      backTs.value = now;
-      showToast('再按一次退出');
-    } else {
-      await exit_app();
-    }
-  };
   const path = route.name?.toString();
-  if (path === 'PhotoDetail') {
-    router.push({ name: 'Photo' });
-  } else if (path === 'SongPlaylist') {
-    if (displayStore.showPlayingPlaylist) {
-      // 关闭播放列表
-      displayStore.showPlayingPlaylist = false;
-    } else if (displayStore.showPlayView) {
-      // 关闭播放页
-      displayStore.showPlayView = false;
-    } else if (displayStore.showSongShelf) {
-      displayStore.showSongShelf = false;
-    } else {
-      router.push({ name: 'Song' });
-    }
-  } else if (path === 'BookDetail') {
-    if (displayStore.showBookShelf) {
-      // 关闭书架
-      displayStore.showBookShelf = false;
-    } else {
-      router.push({ name: 'Book' });
-    }
-  } else if (path === 'BookRead') {
-    ttsStore.stop();
-    if (bookStore.readingBook) {
-      if (!bookShelfStore.isBookInShelf(bookStore.readingBook)) {
-        try {
-          const d = await showConfirmDialog({
-            title: '放入书架',
-            message: `是否将《${bookStore.readingBook.title}》放入书架？`,
-          });
-          if (d == 'confirm') {
-            bookShelfStore.addToBookSelf(bookStore.readingBook);
-            if (bookStore.readingBook && bookStore.readingChapter) {
-              bookShelfStore.updateBookReadInfo(
-                bookStore.readingBook,
-                bookStore.readingChapter,
-              );
-            }
-          }
-        } catch (error) {}
-      }
-    }
-    displayStore.showTabBar = true;
-    router.push({ name: 'Book' });
-  } else if (path === 'ComicDetail') {
-    if (displayStore.showComicShelf) {
-      // 关闭书架
-      displayStore.showComicShelf = false;
-    } else {
-      router.push({ name: 'Comic' });
-    }
-  } else if (path === 'ComicRead') {
-    if (comicStore.readingComic) {
-      if (!comicShelfStore.isComicInShelf(comicStore.readingComic)) {
-        try {
-          const d = await showConfirmDialog({
-            title: '放入书架',
-            message: `是否将《${comicStore.readingComic.title}》放入书架？`,
-          });
-          if (d == 'confirm') {
-            comicShelfStore.addToComicSelf(comicStore.readingComic);
-            if (comicStore.readingComic && comicStore.readingChapter) {
-              comicShelfStore.updateComicReadInfo(
-                comicStore.readingComic,
-                comicStore.readingChapter,
-              );
-            }
-          }
-        } catch (error) {}
-      }
-    }
-    displayStore.showTabBar = true;
-    router.push({ name: 'Comic' });
-  } else if (path === 'VideoDetail') {
-    if (displayStore.showVideoShelf) {
-      // 关闭收藏
-      displayStore.showVideoShelf = false;
-    } else {
-      router.push({ name: 'Video' });
-    }
-  } else if (path === 'Photo') {
-    if (displayStore.showPhotoShelf) {
-      displayStore.showPhotoShelf = false;
-    } else {
-      await checkBack();
-    }
-  } else if (path === 'Song') {
-    if (displayStore.showPlayingPlaylist) {
-      // 关闭播放列表
-      displayStore.showPlayingPlaylist = false;
-    } else if (displayStore.showPlayView) {
-      // 关闭播放页
-      displayStore.showPlayView = false;
-    } else if (displayStore.showSongShelfDetail) {
-      // 收藏的歌单的详情
-      displayStore.showSongShelfDetail = false;
-    } else if (displayStore.showSongShelf) {
-      displayStore.showSongShelf = false;
-    } else {
-      await checkBack();
-    }
-  } else if (path === 'Book') {
-    if (displayStore.showBookShelf) {
-      displayStore.showBookShelf = false;
-    } else {
-      await checkBack();
-    }
-  } else if (path === 'Comic') {
-    if (displayStore.showComicShelf) {
-      displayStore.showComicShelf = false;
-    } else {
-      await checkBack();
-    }
-  } else if (path === 'Video') {
-    if (displayStore.showVideoShelf) {
-      displayStore.showVideoShelf = false;
-    } else {
-      await checkBack();
-    }
-  } else if (!path || path === 'Home') {
-    await checkBack();
-  } else {
-    showToast(`未定义的返回路径 ${route.path}`);
+  if (path) {
+    await displayStore.triggerBackCallbacks(path);
   }
 };
 </script>

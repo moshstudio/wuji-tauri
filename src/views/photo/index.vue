@@ -8,7 +8,8 @@ import WinPhotoList from '@/views/windowsView/photo/index.vue';
 import { debounce } from 'lodash';
 import { storeToRefs } from 'pinia';
 import { showLoadingToast } from 'vant';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
+import { router } from '@/router';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -21,8 +22,7 @@ const recommend = createCancellableFunction(
     await Promise.all(
       photoSources.value.map(async (source) => {
         if (!source.list || force) {
-          if (signal.aborted)
-            return;
+          if (signal.aborted) return;
           await store.photoRecommendList(source);
         }
       }),
@@ -35,12 +35,10 @@ const search = createCancellableFunction(async (signal: AbortSignal) => {
   const t = displayStore.showToast();
   if (!keyword) {
     await recommend(true);
-  }
-  else {
+  } else {
     await Promise.all(
       photoSources.value.map(async (source) => {
-        if (signal.aborted)
-          return;
+        if (signal.aborted) return;
         await store.photoSearchList(source, keyword, 1);
       }),
     );
@@ -59,8 +57,7 @@ const pageChange = debounce(
       });
       if (!searchValue.value) {
         await store.photoRecommendList(source, pageNo);
-      }
-      else {
+      } else {
         await store.photoSearchList(source, searchValue.value, pageNo);
       }
       toast.close();
@@ -74,6 +71,15 @@ async function openBaseUrl(source: PhotoSource) {
     // open(sc.baseUrl);
   }
 }
+onMounted(() => {
+  displayStore.addBackCallback('Photo', async () => {
+    if (displayStore.showPhotoShelf) {
+      displayStore.showPhotoShelf = false;
+    } else {
+      await displayStore.checkExitApp();
+    }
+  });
+});
 </script>
 
 <template>

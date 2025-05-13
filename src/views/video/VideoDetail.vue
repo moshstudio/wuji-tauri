@@ -17,8 +17,9 @@ import WinVideoDetail from '@/views/windowsView/video/VideoDetail.vue';
 import _ from 'lodash';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 import { showLoadingToast, showNotify, showToast } from 'vant';
-import { onActivated, onDeactivated, ref, watch } from 'vue';
+import { onActivated, onDeactivated, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { set_screen_orientation } from 'tauri-plugin-commands-api';
 
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
@@ -309,6 +310,24 @@ onDeactivated(() => {
   try {
     videoPlayer.value?.pause();
   } catch (error) {}
+});
+onMounted(() => {
+  displayStore.addBackCallback('VideoDetail', async () => {
+    if (displayStore.fullScreenMode) {
+      // 退出全屏模式
+      displayStore.fullScreenMode = false;
+      displayStore.showTabBar = true;
+      await set_screen_orientation('portrait');
+      return;
+    } else if (displayStore.showVideoShelf) {
+      // 关闭收藏
+      displayStore.showVideoShelf = false;
+      return;
+    } else {
+      router.push({ name: 'Video' });
+      return;
+    }
+  });
 });
 </script>
 

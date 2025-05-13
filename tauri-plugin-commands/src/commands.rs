@@ -10,6 +10,11 @@ pub(crate) async fn exit_app<R: Runtime>(app: AppHandle<R>) -> Result<()> {
 }
 
 #[command]
+pub(crate) async fn return_to_home<R: Runtime>(app: AppHandle<R>) -> Result<()> {
+    app.commands().return_to_home()
+}
+
+#[command]
 pub(crate) async fn set_status_bar<R: Runtime>(
     app: AppHandle<R>,
     payload: SetStatusBarRequest,

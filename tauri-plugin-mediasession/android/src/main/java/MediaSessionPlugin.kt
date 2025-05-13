@@ -116,6 +116,12 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
                 })
             }
         }
+        setActionHandler("stop") {
+            playbackState = "stopped"
+            if (service != null) {
+                updateServicePlaybackState()
+            }
+        }
     }
 
     fun startMediaService() {
@@ -191,6 +197,10 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
             }
             "paused" -> {
                 service?.playbackState = PlaybackStateCompat.STATE_PAUSED
+                service?.update()
+            }
+            "stopped" -> {
+                service?.playbackState = PlaybackStateCompat.STATE_STOPPED
                 service?.update()
             }
             else -> {

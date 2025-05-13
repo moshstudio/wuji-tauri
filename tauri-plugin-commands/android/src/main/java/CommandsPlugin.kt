@@ -163,7 +163,14 @@ class CommandsPlugin(private val activity: Activity) : Plugin(activity) {
 
     @Command
     fun exitApp(invoke: Invoke) {
-        implementation.exit_app()
+        implementation.exitApp()
+        val ret = JSObject()
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun returnToHome(invoke: Invoke) {
+        implementation.returnToHome()
         val ret = JSObject()
         invoke.resolve(ret)
     }

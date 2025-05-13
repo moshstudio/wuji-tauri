@@ -8,7 +8,7 @@ import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { debounce } from 'lodash';
 import { storeToRefs } from 'pinia';
 import { showLoadingToast } from 'vant';
-import { ref, triggerRef } from 'vue';
+import { onMounted, ref, triggerRef } from 'vue';
 import MobileComic from '../mobileView/comic/index.vue';
 import WinComic from '../windowsView/comic/index.vue';
 
@@ -23,8 +23,7 @@ const recommend = createCancellableFunction(
     await Promise.all(
       comicSources.value.map(async (source) => {
         if (!source.list || force) {
-          if (signal.aborted)
-            return;
+          if (signal.aborted) return;
           await store.comicRecommendList(source);
         }
       }),
@@ -38,12 +37,10 @@ const search = createCancellableFunction(async (signal: AbortSignal) => {
   if (!keyword) {
     await recommend(true);
     triggerRef(comicSources);
-  }
-  else {
+  } else {
     await Promise.all(
       comicSources.value.map(async (comicSources) => {
-        if (signal.aborted)
-          return;
+        if (signal.aborted) return;
         await store.comicSearch(comicSources, keyword, 1);
       }),
     );
@@ -69,8 +66,7 @@ const loadPage = debounce(
       });
       if (!searchValue.value) {
         await store.comicRecommendList(source, pageNo, type);
-      }
-      else {
+      } else {
         await store.comicSearch(source, searchValue.value, pageNo);
       }
       toast.close();
@@ -94,6 +90,15 @@ async function openBaseUrl(source: ComicSource) {
     // open(sc.baseUrl);
   }
 }
+onMounted(() => {
+  displayStore.addBackCallback('Comic', async () => {
+    if (displayStore.showComicShelf) {
+      displayStore.showComicShelf = false;
+    } else {
+      await displayStore.checkExitApp();
+    }
+  });
+});
 </script>
 
 <template>
