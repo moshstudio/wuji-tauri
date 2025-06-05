@@ -64,9 +64,11 @@ abstract class BookExtension extends Extension {
   @transformResult<BooksList | null>((r) => {
     if (r) {
       _.castArray(r).forEach((bookList) => {
-        bookList.id = String(bookList.id) || nanoid();
+        bookList.id = String(bookList.id || nanoid());
         bookList.list.forEach((bookItem) => {
-          bookItem.id = String(bookItem.id);
+          bookItem.id = String(
+            bookItem.id || bookItem.url || bookItem.title + bookItem.sourceId,
+          );
         });
       });
     }
@@ -93,10 +95,13 @@ abstract class BookExtension extends Extension {
   @transformResult<BooksList | null>((r) => {
     if (r) {
       _.castArray(r).forEach((bookList) => {
-        bookList.id = String(bookList.id) || nanoid();
+        bookList.id = String(bookList.id || nanoid());
         bookList.list.forEach((bookItem) => {
           bookItem.id = String(
-            bookItem.id || bookItem.url || bookItem.title || nanoid(),
+            bookItem.id ||
+              bookItem.url ||
+              bookItem.title + bookItem.sourceId ||
+              nanoid(),
           );
         });
       });
@@ -126,7 +131,7 @@ abstract class BookExtension extends Extension {
       r.id = String(r.id);
       r.chapters?.forEach((chapter) => {
         chapter.id = String(
-          chapter.id || chapter.url || chapter.title || nanoid(),
+          chapter.id || chapter.url || chapter.title + r.sourceId,
         );
       });
     }

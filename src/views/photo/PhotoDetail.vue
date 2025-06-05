@@ -113,14 +113,10 @@ function addPhotoToShelf(shelfId: string) {
 }
 
 watch([() => id, () => sourceId], () => {
-  console.log('watch change');
-
   shouldLoad.value = false; // watch这里优先load
   loadData();
 });
 onActivated(async () => {
-  console.log('on activivated');
-
   await sleep(200);
   if (shouldLoad.value) {
     shouldLoad.value = false;

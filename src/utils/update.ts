@@ -1,6 +1,8 @@
 import { relaunch } from '@tauri-apps/plugin-process';
 import { check } from '@tauri-apps/plugin-updater';
 import { showConfirmDialog, showDialog } from 'vant';
+import { sleep } from '.';
+import { getVersion } from '@tauri-apps/api/app';
 
 function calculateProgress(currentBytes: number) {
   // 假设文件大小为20M, 越接近越到100%
@@ -26,7 +28,14 @@ function formatFileSize(bytes: number) {
 }
 
 export async function checkAndUpdate() {
-  const update = await check();
+  const appVersion = await getVersion();
+  console.log('appVersion', appVersion);
+
+  const update = await check({
+    target: 'windows-x86_64',
+  });
+  console.log('update', update);
+
   if (update) {
     try {
       const confirm = await showConfirmDialog({

@@ -206,8 +206,8 @@ function onFullScreenChange() {
 
 async function requestFullScreen() {
   displayStore.fullScreenMode = true;
+  displayStore.showTabBar = false;
   if (displayStore.isAndroid) {
-    displayStore.showTabBar = false;
     if (!isVerticalView.value) {
       // 非纵向视频需自动横屏
       await set_screen_orientation('landscape');
@@ -220,13 +220,14 @@ async function requestFullScreen() {
     }
   } else {
     await getCurrentWindow().setFullscreen(true);
-    player.value?.requestFullscreen();
+    videoWrapper.value?.focus();
   }
+  videoWrapper.value?.focus();
 }
 async function exitFullScreen() {
   fullScreenMode.value = false;
+  displayStore.showTabBar = true;
   if (displayStore.isAndroid) {
-    displayStore.showTabBar = true;
     await set_screen_orientation('portrait');
     setTimeout(() => {
       checkIfVerticalView();
@@ -236,12 +237,8 @@ async function exitFullScreen() {
     }, 300);
   } else {
     await getCurrentWindow().setFullscreen(false);
-    try {
-      player.value?.exitFullscreen();
-    } catch (error) {
-      console.warn('exitFullScreen error', error);
-    }
   }
+  videoWrapper.value?.focus();
 }
 
 function onLoadstart(args: any) {
@@ -328,7 +325,7 @@ const guestureRecognizers: Record<string, Recognizer> = {
 
 const _isTargetElement = (e: HTMLElement) => {
   // 只响应播放元素而不包括控制元素
-  return e.classList.contains('vjs-tech') || e.classList.contains('bg-mask');
+  return e.classList.contains('video-container');
 };
 
 const guestureEventHandlers: Record<string, HammerListener> = {
@@ -375,17 +372,27 @@ const guestureEventHandlers: Record<string, HammerListener> = {
   },
   panHorizontalstart: (e) => {
     if (!_isTargetElement(e.target)) return;
+    if (isPressing.value) return; // 快进时不响应滑动事件
+    if (isVerticalView.value) {
+      if (Math.abs(e.deltaX) > 25) {
+        // 竖屏时滚动可能会误触发
+        return;
+      }
+    }
     dragMovement.value = [e.deltaX, e.deltaY];
     isDragging.value = true;
     dragDirection.value = 'Horizontal';
   },
   panHorizontal: (e) => {
     if (!_isTargetElement(e.target)) return;
+    if (!isDragging.value) return;
     dragMovement.value = [e.deltaX, e.deltaY];
+    console.log(`panHorizontal ${dragMovement.value}`);
   },
   panHorizontalend: (e) => {
     if (!_isTargetElement(e.target)) return;
-    if (isPressing.value) return;
+    if (!isDragging.value) return;
+    console.log(`panHorizontalEnd ${dragMovement.value}`);
     // 开始调整进度
     dragMovement.value = [e.deltaX, e.deltaY];
     const offset = dragMovement.value[0];
@@ -402,6 +409,7 @@ const guestureEventHandlers: Record<string, HammerListener> = {
   panVerticalstart: async (e) => {
     if (!_isTargetElement(e.target)) return;
     if (fullScreenMode.value && e.center.y < 100) return; // 最顶部不响应
+    if (isPressing.value) return; // 快进时不响应滑动事件
     dragMovement.value = [e.deltaX, e.deltaY];
     isDragging.value = true;
     const middle = (videoWrapper.value?.clientWidth || 0) / 2;
@@ -425,6 +433,7 @@ const guestureEventHandlers: Record<string, HammerListener> = {
   },
   panVertical: async (e) => {
     if (!_isTargetElement(e.target)) return;
+    if (!isDragging.value) return;
     dragMovement.value = [e.deltaX, e.deltaY];
     switch (dragDirection.value) {
       case 'VerticalLeft':
@@ -449,7 +458,7 @@ const guestureEventHandlers: Record<string, HammerListener> = {
           0,
           Math.min(100, initVolume.value + volumeDistance),
         );
-        if (currentVolume.value != volume) {
+        if (currentVolume.value != volume && volume % 4 === 0) {
           currentVolume.value = volume;
           await set_volume(volume);
         }
@@ -458,6 +467,7 @@ const guestureEventHandlers: Record<string, HammerListener> = {
   },
   panVerticalend: async (e) => {
     if (!_isTargetElement(e.target)) return;
+    if (!isDragging.value) return;
     isDragging.value = false;
     dragDirection.value = undefined;
     dragMovement.value = [0, 0];
@@ -515,6 +525,7 @@ function mountAndroidGuesture() {
         player.value?.playbackRate(1.0);
       }
       isPressing.value = false;
+      isDragging.value = false;
     }
   };
   element.addEventListener('pointerup', resetRate);
@@ -580,12 +591,12 @@ onMounted(() => {
 
 <template>
   <div
-    ref="videoWrapper"
     v-click-separate
+    ref="videoWrapper"
     class="video-container transition-all duration-500 ease-in-out text-center bg-black"
     :class="
       fullScreenMode
-        ? 'fixed z-[99999999] w-screen h-screen top-0 right-0 bottom-0 left-0 '
+        ? 'fixed z-[11] w-screen h-screen top-0 right-0 bottom-0 left-0 '
         : 'relative w-full h-auto'
     "
     autofocus
@@ -602,7 +613,7 @@ onMounted(() => {
       crossorigin="anonymous"
       :control-bar="controlBarOptions"
       :playback-rates="[0.5, 0.75, 1.0, 1.25, 1.5, 2.0]"
-      class="my-video-player relative w-full flex flex-col items-center justify-center"
+      class="my-video-player relative w-full flex flex-col items-center justify-center pointer-events-none z-[10]"
       :class="fullScreenMode ? ' h-full' : 'h-auto'"
       @loadstart="onLoadstart"
       @loadedmetadata="onLoadedMetadata"
@@ -611,100 +622,97 @@ onMounted(() => {
       @mounted="handleMounted"
       @error="onError"
       @fullscreenchange="onFullScreenChange"
+    ></VideoPlayer>
+    <div
+      class="video-container-mask absolute left-0 right-0 top-0 bottom-0 w-full h-full z-[11] pointer-events-none"
     >
-      <template
-        #default="{
-          player,
-          state,
-        }: {
-          player: VideoJsPlayer;
-          state: VideoPlayerState;
-        }"
+      <div
+        v-if="isDragging && dragDirection"
+        class="absolute top-20 left-[50%] -translate-x-[50%] text-base rounded p-1 text-gray-200 bg-black/50 select-none pointer-events-none"
+      >
+        {{ dragHint }}
+      </div>
+      <div
+        v-if="isPressing"
+        class="absolute top-5 left-[50%] -translate-x-[50%] text-base rounded p-1 text-gray-200 bg-black/10 select-none pointer-events-none"
+      >
+        <Icon icon="fluent-mdl2:fast-forward-two-x" width="24" height="24" />
+      </div>
+      <div
+        v-show="showControls"
+        class="absolute left-0 top-0 bg-mask w-full h-full bg-transparent"
       >
         <div
-          v-if="isDragging && dragDirection"
-          class="absolute top-20 left-[50%] -translate-x-[50%] text-base rounded p-1 text-gray-200 bg-black/50 select-none pointer-events-none"
-        >
-          {{ dragHint }}
-        </div>
+          class="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"
+        />
         <div
-          v-if="isPressing"
-          class="absolute top-5 left-[50%] -translate-x-[50%] text-base rounded p-1 text-gray-200 bg-black/10 select-none pointer-events-none"
-        >
-          <Icon icon="fluent-mdl2:fast-forward-two-x" width="24" height="24" />
-        </div>
-        <div
-          v-show="showControls"
-          class="absolute left-0 top-0 bg-mask w-full h-full bg-transparent"
-        >
-          <div
-            class="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"
-          />
-          <div
-            class="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-black/60 to-transparent pointer-events-none"
-          />
+          class="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-black/60 to-transparent pointer-events-none"
+        />
 
-          <div
-            class="top-bar absolute left-0 right-0 top-0 bg-transparent flex p-2 text-sm text-gray-300 select-none truncate"
-          >
-            <div class="flex gap-2 items-center">
-              <Icon
-                icon="ic:round-arrow-back"
-                width="24"
-                height="24"
-                class="van-haptics-feedback pointer-events-auto"
-                @click.stop="onBack"
-              />
-              <p>{{ episode?.title || '' }} - {{ resource?.title || '' }}</p>
-            </div>
-          </div>
-          <MobileQuickSeekButton
-            v-if="fullScreenMode"
-            v-show="!videoSrc?.isLive"
-            :seconds="10"
-            :quick-forward="quickForward"
-            :quick-back="quickBackward"
-            class="absolute left-0 right-0 bottom-[50%]"
-          />
-          <div
-            class="control-bar absolute left-0 right-0 bottom-0 flex flex-col gap-2 p-2 pointer-events-auto select-none"
-            @click.stop
-          >
-            <VideoProgressBar
-              v-show="!videoSrc?.isLive"
-              :state="state"
-              @seek="(time) => player.currentTime(time)"
+        <div
+          class="top-bar absolute left-0 right-0 top-0 bg-transparent flex p-2 text-sm text-gray-300 select-none truncate"
+        >
+          <div class="flex gap-2 items-center">
+            <Icon
+              icon="ic:round-arrow-back"
+              width="24"
+              height="24"
+              class="van-haptics-feedback pointer-events-auto"
+              @click.stop="onBack"
             />
+            <p>{{ episode?.title || '' }} - {{ resource?.title || '' }}</p>
+          </div>
+        </div>
+        <MobileQuickSeekButton
+          v-if="fullScreenMode"
+          v-show="!videoSrc?.isLive"
+          :seconds="10"
+          :quick-forward="quickForward"
+          :quick-back="quickBackward"
+          class="absolute left-0 right-0 bottom-[50%]"
+        />
+        <div
+          class="control-bar absolute left-0 right-0 bottom-0 flex flex-col gap-2 p-2 pointer-events-auto select-none"
+          @click.stop
+        >
+          <VideoProgressBar
+            v-show="!videoSrc?.isLive"
+            :state="state"
+            @seek="(time) => player?.currentTime(time)"
+            v-if="state"
+          />
 
-            <div class="flex gap-2 items-center justify-between">
-              <div class="flex items-center gap-2">
-                <PlayPauseButton
-                  :is-playing="state.playing"
-                  :play-or-pause="
-                    () => {
-                      state.playing ? player.pause() : player.play();
-                    }
-                  "
-                />
-                <TimeShow :state="state" :is-playing="state.playing" />
-              </div>
-              <div class="flex items-center gap-2">
-                <PlaybackRateButton
-                  v-show="!videoSrc?.isLive"
-                  :state="state"
-                  :player="player"
-                />
-                <FullScreenButton
-                  :is-fullscreen="fullScreenMode"
-                  :request-fullscreen="requestFullScreen"
-                  :exit-fullscreen="exitFullScreen"
-                />
-              </div>
+          <div
+            class="flex gap-2 items-center justify-between"
+            v-if="state && player"
+          >
+            <div class="flex items-center gap-2">
+              <PlayPauseButton
+                :is-playing="state.playing"
+                :play-or-pause="
+                  () => {
+                    state?.playing ? player?.pause() : player?.play();
+                  }
+                "
+              />
+              <TimeShow :state="state" :is-playing="state.playing" />
+            </div>
+            <div class="flex items-center gap-2">
+              <PlaybackRateButton
+                v-show="!videoSrc?.isLive"
+                :state="state"
+                :player="player"
+              />
+              <FullScreenButton
+                :is-fullscreen="fullScreenMode"
+                :request-fullscreen="requestFullScreen"
+                :exit-fullscreen="exitFullScreen"
+              />
             </div>
           </div>
         </div>
-      </template>
-    </VideoPlayer>
+      </div>
+    </div>
   </div>
 </template>
 

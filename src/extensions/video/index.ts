@@ -82,7 +82,11 @@ abstract class VideoExtension extends Extension {
       _.castArray(r).forEach((videoList) => {
         videoList.id = String(videoList.id) || nanoid();
         videoList.list?.forEach((videoItem) => {
-          videoItem.id = String(videoItem.id);
+          videoItem.id = String(
+            videoItem.id ||
+              videoItem.url ||
+              videoItem.title + videoItem.sourceId,
+          );
         });
       });
     }
@@ -111,7 +115,11 @@ abstract class VideoExtension extends Extension {
       _.castArray(r).forEach((videoList) => {
         videoList.id = String(videoList.id || nanoid());
         videoList.list?.forEach((videoItem) => {
-          videoItem.id = String(videoItem.id);
+          videoItem.id = String(
+            videoItem.id ||
+              videoItem.url ||
+              videoItem.title + videoItem.sourceId,
+          );
         });
       });
     }
@@ -190,12 +198,19 @@ abstract class VideoExtension extends Extension {
     episode: VideoEpisode,
   ) {
     return this.getPlayUrl(item, resource, episode).then(async (r) => {
-      // if (r) {
-      //   const proxyUrl = await this.getM3u8ProxyUrl(r.url);
-      //   if (proxyUrl) {
-      //     r.url = proxyUrl;
-      //   }
-      // }
+      if (r) {
+        if (r.url.startsWith('http://127.0.0.1')) {
+          // 已经被代理了
+          return r;
+        }
+        if (r.headers) {
+          if (r.url.endsWith('.m3u8')) {
+            r.url = (await this.getM3u8ProxyUrl(r.url, r.headers)) || r.url;
+          } else {
+            r.url = (await this.getProxyUrl(r.url, r.headers)) || r.url;
+          }
+        }
+      }
       return r;
     });
   }

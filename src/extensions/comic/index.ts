@@ -70,9 +70,13 @@ abstract class ComicExtension extends Extension {
   @transformResult<ComicsList | null>((r) => {
     if (r) {
       _.castArray(r).forEach((comicList) => {
-        comicList.id = String(comicList.id) || nanoid();
+        comicList.id = String(comicList.id || nanoid());
         comicList.list.forEach((comicItem) => {
-          comicItem.id = String(comicItem.id);
+          comicItem.id = String(
+            comicItem.id ||
+              comicItem.url ||
+              comicItem.title + comicItem.sourceId,
+          );
         });
       });
     }
@@ -99,9 +103,13 @@ abstract class ComicExtension extends Extension {
   @transformResult<ComicsList | null>((r) => {
     if (r) {
       _.castArray(r).forEach((comicList) => {
-        comicList.id = String(comicList.id) || nanoid();
+        comicList.id = String(comicList.id || nanoid());
         comicList.list.forEach((comicItem) => {
-          comicItem.id = String(comicItem.id);
+          comicItem.id = String(
+            comicItem.id ||
+              comicItem.url ||
+              comicItem.title + comicItem.sourceId,
+          );
         });
       });
     }

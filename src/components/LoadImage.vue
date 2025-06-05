@@ -26,21 +26,24 @@ if (!restProps.fit) {
 // 获取事件监听器
 const listeners = {
   click: attrs.onClick, // 手动绑定 click 事件
-  load: attrs.onLoad, // 手动绑定 load 事件
+  // load: attrs.onLoad, // 手动绑定 load 事件
   error: attrs.onError, // 其他事件可以根据需要添加
 };
 
 const loadFinished = ref(false);
 // 定义 processedSrc
-const processedSrc = ref('');
+const processedSrc = ref<string>();
 
 function onLoadFinished() {
   loadFinished.value = true;
+  (attrs.load as Function)?.();
 }
 // 异步处理 src 的函数
-async function processSrc(src: string, headers?: Record<string, string>): Promise<string> {
-  if (!headers)
-    return src;
+async function processSrc(
+  src: string,
+  headers?: Record<string, string>,
+): Promise<string> {
+  if (!headers) return src;
   let response: Response;
   try {
     response = await cachedFetch(props.src, {
@@ -52,8 +55,7 @@ async function processSrc(src: string, headers?: Record<string, string>): Promis
     if (!response.ok) {
       throw new Error('maxRedirections == 0 failed');
     }
-  }
-  catch (error) {
+  } catch (error) {
     response = await cachedFetch(props.src, {
       headers,
       verify: false,
@@ -92,11 +94,11 @@ watch(
     v-on="listeners"
     @load="onLoadFinished"
   >
-    <slot />
+    <slot></slot>
 
     <!-- 传递具名插槽 -->
     <template v-for="(_, name) in $slots" #[name]>
-      <slot :name="name" />
+      <slot :name="name"></slot>
     </template>
   </VanImage>
 </template>

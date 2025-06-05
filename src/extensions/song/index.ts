@@ -113,7 +113,7 @@ abstract class SongExtension extends Extension {
   @transformResult<PlaylistList | null>((r) => {
     if (r) {
       r.list.forEach((item) => {
-        item.id = String(item.id);
+        item.id = String(item.id || item.url || item.name + item.sourceId);
         item.list?.list.forEach((songItem) => {
           songItem.id = String(songItem.id);
         });
@@ -135,7 +135,7 @@ abstract class SongExtension extends Extension {
   @transformResult<SongList | null>((r) => {
     if (r) {
       r.list.forEach((item) => {
-        item.id = String(item.id);
+        item.id = String(item.id || item.playUrl || item.name + item.sourceId);
       });
     }
     return r;
@@ -154,7 +154,7 @@ abstract class SongExtension extends Extension {
   @transformResult<PlaylistList | null>((r) => {
     if (r) {
       r.list.forEach((item) => {
-        item.id = String(item.id);
+        item.id = String(item.id || item.url || item.name + item.sourceId);
         item.list?.list.forEach((songItem) => {
           songItem.id = String(songItem.id);
         });
@@ -182,7 +182,7 @@ abstract class SongExtension extends Extension {
   @transformResult<SongList | null>((r) => {
     if (r) {
       r.list.forEach((item) => {
-        item.id = String(item.id);
+        item.id = String(item.id || item.playUrl || item.name + item.sourceId);
       });
     }
     return r;
@@ -208,7 +208,7 @@ abstract class SongExtension extends Extension {
     if (r) {
       r.id = String(r.id);
       r.list?.list.forEach((item) => {
-        item.id = String(item.id);
+        item.id = String(item.id || item.playUrl || item.name + item.sourceId);
       });
       if (!r.picUrl) {
         if (r.list?.list.length) {

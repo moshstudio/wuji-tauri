@@ -319,10 +319,10 @@ onMounted(() => {
       displayStore.showTabBar = true;
       await set_screen_orientation('portrait');
       return;
-    } else if (displayStore.showVideoShelf) {
-      // 关闭收藏
-      displayStore.showVideoShelf = false;
-      return;
+      // } else if (displayStore.showVideoShelf) {
+      //   // 关闭收藏
+      //   displayStore.showVideoShelf = false;
+      //   return;
     } else {
       router.push({ name: 'Video' });
       return;

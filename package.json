@@ -1,7 +1,7 @@
 {
   "name": "taichi-app",
   "type": "module",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -24,7 +24,7 @@
     "@tauri-apps/plugin-process": "~2",
     "@tauri-apps/plugin-shell": "^2.2.0",
     "@tauri-apps/plugin-store": "~2.2.0",
-    "@tauri-apps/plugin-updater": "~2",
+    "@tauri-apps/plugin-updater": "~2.6.1",
     "@tauri-apps/plugin-websocket": "~2",
     "@tauri-apps/plugin-window-state": "~2.2.1",
     "@vant/touch-emulator": "^1.4.0",

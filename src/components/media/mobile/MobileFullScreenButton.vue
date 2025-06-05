@@ -10,8 +10,7 @@ const props = defineProps<{
 async function toggleFullscreen() {
   if (props.isFullscreen) {
     props.exitFullscreen();
-  }
-  else {
+  } else {
     props.requestFullscreen();
   }
 }

@@ -111,7 +111,7 @@ async function switchSource(newBookItem: BookItem) {
   chapter.readingPage = readingChapter.value.readingPage;
   showSwitchSourceDialog.value = false;
   router.push({
-    name: 'BookRead',
+    // name: 'BookRead',
     params: {
       chapterId: chapter.id,
       bookId: newBookItem.id,
@@ -306,7 +306,7 @@ function prevChapter(toLast: boolean = false) {
     }
     ttsStore.resetReadingPage();
     router.push({
-      name: 'BookRead',
+      // name: 'BookRead',
       params: {
         chapterId: chapterList.value[index - 1].id,
         bookId: book.value?.id,
@@ -331,7 +331,7 @@ function nextChapter() {
     chapterList.value[index + 1].readingPage = undefined;
     if (route.name?.toString().includes('BookRead')) {
       router.push({
-        name: 'BookRead',
+        // name: 'BookRead',
         params: {
           chapterId: chapterList.value[index + 1].id,
           bookId: book.value?.id,
@@ -343,7 +343,7 @@ function nextChapter() {
       const currPath = route.path;
       router
         .push({
-          name: 'BookRead',
+          // name: 'BookRead',
           params: {
             chapterId: chapterList.value[index + 1].id,
             bookId: book.value?.id,
@@ -367,7 +367,7 @@ function toChapter(chapter: BookChapter) {
   chapter.readingPage = undefined;
 
   router.push({
-    name: 'BookRead',
+    // name: 'BookRead',
     params: {
       chapterId: chapter.id,
       bookId: book.value?.id,

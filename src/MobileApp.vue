@@ -15,6 +15,8 @@ import {
   useComicShelfStore,
   useComicStore,
   useDisplayStore,
+  useStore,
+  useSubscribeSourceStore,
   useTTSStore,
   useVideoShelfStore,
 } from './store';
@@ -28,7 +30,9 @@ const { routerView } = defineProps<{
   routerView: VNode;
 }>();
 
+const store = useStore();
 const displayStore = useDisplayStore();
+const sourceStore = useSubscribeSourceStore();
 const bookStore = useBookStore();
 const comicStore = useComicStore();
 const bookShelfStore = useBookShelfStore();
@@ -152,6 +156,8 @@ const { showTabBar } = storeToRefs(displayStore);
 window.androidBackCallback = async () => {
   if (displayStore.showManageSubscribeDialog) {
     displayStore.showManageSubscribeDialog = false;
+    sourceStore.saveSubscribeSources();
+    store.loadSubscribeSources(true);
     return;
   }
   const path = route.name?.toString();

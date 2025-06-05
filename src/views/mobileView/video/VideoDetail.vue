@@ -181,7 +181,7 @@ watch(
         <van-tab
           v-for="(resource, index) in videoItem?.resources"
           :key="index"
-          :name="resource.id"
+          :name="resource.title"
         >
           <template #title>
             <p class="max-w-[100px] truncate">

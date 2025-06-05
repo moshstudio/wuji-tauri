@@ -52,7 +52,7 @@ abstract class PhotoExtension extends Extension {
   @transformResult<PhotoList | null>((r) => {
     if (r) {
       r.list.forEach((item) => {
-        item.id = String(item.id);
+        item.id = String(item.id || item.url || item.title + item.sourceId);
       });
     }
     return r;
@@ -71,7 +71,7 @@ abstract class PhotoExtension extends Extension {
   @transformResult<PhotoList | null>((r) => {
     if (r) {
       r.list.forEach((item) => {
-        item.id = String(item.id);
+        item.id = String(item.id || item.url || item.title + item.sourceId);
       });
     }
     return r;
@@ -92,7 +92,9 @@ abstract class PhotoExtension extends Extension {
 
   @transformResult<PhotoDetail | null>((r) => {
     if (r) {
-      r.item.id = String(r.item.id);
+      r.item.id = String(
+        r.item.id || r.item.url || r.item.title + r.item.sourceId,
+      );
     }
     return r;
   })
@@ -118,8 +120,7 @@ function loadPhotoExtensionString(
     const func = new Function('PhotoExtension', codeString);
     const extensionclass = func(PhotoExtension);
     return new extensionclass();
-  }
-  catch (error) {
+  } catch (error) {
     console.error('Error executing code:\n', error);
     // showNotify({
     //   type: 'danger',
