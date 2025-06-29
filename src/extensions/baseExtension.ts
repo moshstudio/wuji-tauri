@@ -106,6 +106,7 @@ abstract class Extension {
       url?: string;
       latestUpdate?: string;
       coverDomain?: string;
+      coverHeaders?: Record<string, string>;
       baseUrl?: string;
     },
   ) => Promise<VideoItem[]>;
@@ -318,6 +319,7 @@ abstract class Extension {
         url = 'a',
         latestUpdate = '.update',
         coverDomain = undefined,
+        coverHeaders = undefined,
         baseUrl = undefined,
       },
     ) => {
@@ -380,6 +382,7 @@ abstract class Extension {
           cover: coverE
             ? this.urlJoin(baseUrl ?? this.baseUrl, coverE)
             : undefined,
+          coverHeaders: coverHeaders,
           releaseDate: releaseDateE?.trim() || undefined,
           country: countryE?.trim() || undefined,
           duration: durationE?.trim() || undefined,

@@ -17,18 +17,20 @@ const tabBarPages = computed(() => {
   return displayStore.tabBarPages.filter((item) => {
     if (displayStore.isMobileView && item.name === 'Home') {
       return false;
-    }
-    else {
+    } else {
       return true;
     }
   });
 });
-function updateTabBarPages(page: {
-  name: string;
-  chineseName: string;
-  enable: boolean;
-}, checked: boolean) {
-  if (checked === false && tabBarPages.value.every(item => !item.enable)) {
+function updateTabBarPages(
+  page: {
+    name: string;
+    chineseName: string;
+    enable: boolean;
+  },
+  checked: boolean,
+) {
+  if (checked === false && tabBarPages.value.every((item) => !item.enable)) {
     showToast('至少需要保留一个页面');
     page.enable = true;
   }
@@ -36,14 +38,13 @@ function updateTabBarPages(page: {
 function onConfirm() {
   if (
     !tabBarPages.value
-      .filter(item => item.enable)
-      .find(page => route.path.includes(page.name.toLowerCase()))
+      .filter((item) => item.enable)
+      .find((page) => route.path.includes(page.name.toLowerCase()))
   ) {
     router.push({
-      name: tabBarPages.value.filter(item => item.enable)[0].name,
+      name: tabBarPages.value.filter((item) => item.enable)[0].name,
     });
-  }
-  else {
+  } else {
     router.push(route.path);
   }
 }
@@ -84,7 +85,7 @@ function onConfirm() {
         </van-cell-group>
       </van-collapse-item>
     </van-collapse>
-    <van-cell-group class="mt-2">
+    <van-cell-group>
       <van-cell
         center
         title="清除缓存"
@@ -93,9 +94,7 @@ function onConfirm() {
       />
       <van-cell center is-link @click="showConfirmClearData = true">
         <template #title>
-          <p class="text-red">
-            清空数据
-          </p>
+          <p class="text-red">清空数据</p>
         </template>
       </van-cell>
     </van-cell-group>
