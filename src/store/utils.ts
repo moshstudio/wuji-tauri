@@ -14,8 +14,8 @@ export async function tauriAddPluginListener<T>(
   handler.onmessage = (response: unknown) => {
     cb(response as T);
   };
-  console.log('add plugin', plugin, event);
-  
+  console.log('tauriAddPluginListener', plugin, event);
+
   return invoke(`plugin:${plugin}|register_listener`, { event, handler }).then(
     () => new PluginListener(plugin, event, handler.id),
   );

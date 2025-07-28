@@ -44,9 +44,9 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
   ): SubscribeSource | undefined => {
     return subscribeSources.find((item) => item.detail.id === sourceId);
   };
-  const saveSubscribeSources = async () => {
+  const saveSubscribeSources = _.debounce(async () => {
     await store?.set('subscribeSources', subscribeSources);
-  };
+  }, 500);
   const clearSubscribeSources = async () => {
     subscribeSources.length = 0;
     await store?.clear();

@@ -1,11 +1,13 @@
-import type { ArtistInfo, SongUrlMap } from '@/extensions/song';
-import type { ClientOptions } from '@/utils/fetch';
-import { fetch } from '@/utils/fetch';
+import type { ArtistInfo, SongUrlMap } from '@wuji-tauri/source-extension';
+import type { ClientOptions } from '@wuji-tauri/fetch';
+import { fetch, fetchAndSave } from '@wuji-tauri/fetch';
 import { debug, error, info, trace, warn } from '@tauri-apps/plugin-log';
-import * as fs from 'tauri-plugin-fs-api';
+import * as fs from '@tauri-apps/plugin-fs';
+import * as commands from 'tauri-plugin-commands-api';
 import _urlJoin from 'url-join';
 import { showToast } from 'vant';
 import { onBeforeUnmount, onMounted } from 'vue';
+import { useDisplayStore } from '@/store';
 // import * as dialog from '@tauri-apps/plugin-dialog';
 export * from './extensionUtils';
 
@@ -177,29 +179,6 @@ export function purifyText(text: string): string {
   return text;
 }
 
-export async function cachedFetch(
-  input: URL | Request | string,
-  init?: RequestInit & ClientOptions,
-): Promise<Response> {
-  if ('caches' in window) {
-    const cacheKey = input.toString();
-    const cache = await caches.open('tauri-cache');
-    const cachedResponse = await cache.match(cacheKey);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    const response = await fetch(input, init);
-
-    if (response.ok) {
-      cache.put(cacheKey, response.clone());
-    }
-    return response;
-  } else {
-    const response = await fetch(input, init);
-    return response;
-  }
-}
-
 export function levenshteinDistance(a: string, b: string): number {
   const matrix: number[][] = Array.from<number, number[]>(
     { length: a.length + 1 },
@@ -227,42 +206,71 @@ export function useElementResize(
   elementSelector: string,
   callback: (width: number, height: number) => void,
 ) {
-  let resizeObserver: ResizeObserver | null = null;
-  let prevSize: { width: number; height: number } | null = null;
+  let observer: ResizeObserver | null = null;
+  let currentElement: Element | null = null;
 
-  onMounted(() => {
+  // 处理大小变化
+  const handleResize = (entries: ResizeObserverEntry[]) => {
+    for (const entry of entries) {
+      const { width, height } = entry.contentRect;
+      if (width === 0 && height === 0) {
+        // 元素可能被隐藏，跳过
+        continue;
+      }
+      callback(width, height);
+    }
+  };
+
+  // 初始化观察器
+  const initObserver = () => {
+    observer = new ResizeObserver(handleResize);
+    observeCurrentElement();
+  };
+
+  // 观察当前元素
+  const observeCurrentElement = () => {
     const element = document.querySelector(elementSelector);
     if (element) {
-      resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          const { width, height } = entry.contentRect;
-          if (width === 0 && height === 0) {
-            // 切换了页面，不计做事件
-            prevSize = null;
-            return;
-          }
-          if (prevSize === null) {
-            // 首次不计做事件
-            prevSize = { width, height };
-            return;
-          }
-          prevSize = { width, height };
-          callback(width, height); // 触发回调，传递尺寸变化
+      if (element !== currentElement) {
+        // 如果元素变化了，先取消旧元素的观察
+        if (currentElement && observer) {
+          observer.unobserve(currentElement);
         }
-      });
-      resizeObserver.observe(element); // 开始观察
+        currentElement = element;
+        observer?.observe(element);
+        // 立即触发一次回调
+        const rect = element.getBoundingClientRect();
+        callback(rect.width, rect.height);
+      }
     } else {
-      console.warn(`Element with selector "${elementSelector}" not found!`);
+      // console.warn(`元素 "${elementSelector}" 未找到!`);
     }
-  });
+  };
 
-  onBeforeUnmount(() => {
-    if (resizeObserver) {
-      resizeObserver.disconnect(); // 清理观察器
-    }
+  onMounted(() => {
+    initObserver();
+
+    // 使用MutationObserver监听DOM变化，以便在元素被替换时重新观察
+    const mutationObserver = new MutationObserver(() => {
+      observeCurrentElement();
+    });
+
+    // 监听整个文档的DOM变化
+    mutationObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    onBeforeUnmount(() => {
+      if (observer) {
+        observer.disconnect();
+        observer = null;
+      }
+      mutationObserver.disconnect();
+      currentElement = null;
+    });
   });
 }
-
 export function forwardConsoleLog() {
   function forwardConsole(
     fnName: 'log' | 'debug' | 'info' | 'warn' | 'error',
@@ -380,18 +388,10 @@ export async function downloadFile(
     headers?: Record<string, string>;
     filename?: string;
     suffix?: string;
+    baseDir?: fs.BaseDirectory;
   },
 ): Promise<boolean> {
   try {
-    // const path = await dialog.save({
-    //   filters: [
-    //     {
-    //       name: 'My Filter',
-    //       extensions: ['png', 'jpeg'],
-    //     },
-    //   ],
-    // });
-    // console.log(path);
     url = urlJoin([url]);
     const response = await fetch(url, {
       headers: options?.headers,
@@ -409,34 +409,49 @@ export async function downloadFile(
       showToast(response.statusText);
       return false;
     }
-    const blob = await response.blob();
     const filename =
       options?.filename || getFileNameFromUrl(url, options?.suffix);
 
-    if (!(await fs.exists('', { baseDir: fs.BaseDirectory.Download }))) {
-      await fs.mkdir('', {
-        baseDir: fs.BaseDirectory.Download,
-        recursive: true,
-      });
-    }
+    const displayStore = useDisplayStore();
+    if (displayStore.isAndroid) {
+      const res = await commands.save_file(
+        options?.baseDir || fs.BaseDirectory.Download,
+        filename,
+        new Uint8Array(await response.arrayBuffer()),
+        '无极',
+      );
+      console.log('返回结果', res);
 
-    let file: fs.FileHandle;
-    if (!(await fs.exists(filename, { baseDir: fs.BaseDirectory.Download }))) {
-      file = await fs.open(filename, {
-        write: true,
-        create: true,
-        baseDir: fs.BaseDirectory.Download,
-      });
+      return Boolean(res);
     } else {
-      file = await fs.open(filename, {
-        write: true,
-        baseDir: fs.BaseDirectory.Download,
-      });
-    }
+      const blob = await response.blob();
+      if (!(await fs.exists('', { baseDir: fs.BaseDirectory.Download }))) {
+        await fs.mkdir('', {
+          baseDir: fs.BaseDirectory.Download,
+          recursive: true,
+        });
+      }
 
-    await file.write(await streamToUint8Array(await blob.stream()));
-    await file.close();
-    return true;
+      let file: fs.FileHandle;
+      if (
+        !(await fs.exists(filename, { baseDir: fs.BaseDirectory.Download }))
+      ) {
+        file = await fs.open(filename, {
+          write: true,
+          create: true,
+          baseDir: fs.BaseDirectory.Download,
+        });
+      } else {
+        file = await fs.open(filename, {
+          write: true,
+          baseDir: fs.BaseDirectory.Download,
+        });
+      }
+
+      await file.write(await streamToUint8Array(blob.stream()));
+      await file.close();
+      return true;
+    }
   } catch (error) {
     console.error('文件下载失败:', error);
     showToast('文件下载失败');
@@ -470,4 +485,11 @@ export function sanitizePathName(
   }
 
   return sanitizedName;
+}
+
+export function updateReactive<T extends object>(
+  target: T,
+  updates: Partial<T>,
+) {
+  Object.assign(target, updates);
 }

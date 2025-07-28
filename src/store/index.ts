@@ -1,3 +1,4 @@
+export * from './backStore';
 export * from './bookChaptersStore';
 export * from './bookShelfStore';
 export * from './bookStore';

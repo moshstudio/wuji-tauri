@@ -49,6 +49,10 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::get_volume,
             commands::set_volume,
             commands::get_device_id,
+            commands::save_file,
+            commands::vibrate,
+            commands::vibrate_pattern,
+            commands::vibrate_predefined,
         ])
         .setup(|app, api| {
             #[cfg(mobile)]

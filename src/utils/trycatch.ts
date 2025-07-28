@@ -10,13 +10,11 @@ export function tryCatch<T>(
   return async (...args: any[]): Promise<T | null> => {
     try {
       return await fn(...args);
-    }
-    catch (e) {
+    } catch (e) {
       if (options?.onCatch) {
         try {
           return await options.onCatch(e);
-        }
-        catch (catchError) {
+        } catch (catchError) {
           console.error('Error in onCatch handler:', catchError);
         }
       }

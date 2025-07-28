@@ -1,0 +1,17 @@
+{
+  "name": "@wuji-tauri/components",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/components.umd.cjs",
+  "module": "./dist/components.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build && tsc",
+    "prepublishOnly": "pnpm build"
+  }
+}

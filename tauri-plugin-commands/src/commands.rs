@@ -97,3 +97,35 @@ pub(crate) async fn get_device_id<R: Runtime>(
 ) -> Result<StringResponse> {
     app.commands().get_device_id(payload)
 }
+
+#[command]
+pub(crate) async fn save_file<R: Runtime>(
+    app: AppHandle<R>,
+    payload: SaveFileRequest,
+) -> Result<BoolResponse> {
+    app.commands().save_file(payload)
+}
+
+#[command]
+pub(crate) async fn vibrate<R: Runtime>(
+    app: AppHandle<R>,
+    payload: VibrateRequest,
+) -> Result<BoolResponse> {
+    app.commands().vibrate(payload)
+}
+
+#[command]
+pub(crate) async fn vibrate_pattern<R: Runtime>(
+    app: AppHandle<R>,
+    payload: VibratePatternRequest,
+) -> Result<BoolResponse> {
+    app.commands().vibrate_pattern(payload)
+}
+
+#[command]
+pub(crate) async fn vibrate_predefined<R: Runtime>(
+    app: AppHandle<R>,
+    payload: VibratePredefinedRequest,
+) -> Result<BoolResponse> {
+    app.commands().vibrate_predefined(payload)
+}

@@ -1,15 +1,15 @@
-import type { SongExtension, SongInfo } from '@/extensions/song';
+import type { SongExtension, SongInfo } from '@wuji-tauri/source-extension';
 
 import type { PluginListener } from '@tauri-apps/api/core';
-import { SongPlayMode } from '@/types/song';
+import { SongPlayMode } from '@wuji-tauri/source-extension';
 import { joinSongArtists, songUrlToString } from '@/utils';
-import { fetch } from '@/utils/fetch';
+import { fetch } from '@wuji-tauri/fetch';
 import { getSongCover } from '@/utils/songCover';
 import { useStorageAsync } from '@vueuse/core';
 import _ from 'lodash';
 import { defineStore } from 'pinia';
 import * as androidMedia from 'tauri-plugin-mediasession-api';
-import { showNotify, showToast } from 'vant';
+import { showFailToast, showNotify, showToast } from 'vant';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import {
   setTimeout,
@@ -155,7 +155,7 @@ export const useSongStore = defineStore('song', () => {
           }
         }
         if (!newSrc) {
-          showNotify(`歌曲 ${song.name} 无法播放`);
+          showFailToast(`歌曲 ${song.name} 无法播放`);
         }
       }
     }

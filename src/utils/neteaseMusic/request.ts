@@ -1,4 +1,4 @@
-import { fetch } from '@/utils/fetch';
+import { fetch } from '@wuji-tauri/fetch';
 import CryptoJS from 'crypto-js';
 import _ from 'lodash';
 import encrypt from './crypto';
@@ -17,28 +17,24 @@ export enum OSType {
   iphone = 'iphone',
 }
 function toBoolean(val: any) {
-  if (typeof val === 'boolean')
-    return val;
-  if (val === '')
-    return val;
+  if (typeof val === 'boolean') return val;
+  if (val === '') return val;
   return val === 'true' || val == '1';
 }
 function cookieObjToString(cookie: Record<string, string>) {
   return Object.keys(cookie)
     .map(
-      key => `${encodeURIComponent(key)}=${encodeURIComponent(cookie[key])}`,
+      (key) => `${encodeURIComponent(key)}=${encodeURIComponent(cookie[key])}`,
     )
     .join('; ');
 }
 function cookieToJson(cookie: string) {
-  if (!cookie)
-    return {};
+  if (!cookie) return {};
   const cookieArr = cookie.split(';');
   const obj: Record<string, string> = {};
   cookieArr.forEach((i) => {
     const arr = i.split('=');
-    if (arr.length == 2)
-      obj[arr[0].trim()] = arr[1].trim();
+    if (arr.length == 2) obj[arr[0].trim()] = arr[1].trim();
   });
   return obj;
 }
@@ -108,15 +104,19 @@ function chooseUserAgent(crypto: CryptoType, uaType = 'pc') {
   };
   return userAgentMap[crypto][uaType] || '';
 }
-async function createRequest(uri: string, data: Record<string, string | number | Record<string, string>>, options?: {
-  headers?: HeadersInit;
-  crypto?: CryptoType;
-  cookie?: string | Record<string, string>;
-  ua?: string;
-  proxy?: string;
-  realIP?: string;
-  e_r?: string;
-}) {
+async function createRequest(
+  uri: string,
+  data: Record<string, string | number | Record<string, string>>,
+  options?: {
+    headers?: HeadersInit;
+    crypto?: CryptoType;
+    cookie?: string | Record<string, string>;
+    ua?: string;
+    proxy?: string;
+    realIP?: string;
+    e_r?: string;
+  },
+) {
   const headers = new Headers(options?.headers || {});
   let cookie = options?.cookie || {};
   if (typeof cookie === 'string') {
@@ -199,18 +199,16 @@ async function createRequest(uri: string, data: Record<string, string | number |
           .toString()
           .padStart(4, '0')}`,
       });
-      if (cookie.MUSIC_U)
-        header.set('MUSIC_U', cookie.MUSIC_U);
-      if (cookie.MUSIC_A)
-        header.set('MUSIC_A', cookie.MUSIC_A);
+      if (cookie.MUSIC_U) header.set('MUSIC_U', cookie.MUSIC_U);
+      if (cookie.MUSIC_A) header.set('MUSIC_A', cookie.MUSIC_A);
       headers.set(
         'Cookie',
         Array.from(header.keys())
           .map(
-            key =>
-              `${encodeURIComponent(key)
-              }=${
-                encodeURIComponent(header.get(key)!)}`,
+            (key) =>
+              `${encodeURIComponent(key)}=${encodeURIComponent(
+                header.get(key)!,
+              )}`,
           )
           .join('; '),
       );
@@ -222,8 +220,8 @@ async function createRequest(uri: string, data: Record<string, string | number |
       if (crypto === 'eapi') {
         // 使用eapi加密
         data.header = Object.fromEntries(header.entries());
-        data.e_r
-          = options?.e_r != undefined
+        data.e_r =
+          options?.e_r != undefined
             ? options.e_r
             : data.e_r != undefined
               ? data.e_r
@@ -231,8 +229,7 @@ async function createRequest(uri: string, data: Record<string, string | number |
         // data.e_r = toBoolean(data.e_r);
         encryptData = encrypt.eapi(uri, data);
         url = `${APP_CONF.apiDomain}/eapi/${uri.substring(5)}`;
-      }
-      else if (crypto === 'api') {
+      } else if (crypto === 'api') {
         // 不使用任何加密
         url = APP_CONF.apiDomain + uri;
         encryptData = Object.fromEntries(

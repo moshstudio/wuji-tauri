@@ -4,7 +4,11 @@ import scrollbarHide from 'tailwind-scrollbar-hide';
 
 export default {
   darkMode: 'selector',
-  content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
+  content: [
+    './index.html',
+    './src/**/*.{vue,js,ts,jsx,tsx}',
+    './packages/**/!(*.stories|node_modules)/*.{vue,js,ts}',
+  ],
   theme: {
     extend: {
       keyframes: {

@@ -1,21 +1,25 @@
-import type { HotItem } from '@/apis/hot/apiHot';
-import type { Extension } from '@/extensions/baseExtension';
+import type { HotItem } from '@wuji-tauri/hot-api';
+import type { Extension } from '@wuji-tauri/source-extension';
 
 import type {
   BookChapter,
   BookExtension,
   BookItem,
   BooksList,
-} from '@/extensions/book';
+} from '@wuji-tauri/source-extension';
 import type {
   ComicChapter,
   ComicContent,
   ComicExtension,
   ComicItem,
   ComicsList,
-} from '@/extensions/comic';
-import type { PhotoExtension, PhotoItem } from '@/extensions/photo';
-import type { PlaylistInfo, SongExtension, SongInfo } from '@/extensions/song';
+} from '@wuji-tauri/source-extension';
+import type { PhotoExtension, PhotoItem } from '@wuji-tauri/source-extension';
+import type {
+  PlaylistInfo,
+  SongExtension,
+  SongInfo,
+} from '@wuji-tauri/source-extension';
 import type {
   VideoEpisode,
   VideoExtension,
@@ -23,7 +27,7 @@ import type {
   VideoResource,
   VideosList,
   VideoUrlMap,
-} from '@/extensions/video';
+} from '@wuji-tauri/source-extension';
 import type {
   BookSource,
   ComicSource,
@@ -35,28 +39,28 @@ import type {
   SubscribeSource,
   VideoSource,
 } from '@/types';
-import { loadBookExtensionString } from '@/extensions/book';
-import TestBookExtension from '@/extensions/book/test';
-import { loadComicExtensionString } from '@/extensions/comic';
-import TestComicExtension from '@/extensions/comic/test';
-import { loadPhotoExtensionString } from '@/extensions/photo';
-import TestPhotoExtension from '@/extensions/photo/test';
-import { loadSongExtensionString } from '@/extensions/song';
-import TestSongExtension from '@/extensions/song/test';
-import { loadVideoExtensionString } from '@/extensions/video';
-import TestVideoExtension from '@/extensions/video/test';
+import { loadBookExtensionString } from '@wuji-tauri/source-extension';
+import TestBookExtension from '@/test/book/test';
+import { loadComicExtensionString } from '@wuji-tauri/source-extension';
+import TestComicExtension from '@/test/comic/test';
+import { loadPhotoExtensionString } from '@wuji-tauri/source-extension';
+import TestPhotoExtension from '@/test/photo/test';
+import { loadSongExtensionString } from '@wuji-tauri/source-extension';
+import TestSongExtension from '@/test/song/test';
+import { loadVideoExtensionString } from '@wuji-tauri/source-extension';
+import TestVideoExtension from '@/test/video/test';
 import { SourceType } from '@/types';
 import { DEFAULT_SOURCE_URL, sleep, tryCatchProxy } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
-import { fetch } from '@/utils/fetch';
+import { fetch } from '@wuji-tauri/fetch';
 import { useStorageAsync } from '@vueuse/core';
 import _ from 'lodash';
 import { defineStore } from 'pinia';
-import * as fs from 'tauri-plugin-fs-api';
+import * as fs from '@tauri-apps/plugin-fs';
 import {
   showConfirmDialog,
+  showFailToast,
   showLoadingToast,
-  showNotify,
   showToast,
 } from 'vant';
 import { onBeforeMount, ref, triggerRef } from 'vue';
@@ -256,7 +260,7 @@ export const useStore = defineStore('store', () => {
     if (res) {
       return res;
     } else {
-      showNotify(`${source.item.name} 获取内容失败`);
+      showFailToast(`${source.item.name} 获取内容失败`);
       return null;
     }
   };
@@ -324,14 +328,14 @@ export const useStore = defineStore('store', () => {
     if (res) {
       return res;
     } else {
-      showNotify(`${source.item.name} 获取内容失败`);
+      showFailToast(`${source.item.name} 获取内容失败`);
       return null;
     }
   };
   const songPlaylistPlayAll = async (item: PlaylistInfo) => {
     const source = getSongSource(item.sourceId);
     if (!source) {
-      showNotify(`获取内容失败`);
+      showFailToast(`获取内容失败`);
       return;
     }
     const songs: SongInfo[] = [];
@@ -355,7 +359,7 @@ export const useStore = defineStore('store', () => {
       }
     }
     if (!songs) {
-      showNotify(`内容为空`);
+      showFailToast(`内容为空`);
     } else {
       const songStore = useSongStore();
       await songStore.setPlayingList(songs, songs[0]);
@@ -467,7 +471,7 @@ export const useStore = defineStore('store', () => {
     if (res) {
       return res;
     } else {
-      showNotify(`${source.item.name} 获取内容失败`);
+      showFailToast(`${source.item.name} 获取内容失败`);
       return null;
     }
   };
@@ -631,7 +635,7 @@ export const useStore = defineStore('store', () => {
     if (res) {
       return res;
     } else {
-      showNotify(`${source.item.name} 获取内容失败`);
+      showFailToast(`${source.item.name} 获取内容失败`);
       return null;
     }
   };
@@ -738,7 +742,7 @@ export const useStore = defineStore('store', () => {
     if (res) {
       return res;
     } else {
-      showNotify(`${source.item.name} 获取内容失败`);
+      showFailToast(`${source.item.name} 获取内容失败`);
       return null;
     }
   };
@@ -910,7 +914,7 @@ export const useStore = defineStore('store', () => {
     try {
       content = await fs.readTextFile(path);
     } catch (error) {
-      showNotify(`读取文件失败:${String(error)}`);
+      showFailToast(`读取文件失败:${String(error)}`);
       return;
     }
     const oldSource = subscribeSourceStore.getSubscribeSource(localSourceId);
@@ -948,7 +952,7 @@ export const useStore = defineStore('store', () => {
         }
       }
       if (!sourceType || !extensionClass) {
-        showNotify('导入失败，不支持的订阅源');
+        showFailToast('导入失败，不支持的订阅源');
         return;
       }
       const item = {
@@ -965,7 +969,7 @@ export const useStore = defineStore('store', () => {
       }
       for (const existSource of subscribeSourceStore.subscribeSources) {
         if (existSource.detail.urls.find((item) => item.id === sc.id)) {
-          showNotify(`${sc.name} 在 ${existSource.detail.name} 已存在`);
+          showFailToast(`${sc.name} 在 ${existSource.detail.name} 已存在`);
           return;
         }
       }
@@ -1025,9 +1029,9 @@ export const useStore = defineStore('store', () => {
     // }
 
     if (failed.length > 0) {
-      showNotify(`${failed.join(',')} 订阅源更新失败`);
+      showFailToast(`${failed.join(',')} 订阅源更新失败`);
     } else {
-      showNotify({
+      showFailToast({
         type: 'success',
         message: '更新订阅源成功',
         duration: 2000,
@@ -1144,7 +1148,7 @@ export const useStore = defineStore('store', () => {
         console.log('暂未实现 removeFromSource', sourceType);
     }
   };
-  const loadSubscribeSources = (load?: boolean) => {
+  const loadSubscribeSources = (load?: boolean, loadDelay = 3000) => {
     load ??= false;
     const added: string[] = [];
 
@@ -1185,6 +1189,8 @@ export const useStore = defineStore('store', () => {
         if (source.item.id.includes('test') && keepTest.value) {
           continue;
         }
+        console.log('removeFromSource', source.item.name);
+
         removeFromSource(source.item.id, source.item.type);
       }
     }
@@ -1195,7 +1201,7 @@ export const useStore = defineStore('store', () => {
         a != null && (Array.isArray(a) ? !!a.length : !!a.list?.length);
       const videoHasContent = (a?: VideosList): boolean =>
         a != null && (Array.isArray(a) ? !!a.length : !!a.list?.length);
-      sleep(4000).then(async () => {
+      sleep(loadDelay).then(async () => {
         await Promise.all(
           [
             photoSources,
@@ -1333,7 +1339,7 @@ export const useStore = defineStore('store', () => {
     const songCacheStore = useSongCacheStore();
     await songCacheStore.clear();
     if ('caches' in window) {
-      const cache = await caches.open('tauri-cache');
+      const cache = await caches.open('wuji-cache');
       for (const key of await cache.keys()) {
         await cache.delete(key);
       }
@@ -1375,12 +1381,12 @@ export const useStore = defineStore('store', () => {
         _;
       }
     }
-    keepTest.value = true;
+    // keepTest.value = true;
     // addTestSource(new TestSongExtension(), SourceType.Song);
     // addTestSource(new TestBookExtension(), SourceType.Book);
     // addTestSource(new TestPhotoExtension(), SourceType.Photo);
     // addTestSource(new TestComicExtension(), SourceType.Comic);
-    addTestSource(new TestVideoExtension(), SourceType.Video);
+    // addTestSource(new TestVideoExtension(), SourceType.Video);
 
     loadSubscribeSources(true);
   });

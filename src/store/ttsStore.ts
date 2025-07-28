@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { onMounted, onUnmounted, PropType, reactive, ref, watch } from 'vue';
 import { EdgeTTSClient } from '@/utils/edge-tts';
-import { showNotify, showToast } from 'vant';
+import { showFailToast, showToast } from 'vant';
 import { useStorageAsync } from '@vueuse/core';
 import CryptoJS from 'crypto-js';
 import { SimpleLRUCache } from '@/utils/lruCache';
@@ -273,7 +273,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       } while (!success && times-- > 0);
     }
     if (!lruCache.has(uid)) {
-      showNotify('TTS生成失败');
+      showFailToast('TTS生成失败');
       audioPlayer.value?.pause();
       isReading.value = false;
       return;

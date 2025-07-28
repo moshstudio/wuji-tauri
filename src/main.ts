@@ -1,9 +1,9 @@
-import { GesturePlugin } from '@vueuse/gesture';
 import { createPinia } from 'pinia';
 import { Lazyload } from 'vant';
 import { Toast, Dialog, Notify, ImagePreview, Sticky } from 'vant';
 
 import { createApp } from 'vue';
+import { GesturePlugin } from '@vueuse/gesture';
 import { createVuetify } from 'vuetify';
 import * as components from 'vuetify/components';
 

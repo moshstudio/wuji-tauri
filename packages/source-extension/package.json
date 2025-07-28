@@ -1,0 +1,17 @@
+{
+  "name": "@wuji-tauri/source-extension",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/source-extension.umd.cjs",
+  "module": "./dist/source-extension.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build && tsc",
+    "prepublishOnly": "pnpm build"
+  }
+}

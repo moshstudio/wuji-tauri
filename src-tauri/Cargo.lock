@@ -4666,31 +4666,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-fs2"
-version = "2.2.0"
-dependencies = [
- "anyhow",
- "dunce",
- "glob",
- "http 1.3.1",
- "percent-encoding",
- "rand 0.8.5",
- "reqwest",
- "schemars",
- "serde",
- "serde_json",
- "serde_repr",
- "tauri",
- "tauri-plugin",
- "tauri-utils",
- "thiserror 2.0.12",
- "tokio",
- "toml",
- "url",
- "uuid",
-]
-
-[[package]]
 name = "tauri-plugin-http"
 version = "2.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6392,7 +6367,7 @@ dependencies = [
 
 [[package]]
 name = "wuji-app"
-version = "0.1.11"
+version = "0.1.12"
 dependencies = [
  "http 1.3.1",
  "log",
@@ -6407,7 +6382,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-commands",
  "tauri-plugin-dialog",
- "tauri-plugin-fs2",
+ "tauri-plugin-fs",
  "tauri-plugin-http",
  "tauri-plugin-keep-screen-on",
  "tauri-plugin-log",

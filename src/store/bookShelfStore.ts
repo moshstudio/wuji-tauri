@@ -1,4 +1,8 @@
-import type { BookChapter, BookItem, BookShelf } from '@/extensions/book';
+import type {
+  BookChapter,
+  BookItem,
+  BookShelf,
+} from '@wuji-tauri/source-extension';
 import { useStorageAsync } from '@vueuse/core';
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
@@ -26,14 +30,11 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     ],
     kvStorage.storage,
   );
-  const bookChapterRefreshing = ref(false);
 
   const createBookShelf = (name: string) => {
-    if (bookShelf.value.some(item => item.name === name)) {
+    if (bookShelf.value.some((item) => item.name === name)) {
       // 书架已存在
-
-    }
-    else {
+    } else {
       bookShelf.value.push({
         id: nanoid(),
         name,
@@ -43,8 +44,12 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     }
   };
   const removeBookShelf = (shelfId: string) => {
-    const find = bookShelf.value.find(item => item.id === shelfId);
-    bookShelf.value = bookShelf.value.filter(item => item.id !== shelfId);
+    if (bookShelf.value.length === 1) {
+      showToast('至少需要保留一个书架');
+      return false;
+    }
+    const find = bookShelf.value.find((item) => item.id === shelfId);
+    bookShelf.value = bookShelf.value.filter((item) => item.id !== shelfId);
     if (find) {
       const bookChapterStore = useBookChapterStore();
       find.books.forEach((book) => {
@@ -62,19 +67,16 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     let id: string;
     if (typeof book === 'string') {
       id = book;
-    }
-    else {
+    } else {
       id = book.id;
     }
     if (shelfId) {
       return !!bookShelf.value
-        .find(shelf => shelf.id === shelfId)
-        ?.books
-        .find(b => b.book.id === id);
-    }
-    else {
+        .find((shelf) => shelf.id === shelfId)
+        ?.books.find((b) => b.book.id === id);
+    } else {
       for (const shelf of bookShelf.value) {
-        const find = shelf.books.find(b => b.book.id === id);
+        const find = shelf.books.find((b) => b.book.id === id);
         if (find) {
           return true;
         }
@@ -108,13 +110,13 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
       return false;
     }
     const shelf = shelfId
-      ? bookShelf.value.find(item => item.id === shelfId)
+      ? bookShelf.value.find((item) => item.id === shelfId)
       : bookShelf.value[0];
     if (!shelf) {
       showToast('书架不存在');
       return false;
     }
-    if (shelf.books.find(item => item.book.id === bookItem.id)) {
+    if (shelf.books.find((item) => item.book.id === bookItem.id)) {
       showToast('书架中已存在此书');
       return false;
     }
@@ -130,30 +132,24 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
       showToast('书架为空');
       return;
     }
-    if (!shelfId)
-      shelfId = bookShelf.value[0].id;
-    const shelf = bookShelf.value.find(item => item.id === shelfId);
+    if (!shelfId) shelfId = bookShelf.value[0].id;
+    const shelf = bookShelf.value.find((item) => item.id === shelfId);
     if (!shelf) {
       showToast('书架不存在');
       return;
     }
-    _.remove(shelf.books, item => item.book.id === bookItem.id);
+    _.remove(shelf.books, (item) => item.book.id === bookItem.id);
     if (!isBookInShelf(bookItem)) {
       const bookChapterStore = useBookChapterStore();
       bookChapterStore.removeBookCache(bookItem);
     }
   };
   const updateBookReadInfo = (bookItem: BookItem, chapter: BookChapter) => {
-    console.log('updateBookReadInfo', bookItem, chapter);
-    
-    if (!bookShelf.value)
-      return;
+    if (!bookShelf.value) return;
     for (const shelf of bookShelf.value) {
       for (const book of shelf.books) {
         if (book.book.id === bookItem.id) {
-          if (book.book.chapters?.find(item => item.id === chapter.id)) {
-            console.log('lastReadChapter save', chapter);
-            
+          if (book.book.chapters?.find((item) => item.id === chapter.id)) {
             book.lastReadChapter = chapter;
             book.lastReadTime = Date.now();
           }
@@ -162,15 +158,11 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     }
   };
   const deleteBookFromShelf = (bookItem: BookItem, shelfId: string) => {
-    const shelf = bookShelf.value.find(item => item.id === shelfId);
-    if (!shelf)
-      return;
-    _.remove(shelf.books, item => item.book.id === bookItem.id);
+    const shelf = bookShelf.value.find((item) => item.id === shelfId);
+    if (!shelf) return;
+    _.remove(shelf.books, (item) => item.book.id === bookItem.id);
   };
   const bookRefreshChapters = async () => {
-    if (bookChapterRefreshing.value)
-      return;
-    bookChapterRefreshing.value = true;
     const store = useStore();
     await Promise.all(
       bookShelf.value.map(async (shelf) => {
@@ -184,7 +176,6 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
         );
       }),
     );
-    bookChapterRefreshing.value = false;
     showToast('刷新章节完成');
   };
   const clear = () => {
@@ -200,7 +191,6 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
 
   return {
     bookShelf,
-    bookChapterRefreshing,
     createBookShelf,
     removeBookShelf,
     isBookInShelf,

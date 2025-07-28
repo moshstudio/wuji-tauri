@@ -1,0 +1,20 @@
+{
+  "name": "@wuji-tauri/fetch",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/fetch.umd.cjs",
+  "module": "./dist/fetch.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build && tsc",
+    "prepublishOnly": "pnpm build"
+  },
+  "peerDependencies": {
+    "@tauri-apps/api": "^2.6.0"
+  }
+}

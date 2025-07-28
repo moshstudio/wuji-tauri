@@ -10,7 +10,13 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
 -----END PUBLIC KEY-----`;
 const eapiKey = 'e82ckenh8dichen8';
 
-function aesEncrypt(text: string, mode: keyof typeof CryptoJS.mode, key: string, iv: string, format = 'base64') {
+function aesEncrypt(
+  text: string,
+  mode: keyof typeof CryptoJS.mode,
+  key: string,
+  iv: string,
+  format = 'base64',
+) {
   const encrypted = CryptoJS.AES.encrypt(
     CryptoJS.enc.Utf8.parse(text),
     CryptoJS.enc.Utf8.parse(key),
@@ -26,7 +32,12 @@ function aesEncrypt(text: string, mode: keyof typeof CryptoJS.mode, key: string,
 
   return encrypted.ciphertext.toString().toUpperCase();
 }
-function aesDecrypt(ciphertext: string, key: string, iv: string, format = 'base64') {
+function aesDecrypt(
+  ciphertext: string,
+  key: string,
+  iv: string,
+  format = 'base64',
+) {
   let bytes;
   if (format === 'base64') {
     bytes = CryptoJS.AES.decrypt(ciphertext, CryptoJS.enc.Utf8.parse(key), {
@@ -34,8 +45,7 @@ function aesDecrypt(ciphertext: string, key: string, iv: string, format = 'base6
       mode: CryptoJS.mode.ECB,
       padding: CryptoJS.pad.Pkcs7,
     });
-  }
-  else {
+  } else {
     bytes = CryptoJS.AES.decrypt(ciphertext, CryptoJS.enc.Utf8.parse(key), {
       iv: CryptoJS.enc.Utf8.parse(iv),
       mode: CryptoJS.mode.ECB,

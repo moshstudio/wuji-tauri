@@ -78,4 +78,21 @@ impl<R: Runtime> Commands<R> {
             value: machine_guid,
         })
     }
+    pub fn save_file(&self, payload: SaveFileRequest) -> crate::Result<BoolResponse> {
+        Ok(BoolResponse { res: Some(true) })
+    }
+    pub fn vibrate(&self, payload: VibrateRequest) -> crate::Result<BoolResponse> {
+        Ok(BoolResponse { res: Some(true) })
+    }
+
+    pub fn vibrate_pattern(&self, payload: VibratePatternRequest) -> crate::Result<BoolResponse> {
+        Ok(BoolResponse { res: Some(true) })
+    }
+
+    pub fn vibrate_predefined(
+        &self,
+        payload: VibratePredefinedRequest,
+    ) -> crate::Result<BoolResponse> {
+        Ok(BoolResponse { res: Some(true) })
+    }
 }

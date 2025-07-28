@@ -1,4 +1,4 @@
-import type { SongInfo } from '@/extensions/song';
+import type { SongInfo } from '@wuji-tauri/source-extension';
 import { joinSongArtists } from '.';
 import {
   search as neteaseSearch,
@@ -6,8 +6,7 @@ import {
 } from './neteaseMusic';
 
 export async function getSongCover(song: SongInfo): Promise<SongInfo> {
-  if (!song.name)
-    return song;
+  if (!song.name) return song;
   const songName = song.name;
   const singerName = joinSongArtists(song.artists);
 
@@ -22,15 +21,13 @@ export async function getSongCover(song: SongInfo): Promise<SongInfo> {
       artists: song.artists.map((artist: any) => artist.name).join(','),
     };
   });
-  if (!songs)
-    return song;
-  const sSong
-    = songs.find(
-      song => song.name === songName && song.artists.includes(singerName),
-    ) || songs.find(song => song.name === songName);
+  if (!songs) return song;
+  const sSong =
+    songs.find(
+      (song) => song.name === songName && song.artists.includes(singerName),
+    ) || songs.find((song) => song.name === songName);
 
-  if (!sSong)
-    return song;
+  if (!sSong) return song;
 
   const detail = await neteaseSongDetail([String(sSong.id)]);
   const json = await detail.json();

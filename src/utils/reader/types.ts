@@ -16,6 +16,7 @@ export interface ReaderOptions {
   fontSize: number;
   lineHeight?: number;
   pGap?: number;
+  pIndent?: number;
   title?: string;
   titleSize?: number;
   titleHeight?: number;

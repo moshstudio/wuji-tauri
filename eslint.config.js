@@ -21,7 +21,6 @@ export default antfu({
     '**/build/**',
     '**/src-tauri/**',
     '**/tauri-plugin-commands/**',
-    '**/tauri-plugin-fs/**',
     '**/tauri-plugin-mediasession/**',
   ],
 });

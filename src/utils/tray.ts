@@ -26,8 +26,8 @@ export default async function buildTray() {
     action: async (event: TrayIconEvent) => {
       if (event.type === 'DoubleClick') {
         const windows = await Window.getAll();
-        const window
-          = windows.find(window => window.label === 'main') || windows[0];
+        const window =
+          windows.find((window) => window.label === 'main') || windows[0];
 
         window?.show();
         window?.setFocus();

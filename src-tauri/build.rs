@@ -8,6 +8,7 @@ fn main() {
                     "fetch_cancel",
                     "fetch_send",
                     "fetch_read_body",
+                    "fetch_and_save",
                 ]),
             )
             .plugin(

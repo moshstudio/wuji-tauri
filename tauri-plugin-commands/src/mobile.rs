@@ -29,7 +29,9 @@ impl<R: Runtime> Commands<R> {
         self.0.run_mobile_plugin("exitApp", ()).map_err(Into::into)
     }
     pub fn return_to_home(&self) -> crate::Result<()> {
-        self.0.run_mobile_plugin("returnToHome", ()).map_err(Into::into)
+        self.0
+            .run_mobile_plugin("returnToHome", ())
+            .map_err(Into::into)
     }
     pub fn set_status_bar(
         &self,
@@ -93,6 +95,29 @@ impl<R: Runtime> Commands<R> {
     pub fn get_device_id(&self, payload: EmptyRequest) -> crate::Result<StringResponse> {
         self.0
             .run_mobile_plugin("getAndroidId", payload)
+            .map_err(Into::into)
+    }
+    pub fn save_file(&self, payload: SaveFileRequest) -> crate::Result<BoolResponse> {
+        self.0
+            .run_mobile_plugin("saveFile", payload)
+            .map_err(Into::into)
+    }
+
+    pub fn vibrate(&self, payload: VibrateRequest) -> crate::Result<BoolResponse> {
+        self.0
+            .run_mobile_plugin("vibrate", payload)
+            .map_err(Into::into)
+    }
+
+    pub fn vibrate_pattern(&self, payload: VibratePatternRequest) -> crate::Result<BoolResponse> {
+        self.0
+            .run_mobile_plugin("vibratePattern", payload)
+            .map_err(Into::into)
+    }
+
+    pub fn vibrate_predefined(&self, payload: VibratePredefinedRequest) -> crate::Result<BoolResponse> {
+        self.0
+            .run_mobile_plugin("vibratePredefined", payload)
             .map_err(Into::into)
     }
 }

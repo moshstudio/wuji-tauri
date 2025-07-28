@@ -1,4 +1,4 @@
-import type { ComicChapter, ComicItem } from '@/extensions/comic';
+import type { ComicChapter, ComicItem } from '@wuji-tauri/source-extension';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 

@@ -1,4 +1,4 @@
-import type { SongShelf } from '@/extensions/song';
+import type { SongShelf } from '@wuji-tauri/source-extension';
 
 import type { PluginListener } from '@tauri-apps/api/core';
 
@@ -6,44 +6,60 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { useDark, useStorage, useStorageAsync, useToggle } from '@vueuse/core';
 import { defineStore } from 'pinia';
-import { showToast as vanShowToast } from 'vant';
 import * as commands from 'tauri-plugin-commands-api';
 
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue';
 import { tauriAddPluginListener } from './utils';
 import _ from 'lodash';
+import { TrayIcon } from '@tauri-apps/api/tray';
+import buildTray from '@/utils/tray';
 
 export const useDisplayStore = defineStore('display', () => {
   const showTabBar = ref(true);
+  const fullScreenMode = ref(false);
 
   // 检测是否为手机尺寸
   const mobileMediaQuery = window.matchMedia('(max-width: 420px)');
   // 检测是否为横屏
   const landscapeMediaQuery = window.matchMedia('(orientation: landscape)');
 
-  const isMobileView = ref(osType() == 'android' || mobileMediaQuery.matches);
+  const isAppView = ref(osType() == 'android' || mobileMediaQuery.matches);
   const isWindows = ref(osType() == 'windows');
   const isAndroid = ref(osType() == 'android');
   const isLandscape = ref(landscapeMediaQuery.matches);
 
-  const fullScreenMode = ref(false);
-  onMounted(async () => {
-    showTabBar.value = true;
-    if (isAndroid.value) {
-      await commands.set_screen_orientation('portrait');
-    } else {
-      await getCurrentWindow().setFullscreen(false);
-    }
-  });
-
   const checkMobile = (event: MediaQueryListEvent) => {
     // 全屏状态下就不刷新`isMobile`了
     if (fullScreenMode.value) return;
-    isMobileView.value = osType() == 'android' || event.matches;
+    isAppView.value = osType() == 'android' || event.matches;
   };
   const checklanscape = (event: MediaQueryListEvent) => {
     isLandscape.value = event.matches;
   };
+
+  watch(
+    fullScreenMode,
+    async (val) => {
+      fullScreenMode.value = val;
+      if (val) {
+        showTabBar.value = false;
+        if (isAndroid.value) {
+          //横屏
+          await commands.set_screen_orientation('landscape');
+        } else if (isWindows.value) {
+          await getCurrentWindow().setFullscreen(true);
+        }
+      } else {
+        showTabBar.value = true;
+        if (isAndroid.value) {
+          await commands.set_screen_orientation('portrait');
+        } else if (isWindows.value) {
+          await getCurrentWindow().setFullscreen(false);
+        }
+      }
+    },
+    { immediate: true },
+  );
 
   onMounted(() => {
     // 监听变化
@@ -61,28 +77,6 @@ export const useDisplayStore = defineStore('display', () => {
   const isDark = useDark();
   const toggleDark = useToggle(isDark);
 
-  const showAddSubscribeDialog = ref(false);
-  const showManageSubscribeDialog = useStorageAsync('manageSubscribe', false);
-  const showCreateSubscribeDialog = useStorageAsync('createSubscribe', false);
-
-  const showAddBookShelfDialog = ref(false);
-  const showRemoveBookShelfDialog = ref(false);
-
-  const showAddSongShelfDialog = ref(false);
-  const showRemoveSongShelfDialog = ref(false);
-
-  const showAddPhotoShelfDialog = ref(false);
-  const showRemovePhotoShelfDialog = ref(false);
-
-  const showAddComicShelfDialog = ref(false);
-  const showRemoveComicShelfDialog = ref(false);
-
-  const showAddVideoShelfDialog = ref(false);
-  const showRemoveVideoShelfDialog = ref(false);
-
-  const showAboutDialog = ref(false);
-
-  const showSettingDialog = ref(false);
   const showLeftPopup = ref(false);
 
   // 仅移动端有效
@@ -90,6 +84,16 @@ export const useDisplayStore = defineStore('display', () => {
   const comicKeepScreenOn = useStorageAsync('comicKeepScreenOn', false);
 
   const trayId = ref('');
+  if (isWindows.value) {
+    onMounted(async () => {
+      trayId.value = (await buildTray()).id;
+    });
+    onBeforeUnmount(async () => {
+      if (trayId.value && (await TrayIcon.getById(trayId.value))) {
+        await TrayIcon.removeById(trayId.value);
+      }
+    });
+  }
 
   const toastActive = ref(false);
   const toastId = ref('');
@@ -106,53 +110,6 @@ export const useDisplayStore = defineStore('display', () => {
   const bookPath = useStorageAsync('bookPath', '/book');
   const comicPath = useStorageAsync('comicPath', '/comic');
   const videoPath = useStorageAsync('videoPath', '/video');
-
-  const showPhotoShelf = useStorageAsync('showPhotoShelf', false);
-  const showSongShelf = useStorageAsync('showSongShelf', false);
-  const showSongShelfDetail = useStorageAsync('showSongShelfDetail', false);
-  const selectedSongShelf = useStorageAsync<SongShelf | undefined>(
-    'selectedSongShelf',
-    undefined,
-    undefined,
-    {
-      serializer: {
-        read: async (raw: string) => {
-          if (!raw) return undefined;
-          return JSON.parse(raw);
-        },
-        write: async (value: SongShelf | undefined) => {
-          if (!value) return '';
-          return JSON.stringify(value);
-        },
-      },
-    },
-  );
-  const showImportPlaylistDialog = useStorageAsync(
-    'showImportPlaylistDialog',
-    false,
-  );
-  const showBookShelf = useStorageAsync('showBookShelf', false);
-  const showComicShelf = useStorageAsync('showComicShelf', false);
-  const showVideoShelf = useStorageAsync('showVideoShelf', false);
-  const showPlayView = useStorageAsync('showPlayView', false);
-  const showPlayingPlaylist = useStorageAsync('showPlayingPlaylist', false);
-  const showUserPage = useStorageAsync('showUserPage', false);
-
-  watch(
-    showPlayingPlaylist,
-    (val) => {
-      if (val) {
-        nextTick(() => {
-          document
-            .querySelector('.playing-song')
-            ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        });
-      }
-    },
-    {
-      immediate: true,
-    },
-  );
 
   const searchHistories = useStorageAsync<string[]>('searchHistories', []);
   onMounted(() => {
@@ -238,54 +195,13 @@ export const useDisplayStore = defineStore('display', () => {
     });
   }
 
-  const _backTs = ref(Date.now());
-  const checkExitApp = async () => {
-    const now = Date.now();
-    if (now - _backTs.value > 1000) {
-      _backTs.value = now;
-      vanShowToast('再按一次返回');
-    } else {
-      await commands.return_to_home();
-    }
+  const exitApp = async () => {
+    await commands.return_to_home();
   };
-
-  // 进行返回时的调用
-  const backCallbacks: Record<string, Function[]> = {};
-  const addBackCallback = (pathName: string, cb: Function) => {
-    backCallbacks[pathName] = backCallbacks[pathName] || [];
-    if (backCallbacks[pathName].includes(cb)) {
-      return;
-    }
-    backCallbacks[pathName].push(cb);
-  };
-  const removeBackCallback = (pathName: string, cb: Function) => {
-    if (!backCallbacks[pathName]) {
-      return;
-    }
-    _.remove(backCallbacks[pathName], (item) => item === cb);
-  };
-  const triggerBackCallbacks = async (pathName: string) => {
-    if (!backCallbacks[pathName]) {
-      return;
-    }
-
-    for (const callback of backCallbacks[pathName]) {
-      try {
-        await Promise.resolve(callback());
-      } catch (error) {
-        console.error(`Error executing callback for ${pathName}:`, error);
-      }
-    }
-  };
-  onUnmounted(() => {
-    Object.keys(backCallbacks).forEach((key) => {
-      delete backCallbacks[key];
-    });
-  });
 
   return {
     fullScreenMode,
-    isMobileView,
+    isAppView,
     isAndroid,
     isWindows,
     androidOrientation,
@@ -294,29 +210,7 @@ export const useDisplayStore = defineStore('display', () => {
     isDark,
     toggleDark,
     showTabBar,
-    showAddSubscribeDialog,
-    showManageSubscribeDialog,
-    showCreateSubscribeDialog,
 
-    showAddBookShelfDialog,
-    showRemoveBookShelfDialog,
-
-    showAddSongShelfDialog,
-    showRemoveSongShelfDialog,
-    showImportPlaylistDialog,
-
-    showAddPhotoShelfDialog,
-    showRemovePhotoShelfDialog,
-
-    showAddComicShelfDialog,
-    showRemoveComicShelfDialog,
-
-    showAddVideoShelfDialog,
-    showRemoveVideoShelfDialog,
-
-    showAboutDialog,
-
-    showSettingDialog,
     showLeftPopup,
 
     bookKeepScreenOn,
@@ -340,25 +234,9 @@ export const useDisplayStore = defineStore('display', () => {
     comicPath,
     videoPath,
 
-    showPhotoShelf,
-    showSongShelf,
-    showSongShelfDetail,
-    selectedSongShelf,
-    showBookShelf,
-    showComicShelf,
-    showVideoShelf,
-    showPlayView,
-    showPlayingPlaylist,
-
-    showUserPage,
-
     searchHistories,
-
     tabBarPages,
 
-    checkExitApp,
-    addBackCallback,
-    removeBackCallback,
-    triggerBackCallbacks,
+    exitApp,
   };
 });

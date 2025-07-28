@@ -32,7 +32,7 @@ pub enum Error {
     #[error("Request canceled")]
     RequestCanceled,
     #[error(transparent)]
-    FsError(#[from] tauri_plugin_fs2::Error),
+    FsError(#[from] tauri_plugin_fs::Error),
     #[error("failed to process data url")]
     DataUrlError,
     #[error("failed to decode data url into bytes")]
@@ -41,6 +41,8 @@ pub enum Error {
     Tauri(#[from] tauri::Error),
     #[error(transparent)]
     Utf8(#[from] std::string::FromUtf8Error),
+    #[error("path is not valid")]
+    PathError,
 }
 
 impl Serialize for Error {

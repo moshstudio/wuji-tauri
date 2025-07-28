@@ -13,7 +13,9 @@ export enum MediaSessionPermissionType {
   WakeLock = 'wakeLock',
 }
 
-export async function handlePermissionRequest(type: MediaSessionPermissionType) {
+export async function handlePermissionRequest(
+  type: MediaSessionPermissionType,
+) {
   const permission = await invoke<MediaSessionPermissions>(
     'plugin:mediasession|check_permissions',
   );

@@ -1,4 +1,4 @@
-import type { BookChapter, BookItem } from '@/extensions/book';
+import type { BookChapter, BookItem } from '@wuji-tauri/source-extension';
 import type { ReadTheme } from '@/types/book';
 import { useStorageAsync } from '@vueuse/core';
 import { defineStore } from 'pinia';
@@ -8,12 +8,12 @@ import { useDisplayStore } from './displayStore';
 export const useBookStore = defineStore('book', () => {
   const displayStore = useDisplayStore();
   const readMode = ref<'slide' | 'scroll'>(
-    displayStore.isMobileView ? 'slide' : 'scroll',
+    displayStore.isAppView ? 'slide' : 'scroll',
   );
   watch(
-    () => displayStore.isMobileView,
+    () => displayStore.isAppView,
     () => {
-      readMode.value = displayStore.isMobileView ? 'slide' : 'scroll';
+      readMode.value = displayStore.isAppView ? 'slide' : 'scroll';
     },
   );
   const fontSize = useStorageAsync('readFontSize', 20);

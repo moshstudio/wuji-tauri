@@ -1,0 +1,17 @@
+{
+  "name": "@wuji-tauri/hot-api",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/hot-api.umd.cjs",
+  "module": "./dist/hot-api.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build && tsc",
+    "prepublishOnly": "pnpm build"
+  }
+}

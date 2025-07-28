@@ -24,6 +24,33 @@ class HideStatusBarArgs(
     var hide: Boolean? = null
 )
 
+@InvokeArg
+class SaveFileArgs {
+    var directoryType: Int? = null
+    lateinit var fileName: String;
+    lateinit var content: ByteArray;
+    var subPath: String? = null
+
+}
+
+@InvokeArg
+class VibrateArgs {
+    var duration: Long? = null
+    var amplitude: Int? = null
+}
+
+@InvokeArg
+class VibratePatternArgs {
+    lateinit var pattern: LongArray;
+    var repeat: Int? = null;
+    var amplitudes: IntArray? = null
+}
+
+@InvokeArg
+class VibratePredefinedArgs {
+    var effectId: Int? = null;
+}
+
 
 @TauriPlugin
 class CommandsPlugin(private val activity: Activity) : Plugin(activity) {
@@ -182,4 +209,53 @@ class CommandsPlugin(private val activity: Activity) : Plugin(activity) {
         ret.put("value", aId)
         invoke.resolve(ret)
     }
+
+    @Command
+    fun saveFile(invoke: Invoke) {
+        val args = invoke.parseArgs(SaveFileArgs::class.java)
+        val file = implementation.saveToDirectory(
+            BaseDirectory.values()[(args.directoryType ?: 15) - 1],
+            args.fileName,
+            args.content,
+            args.subPath ?: ""
+        )
+        val ret = JSObject()
+        ret.put("value", file?.exists() == true)
+        invoke.resolve(ret)
+
+    }
+
+    @Command
+    fun vibrate(invoke: Invoke) {
+        val args = invoke.parseArgs(VibrateArgs::class.java)
+        val duration = args.duration ?: 100L
+        val amplitudes = args.amplitude ?: -1
+        implementation.vibrate(duration, amplitudes)
+        val ret = JSObject()
+        ret.put("value", true)
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun vibratePattern(invoke: Invoke) {
+        val args = invoke.parseArgs(VibratePatternArgs::class.java)
+        val pattern = args.pattern
+        val repeat = args.repeat ?: -1
+        val amplitudes = args.amplitudes
+        implementation.vibratePattern(pattern, repeat, amplitudes)
+        val ret = JSObject()
+        ret.put("value", true)
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun vibratePredefined(invoke: Invoke) {
+        val args = invoke.parseArgs(VibratePredefinedArgs::class.java)
+        val effectId = args.effectId ?: -1
+        implementation.vibratePredefined(effectId)
+        val ret = JSObject()
+        ret.put("value", true)
+        invoke.resolve(ret)
+    }
+
 }

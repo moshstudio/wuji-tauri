@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    // 子项目特定的配置，会覆盖主项目的配置
+    "outDir": "./dist",
+    "paths": {
+      "@ha/*": ["./src/*"]
+    }
+  },
+
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

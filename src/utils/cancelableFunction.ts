@@ -29,19 +29,16 @@ function createCancellableFunction<T, Args extends any[]>(
       });
 
       return result;
-    }
-    catch (error) {
+    } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         // 处理中断错误
         console.log('操作被中断');
-      }
-      else {
+      } else {
         // 处理其他错误
         console.error('操作失败:', error);
       }
       throw error;
-    }
-    finally {
+    } finally {
       // abortController = null;
     }
   };

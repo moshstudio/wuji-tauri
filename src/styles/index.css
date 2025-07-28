@@ -3,11 +3,14 @@
 @tailwind utilities;
 
 @layer components {
+  .active-bg-scale {
+    @apply transform cursor-pointer select-none transition-all duration-150 active:scale-[0.98] active:bg-[var(--van-background)];
+  }
   .text-button {
-    @apply text-sm text-[--van-text-color] cursor-pointer active:opacity-50 select-none border-b-2 border-b-orange-600;
+    @apply cursor-pointer select-none border-b-2 border-b-orange-600 text-sm text-[--van-text-color] active:opacity-50;
   }
   .text-button-2 {
-    @apply text-[--van-text-color] cursor-pointer active:opacity-50 select-none hover:text-orange-600;
+    @apply cursor-pointer select-none text-[--van-text-color] hover:text-orange-600 active:opacity-50;
   }
   .clickable {
     @apply cursor-pointer opacity-90 active:opacity-100;
@@ -61,13 +64,19 @@ body,
   -ms-overflow-style: none;
 }
 
+#app {
+  background-color: var(--van-background);
+}
+
 :root:root {
   --van-search-padding: 6px 10px;
   --van-collapse-item-content-padding: 10px 10px;
   --van-tabs-nav-background: var(--van-background-2);
 }
-.van-button__text,
-.van-button__content,
+.van-button:not(.van-button--primary),
+.van-button:not(.van-button--primary)
+  > .van-button__content
+  > .van-button__text,
 .van-cell__title {
   color: var(--van-text-color);
 }
@@ -76,4 +85,67 @@ body,
 }
 .van-button--danger .van-button__content {
   color: white;
+}
+.not-mobile-scrollbar {
+  ::-webkit-scrollbar {
+    background-color: transparent;
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 6px;
+  }
+
+  :hover::-webkit-scrollbar-thumb {
+    background-color: rgba(110, 110, 110, 0.2);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(110, 110, 110, 0.6);
+  }
+}
+
+.mobile-scrollbar {
+  ::-webkit-scrollbar {
+    background-color: transparent;
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(110, 110, 110, 0.2);
+    border-radius: 6px;
+  }
+
+  :hover::-webkit-scrollbar-thumb {
+    background-color: rgba(110, 110, 110, 0.6);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(110, 110, 110, 0.8);
+  }
+}
+
+.hide-vertical-scrollbar {
+  ::-webkit-scrollbar {
+    background-color: transparent;
+    width: 0; /* 隐藏纵向滚动条 */
+    height: 8px; /* 保留横向滚动条高度 */
+  }
+
+  /* 横向滚动条相关样式 */
+  ::-webkit-scrollbar-thumb:horizontal {
+    background-color: rgba(110, 110, 110, 0.2);
+    border-radius: 6px;
+  }
+
+  :hover::-webkit-scrollbar-thumb:horizontal {
+    background-color: rgba(110, 110, 110, 0.6);
+  }
+
+  ::-webkit-scrollbar-thumb:horizontal:hover {
+    background-color: rgba(110, 110, 110, 0.8);
+  }
 }

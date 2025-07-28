@@ -1,9 +1,9 @@
-import type { BookChapter, BookItem } from '@/extensions/book';
+import type { BookChapter, BookItem } from '@wuji-tauri/source-extension';
 import { sanitizePathName } from '@/utils';
 import CryptoJS from 'crypto-js';
 import _ from 'lodash';
 import { defineStore } from 'pinia';
-import * as fs from 'tauri-plugin-fs-api';
+import * as fs from '@tauri-apps/plugin-fs';
 import { ref, watch } from 'vue';
 import { SimpleLRUCache } from '@/utils/lruCache';
 import { useBookShelfStore } from './bookShelfStore';
@@ -166,15 +166,17 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     }
     const cache_book_id = genBookCacheId(book);
     const cache_chapter_id = genChapterCacheId(book, chapter);
-    if (lruCache.has(cache_book_id + '/' + cache_chapter_id)) {
-      return lruCache.get(cache_book_id + '/' + cache_chapter_id);
+    const key = cache_book_id + '/' + cache_chapter_id;
+    if (lruCache.has(key)) {
+      return lruCache.get(key);
     }
-
-    const find = books.value.find(
-      (b) =>
+    const find = books.value.find((b) => {
+      return (
         b.cache_book_id === cache_book_id &&
-        b.cache_chapter_id === cache_chapter_id,
-    );
+        b.cache_chapter_id === cache_chapter_id
+      );
+    });
+
     if (find) {
       try {
         const content = new TextDecoder().decode(
@@ -182,7 +184,7 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
             baseDir,
           }),
         );
-        lruCache.set(cache_book_id + '/' + cache_chapter_id, content);
+        lruCache.set(key, content);
         return content;
       } catch (error) {}
     }

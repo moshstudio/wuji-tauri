@@ -1,112 +1,151 @@
 import type { RouteRecordRaw } from 'vue-router';
-// import BookDetail from '@/views/book/BookDetail.vue';
-// import BookRead from '@/views/book/BookRead.vue';
-// import Book from '@/views/book/index.vue';
-// import ComicDetail from '@/views/comic/ComicDetail.vue';
-// import ComicRead from '@/views/comic/ComicRead.vue';
-// import Comic from '@/views/comic/index.vue';
-// import Home from '@/views/home/index.vue';
-// import Photo from '@/views/photo/index.vue';
-// import PhotoDetail from '@/views/photo/PhotoDetail.vue';
-// import Song from '@/views/song/index.vue';
-// import PlaylistDetail from '@/views/song/PlaylistDetail.vue';
-// import Video from '@/views/video/index.vue';
-// import VideoDetail from '@/views/video/VideoDetail.vue';
-import { type as osType } from '@tauri-apps/plugin-os';
 import { createRouter, createWebHashHistory } from 'vue-router';
 
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: osType() == 'android' ? '/photo' : '/home',
+    component: () => import('@/views2/tabbar/index.vue'),
+    redirect: '/home',
+    children: [
+      {
+        path: 'home',
+        name: 'Home',
+        component: () => import('@/views2/home/index.vue'),
+      },
+      {
+        path: 'photo',
+        name: 'Photo',
+        component: () => import('@/views2/photo/index.vue'),
+      },
+      {
+        path: 'photo-shelf',
+        name: 'PhotoShelf',
+        component: () => import('@/views2/photo/PhotoShelf.vue'),
+      },
+      {
+        path: 'photo-detail/:sourceId/:id',
+        name: 'PhotoDetail',
+        component: () => import('@/views2/photo/PhotoDetail.vue'),
+        props: true,
+      },
+      {
+        path: 'song',
+        name: 'Song',
+        component: () => import('@/views2/song/index.vue'),
+      },
+      {
+        path: 'song-play-view',
+        name: 'SongPlayView',
+        component: () => import('@/views2/song/SongPlayView.vue'),
+      },
+      {
+        path: 'song-shelf',
+        name: 'SongShelf',
+        component: () => import('@/views2/song/SongShelf.vue'),
+      },
+      {
+        path: 'song-shelf-detail/:shelfId',
+        name: 'SongShelfDetail',
+        component: () => import('@/views2/song/SongShelfDetail.vue'),
+        props: true,
+      },
+      {
+        path: 'song-playlist-detail/:sourceId/:playlistId',
+        name: 'SongPlaylistDetail',
+        component: () => import('@/views2/song/PlaylistDetail.vue'),
+        props: true,
+      },
+      {
+        path: 'book',
+        name: 'Book',
+        component: () => import('@/views2/book/index.vue'),
+      },
+      {
+        path: 'book-shelf',
+        name: 'BookShelf',
+        component: () => import('@/views2/book/BookShelf.vue'),
+      },
+      {
+        path: 'book-detail/:sourceId/:bookId',
+        name: 'BookDetail',
+        component: () => import('@/views2/book/BookDetail.vue'),
+        props: true,
+      },
+      {
+        path: 'book-read/:sourceId/:bookId/:chapterId/:isPrev?',
+        name: 'BookRead',
+        component: () => import('@/views2/book/BookRead.vue'),
+        props: true,
+      },
+      {
+        path: 'comic',
+        name: 'Comic',
+        component: () => import('@/views2/comic/index.vue'),
+      },
+      {
+        path: 'comic-shelf',
+        name: 'ComicShelf',
+        component: () => import('@/views2/comic/ComicShelf.vue'),
+      },
+      {
+        path: 'comic-detail/:sourceId/:comicId',
+        name: 'ComicDetail',
+        component: () => import('@/views2/comic/ComicDetail.vue'),
+        props: true,
+      },
+      {
+        path: 'comic-read/:sourceId/:comicId/:chapterId',
+        name: 'ComicRead',
+        component: () => import('@/views2/comic/ComicRead.vue'),
+        props: true,
+      },
+      {
+        path: 'video',
+        name: 'Video',
+        component: () => import('@/views2/video/index.vue'),
+      },
+      {
+        path: 'video-shelf',
+        name: 'VideoShelf',
+        component: () => import('@/views2/video/VideoShelf.vue'),
+      },
+      {
+        path: 'video-detail/:sourceId/:videoId',
+        name: 'VideoDetail',
+        component: () => import('@/views2/video/VideoDetail.vue'),
+        props: true,
+      },
+    ],
   },
   {
-    path: '/home',
-    name: 'Home',
-    // component: Home,
-    component: () => import('@/views/home/index.vue'),
+    path: '/source-manage',
+    name: 'SourceManage',
+    component: () => import('@/views2/source/ManageSource.vue'),
   },
   {
-    path: '/photo',
-    name: 'Photo',
-    // component: Photo,
-    component: () => import('@/views/photo/index.vue'),
+    path: '/source-create',
+    name: 'SourceCreate',
+    component: () => import('@/views2/source/CreateSource.vue'),
   },
   {
-    path: '/photo/detail/:sourceId/:id',
-    name: 'PhotoDetail',
-    // component: PhotoDetail,
-    component: () => import('@/views/photo/PhotoDetail.vue'),
-    props: true,
+    path: '/setting',
+    name: 'Setting',
+    component: () => import('@/views2/setting/index.vue'),
   },
   {
-    path: '/song',
-    name: 'Song',
-    // component: Song,
-    component: () => import('@/views/song/index.vue'),
+    path: '/about',
+    name: 'About',
+    component: () => import('@/views2/about/index.vue'),
   },
   {
-    path: '/song/playlist/:sourceId/:playlistId',
-    name: 'SongPlaylist',
-    // component: PlaylistDetail,
-    component: () => import('@/views/song/PlaylistDetail.vue'),
-    props: true,
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views2/auth/Login.vue'),
   },
   {
-    path: '/book',
-    name: 'Book',
-    // component: Book,
-    component: () => import('@/views/book/index.vue'),
-    children: [],
-  },
-  {
-    path: '/book/detail/:sourceId/:bookId',
-    name: 'BookDetail',
-    // component: BookDetail,
-    component: () => import('@/views/book/BookDetail.vue'),
-    props: true,
-  },
-  {
-    path: '/book/read/:sourceId/:bookId/:chapterId/:isPrev?',
-    name: 'BookRead',
-    // component: BookRead,
-    component: () => import('@/views/book/BookRead.vue'),
-    props: true,
-  },
-  {
-    path: '/comic',
-    name: 'Comic',
-    // component: Comic,
-    component: () => import('@/views/comic/index.vue'),
-    children: [],
-  },
-  {
-    path: '/comic/detail/:sourceId/:comicId',
-    name: 'ComicDetail',
-    // component: ComicDetail,
-    component: () => import('@/views/comic/ComicDetail.vue'),
-    props: true,
-  },
-  {
-    path: '/comic/read/:sourceId/:comicId/:chapterId',
-    name: 'ComicRead',
-    // component: ComicRead,
-    component: () => import('@/views/comic/ComicRead.vue'),
-    props: true,
-  },
-  {
-    path: '/video',
-    name: 'Video',
-    // component: Video,
-    component: () => import('@/views/video/index.vue'),
-    children: [],
-  },
-  {
-    path: '/video/detail/:sourceId/:videoId',
-    name: 'VideoDetail',
-    // component: VideoDetail,
-    component: () => import('@/views/video/VideoDetail.vue'),
-    props: true,
+    path: '/user',
+    name: 'User',
+    component: () => import('@/views2/auth/User.vue'),
   },
 ];
 
@@ -115,7 +154,26 @@ export const router = createRouter({
   routes,
 });
 router.beforeEach((to, from, next) => {
-  (to as any).prevPathName = from.name;
-  console.log(from.fullPath, ' => ', to.fullPath);
-  next();
+  console.log(to);
+  console.log(to.matched);
+
+  if (!to.matched.length) {
+    if (to.path.startsWith('/song')) {
+      next({ name: 'Song' });
+    } else if (to.path.startsWith('/photo')) {
+      next({ name: 'Photo' });
+    } else if (to.path.startsWith('/video')) {
+      next({ name: 'Video' });
+    } else if (to.path.startsWith('/book')) {
+      next({ name: 'Book' });
+    } else if (to.path.startsWith('/comic')) {
+      next({ name: 'Comic' });
+    } else {
+      next('/');
+    }
+  } else {
+    (to as any).prevPathName = from.name;
+    console.log(from.fullPath, ' => ', to.fullPath);
+    next();
+  }
 });

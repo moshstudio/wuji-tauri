@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    // 子项目特定的配置，会覆盖主项目的配置
+    "outDir": "./dist",
+    "types": ["vite/client"],
+    "baseUrl": "./",
+    "paths": {
+      "@c/*": ["src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue"],
+  "exclude": ["node_modules"]
+}

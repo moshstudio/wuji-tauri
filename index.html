@@ -2,186 +2,70 @@
 <html lang="zh">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/wuji.svg" />
+    <link rel="icon" type="image/svg+xml" href="/icon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>无极</title>
     <style>
-      :root {
-        --primary-color: #4facfe;
-        --secondary-color: #00f2fe;
-        --bg-gradient-start: #f8f9fa;
-        --bg-gradient-end: #e9ecef;
-        --text-color: #212529;
-        --particle-color: rgba(79, 172, 254, 0.6);
-        --shadow-color: rgba(79, 172, 254, 0.7);
-      }
-
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --primary-color: #4facfe;
-          --secondary-color: #00f2fe;
-          --bg-gradient-start: #1a1a2e;
-          --bg-gradient-end: #16213e;
-          --text-color: #f8f9fa;
-          --particle-color: rgba(100, 200, 255, 0.6);
-          --shadow-color: rgba(100, 200, 255, 0.7);
-        }
-      }
-
       body {
         margin: 0;
         padding: 0;
-        height: 100vh;
         overflow: hidden;
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+          Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
       }
 
-      /* Splash Screen Styles */
       #splash {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
+        background-color: #2f90ff;
         display: flex;
-        flex-direction: column;
         justify-content: center;
         align-items: center;
-        background: linear-gradient(
-          135deg,
-          var(--bg-gradient-start),
-          var(--bg-gradient-end)
-        );
-        z-index: 2000;
-        transition: opacity 0.3s ease-out;
+        z-index: 9999;
+        transition:
+          opacity 0.5s ease-out,
+          transform 0.5s ease-out;
       }
 
-      .infinity-wrapper {
-        position: relative;
-        width: 500px;
-        height: 200px;
-        filter: drop-shadow(0 0 15px var(--shadow-color));
+      .splash-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
       }
 
-      .infinity-svg {
-        width: 100%;
-        height: 100%;
+      .splash-logo {
+        width: 120px;
+        height: 120px;
+        object-fit: contain;
+        animation: pulse 2s infinite;
       }
 
-      .infinity-path {
-        fill: none;
-        stroke: url(#gradient);
-        stroke-width: 4;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        stroke-dasharray: 650;
-        stroke-dashoffset: 650;
-        animation: draw 1.2s ease-in-out infinite;
-      }
-
-      @keyframes draw {
-        0% {
-          stroke-dashoffset: 650;
-          opacity: 0;
-        }
-        10% {
-          opacity: 1;
-        }
-        90% {
-          stroke-dashoffset: 0;
-          opacity: 1;
-        }
-        100% {
-          stroke-dashoffset: 650;
-          opacity: 0;
-        }
-      }
-
-      .title {
-        margin-top: 40px;
-        margin-bottom: 0;
-        color: var(--text-color);
-        font-size: 32px;
-        font-weight: 300;
-        font-family: Microsoft YaHei;
-        letter-spacing: 4px;
-        text-transform: uppercase;
+      .splash-text {
+        color: white;
+        font-size: 24px;
+        margin-top: 20px;
+        font-weight: 500;
         opacity: 0.9;
-        text-shadow: 0 0 12px var(--shadow-color);
-        animation: textFade 1.5s ease-in-out infinite;
       }
 
-      @keyframes textFade {
-        0%,
-        100% {
-          opacity: 0.6;
-          transform: translateY(0);
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+          opacity: 1;
         }
         50% {
+          transform: scale(1.05);
+          opacity: 0.9;
+        }
+        100% {
+          transform: scale(1);
           opacity: 1;
-          transform: translateY(0);
         }
-      }
-
-      .particle {
-        position: absolute;
-        background: var(--particle-color);
-        border-radius: 50%;
-        filter: blur(1px);
-        animation: float linear infinite;
-      }
-
-      @keyframes float {
-        to {
-          transform: translateY(-100px) rotate(360deg);
-          opacity: 0;
-        }
-      }
-
-      .loading-text {
-        height: 40px;
-        margin-top: 20px;
-        margin-bottom: 0;
-        color: var(--text-color);
-        font-size: 14px;
-        font-family: Microsoft YaHei;
-        opacity: 0.7;
-        animation: fadeIn 1s ease-out;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-        }
-        to {
-          opacity: 0.7;
-        }
-      }
-
-      .progress-container {
-        width: 200px;
-        height: 4px;
-        background-color: rgba(0, 0, 0, 0.1);
-        border-radius: 2px;
-        margin-top: 30px;
-        overflow: hidden;
-      }
-
-      @media (prefers-color-scheme: dark) {
-        .progress-container {
-          background-color: rgba(255, 255, 255, 0.1);
-        }
-      }
-
-      .progress-bar {
-        height: 100%;
-        width: 0;
-        background: linear-gradient(
-          90deg,
-          var(--primary-color),
-          var(--secondary-color)
-        );
-        border-radius: 2px;
-        transition: width 0.2s ease;
       }
     </style>
   </head>
@@ -189,107 +73,33 @@
   <body>
     <!-- Splash Screen -->
     <div id="splash">
-      <!-- 背景粒子 -->
-      <div id="particles"></div>
-
-      <div class="infinity-wrapper">
-        <svg
-          class="infinity-svg"
-          viewBox="0 0 400 200"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <defs>
-            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="var(--primary-color)" />
-              <stop offset="50%" stop-color="var(--secondary-color)" />
-              <stop offset="100%" stop-color="var(--primary-color)" />
-            </linearGradient>
-          </defs>
-          <!-- 水平无穷符号路径，从顶部开始绘制 -->
-          <path
-            class="infinity-path"
-            d="M200,100
-                    c-30,0 -30,-50 0,-50
-                    s30,50 0,50
-                    s-30,50 0,50
-                    s30,-50 0,-50"
-            transform="rotate(90,200,100)"
-          />
-        </svg>
-      </div>
-      <h1 class="title">无极</h1>
-      <div class="loading-text">加载中，请稍候...</div>
-      <div class="progress-container">
-        <div class="progress-bar" id="progress-bar"></div>
+      <div class="splash-content">
+        <img src="/wuji.png" alt="无极" class="splash-logo" />
+        <div class="splash-text">无极</div>
       </div>
     </div>
 
     <div id="app"></div>
 
-    <script type="module" src="/src/main.ts"></script>
     <script>
-      function createParticles() {
-        const particlesContainer = document.getElementById('particles');
-        const particleCount = 50;
-
-        for (let i = 0; i < particleCount; i++) {
-          const particle = document.createElement('div');
-          particle.classList.add('particle');
-
-          const size = Math.random() * 8 + 2;
-          const posX = Math.random() * 100;
-          const posY = Math.random() * 100 + 50; // 主要在下半部分
-          const duration = Math.random() * 15 + 5;
-          const delay = Math.random() * 5;
-
-          particle.style.width = `${size}px`;
-          particle.style.height = `${size}px`;
-          particle.style.left = `${posX}%`;
-          particle.style.top = `${posY}%`;
-          particle.style.animationDuration = `${duration}s`;
-          particle.style.animationDelay = `${delay}s`;
-
-          particlesContainer.appendChild(particle);
-        }
-      }
-
-      // 进度条加载
-      function simulateProgress() {
-        const progressBar = document.getElementById('progress-bar');
-        let progress = 0;
-        const interval = setInterval(() => {
-          progress += Math.random() * 10;
-          if (progress > 90) {
-            clearInterval(interval);
-          }
-          progressBar.style.width = `${Math.min(progress, 90)}%`;
-        }, 200);
-      }
-
-      // Hide splash screen
       function transitionToEnd() {
-        const progressBar = document.getElementById('progress-bar');
-        progressBar.style.width = '100%';
+        const splash = document.getElementById('splash');
+        splash.style.opacity = '0';
+        splash.style.transform = 'scale(1.2)';
 
-        setTimeout(() => {
-          const splash = document.getElementById('splash');
-          splash.style.opacity = '0';
-          setTimeout(() => {
-            splash.style.display = 'none';
-          }, 150);
-        }, 150);
+        // 动画结束后移除元素
+        splash.addEventListener('transitionend', () => {
+          splash.style.display = 'none';
+        });
       }
 
       // 初始化
       function init() {
-        // createParticles();
-        simulateProgress();
-
         // 记录加载开始时间
         const loadStartTime = Date.now();
 
         document.addEventListener('DOMContentLoaded', () => {
-          const MIN_DISPLAY_TIME = 600; // 最少显示0.6秒
+          const MIN_DISPLAY_TIME = 0; // 最少显示0.5秒
 
           // 监听app加载完成
           function checkAppLoaded() {
@@ -324,5 +134,6 @@
 
       init();
     </script>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

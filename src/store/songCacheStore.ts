@@ -1,12 +1,12 @@
-import type { ArtistInfo, SongInfo } from '@/extensions/song';
+import type { ArtistInfo, SongInfo } from '@wuji-tauri/source-extension';
 
-import type { ClientOptions } from '@/utils/fetch';
+import type { ClientOptions } from '@wuji-tauri/fetch';
 
 import { sanitizePathName } from '@/utils';
-import { fetch } from '@/utils/fetch';
+import { fetch, fetchAndSave } from '@wuji-tauri/fetch';
 import _ from 'lodash';
 import { defineStore } from 'pinia';
-import * as fsApi from 'tauri-plugin-fs-api';
+import * as fsApi from '@tauri-apps/plugin-fs';
 import { ref, watch } from 'vue';
 import { useDisplayStore } from './displayStore';
 
@@ -234,7 +234,7 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
         baseDir,
         path: `${dirName}/${cache_song_id}`,
       };
-      const ret = await fsApi.fetchAndSave(url, option);
+      const ret = await fetchAndSave(url, option);
       if (!ret) {
         throw new Error('fetchAndSave 失败');
       }

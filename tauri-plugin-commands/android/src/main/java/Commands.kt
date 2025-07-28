@@ -1,9 +1,6 @@
 package tauri.plugin.commands
 
-import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.ActivityManager
-import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -11,25 +8,54 @@ import android.content.res.Configuration
 import android.graphics.Color
 import android.media.AudioManager
 import android.os.Build
+import android.os.Environment
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
-import androidx.annotation.RequiresApi
 import androidx.core.view.WindowCompat
+import java.io.File
 import kotlin.math.roundToInt
-import kotlin.system.exitProcess
+
+enum class BaseDirectory(val value: Int) {
+    AUDIO(1),
+    CACHE(2),
+    CONFIG(3),
+    DATA(4),
+    LOCAL_DATA(5),
+    DOCUMENT(6),
+    DOWNLOAD(7),
+    PICTURE(8),
+    PUBLIC(9),
+    VIDEO(10),
+    RESOURCE(11),
+    TEMP(12),
+    APP_CONFIG(13),
+    APP_DATA(14),
+    APP_LOCAL_DATA(15),
+    APP_CACHE(16),
+    APP_LOG(17),
+    DESKTOP(18),
+    EXECUTABLE(19),
+    FONT(20),
+    HOME(21),
+    RUNTIME(22),
+    TEMPLATE(23)
+}
 
 class Commands(private val activity: Activity) {
     fun exitApp() {
         activity.finishAffinity()
         android.os.Process.killProcess(android.os.Process.myPid())
-//        // 关闭所有 Activity
-//        activity.finishAffinity()
-//        // 终止进程
-//        System.exit(0)
+        //        // 关闭所有 Activity
+        //        activity.finishAffinity()
+        //        // 终止进程
+        //        System.exit(0)
     }
 
     fun returnToHome() {
@@ -77,7 +103,6 @@ class Commands(private val activity: Activity) {
             else -> {
                 return "unknown"
             }
-
         }
     }
 
@@ -123,14 +148,13 @@ class Commands(private val activity: Activity) {
             }
         } else {
             @Suppress("DEPRECATION")
-            activity.window?.decorView?.systemUiVisibility = (
-                    View.SYSTEM_UI_FLAG_FULLSCREEN
-                            or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                            or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                            or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                            or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                            or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    )
+            activity.window?.decorView?.systemUiVisibility =
+                (View.SYSTEM_UI_FLAG_FULLSCREEN or
+                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                        View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
         }
         return true
     }
@@ -149,18 +173,17 @@ class Commands(private val activity: Activity) {
         }
         return true
     }
+
     fun getBrightness(): Float {
         val layoutParams = activity.window.attributes
         return layoutParams.screenBrightness
     }
+
     fun getSystemBrightness(): Int {
         return try {
-            Settings.System.getInt(
-                activity.contentResolver,
-                Settings.System.SCREEN_BRIGHTNESS
-            )
+            Settings.System.getInt(activity.contentResolver, Settings.System.SCREEN_BRIGHTNESS)
         } catch (e: Settings.SettingNotFoundException) {
-            -1  // 返回-1表示获取失败
+            -1 // 返回-1表示获取失败
         }
     }
 
@@ -198,11 +221,7 @@ class Commands(private val activity: Activity) {
         // 计算实际音量值（四舍五入）
         val targetVolume = (volume * maxVolume / 100f).roundToInt()
         return try {
-            audioManager.setStreamVolume(
-                AudioManager.STREAM_MUSIC,
-                targetVolume,
-                0
-            )
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVolume, 0)
             true
         } catch (e: SecurityException) {
             false // 无权限
@@ -210,12 +229,154 @@ class Commands(private val activity: Activity) {
     }
 
     fun getAndroidId(): String {
-        val androidId = Settings.Secure.getString(
-            activity.contentResolver,
-            Settings.Secure.ANDROID_ID
-        )
+        val androidId =
+            Settings.Secure.getString(activity.contentResolver, Settings.Secure.ANDROID_ID)
         val buildInfo = "${Build.BRAND}-${Build.MODEL}-${Build.MANUFACTURER}-${Build.HARDWARE}"
         return "$androidId-${buildInfo}"
     }
+
+    fun getDirectoryPath(
+        directoryType: BaseDirectory,
+        subPath: String = ""
+    ): File? {
+        return when (directoryType) {
+            BaseDirectory.AUDIO ->
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
+
+            BaseDirectory.CACHE -> activity.cacheDir
+            BaseDirectory.CONFIG -> File(activity.filesDir, "config")
+            BaseDirectory.DATA -> activity.filesDir
+            BaseDirectory.LOCAL_DATA -> activity.filesDir
+            BaseDirectory.DOCUMENT ->
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+
+            BaseDirectory.DOWNLOAD ->
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+
+            BaseDirectory.PICTURE ->
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+
+            BaseDirectory.PUBLIC ->
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+
+            BaseDirectory.VIDEO ->
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
+
+            BaseDirectory.RESOURCE -> activity.filesDir
+            BaseDirectory.TEMP -> activity.cacheDir
+            BaseDirectory.APP_CONFIG -> File(activity.filesDir, "config")
+            BaseDirectory.APP_DATA -> activity.getExternalFilesDir(null) ?: activity.filesDir
+            BaseDirectory.APP_LOCAL_DATA -> activity.filesDir
+            BaseDirectory.APP_CACHE -> activity.externalCacheDir ?: activity.cacheDir
+            BaseDirectory.APP_LOG -> File(activity.filesDir, "logs")
+            BaseDirectory.DESKTOP ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    Environment.getExternalStoragePublicDirectory(
+                        Environment.DIRECTORY_DOCUMENTS
+                    )
+                } else {
+                    Environment.getExternalStorageDirectory()?.let { File(it, "Desktop") }
+                }
+
+            BaseDirectory.EXECUTABLE -> activity.filesDir
+            BaseDirectory.FONT ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    File(activity.filesDir, "fonts")
+                } else {
+                    Environment.getExternalStorageDirectory()?.let { File(it, "Fonts") }
+                }
+
+            BaseDirectory.HOME -> activity.filesDir
+            BaseDirectory.RUNTIME -> activity.filesDir
+            BaseDirectory.TEMPLATE -> activity.filesDir
+        }?.let { baseDir ->
+            if (subPath.isNotEmpty()) {
+                File(baseDir, subPath).also { it.mkdirs() }
+            } else {
+                baseDir
+            }
+        }
+    }
+
+    fun saveToDirectory(
+        directoryType: BaseDirectory,
+        fileName: String,
+        content: ByteArray,
+        subPath: String = ""
+    ): File? {
+        val file =
+            getDirectoryPath(directoryType, subPath)?.let { dir ->
+                File(dir, fileName).apply {
+                    parentFile?.mkdirs()
+                    writeBytes(content)
+                }
+            }
+        return file
+    }
+
+    fun vibrate(duration: Long = 100L, amplitude: Int = VibrationEffect.DEFAULT_AMPLITUDE) {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = activity.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            activity.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(duration)
+        }
+    }
+
+    fun vibratePattern(pattern: LongArray, repeat: Int = -1, amplitudes: IntArray? = null) {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = activity.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            activity.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val effect = if (amplitudes != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                VibrationEffect.createWaveform(pattern, amplitudes, repeat)
+            } else {
+                VibrationEffect.createWaveform(pattern, repeat)
+            }
+            vibrator.vibrate(effect)
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(pattern, repeat)
+        }
+    }
+
+    fun vibratePredefined(effectId: Int) {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = activity.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            activity.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val effect = when (effectId) {
+                0 -> VibrationEffect.EFFECT_CLICK
+                1 -> VibrationEffect.EFFECT_DOUBLE_CLICK
+                2 -> VibrationEffect.EFFECT_HEAVY_CLICK
+                3 -> VibrationEffect.EFFECT_TICK
+                else -> VibrationEffect.EFFECT_CLICK
+            }
+            vibrator.vibrate(VibrationEffect.createPredefined(effect))
+        } else {
+            // 对于旧版本，使用默认震动
+            vibrator.vibrate(100L)
+        }
+    }
+
+
 
 }

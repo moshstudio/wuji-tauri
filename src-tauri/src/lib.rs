@@ -14,6 +14,7 @@ fn greet(name: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
@@ -35,7 +36,6 @@ pub fn run() {
             handle.plugin(proxy_plugin::init())?;
             Ok(())
         })
-        .plugin(tauri_plugin_fs2::init())
         .plugin(tauri_plugin_commands::init())
         .plugin(tauri_plugin_mediasession::init())
         .plugin(tauri_plugin_store::Builder::new().build())

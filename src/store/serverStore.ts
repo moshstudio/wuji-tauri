@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia';
 import { useStorageAsync } from '@vueuse/core';
-import { ClientOptions, fetch } from '@/utils/fetch';
+import { ClientOptions, fetch } from '@wuji-tauri/fetch';
 import validator from 'validator';
-import { showDialog, showLoadingToast, showNotify, showToast } from 'vant';
+import { showDialog, showFailToast, showLoadingToast, showNotify } from 'vant';
 import * as os from '@tauri-apps/plugin-os';
 import { getDeviceId } from '@/utils/device';
 import { onMounted } from 'vue';
@@ -82,10 +82,18 @@ export const useServerStore = defineStore('serverStore', () => {
       });
     } else {
       response.text().then(async (data) => {
+        if (data.trim() === '') {
+          showDialog({
+            title: '连接服务器失败',
+            message: '连接服务器失败，请稍后再试。',
+            showCancelButton: false,
+          });
+          return;
+        }
         try {
           const json = JSON.parse(data);
           showDialog({
-            title: '错误',
+            title: '服务器错误',
             message: String(json.message),
             showCancelButton: false,
           });
@@ -136,18 +144,18 @@ export const useServerStore = defineStore('serverStore', () => {
     passwordConfirm: string,
   ): Promise<boolean> => {
     if (!validator.isEmail(email)) {
-      showNotify('邮箱格式错误');
+      showFailToast('邮箱格式错误');
       return false;
     }
     if (
       !validator.matches(password, /(?=.*\d)(?=.*[a-z])(?=.*[A-Z])/) ||
       password.length < 6
     ) {
-      showNotify('密码必须包含大小写字母和数字, 且长度不小于6位');
+      showFailToast('密码必须包含大小写字母和数字, 且长度不小于6位');
       return false;
     }
     if (password !== passwordConfirm) {
-      showNotify('两次输入的密码不一致');
+      showFailToast('两次输入的密码不一致');
       return false;
     }
     const response = await request('auth/register', {
@@ -170,14 +178,14 @@ export const useServerStore = defineStore('serverStore', () => {
   // 登录
   const login = async (email: string, password: string): Promise<boolean> => {
     if (!validator.isEmail(email)) {
-      showNotify('邮箱格式错误');
+      showFailToast('邮箱格式错误');
       return false;
     }
     if (
       !validator.matches(password, /(?=.*\d)(?=.*[a-z])(?=.*[A-Z])/) ||
       password.length < 6
     ) {
-      showNotify('密码必须包含大小写字母和数字, 且长度不小于6位');
+      showFailToast('密码必须包含大小写字母和数字, 且长度不小于6位');
       return false;
     }
 
@@ -198,13 +206,13 @@ export const useServerStore = defineStore('serverStore', () => {
       await fetchUserInfo();
       return true;
     } catch (error) {
-      showNotify('网络错误');
+      showFailToast('网络错误');
       return false;
     }
   };
   const forgetPasswordEmail = async (email: string): Promise<boolean> => {
     if (!validator.isEmail(email)) {
-      showNotify('邮箱格式错误');
+      showFailToast('邮箱格式错误');
       return false;
     }
     const toast = showLoadingToast({
@@ -230,7 +238,7 @@ export const useServerStore = defineStore('serverStore', () => {
 
   const resendVerifyEmail = async (email: string): Promise<boolean> => {
     if (!validator.isEmail(email)) {
-      showNotify('邮箱格式错误');
+      showFailToast('邮箱格式错误');
       return false;
     }
     const response = await request('auth/resend-verification', {
@@ -263,7 +271,7 @@ export const useServerStore = defineStore('serverStore', () => {
         handleError(response);
       }
     } catch (error) {
-      showNotify('获取用户信息失败');
+      showFailToast('获取用户信息失败');
     }
   };
 

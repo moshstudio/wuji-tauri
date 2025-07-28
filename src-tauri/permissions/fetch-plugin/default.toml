@@ -4,9 +4,10 @@ permissions = [
   "allow-fetch",
   "allow-fetch-send",
   "allow-fetch-cancel",
-  "allow-fetch-read-body"
+  "allow-fetch-read-body",
+  "allow-fetch-and-save",
 ]
 
 [allow]
-http = [ 'http://*' ]
-https = [ 'https://*' ]
+http = ['http://*']
+https = ['https://*']

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-use std::{future::Future, pin::Pin, str::FromStr, sync::Arc, time::Duration};
+use std::{future::Future, path::PathBuf, pin::Pin, str::FromStr, sync::Arc, time::Duration};
 
 use http::{header, HeaderMap, HeaderName, HeaderValue, Method, StatusCode};
 use rand::{seq::SliceRandom, thread_rng};
@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{
     async_runtime::Mutex,
     ipc::{Channel, CommandScope, GlobalScope},
+    path::BaseDirectory,
     Manager, ResourceId, ResourceTable, Runtime, State, Webview,
 };
 use tokio::sync::oneshot::{channel, Receiver, Sender};
@@ -109,6 +110,22 @@ pub struct ClientConfig {
     proxy: Option<Proxy>,
     verify: Option<bool>,
     no_proxy: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientConfigWithSave {
+    method: String,
+    url: url::Url,
+    headers: Vec<(String, String)>,
+    data: Option<Vec<u8>>,
+    connect_timeout: Option<u64>,
+    max_redirections: Option<usize>,
+    proxy: Option<Proxy>,
+    verify: Option<bool>,
+    no_proxy: Option<bool>,
+    base_dir: Option<BaseDirectory>,
+    path: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -493,4 +510,60 @@ fn _is_unsafe_header(header: &HeaderName) -> bool {
         let lower = header.as_str().to_lowercase();
         lower.starts_with("proxy-") || lower.starts_with("sec-")
     }
+}
+
+#[tauri::command]
+pub async fn fetch_and_save<R: Runtime>(
+    webview: Webview<R>,
+    _state: State<'_, Http>,
+    client_config_with_save: ClientConfigWithSave,
+    _command_scope: CommandScope<Entry>,
+    _global_scope: GlobalScope<Entry>,
+) -> crate::fetch_plugin::Result<bool> {
+    // Create client config and build request
+    let client_config = ClientConfig {
+        method: client_config_with_save.method,
+        url: client_config_with_save.url,
+        headers: client_config_with_save.headers,
+        data: client_config_with_save.data,
+        connect_timeout: client_config_with_save.connect_timeout,
+        max_redirections: client_config_with_save.max_redirections,
+        proxy: client_config_with_save.proxy,
+        verify: client_config_with_save.verify,
+        no_proxy: client_config_with_save.no_proxy,
+    };
+
+    let builder = reqwest::ClientBuilder::new();
+    let request = build_request(builder, client_config)?;
+    let response = request.send().await?;
+
+    if !response.status().is_success() {
+        return Ok(false);
+    }
+
+    let bytes = response.bytes().await?;
+
+    // Resolve path
+    let full_path = if let Some(base_dir) = client_config_with_save.base_dir {
+        webview
+            .path()
+            .resolve(&client_config_with_save.path, base_dir)?
+    } else {
+        // Security check for direct paths
+        let path = PathBuf::from(&client_config_with_save.path);
+        if path.is_absolute() {
+            return Err(Error::PathError);
+        }
+        path
+    };
+
+    // Create parent directories if needed (async)
+    if let Some(parent) = full_path.parent() {
+        tokio::fs::create_dir_all(parent).await?;
+    }
+
+    // Write file asynchronously
+    tokio::fs::write(&full_path, &bytes).await?;
+
+    Ok(true)
 }

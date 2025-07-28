@@ -10,95 +10,176 @@ export async function return_to_home(): Promise<void> {
 
 export async function set_status_bar(
   bg: string,
-  text?: 'dark' | 'light'
+  text?: 'dark' | 'light',
 ): Promise<boolean | null> {
-  return await invoke<{ res?: string }>('plugin:commands|set_status_bar', {
+  const r = await invoke<{ res?: string }>('plugin:commands|set_status_bar', {
     payload: {
       bg: bg,
       text: text,
     },
-  }).then((r) => (r.res === 'true' ? true : false));
+  });
+  return r.res === 'true' ? true : false;
 }
 
 export async function hide_status_bar(
-  hide: boolean = true
+  hide: boolean = true,
 ): Promise<boolean | null> {
-  return await invoke<{ res?: string }>('plugin:commands|hide_status_bar', {
+  const r = await invoke<{ res?: string }>('plugin:commands|hide_status_bar', {
     payload: { hide: hide },
-  }).then((r) => (r.res === 'true' ? true : false));
+  });
+  return r.res === 'true' ? true : false;
 }
 
 export async function get_system_font_scale(): Promise<number> {
-  return await invoke<{ value?: number }>(
+  const r = await invoke<{ value?: number }>(
     'plugin:commands|get_system_font_scale',
     {
       payload: {},
-    }
-  ).then((r) => Number(r.value));
+    },
+  );
+  return Number(r.value);
 }
 
 export async function get_screen_orientation(): Promise<
   'landscape' | 'portrait' | 'auto'
 > {
-  return await invoke<{ value?: 'landscape' | 'portrait' | 'auto' }>(
+  const r = await invoke<{ value?: 'landscape' | 'portrait' | 'auto' }>(
     'plugin:commands|get_screen_orientation',
     {
       payload: {},
-    }
-  ).then((r) => r.value || 'auto'); // 如果r.value为undefined，返回默认值'auto'
+    },
+  ); // 如果r.value为undefined，返回默认值'auto'
+  return r.value || 'auto';
 }
 export async function set_screen_orientation(
-  orientation: 'landscape' | 'portrait' | 'auto'
+  orientation: 'landscape' | 'portrait' | 'auto',
 ): Promise<boolean | null> {
-  return await invoke<{ res?: string }>(
+  const r = await invoke<{ res?: string }>(
     'plugin:commands|set_screen_orientation',
     {
       payload: {
         orientation: orientation,
       },
-    }
-  ).then((r) => (r.res === 'true' ? true : false));
+    },
+  );
+  return r.res === 'true' ? true : false;
 }
 
 export async function get_brightness(): Promise<number> {
-  return await invoke<{ value?: number }>('plugin:commands|get_brightness', {
+  const r = await invoke<{ value?: number }>('plugin:commands|get_brightness', {
     payload: {},
-  }).then((r) => Number(r.value));
+  });
+  return Number(r.value);
 }
 
 export async function get_system_brightness(): Promise<number> {
-  return await invoke<{ value?: number }>(
+  const r = await invoke<{ value?: number }>(
     'plugin:commands|get_system_brightness',
     {
       payload: {},
-    }
-  ).then((r) => Number(r.value));
+    },
+  );
+  return Number(r.value);
 }
 
 export async function set_brightness(value: number): Promise<Boolean | null> {
-  return await invoke<{ value?: boolean }>('plugin:commands|set_brightness', {
-    payload: {
-      brightness: value,
+  const r = await invoke<{ value?: boolean }>(
+    'plugin:commands|set_brightness',
+    {
+      payload: {
+        brightness: value,
+      },
     },
-  }).then((r) => (r.value ? r.value : null));
+  );
+  return r.value ? r.value : null;
 }
 
 export async function get_volume(): Promise<number> {
-  return await invoke<{ value?: number }>('plugin:commands|get_volume', {
+  const r = await invoke<{ value?: number }>('plugin:commands|get_volume', {
     payload: {},
-  }).then((r) => Number(r.value));
+  });
+  return Number(r.value);
 }
 
 export async function set_volume(value: number): Promise<Boolean | null> {
-  return await invoke<{ value?: boolean }>('plugin:commands|set_volume', {
+  const r = await invoke<{ value?: boolean }>('plugin:commands|set_volume', {
     payload: {
       volume: value,
     },
-  }).then((r) => (r.value ? r.value : null));
+  });
+  return r.value ? r.value : null;
 }
 
 export async function get_device_id(): Promise<string> {
-  return await invoke<{ value?: String }>('plugin:commands|get_device_id', {
+  const r = await invoke<{ value?: String }>('plugin:commands|get_device_id', {
     payload: {},
-  }).then((r) => String(r.value));
+  });
+  return String(r.value);
+}
+
+export async function save_file(
+  directoryType: number,
+  fileName: string,
+  content: Uint8Array,
+  subPath?: String,
+): Promise<Boolean> {
+  const r = await invoke<{ value?: Boolean }>('plugin:commands|save_file', {
+    payload: {
+      directoryType,
+      fileName,
+      content,
+      subPath,
+    },
+  });
+  return r.value ? Boolean(r.value) : false;
+}
+
+export async function vibrate(
+  duration?: number,
+  amplitude?: number,
+): Promise<Boolean> {
+  const r = await invoke<{ value?: Boolean }>('plugin:commands|vibrate', {
+    payload: {
+      duration,
+      amplitude,
+    },
+  });
+  return r.value ? Boolean(r.value) : false;
+}
+
+export async function vibrate_pattern(
+  pattern: number[],
+  repeat?: number,
+  amplitudes?: number[],
+): Promise<Boolean> {
+  const r = await invoke<{ value?: Boolean }>(
+    'plugin:commands|vibrate_pattern',
+    {
+      payload: {
+        pattern,
+        repeat,
+        amplitudes,
+      },
+    },
+  );
+  return r.value ? Boolean(r.value) : false;
+}
+
+export async function vibrate_predefined(effectId?: number): Promise<Boolean> {
+  /**
+   * 0 -> VibrationEffect.EFFECT_CLICK
+    1 -> VibrationEffect.EFFECT_DOUBLE_CLICK
+    2 -> VibrationEffect.EFFECT_HEAVY_CLICK
+    3 -> VibrationEffect.EFFECT_TICK
+    else -> VibrationEffect.EFFECT_CLICK
+   */
+  const r = await invoke<{ value?: Boolean }>(
+    'plugin:commands|vibrate_predefined',
+    {
+      payload: {
+        effectId,
+      },
+    },
+  );
+  return r.value ? Boolean(r.value) : false;
 }

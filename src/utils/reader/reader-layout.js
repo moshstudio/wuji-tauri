@@ -34,6 +34,7 @@ let options = {
   fontFamily: 'alipuhui', // 字体
   fontSize: 0, // 字号大小-章节内容-必传
   lineHeight: 1.4, // 行高-章节内容
+  pIndent: 0, // 段落首行缩进
   pGap: 0, // 段落首行和上一段落间距
 
   title: '', // 章节标题
@@ -97,19 +98,19 @@ function Reader(content, option) {
   const { type, width, height, fontFamily, fontSize, title, titleSize } =
     option;
   if (!content) {
-    return emptyLine('无内容')
+    return emptyLine('无内容');
   }
   if (!width || Number(width) <= 0) {
-    return emptyLine('请传入容器宽度，值需要大于 0')
+    return emptyLine('请传入容器宽度，值需要大于 0');
   }
   if (type === 'page' && (!height || Number(height) <= 0)) {
-    return emptyLine('请传入容器高度，值需要大于 0')
+    return emptyLine('请传入容器高度，值需要大于 0');
   }
   if (!fontSize || Number(fontSize) <= 0) {
-    return emptyLine('请传入章节内容字号大小，值需要大于 0')
+    return emptyLine('请传入章节内容字号大小，值需要大于 0');
   }
   if (title && (!titleSize || Number(titleSize) <= 0)) {
-    return emptyLine('请传入章节标题字号大小，值需要大于 0')
+    return emptyLine('请传入章节标题字号大小，值需要大于 0');
   }
   options = { ...options, ...option };
 
@@ -148,7 +149,7 @@ function Reader(content, option) {
  * @return {Array} [] 行数组
  */
 function splitContent2lines(content) {
-  const { splitCode, width, fontSize, title } = options;
+  const { splitCode, width, fontSize, title, pIndent } = options;
 
   // 把文本拆成段落数组
   let hasTitle = false;
@@ -184,12 +185,12 @@ function splitContent2lines(content) {
     const maxText = getText({ fontSize }, char, true);
     cacheData.maxText = maxText.length;
   }
-  // console.log(333, '一行放多少个汉字2', cacheData.maxText)
+  // console.log(333, '一行放多少个汉字2', cacheData.maxText);
 
   // 把段落拆成行
   let result = [];
   pList.forEach((pText, index) => {
-    result = result.concat(p2line(pText, index, cacheData.maxText));
+    result = result.concat(p2line(pText, index, cacheData.maxText, pIndent));
   });
 
   return result;
@@ -202,7 +203,7 @@ function splitContent2lines(content) {
  * @param {number} maxLen 每行可放的最大字数
  * @return {Array} [] 行数组
  */
-function p2line(pText, index, maxLen) {
+function p2line(pText, index, maxLen, pIndent) {
   const { fast, fontSize, title, titleSize, titleWeight } = options;
   const isTitle = pText === title;
   let p = pText;
@@ -212,7 +213,7 @@ function p2line(pText, index, maxLen) {
   while (p) {
     tag += 1;
     const pFirst = !isTitle && tag === 1; // 是否段落行首
-    const sliceLen = pFirst ? maxLen - 2 : maxLen;
+    const sliceLen = pFirst ? maxLen - pIndent : maxLen;
     let lineText = p.slice(0, sliceLen);
     if (pFirst) {
       lineText = baseChar + baseChar + lineText;
@@ -234,10 +235,10 @@ function p2line(pText, index, maxLen) {
           lineText,
         );
       }
-      p = p.slice(pFirst ? lineText.length - 2 : lineText.length);
+      p = p.slice(pFirst ? lineText.length - pIndent : lineText.length);
     }
 
-    // 去掉首行行首额外加的两个字符
+    // 去掉首行行首额外加的pIndent个字符
     if (pFirst) {
       lineText = lineText.slice(2);
     }
@@ -266,7 +267,7 @@ function p2line(pText, index, maxLen) {
     lines.push({
       isTitle, // 是否标题
       center, // 是否两端对齐
-      pFirst: !isTitle && tag === 1, // 段落首行
+      pFirst, // 段落首行
       pLast: false, // 段落尾行
       pIndex: index, // 段落索引
       lineIndex: tag, // 行索引
