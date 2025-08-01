@@ -4,32 +4,46 @@ class TestPhotoExtension extends PhotoExtension {
   id = 'testPhoto';
   name = 'ceshi';
   version = '0.0.1';
-  baseUrl = 'https://xx.knit.bid/';
+  baseUrl = 'https://clickme.net/';
 
-  /**
-   * 获取推荐图片列表
-   * @param {number} [pageNo=1] - 页码，默认为1
-   * @returns {Promise<{list: Array, page: number, totalPage: number}> | null} - 返回包含图片列表、当前页码和总页数的对象，如果出错则返回null
-   */
   async getRecommendList(pageNo) {
     pageNo ||= 1;
-    let url = `${this.baseUrl}page/${pageNo}/`;
+    let url = `https://api.clickme.net/article/list?key=clickme`;
     try {
-      const document = await this.fetchDom(url);
+      const formData = new FormData();
+      for (const [key, value] of new Map([
+        ['articleType', 'article'],
+        ['subtype', 'category'],
+        ['subtypeSlug', 'beauty'],
+        ['device', ''],
+        ['limit', '18'],
+        ['page', pageNo],
+      ]).entries()) {
+        formData.append(key, value);
+      }
 
-      const list = await this.queryPhotoElements(document, {
-        element: '.image-container .excerpt',
-        title: 'h2 a',
-        url: 'h2 a',
+      const response = await this.fetch(url, {
+        method: 'POST',
+        body: formData,
       });
-      const pageElements = document.querySelectorAll(
-        '.pagination a, .pagination span',
-      );
+      const json = await response.json();
+      if (json.hasError) return null;
 
       return {
-        list,
+        list: json.data.items.map((item) => {
+          return {
+            id: item.articleIndex,
+            title: item.title,
+            url: item.url,
+            cover: item.thumbnail,
+            coverHeaders: { Referer: this.baseUrl },
+            datetime: item.date,
+            view: item.visitedCount,
+            sourceId: '',
+          };
+        }),
         page: pageNo,
-        totalPage: this.maxPageNoFromElements(pageElements),
+        totalPage: json.data.total_pages,
       };
     } catch (error) {
       console.log(error);
@@ -39,22 +53,41 @@ class TestPhotoExtension extends PhotoExtension {
 
   async search(keyword, pageNo) {
     pageNo ||= 1;
-    let url = `${this.baseUrl}search/page/${pageNo}/?s=${keyword}`;
+    let url = `https://api.clickme.net/article/list?key=clickme`;
     try {
-      const document = await this.fetchDom(url);
-      const list = await this.queryPhotoElements(document, {
-        element: '.image-container .excerpt',
-        title: 'h2 a',
-        url: 'h2 a',
-      });
-      const pageElements = document.querySelectorAll(
-        '.pagination a, .pagination span',
-      );
+      const formData = new FormData();
+      for (const [key, value] of new Map([
+        ['articleType', 'article'],
+        ['subtype', 'search'],
+        ['subtypeSlug', keyword],
+        ['device', ''],
+        ['limit', '18'],
+        ['page', pageNo],
+      ]).entries()) {
+        formData.append(key, value);
+      }
 
+      const response = await this.fetch(url, {
+        method: 'POST',
+        body: formData,
+      });
+      const json = await response.json();
+      if (json.hasError) return null;
       return {
-        list,
+        list: json.data.items.map((item) => {
+          return {
+            id: item.articleIndex,
+            title: item.title,
+            url: item.url,
+            cover: item.thumbnail,
+            coverHeaders: { Referer: this.baseUrl },
+            datetime: item.date,
+            view: item.visitedCount,
+            sourceId: '',
+          };
+        }),
         page: pageNo,
-        totalPage: this.maxPageNoFromElements(pageElements),
+        totalPage: json.data.total_pages,
       };
     } catch (error) {
       console.log(error);
@@ -63,23 +96,15 @@ class TestPhotoExtension extends PhotoExtension {
   }
   async getPhotoDetail(item, pageNo) {
     try {
-      pageNo ||= 1;
-      const url = this.urlJoin(item.url, `page/${pageNo}/`);
-      const document = await this.fetchDom(url);
-      const imgs = document.querySelectorAll('.image-container img');
-      const imgItems = Array.from(imgs).map((img) =>
-        this.urlJoin(URL.parse(item.url).origin, img.getAttribute('data-src')),
-      );
-
-      const pageElements = document.querySelectorAll(
-        '.pagination a, .pagination span',
-      );
+      const document = await this.fetchDom(item.url);
+      const imgs = document.querySelectorAll('.article-detail-content img');
+      const imgItems = Array.from(imgs).map((img) => img.getAttribute('src'));
       return {
         item,
         photos: imgItems,
-        photosHeaders: { referer: item.url },
-        page: pageNo,
-        totalPage: this.maxPageNoFromElements(pageElements),
+        photosHeaders: { referer: this.baseUrl },
+        page: 1,
+        totalPage: 1,
       };
     } catch (error) {
       console.log(error);

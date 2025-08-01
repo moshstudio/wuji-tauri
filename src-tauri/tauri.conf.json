@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2.5.1",
   "productName": "无极",
   "mainBinaryName":"无极",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "identifier": "com.wuji-app.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -54,7 +54,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE4NDNCRDczRjBFOTMzMQpSV1F4a3c0LzF6dUVDaDRpTU9qeTNIay84eUtJRW44L3JGdlNvcm0xNFZyYWlJTWpMelpaZmJTMQo=",
       "endpoints": [
-        "https://wuji.s3.bitiful.net/wuji%2Fupdater_win.json"
+        "https://wuji.moshangwangluo.com/wuji%2Fupdater_win.json"
       ],
       "windows": {
         "installMode": "passive"

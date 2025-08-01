@@ -12,7 +12,7 @@ defineProps<{
   <div class="relative flex h-full flex-col overflow-hidden">
     <WNavbar title="设置"></WNavbar>
     <div
-      class="flex grow flex-col items-center overflow-y-auto bg-[--van-background] p-2"
+      class="flex w-full flex-grow flex-col items-center overflow-y-auto bg-[--van-background] p-4"
     >
       <van-cell-group inset class="w-full">
         <van-cell

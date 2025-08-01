@@ -20,7 +20,7 @@ withDefaults(
 </script>
 
 <template>
-  <div class="flex items-center justify-center">
+  <div class="hidden items-center justify-center">
     <div
       class="van-haptics-feedback flex cursor-pointer items-center justify-center gap-1 text-xs text-[var(--van-text-color-2)]"
       @click="

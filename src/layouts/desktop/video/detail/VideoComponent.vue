@@ -101,7 +101,7 @@ watch(
   >
     <div
       v-if="isShowing"
-      class="z-2 up-shadow video-list flex h-[70%] w-full flex-shrink-0 cursor-auto flex-col overflow-hidden rounded-t-lg bg-[var(--van-background-2)] text-[var(--van-text-color)]"
+      class="z-2 up-shadow video-list flex h-full w-full cursor-auto flex-col overflow-hidden rounded-t-lg bg-[var(--van-background-2)] text-[var(--van-text-color)]"
     >
       <div class="flex flex-shrink-0 items-center justify-end">
         <van-icon
@@ -131,7 +131,7 @@ watch(
               <van-tag
                 v-for="tag in _.castArray(videoItem?.tags)"
                 plain
-                color="rgba(240,240,240,0.3)"
+                color="rgba(100,100,100,0.3)"
                 text-color="var(--van-text-color-2)"
                 class="flex-shrink-0"
               >
@@ -141,21 +141,21 @@ watch(
             <div class="flex gap-1 overflow-x-auto">
               <van-tag
                 v-if="videoItem?.releaseDate"
-                color="rgba(240,240,240,0.3)"
+                color="rgba(100,100,100,0.3)"
                 text-color="var(--van-text-color-2)"
               >
                 {{ videoItem?.releaseDate }}
               </van-tag>
               <van-tag
                 v-if="videoItem?.country"
-                color="rgba(240,240,240,0.3)"
+                color="rgba(100,100,100,0.3)"
                 text-color="var(--van-text-color-2)"
               >
                 {{ videoItem?.country }}
               </van-tag>
               <van-tag
                 v-if="videoItem?.duration"
-                color="rgba(240,240,240,0.3)"
+                color="rgba(100,100,100,0.3)"
                 text-color="var(--van-text-color-2)"
               >
                 {{ videoItem?.duration }}

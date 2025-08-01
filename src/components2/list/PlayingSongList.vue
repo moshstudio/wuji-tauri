@@ -42,35 +42,35 @@ watch(
     <div class="flex h-full flex-col overflow-hidden px-2 pb-2">
       <div class="flex select-none pb-2 pl-2">
         <div
-          class="playMode rounded-lg border bg-[var(--van-background)] px-2 py-1"
+          class="playMode bg-[var(--van-background)]/50 rounded-lg border px-2 py-1"
         >
           <div
             v-if="songStore.playMode === SongPlayMode.list"
-            class="van-haptics-feedback flex cursor-pointer items-center gap-1 text-sm text-gray-400 hover:text-[--van-text-color]"
+            class="van-haptics-feedback flex items-center gap-1"
             @click="songStore.playMode = SongPlayMode.single"
           >
-            <Icon icon="fluent-mdl2:repeat-all" width="18px" height="18px" />
-            列表循环
+            <Icon icon="fluent-mdl2:repeat-all" width="14px" height="14px" />
+            <div class="text-xs text-[var(--van-text-color-2)]">列表循环</div>
           </div>
           <div
             v-else-if="songStore.playMode === SongPlayMode.single"
-            class="van-haptics-feedback flex cursor-pointer items-center gap-1 text-sm text-gray-400 hover:text-[--van-text-color]"
+            class="van-haptics-feedback flex items-center gap-1"
             @click="songStore.playMode = SongPlayMode.random"
           >
-            <Icon icon="fluent-mdl2:repeat-one" width="18px" height="18px" />
-            单曲循环
+            <Icon icon="fluent-mdl2:repeat-one" width="14px" height="14px" />
+            <div class="text-xs text-[var(--van-text-color-2)]">单曲循环</div>
           </div>
           <div
             v-else
-            class="van-haptics-feedback flex cursor-pointer items-center gap-1 text-sm text-gray-400 hover:text-[--van-text-color]"
+            class="van-haptics-feedback flex items-center gap-1"
             @click="songStore.playMode = SongPlayMode.list"
           >
             <Icon
               icon="lets-icons:sort-random-light"
-              width="18px"
-              height="18px"
+              width="14px"
+              height="14px"
             />
-            随机播放
+            <div class="text-xs text-[var(--van-text-color-2)]">随机播放</div>
           </div>
         </div>
       </div>

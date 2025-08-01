@@ -124,7 +124,12 @@ async function savePic(url: string, headers?: Record<string, string>) {
     suffix: 'png',
     baseDir: baseDir,
   });
-  showSuccessToast('已保存');
+  if (!res) {
+    showFailToast('保存失败');
+    return;
+  } else {
+    showSuccessToast('已保存');
+  }
 }
 
 watch(

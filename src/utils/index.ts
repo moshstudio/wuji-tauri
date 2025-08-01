@@ -420,9 +420,9 @@ export async function downloadFile(
         new Uint8Array(await response.arrayBuffer()),
         '无极',
       );
-      console.log('返回结果', res);
+      console.log('android download file 返回结果', res);
 
-      return Boolean(res);
+      return true;
     } else {
       const blob = await response.blob();
       if (!(await fs.exists('', { baseDir: fs.BaseDirectory.Download }))) {

@@ -29,13 +29,7 @@ function formatFileSize(bytes: number) {
 
 export async function checkAndUpdate() {
   const appVersion = await getVersion();
-  console.log('appVersion', appVersion);
-
-  const update = await check({
-    target: 'windows-x86_64',
-  });
-  console.log('update', update);
-
+  const update = await check();
   if (update) {
     try {
       const confirm = await showConfirmDialog({

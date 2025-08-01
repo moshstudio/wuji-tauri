@@ -466,63 +466,70 @@ onDeactivated(() => {
       :show-confirm-button="false"
       class="setting-dialog"
     >
-      <div class="flex flex-col p-2 text-sm">
-        <div class="pb-2 text-gray-400">字体和样式</div>
-        <van-cell title="字体大小">
-          <template #value>
-            <van-stepper v-model="bookStore.fontSize" min="10" max="40" />
-          </template>
-        </van-cell>
-        <van-cell title="行间距">
-          <template #value>
-            <van-stepper
-              v-model="bookStore.lineHeight"
-              step="0.1"
-              :decimal-length="1"
-              min="0.5"
-              max="3"
-            />
-          </template>
-        </van-cell>
-        <van-cell title="段间距">
-          <template #value>
-            <van-stepper v-model="bookStore.readPGap" min="0" max="30" />
-          </template>
-        </van-cell>
-        <van-cell title="左右边距">
-          <template #value>
-            <van-stepper v-model="bookStore.paddingX" min="0" max="60" />
-          </template>
-        </van-cell>
-        <van-cell title="下划线">
-          <template #value>
-            <van-switch v-model="bookStore.underline" />
-          </template>
-        </van-cell>
+      <div class="flex max-h-[80vh] flex-col overflow-y-auto p-2 text-sm">
         <div class="pb-2 text-gray-400">文字颜色和背景</div>
-        <div v-horizontal-scroll class="flex gap-2 overflow-x-auto py-2">
+        <div
+          class="grid grid-cols-[repeat(auto-fill,minmax(40px,1fr))] gap-2 p-2"
+        >
           <div
             v-for="theme in bookStore.themes"
             :key="JSON.stringify(theme)"
-            class="h-[40px] w-[40px] shrink-0 cursor-pointer rounded-full border-2 p-2 text-center"
+            class="flex h-[40px] w-[40px] shrink-0 cursor-pointer items-center justify-center rounded-full border-2 text-center text-[10px]"
             :class="[
               theme.name === bookStore.currTheme.name
                 ? 'border-[var(--van-primary-color)]'
                 : 'border-white',
             ]"
             :style="{
-              backgroundColor: theme.bgColor,
               color: theme.color,
+              backgroundColor: theme.bgColor,
+              backgroundImage: theme.bgImage ? `url(${theme.bgImage})` : '',
+              backgroundRepeat: theme.bgRepeat,
+              backgroundSize: theme.bgSize,
               textDecoration: bookStore.underline
                 ? 'underline solid 0.5px'
                 : 'none',
-              textUnderlineOffset: bookStore.underline ? '6px' : 'none',
+              textUnderlineOffset: '6px',
             }"
             @click="bookStore.currTheme = theme"
           >
-            文
+            {{ theme.name }}
           </div>
         </div>
+        <div class="pb-2 text-gray-400">字体和样式</div>
+        <van-cell-group>
+          <van-cell title="字体大小">
+            <template #value>
+              <van-stepper v-model="bookStore.fontSize" min="10" max="40" />
+            </template>
+          </van-cell>
+          <van-cell title="行间距">
+            <template #value>
+              <van-stepper
+                v-model="bookStore.lineHeight"
+                step="0.1"
+                :decimal-length="1"
+                min="0.5"
+                max="3"
+              />
+            </template>
+          </van-cell>
+          <van-cell title="段间距">
+            <template #value>
+              <van-stepper v-model="bookStore.readPGap" min="0" max="30" />
+            </template>
+          </van-cell>
+          <van-cell title="左右边距">
+            <template #value>
+              <van-stepper v-model="bookStore.paddingX" min="0" max="60" />
+            </template>
+          </van-cell>
+          <van-cell title="下划线">
+            <template #value>
+              <van-switch v-model="bookStore.underline" />
+            </template>
+          </van-cell>
+        </van-cell-group>
       </div>
     </van-dialog>
   </BookReadSwiper>

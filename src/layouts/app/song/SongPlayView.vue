@@ -33,7 +33,7 @@ const shelfStore = useSongShelfStore();
 const displayStore = useDisplayStore();
 const { playingSong } = storeToRefs(songStore);
 
-const showLyric = ref(false);
+const showLyric = ref(true);
 const showPlayingSongList = ref(false);
 const showMoreOptions = ref(false);
 const showAddToShelfSheet = ref(false);
@@ -62,10 +62,17 @@ const actions = computed(() => {
   <div class="relative flex h-full w-full flex-col overflow-hidden">
     <div class="absolute inset-0">
       <LoadImage
-        :src="playingSong.picUrl"
+        :src="playingSong.bigPicUrl || playingSong.picUrl"
         :headers="playingSong.picHeaders"
         class="h-full w-full"
-      ></LoadImage>
+      >
+        <template #loading>
+          <img src="@/assets/song-bg.jpg" alt="" />
+        </template>
+        <template #error>
+          <img src="@/assets/song-bg.jpg" alt="" />
+        </template>
+      </LoadImage>
     </div>
 
     <div class="relative flex h-full w-full flex-col">
@@ -180,8 +187,8 @@ const actions = computed(() => {
             <Icon
               v-if="songStore.playMode === SongPlayMode.list"
               icon="fluent-mdl2:repeat-all"
-              width="20"
-              height="20"
+              width="19"
+              height="19"
               color="rgba(220, 220, 220, 0.7)"
               class="van-haptics-feedback cursor-pointer text-gray-400 hover:text-[--van-text-color]"
               @click="songStore.playMode = SongPlayMode.single"
@@ -189,8 +196,8 @@ const actions = computed(() => {
             <Icon
               v-else-if="songStore.playMode === SongPlayMode.single"
               icon="fluent-mdl2:repeat-one"
-              width="20"
-              height="20"
+              width="19"
+              height="19"
               color="rgba(220, 220, 220, 0.7)"
               class="van-haptics-feedback cursor-pointer text-gray-400 hover:text-[--van-text-color]"
               @click="songStore.playMode = SongPlayMode.random"
@@ -198,8 +205,8 @@ const actions = computed(() => {
             <Icon
               v-else
               icon="lets-icons:sort-random-light"
-              width="20"
-              height="20"
+              width="19"
+              height="19"
               color="rgba(220, 220, 220, 0.7)"
               class="van-haptics-feedback cursor-pointer text-gray-400 hover:text-[--van-text-color]"
               @click="songStore.playMode = SongPlayMode.list"
@@ -273,8 +280,9 @@ const actions = computed(() => {
 }
 .lyric-line {
   &.active-line {
-    color: greenyellow !important;
-    transform: scale(1.2);
+    color: #2fff5c !important;
+    transform: scale(1.3);
+    font-weight: bold;
   }
 }
 </style>

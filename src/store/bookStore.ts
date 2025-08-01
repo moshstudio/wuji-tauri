@@ -64,12 +64,24 @@ export const useBookStore = defineStore('book', () => {
     {
       name: '预设7',
       color: '#060606',
-      bgColor: '#EFE2C0',
+      bgImage: '/read/baizhi.jpg',
+      bgSize: 'cover',
     },
     {
       name: '预设8',
       color: '#060606',
+      bgColor: '#EFE2C0',
+    },
+    {
+      name: '预设9',
+      color: '#060606',
       bgColor: '#E0EEE1',
+    },
+    {
+      name: '预设10',
+      color: '#060606',
+      bgImage: '/read/yangpizhi.jpg',
+      bgSize: 'cover',
     },
   ];
   const customThemes = useStorageAsync<ReadTheme[]>('customReadThemes', []);

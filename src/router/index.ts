@@ -154,24 +154,25 @@ export const router = createRouter({
   routes,
 });
 router.beforeEach((to, from, next) => {
-  console.log(to);
-  console.log(to.matched);
-
   if (!to.matched.length) {
+    to.meta.transition = 'slide-right';
     if (to.path.startsWith('/song')) {
-      next({ name: 'Song' });
+      next({ name: 'Song', params: { transition: 'slide-right' } });
     } else if (to.path.startsWith('/photo')) {
-      next({ name: 'Photo' });
+      next({ name: 'Photo', params: { transition: 'slide-right' } });
     } else if (to.path.startsWith('/video')) {
-      next({ name: 'Video' });
+      next({ name: 'Video', params: { transition: 'slide-right' } });
     } else if (to.path.startsWith('/book')) {
-      next({ name: 'Book' });
+      next({ name: 'Book', params: { transition: 'slide-right' } });
     } else if (to.path.startsWith('/comic')) {
-      next({ name: 'Comic' });
+      next({ name: 'Comic', params: { transition: 'slide-right' } });
     } else {
       next('/');
     }
   } else {
+    if (to.params.transition) {
+      to.meta.transition = to.params.transition;
+    }
     (to as any).prevPathName = from.name;
     console.log(from.fullPath, ' => ', to.fullPath);
     next();

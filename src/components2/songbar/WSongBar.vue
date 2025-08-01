@@ -113,24 +113,24 @@ const showPlayingSongList = ref(false);
           <Icon
             v-if="songStore.playMode === SongPlayMode.list"
             icon="fluent-mdl2:repeat-all"
-            width="20px"
-            height="20px"
+            width="18"
+            height="18"
             class="van-haptics-feedback cursor-pointer text-gray-400 hover:text-[--van-text-color]"
             @click="songStore.playMode = SongPlayMode.single"
           />
           <Icon
             v-else-if="songStore.playMode === SongPlayMode.single"
             icon="fluent-mdl2:repeat-one"
-            width="20px"
-            height="20px"
+            width="18"
+            height="18"
             class="van-haptics-feedback cursor-pointer text-gray-400 hover:text-[--van-text-color]"
             @click="songStore.playMode = SongPlayMode.random"
           />
           <Icon
             v-else
             icon="lets-icons:sort-random-light"
-            width="20px"
-            height="20px"
+            width="18"
+            height="18"
             class="van-haptics-feedback cursor-pointer text-gray-400 hover:text-[--van-text-color]"
             @click="songStore.playMode = SongPlayMode.list"
           />

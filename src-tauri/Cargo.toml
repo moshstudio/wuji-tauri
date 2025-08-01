@@ -1,6 +1,6 @@
 [package]
 name = "wuji-app"
-version = "0.1.12"
+version = "0.1.13"
 description = "一款简洁的资源聚合软件，支持单个应用中轻松浏览图片、音乐、小说，漫画、影视等资源"
 authors = ["moshangstudio"]
 edition = "2021"
@@ -57,5 +57,5 @@ unicase = "2.8.1"
 tauri-plugin-fs = "2"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-single-instance = "2"
-tauri-plugin-updater = "2"
+tauri-plugin-single-instance = "2.3.2"
+tauri-plugin-updater = "2.9.0"

@@ -104,7 +104,7 @@ const getTypeProperty = (type: SourceType) => {
                 {{ getSourceStats(source).disabled }}禁用
               </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-3">
               <div
                 class="van-haptics-feedback rounded p-1 text-white"
                 :class="sourceDisabled(source) ? 'bg-gray-400' : 'bg-green-500'"
@@ -170,7 +170,7 @@ const getTypeProperty = (type: SourceType) => {
                 </div>
               </template>
               <template #value>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-3">
                   <div
                     class="van-haptics-feedback rounded p-1 text-white"
                     :class="item.disable ? 'bg-gray-400' : 'bg-green-500'"

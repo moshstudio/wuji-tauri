@@ -475,16 +475,20 @@ onActivated(() => {
         :key="`slide_${slideIndex}`"
       >
         <div
-          class="flex h-full w-full flex-col overflow-hidden"
+          class="flex h-full w-full flex-col overflow-hidden underline-offset-[6px]"
           :style="{
             paddingLeft: `${bookStore.paddingX}px`,
             paddingRight: `${bookStore.paddingX}px`,
-            backgroundColor: bookStore.currTheme.bgColor,
             color: bookStore.currTheme.color,
+            backgroundColor: bookStore.currTheme.bgColor,
+            backgroundImage: bookStore.currTheme.bgImage
+              ? `url(${bookStore.currTheme.bgImage})`
+              : '',
+            backgroundRepeat: bookStore.currTheme.bgRepeat,
+            backgroundSize: bookStore.currTheme.bgSize,
             textDecoration: bookStore.underline
               ? 'underline solid 0.5px'
               : 'none',
-            textUnderlineOffset: bookStore.underline ? '6px' : '6px',
           }"
         >
           <!-- 顶部状态占位 -->

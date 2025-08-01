@@ -34,6 +34,8 @@ pub fn run() {
             let handle = app.handle();
             handle.plugin(fetch_plugin::init())?;
             handle.plugin(proxy_plugin::init())?;
+            #[cfg(desktop)]
+            handle.plugin(tauri_plugin_updater::Builder::new().build())?;
             Ok(())
         })
         .plugin(tauri_plugin_commands::init())
@@ -46,30 +48,12 @@ pub fn run() {
     // 仅在桌面端添加
     #[cfg(desktop)]
     {
-        fn show_window(app: &AppHandle) {
-            let windows = app.webview_windows();
-            windows
-                .values()
-                .next()
-                .expect("Sorry, no window found")
-                .set_focus()
-                .expect("Can't Bring Window to Focus");
-        }
-        fn constraint_window_size(app: &AppHandle) {
-            // 未生效？
-            let windows = app.webview_windows();
-            windows
-                .values()
-                .next()
-                .expect("Sorry, no window found")
-                .set_min_size(Some(tauri::PhysicalSize::new(600, 300)))
-                .expect("Can't Set Min Size");
-        }
-        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            let _ = show_window(app);
-            let _ = constraint_window_size(app);
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            let _ = app
+                .get_webview_window("main")
+                .expect("no main window")
+                .set_focus();
         }));
-        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     }
 
     builder

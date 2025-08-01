@@ -121,11 +121,19 @@ function formatTime(seconds: number) {
 <template>
   <div
     id="video-box"
-    class="flex h-full w-full overflow-hidden bg-black"
-    :class="displayStore.fullScreenMode ? '' : 'flex-col'"
+    class="grid h-full w-full overflow-hidden bg-black transition-all duration-300"
+    :class="
+      displayStore.fullScreenMode
+        ? componentRef?.isShowing
+          ? 'grid-cols-[0.65fr_0.35fr]'
+          : 'grid-cols-[1fr_0fr]'
+        : componentRef?.isShowing
+          ? 'grid-rows-[0.35fr_0.65fr]'
+          : 'grid-rows-[1fr_0fr]'
+    "
   >
     <Swiper
-      class="h-full w-full flex-grow transition-all duration-300"
+      class="h-full w-full"
       direction="vertical"
       :allow-slide-next="swipeable"
       :allow-slide-prev="swipeable"

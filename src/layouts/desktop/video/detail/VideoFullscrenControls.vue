@@ -3,6 +3,7 @@ import _ from 'lodash';
 import { VideoPlayerState } from '@videojs-player/vue';
 import { Icon } from '@iconify/vue';
 import type videojs from 'video.js';
+import * as commands from 'tauri-plugin-commands-api';
 import { AnyGestureEventTypes } from '@vueuse/gesture';
 import {
   VideoEpisode,
@@ -81,6 +82,8 @@ const longPressHandler = (dragState: AnyGestureEventTypes['drag']) => {
     longPressOptions.timer = setTimeout(() => {
       isShowing.value = true;
       longPressOptions.isPressing = true;
+      longPressOptions.timer = undefined;
+      commands.vibrate(50);
       props.player?.playbackRate(2);
       props.player?.play();
     }, 1000);

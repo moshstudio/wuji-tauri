@@ -1,6 +1,6 @@
 {
   "name": "tauri-plugin-commands-api",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "You",
   "description": "",
   "type": "module",
@@ -22,7 +22,7 @@
     "pretest": "pnpm build"
   },
   "dependencies": {
-    "@tauri-apps/api": ">=2.0.0-beta.6"
+    "@tauri-apps/api": ">=2.7.0"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^11.1.6",

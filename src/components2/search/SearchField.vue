@@ -103,7 +103,9 @@ function clearHistory() {
             class="active-bg-scale flex cursor-pointer items-center justify-between border-b px-4 py-2"
             @click="selectHistory(item)"
           >
-            <div class="flex-grow overflow-hidden text-[var(--van-text-color)]">
+            <div
+              class="flex-grow overflow-hidden text-sm text-[var(--van-text-color)]"
+            >
               {{ item }}
             </div>
             <div
@@ -121,7 +123,7 @@ function clearHistory() {
         </van-cell-group>
       </div>
       <div
-        class="van-haptics-feedback sticky bottom-0 border-gray-200 px-4 py-2 text-center text-gray-500"
+        class="van-haptics-feedback sticky bottom-0 border-gray-200 px-4 py-2 text-center text-sm text-gray-500"
         @click="clearHistory"
       >
         清空历史记录
