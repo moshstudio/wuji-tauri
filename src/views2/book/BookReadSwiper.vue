@@ -49,6 +49,7 @@ const displayStore = useDisplayStore();
 const { showTabBar } = storeToRefs(displayStore);
 const checkIsPrev = ref(false);
 const checkTTS = ref(false);
+const isNewOpen = ref(true);
 
 const size = ref({
   width: document.body.clientWidth,
@@ -71,7 +72,11 @@ const chapterPagedContent = computed<ReaderResult>(() => {
       if (props.isPrev && res.length > 0) {
         chapterPagedIndex.value = res.length - 1;
       } else {
-        chapterPagedIndex.value = 0;
+        if (isNewOpen.value) {
+          chapterPagedIndex.value = props.chapter?.readingPage || 0;
+        } else {
+          chapterPagedIndex.value = 0;
+        }
       }
     });
   }
@@ -300,11 +305,13 @@ watch(chapterPagedContent, () => {
 });
 
 onMounted(async () => {
+  isNewOpen.value = true;
   fontScale.value = (await get_system_font_scale()) as number;
-  await nextTick();
-  if (props.chapter?.readingPage && props.chapter?.readingPage >= 0) {
-    chapterPagedIndex.value = props.chapter.readingPage;
-  }
+});
+
+onActivated(async () => {
+  isNewOpen.value = true;
+  fontScale.value = (await get_system_font_scale()) as number;
 });
 </script>
 
