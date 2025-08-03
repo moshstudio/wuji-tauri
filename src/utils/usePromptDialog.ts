@@ -1,5 +1,5 @@
 import { h, ref, type Ref } from 'vue';
-import { showDialog, showToast } from 'vant';
+import { closeDialog, showDialog, showToast } from 'vant';
 import type { DialogOptions, FieldType } from 'vant';
 import PromptDialog from '@/components2/dialog/PromptDialog.vue';
 
@@ -29,6 +29,14 @@ export function showPromptDialog(
         h(PromptDialog, {
           modelValue: inputRef.value,
           'onUpdate:modelValue': (val: string) => (inputRef.value = val),
+          onEnter: () => {
+            if (!inputRef.value.trim()) {
+              showToast('请输入内容');
+              return false;
+            }
+            closeDialog();
+            resolve(inputRef.value.trim());
+          },
           placeholder: options.placeholder,
           inputType: options.inputType || 'text',
           formatter: options.formatter,

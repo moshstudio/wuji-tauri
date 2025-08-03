@@ -10,7 +10,7 @@ defineProps<{
   formatter?: (value: string) => string;
 }>();
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'enter']);
 
 const inputRef = ref<HTMLInputElement>();
 onMounted(async () => {
@@ -25,6 +25,7 @@ onMounted(async () => {
       ref="inputRef"
       :model-value="modelValue"
       @update:model-value="emit('update:modelValue', $event)"
+      @keydown.enter="emit('enter')"
       :placeholder="placeholder"
       :type="inputType"
       :formatter="formatter"
