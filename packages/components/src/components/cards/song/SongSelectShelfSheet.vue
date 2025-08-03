@@ -3,12 +3,13 @@ import type { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
 import { ActionSheet as VanActionSheet } from 'vant';
 import { computed } from 'vue';
 
+const show = defineModel<boolean>();
+
 const props = defineProps<{
   song: SongInfo;
   shelfs: SongShelf[];
   addToShelf: (song: SongInfo, shelf: SongShelf) => void;
 }>();
-const show = defineModel<boolean>();
 
 const actions = computed(() => {
   return props.shelfs.map((item) => {

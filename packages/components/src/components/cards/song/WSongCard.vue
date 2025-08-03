@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import type { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
-import { MoreOptionsSheet } from '@wuji-tauri/components/src';
-import SongSelectShelfSheet from './SongSelectShelfSheet.vue';
+import type { SongInfo } from '@wuji-tauri/source-extension';
 import SongToFavoriteButton from './SongToFavoriteButton.vue';
 import SongPhoto from './SongPhoto.vue';
 import { ref } from 'vue';
@@ -10,7 +8,6 @@ import { joinSongArtists } from './index';
 const props = withDefaults(
   defineProps<{
     song: SongInfo;
-    shelfs: SongShelf[];
     isPlaying?: boolean;
     isPlayingSong?: boolean;
     play: (song: SongInfo) => void;
@@ -18,7 +15,7 @@ const props = withDefaults(
     inLikeShelf?: boolean;
     addToLikeShelf: (song: SongInfo) => void;
     removeFromLikeShelf: (song: SongInfo) => void;
-    addToShelf: (song: SongInfo, shelf: SongShelf) => void;
+    showMoreOptions: (song: SongInfo) => void;
   }>(),
   {
     isPlaying: false,
@@ -27,8 +24,6 @@ const props = withDefaults(
   },
 );
 const showHint = ref(false);
-const showMoreOptions = ref(false);
-const showAddToShelfSheet = ref(false);
 
 function onMouseEnter() {
   showHint.value = true;
@@ -99,32 +94,9 @@ function onDbClick() {
         name="ellipsis"
         class="clickable p-2 text-[--van-text-color]"
         size="16"
-        @click="() => (showMoreOptions = true)"
+        @click="() => showMoreOptions(song)"
       />
     </div>
-    <MoreOptionsSheet
-      v-model="showMoreOptions"
-      :actions="[
-        {
-          name: '添加到收藏夹',
-          color: '#1989fa',
-          callback: () => {
-            showMoreOptions = false;
-            showAddToShelfSheet = true;
-          },
-        },
-      ]"
-    />
-    <SongSelectShelfSheet
-      v-model:show="showAddToShelfSheet"
-      :song="song"
-      :shelfs="shelfs"
-      :add-to-shelf="addToShelf"
-      title="选择收藏夹"
-      :show-confirm-button="false"
-      teleport="body"
-      show-cancel-button
-    />
   </div>
 </template>
 

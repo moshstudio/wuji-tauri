@@ -15,26 +15,17 @@ withDefaults(
     playAll: (shelf: SongShelf) => void;
     removeSong?: (shelf: SongShelf, song: SongInfo) => void;
     removeShelf: (shelf: SongShelf) => void;
+    showMoreOptions: (shelf: SongShelf, song: SongInfo) => void;
   }>(),
   {},
 );
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
-
-const showMoreOptions = ref(false);
 </script>
 
 <template>
   <div class="flex h-full w-full flex-col overflow-hidden">
-    <MNavBar :title="shelf?.playlist.name || '歌单详情'">
-      <template #right>
-        <van-icon
-          name="ellipsis"
-          class="clickable p-2 text-[--van-text-color]"
-          @click="() => (showMoreOptions = true)"
-        ></van-icon>
-      </template>
-    </MNavBar>
+    <MNavBar :title="shelf?.playlist.name || '歌单详情'"></MNavBar>
     <div class="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
       <div class="flex gap-2" v-if="shelf">
         <van-button
@@ -80,11 +71,10 @@ const showMoreOptions = ref(false);
                 songStore.setPlayingList(shelf?.playlist.list?.list || [], song)
             "
             :pause="songStore.onPause"
-            :remove-song-from-shelf="
-              (song, shelf) => {
-                shelfStore.removeSongFromShelf(song, shelf.playlist.id);
-              }
-            "
+            :in-like-shelf="shelfStore.songInLikeShelf(song)"
+            :add-to-like-shelf="shelfStore.addSongToShelf"
+            :remove-from-like-shelf="shelfStore.removeSongFromShelf"
+            :show-more-options="(song) => showMoreOptions(shelf!, song)"
           ></WSongShelfCard>
         </ResponsiveGrid2>
 

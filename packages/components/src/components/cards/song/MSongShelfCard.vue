@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
 import { SongShelfType } from '@wuji-tauri/source-extension';
-import MoreOptionsSheet from '../../MoreOptionsSheet.vue';
 import SongPhoto from './SongPhoto.vue';
 import { joinSongArtists } from './index';
 import { ref } from 'vue';
@@ -12,16 +11,15 @@ withDefaults(
     shelf: SongShelf;
     isPlaying?: boolean;
     isPlayingSong?: boolean;
+    inLikeShelf?: boolean;
     play: (song: SongInfo) => void;
     pause: (song: SongInfo) => void;
-    removeSongFromShelf: (song: SongInfo, shelf: SongShelf) => void;
+    showMoreOptions: (song: SongInfo) => void;
   }>(),
   {
     isPlaying: false,
   },
 );
-
-const showMoreOptions = ref(false);
 
 const isHover = ref(false);
 function onMouseEnter() {
@@ -72,23 +70,9 @@ function onMouseLeave() {
         name="ellipsis"
         class="clickable p-2 text-[var(--van-text-color)]"
         size="16"
-        @click.stop="() => (showMoreOptions = !showMoreOptions)"
+        @click.stop="() => showMoreOptions(song)"
       />
     </div>
-    <MoreOptionsSheet
-      v-model="showMoreOptions"
-      :actions="[
-        {
-          name: '从当前收藏夹移除',
-          subname: song.name,
-          color: '#E74C3C',
-          callback: () => {
-            showMoreOptions = false;
-            removeSongFromShelf(song, shelf);
-          },
-        },
-      ]"
-    />
   </div>
 </template>
 

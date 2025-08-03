@@ -23,17 +23,17 @@ const searchValue = defineModel<string>('searchValue', {
 const activeTabIndex = defineModel<number>('activeTabIndex', {
   default: 0,
 });
-const props = defineProps<{
+defineProps<{
   search: (value: string) => void;
   recommend: (force?: boolean) => void;
   playlistToPage: (source: SongSource, pageNo: number) => void;
   songToPage: (source: SongSource, pageNo: number) => void;
   playSong: (source: SongSource, song: SongInfo) => void;
   openBaseUrl: (source: SongSource) => void;
+  showMoreOptions: (source: SongSource, song: SongInfo) => void;
 }>();
 
 const store = useStore();
-const displayStore = useDisplayStore();
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
 const { songSources } = storeToRefs(store);
@@ -59,31 +59,31 @@ const { songSources } = storeToRefs(store);
       class="flex-1 overflow-y-auto"
     >
       <van-tab
-        v-for="item in songSources.filter((s) => s.playlist || s.songList)"
-        :key="item.item.id"
-        :title="item.item.name"
+        v-for="source in songSources.filter((s) => s.playlist || s.songList)"
+        :key="source.item.id"
+        :title="source.item.name"
         class="p-4"
       >
-        <van-loading v-if="!item.playlist && !item.songList" />
+        <van-loading v-if="!source.playlist && !source.songList" />
         <van-row
-          v-if="item.playlist && item.playlist.totalPage"
+          v-if="source.playlist && source.playlist.totalPage"
           justify="space-between"
         >
           <van-button
             :plain="true"
             size="small"
-            @click="() => openBaseUrl(item)"
+            @click="() => openBaseUrl(source)"
           >
             歌单
           </van-button>
           <MPagination
-            :page-no="item.playlist.page"
-            :page-count="item.playlist.totalPage"
-            :to-page="(page) => playlistToPage(item, page)"
+            :page-no="source.playlist.page"
+            :page-count="source.playlist.totalPage"
+            :to-page="(page) => playlistToPage(source, page)"
           />
         </van-row>
         <HorizonList>
-          <div v-for="p in item.playlist?.list" :key="p.id" class="relative">
+          <div v-for="p in source.playlist?.list" :key="p.id" class="relative">
             <WPlaylistCard
               :playlist="p"
               :click="
@@ -102,47 +102,39 @@ const { songSources } = storeToRefs(store);
         </HorizonList>
         <div class="h-4" />
         <van-row
-          v-if="item.songList && item.songList.totalPage"
+          v-if="source.songList && source.songList.totalPage"
           justify="space-between"
         >
           <van-button
             :plain="true"
             size="small"
-            @click="() => openBaseUrl(item)"
+            @click="() => openBaseUrl(source)"
           >
             歌曲
           </van-button>
           <MPagination
-            :page-no="item.songList.page"
-            :page-count="item.songList.totalPage"
-            :to-page="(page) => songToPage(item, page)"
+            :page-no="source.songList.page"
+            :page-count="source.songList.totalPage"
+            :to-page="(page) => songToPage(source, page)"
           />
         </van-row>
         <ResponsiveGrid2>
-          <template v-for="p in item.songList?.list" :key="p.id">
+          <template v-for="p in source.songList?.list" :key="p.id">
             <WSongCard
               :song="p"
-              :shelfs="shelfStore.songCreateShelf"
               :is-playing="songStore.isPlaying"
               :is-playing-song="p.id === songStore.playingSong?.id"
-              :play="() => playSong(item, p)"
+              :play="() => playSong(source, p)"
               :pause="() => songStore.onPause()"
               :in-like-shelf="shelfStore.songInLikeShelf(p)"
               :add-to-like-shelf="shelfStore.addSongToShelf"
               :remove-from-like-shelf="shelfStore.removeSongFromShelf"
-              :add-to-shelf="
-                (song, shelf) =>
-                  shelfStore.addSongToShelf(song, shelf.playlist.id)
-              "
+              :show-more-options="(song) => showMoreOptions(source, song)"
             />
           </template>
         </ResponsiveGrid2>
       </van-tab>
     </van-tabs>
-    <!-- <div
-      v-remember-scroll
-      class="relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden"
-    ></div> -->
     <WSongBar class="flex-shrink-0" />
   </div>
 </template>

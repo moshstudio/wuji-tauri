@@ -3,9 +3,8 @@ import MNavBar from '@/components2/header/MNavBar.vue';
 import MSongBar from '@/components2/songbar/MSongBar.vue';
 import { MSongShelfCard } from '@wuji-tauri/components/src';
 import MPagination from '@/components2/pagination/MPagination.vue';
-import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
+import { useSongShelfStore, useSongStore } from '@/store';
 import { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
-import { ref } from 'vue';
 
 withDefaults(
   defineProps<{
@@ -14,26 +13,17 @@ withDefaults(
     playAll: (shelf: SongShelf) => void;
     removeSong?: (shelf: SongShelf, song: SongInfo) => void;
     removeShelf: (shelf: SongShelf) => void;
+    showMoreOptions: (shelf: SongShelf, song: SongInfo) => void;
   }>(),
   {},
 );
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
-
-const showMoreOptions = ref(false);
 </script>
 
 <template>
   <div class="flex h-full w-full flex-col overflow-hidden">
-    <MNavBar :title="shelf?.playlist.name || '歌单详情'">
-      <template #right>
-        <van-icon
-          name="ellipsis"
-          class="clickable p-2 text-[--van-text-color]"
-          @click="() => (showMoreOptions = true)"
-        ></van-icon>
-      </template>
-    </MNavBar>
+    <MNavBar :title="shelf?.playlist.name || '歌单详情'"></MNavBar>
     <div class="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
       <div class="flex gap-2" v-if="shelf">
         <van-button
@@ -78,11 +68,7 @@ const showMoreOptions = ref(false);
               songStore.setPlayingList(shelf?.playlist.list?.list || [], song)
           "
           :pause="songStore.onPause"
-          :remove-song-from-shelf="
-            (song, shelf) => {
-              shelfStore.removeSongFromShelf(song, shelf.playlist.id);
-            }
-          "
+          :show-more-options="(song) => showMoreOptions(shelf!, song)"
         ></MSongShelfCard>
         <div
           v-if="!shelf.playlist.list?.list.length"
