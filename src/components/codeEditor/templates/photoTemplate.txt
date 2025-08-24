@@ -1,0 +1,15 @@
+class CustomPhotoExtension extends PhotoExtension {
+  id = 'testPhoto';
+  name = '测试';
+
+  constructor() {}
+
+  async getRecommendList(pageNo) {}
+
+  async search(keyword, pageNo) {}
+
+  async getPhotoDetail(item, pageNo) {}
+
+}
+
+return CustomPhotoExtension;

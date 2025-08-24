@@ -5,11 +5,11 @@ import {
   PlaylistList,
 } from '@wuji-tauri/source-extension';
 import { showDialog, showFailToast, showNotify } from 'vant';
-import SONG_TEMPLATE from '@/components2/codeEditor/templates/songTemplate.txt?raw';
+import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
 import { ref } from 'vue';
-import MPagination from '@/components2/pagination/MPagination.vue';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
-import { joinSongArtists } from '@/utils';
+import MPagination from '@/components/pagination/MPagination.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import LoadImage from '@wuji-tauri/components/src/components/LoadImage.vue';
 import { WSongCard } from '@wuji-tauri/components/src';
 
 enum RunStatus {
@@ -45,9 +45,11 @@ const props = defineProps<{
     padded: boolean,
   ) => void;
   close: () => void;
+  log: (...args: any[]) => void;
 }>();
 
 async function initLoad() {
+  result.value = undefined;
   return await load(1);
 }
 
@@ -101,6 +103,7 @@ async function load(pageNo: number) {
     if (!cls.baseUrl) {
       throw new Error('初始化中的baseUrl未定义!');
     }
+    cls.log = props.log;
     const item =
       findPage('playlist')?.result?.list?.[0] ||
       findPage('searchPlaylist')?.result?.list?.[0];
@@ -117,6 +120,7 @@ async function load(pageNo: number) {
   } catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
+    props.updateResult('song', 'playlistDetail', result.value, false);
   }
 }
 
@@ -198,6 +202,7 @@ defineExpose({
               :add-to-like-shelf="() => {}"
               :remove-from-like-shelf="() => {}"
               :add-to-shelf="() => {}"
+              :show-more-options="() => {}"
             ></WSongCard>
           </template>
         </ResponsiveGrid2>

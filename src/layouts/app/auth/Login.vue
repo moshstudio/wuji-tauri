@@ -5,7 +5,7 @@ import validator from 'validator';
 import { useDisplayStore, useServerStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import { router } from '@/router';
-import MNavBar from '@/components2/header/MNavBar.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
 
 const props = defineProps<{
   register: (params: {

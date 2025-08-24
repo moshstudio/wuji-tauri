@@ -13,6 +13,13 @@ export enum SourceType {
   Comic = 'comic',
 }
 
+export enum MarketSourcePermission {
+  NoLogin = 'noLogin',
+  Login = 'login',
+  Vip = 'vip',
+  SuperVip = 'superVip',
+}
+
 export interface SubscribeItem {
   id: string;
   name: string;
@@ -55,4 +62,33 @@ export interface ComicSource extends Source {
 }
 export interface VideoSource extends Source {
   list?: VideosList;
+}
+
+export interface MarketSourceContent {
+  _id: string;
+  name: string;
+  type: SourceType;
+  disabled: boolean;
+  source: string;
+  url: string;
+  code?: string;
+}
+
+export interface MarketSource {
+  _id: string;
+  name: string;
+  version: number;
+  permissions?: MarketSourcePermission[];
+  sourceContents?: MarketSourceContent[];
+  isPublic: boolean;
+  isBanned: boolean;
+  thumbsUp: number;
+}
+
+export interface PagedMarketSource {
+  data: MarketSource[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 }

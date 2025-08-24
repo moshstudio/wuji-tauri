@@ -167,6 +167,7 @@ abstract class ComicExtension extends Extension {
 
 function loadComicExtensionString(
   codeString: string,
+  raise = false,
 ): ComicExtension | undefined {
   try {
     const func = new Function('ComicExtension', codeString);
@@ -174,6 +175,7 @@ function loadComicExtensionString(
     return new extensionclass();
   } catch (error) {
     console.error('Error executing code:\n', error);
+    if (raise) throw error;
   }
 }
 

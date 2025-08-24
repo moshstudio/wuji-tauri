@@ -1,0 +1,4 @@
+export declare function getProxyUrl(
+  url: string,
+  headers?: Record<string, string>,
+): Promise<string | null>;

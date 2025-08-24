@@ -3,11 +3,11 @@ import type { SongInfo } from '@wuji-tauri/source-extension';
 import type { SongSource } from '@/types';
 import { MPlaylistCard } from '@wuji-tauri/components/src';
 import { MSongCard } from '@wuji-tauri/components/src';
-import HorizonList from '@/components2/list/HorizonList.vue';
-import MHeader from '@/components2/header/MHeader.vue';
-import MSongBar from '@/components2/songbar/MSongBar.vue';
-import MPagination from '@/components2/pagination/MPagination.vue';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
+import HorizonList from '@/components/list/HorizonList.vue';
+import MHeader from '@/components/header/MHeader.vue';
+import MSongBar from '@/components/songbar/MSongBar.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import { useSongStore, useStore } from '@/store';
 import { sleep } from '@/utils';
 import { storeToRefs } from 'pinia';
@@ -135,7 +135,7 @@ async function onRefresh() {
                   :to-page="(page) => songToPage(item, page)"
                 />
               </van-row>
-              <ResponsiveGrid2 >
+              <ResponsiveGrid2>
                 <template v-for="p in item.songList?.list" :key="`song${p.id}`">
                   <MSongCard
                     :song="p"

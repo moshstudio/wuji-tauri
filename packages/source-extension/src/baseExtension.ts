@@ -166,6 +166,7 @@ abstract class Extension {
   nanoid: typeof nanoid;
   urlJoin: (...parts: (string | null | undefined)[]) => string;
   maxPageNoFromElements: typeof maxPageNoFromElements;
+  log: (...args: any[]) => void;
 
   abstract id: string;
   abstract name: string;
@@ -174,6 +175,7 @@ abstract class Extension {
   codeString?: string;
 
   protected constructor() {
+    this.log = console.log;
     this.cryptoJs = CryptoJS;
     this.forge = forge;
     this.iconv = iconv;
@@ -188,25 +190,25 @@ abstract class Extension {
       domType?: DOMParserSupportedType,
       encoding?: 'utf8' | 'gbk',
     ) => {
-      let maxRetry = 2;
-      do {
-        try {
-          const response = await this.fetch(input, init);
-          if (response.status >= 300) {
-            throw new Error(`fetch error: ${response.status}`);
+      let maxRetry = 3;
+      while (maxRetry > 0) {
+        const response = await this.fetch(input, init);
+        if (response.status >= 300) {
+          maxRetry -= 1;
+          if (maxRetry > 0) {
+            continue;
+          } else {
+            const text = await response.text();
+            console.log(`fetch error: ${response.status} ${text}`);
+            throw new Error(`fetch error: ${response.status} ${text}`);
           }
+        } else {
           const buffer = await response.arrayBuffer();
           const text = new TextDecoder(encoding || 'utf8').decode(buffer);
           return new DOMParser().parseFromString(text, domType || 'text/html');
-        } catch (error) {
-          console.warn(`function fetchDom failed retry:`, error);
         }
-      } while (maxRetry-- > 0);
-      const response = await this.fetch(input, init);
-      const buffer = await response.arrayBuffer();
-      const text = new TextDecoder(encoding || 'utf8').decode(buffer);
-
-      return new DOMParser().parseFromString(text, domType || 'text/html');
+      }
+      throw new Error(`fetch error: ${input.toString()} `);
     };
     this.nanoid = nanoid;
 
@@ -249,17 +251,21 @@ abstract class Extension {
           if (!coverE.startsWith('http')) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
+            } else if (coverE.startsWith('data:')) {
+              try {
+                const response = await window.fetch(coverE);
+                const blob = await response.blob();
+                coverE = URL.createObjectURL(blob);
+              } catch (error) {
+                console.log('parse b64 cover failed:', coverE);
+              }
             } else {
               coverE = this.urlJoin(coverDomain ?? this.baseUrl, coverE);
             }
           }
         }
-        const titleE =
-          (!title
-            ? element.textContent || element.getAttribute('title')
-            : null) ||
-          element.querySelector(title)?.textContent ||
-          element.querySelector(title)?.getAttribute('title');
+        const _titleE = title ? element.querySelector(title) : element;
+        const titleE = _titleE?.textContent || _titleE?.getAttribute('title');
         const introE = element.querySelector(intro)?.textContent;
         const authorE = element.querySelector(author)?.textContent;
         const tagsE = Array.from(element.querySelectorAll(tags).values())
@@ -270,14 +276,11 @@ abstract class Extension {
           element.querySelector(latestChapter)?.textContent;
         const latestUpdateE = element.querySelector(latestUpdate)?.textContent;
 
-        const urlE =
-          (!url ? element.getAttribute('href') : null) ||
-          element.querySelector(url)?.getAttribute('href') ||
-          element.querySelector(title)?.getAttribute('href');
-        if (!titleE) continue;
+        const _urlE = url ? element.querySelector(url) : element;
+        const urlE = _urlE?.getAttribute('href') || _urlE?.getAttribute('href');
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
-          title: titleE.trim(),
+          title: titleE?.trim() || '',
           intro: introE?.trim() || undefined,
           cover: coverE ? this.urlJoin(this.baseUrl, coverE) : undefined,
           author: authorE?.trim() || undefined,
@@ -289,7 +292,7 @@ abstract class Extension {
           status: statusE?.trim() || undefined,
           latestChapter: latestChapterE?.trim() || undefined,
           latestUpdate: latestUpdateE?.trim() || undefined,
-          url: this.urlJoin(this.baseUrl, urlE || null),
+          url: urlE ? this.urlJoin(this.baseUrl, urlE) : undefined,
           sourceId: '',
         });
       }
@@ -336,6 +339,14 @@ abstract class Extension {
           if (!coverE.startsWith('http')) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
+            } else if (coverE.startsWith('data:')) {
+              try {
+                const response = await window.fetch(coverE);
+                const blob = await response.blob();
+                coverE = URL.createObjectURL(blob);
+              } catch (error) {
+                console.log('parse b64 cover failed:', coverE);
+              }
             } else {
               coverE = this.urlJoin(
                 coverDomain ?? baseUrl ?? this.baseUrl,
@@ -344,12 +355,8 @@ abstract class Extension {
             }
           }
         }
-        const titleE =
-          (!title
-            ? element.textContent || element.getAttribute('title')
-            : null) ||
-          element.querySelector(title)?.textContent ||
-          element.querySelector(title)?.getAttribute('title');
+        const _titleE = title ? element.querySelector(title) : element;
+        const titleE = _titleE?.textContent || _titleE?.getAttribute('title');
         const introE = element.querySelector(intro)?.textContent;
         const releaseDateE = element.querySelector(releaseDate)?.textContent;
         const countryE = element.querySelector(country)?.textContent;
@@ -362,16 +369,13 @@ abstract class Extension {
         const statusE = element.querySelector(status)?.textContent;
         const latestUpdateE = element.querySelector(latestUpdate)?.textContent;
 
-        const urlE =
-          (!url ? element.getAttribute('href') : null) ||
-          element.querySelector(url)?.getAttribute('href') ||
-          element.querySelector(title)?.getAttribute('href');
-        if (!titleE) continue;
+        const _urlE = url ? element.querySelector(url) : element;
+        const urlE = _urlE?.getAttribute('href') || _urlE?.getAttribute('href');
         list.push({
           id: urlE
             ? this.urlJoin(baseUrl ?? this.baseUrl, urlE)
             : this.nanoid(),
-          title: titleE.trim(),
+          title: titleE?.trim() || '',
           intro: introE?.trim() || undefined,
           cover: coverE
             ? this.urlJoin(baseUrl ?? this.baseUrl, coverE)
@@ -389,7 +393,7 @@ abstract class Extension {
             : undefined,
           status: statusE?.trim() || undefined,
           latestUpdate: latestUpdateE?.trim() || undefined,
-          url: this.urlJoin(baseUrl ?? this.baseUrl, urlE || null),
+          url: urlE ? this.urlJoin(baseUrl ?? this.baseUrl, urlE) : undefined,
           sourceId: '',
         });
       }
@@ -414,21 +418,47 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(cover);
-        const coverE =
+        let coverE =
           img?.getAttribute('data-original') ||
           img?.getAttribute('data-src') ||
-          img?.getAttribute('src');
+          img?.getAttribute('src') ||
+          img?.getAttribute('data-setbg') ||
+          (img as HTMLElement)?.style.backgroundImage?.replace(
+            /url\(["']?(.*?)["']?\)/,
+            '$1',
+          );
+        if (coverE) {
+          if (!coverE.startsWith('http')) {
+            if (coverE.startsWith('//')) {
+              coverE = `https:${coverE}`;
+            } else if (coverE.startsWith('data:')) {
+              try {
+                const response = await window.fetch(coverE);
+                const blob = await response.blob();
+                coverE = URL.createObjectURL(blob);
+              } catch (error) {
+                console.log('parse b64 cover failed:', coverE);
+              }
+            } else {
+              coverE = this.urlJoin(
+                coverDomain ?? this.baseUrl ?? this.baseUrl,
+                coverE,
+              );
+            }
+          }
+        }
+        const _titleE = title ? element.querySelector(title) : element;
         const titleE =
-          element.querySelector(title)?.textContent ||
-          element.querySelector(title)?.getAttribute('title') ||
-          element.querySelector(title)?.getAttribute('alt');
+          _titleE?.textContent ||
+          _titleE?.getAttribute('title') ||
+          _titleE?.getAttribute('alt');
         const descE = element.querySelector(desc)?.textContent;
         const authorE = element.querySelector(author)?.textContent;
         const datetimeE = element.querySelector(datetime)?.textContent;
         const hotE = element.querySelector(hot)?.textContent;
         const viewE = element.querySelector(view)?.textContent;
-        const urlE = element.querySelector(url)?.getAttribute('href')?.trim();
-        if (!titleE) continue;
+        const _urlE = url ? element.querySelector(url) : element;
+        const urlE = _urlE?.getAttribute('href')?.trim();
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           title: titleE?.trim() || '',
@@ -440,7 +470,7 @@ abstract class Extension {
           datetime: datetimeE?.trim() || undefined,
           hot: hotE?.trim() || undefined,
           view: Number(viewE) || undefined,
-          url: this.urlJoin(this.baseUrl, urlE || null),
+          url: urlE ? this.urlJoin(this.baseUrl, urlE) : undefined,
           sourceId: '',
         });
       }
@@ -464,20 +494,46 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(picUrl);
-        const coverE =
+        let coverE =
           img?.getAttribute('data-original') ||
           img?.getAttribute('data-src') ||
-          img?.getAttribute('src');
+          img?.getAttribute('src') ||
+          img?.getAttribute('data-setbg') ||
+          (img as HTMLElement)?.style.backgroundImage?.replace(
+            /url\(["']?(.*?)["']?\)/,
+            '$1',
+          );
+        if (coverE) {
+          if (!coverE.startsWith('http')) {
+            if (coverE.startsWith('//')) {
+              coverE = `https:${coverE}`;
+            } else if (coverE.startsWith('data:')) {
+              try {
+                const response = await window.fetch(coverE);
+                const blob = await response.blob();
+                coverE = URL.createObjectURL(blob);
+              } catch (error) {
+                console.log('parse b64 cover failed:', coverE);
+              }
+            } else {
+              coverE = this.urlJoin(
+                coverDomain ?? this.baseUrl ?? this.baseUrl,
+                coverE,
+              );
+            }
+          }
+        }
+        const _titleE = name ? element.querySelector(name) : element;
         const titleE =
-          element.querySelector(name)?.textContent ||
-          element.querySelector(name)?.getAttribute('title') ||
-          element.querySelector(name)?.getAttribute('alt');
+          _titleE?.textContent ||
+          _titleE?.getAttribute('title') ||
+          _titleE?.getAttribute('alt');
         const descE = element.querySelector(desc)?.textContent;
         const authorE = element.querySelector(creator)?.textContent;
         const datetimeE = element.querySelector(createTime)?.textContent;
         const updateTimeE = element.querySelector(updateTime)?.textContent;
-        const urlE = element.querySelector(url)?.getAttribute('href')?.trim();
-        if (!titleE) continue;
+        const _urlE = url ? element.querySelector(url) : element;
+        const urlE = _urlE?.getAttribute('href')?.trim();
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           name: titleE?.trim() || '',
@@ -488,7 +544,7 @@ abstract class Extension {
           creator: authorE?.trim() ? { name: authorE.trim() } : undefined,
           createTime: datetimeE?.trim() || undefined,
           updateTime: updateTimeE?.trim() || undefined,
-          url: this.urlJoin(this.baseUrl, urlE || null),
+          url: urlE ? this.urlJoin(this.baseUrl, urlE) : undefined,
           sourceId: '',
         });
       }
@@ -512,23 +568,49 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(picUrl);
-        const coverE =
+        let coverE =
           img?.getAttribute('data-original') ||
           img?.getAttribute('data-src') ||
-          img?.getAttribute('src');
+          img?.getAttribute('src') ||
+          img?.getAttribute('data-setbg') ||
+          (img as HTMLElement)?.style.backgroundImage?.replace(
+            /url\(["']?(.*?)["']?\)/,
+            '$1',
+          );
+        if (coverE) {
+          if (!coverE.startsWith('http')) {
+            if (coverE.startsWith('//')) {
+              coverE = `https:${coverE}`;
+            } else if (coverE.startsWith('data:')) {
+              try {
+                const response = await window.fetch(coverE);
+                const blob = await response.blob();
+                coverE = URL.createObjectURL(blob);
+              } catch (error) {
+                console.log('parse b64 cover failed:', coverE);
+              }
+            } else {
+              coverE = this.urlJoin(
+                coverDomain ?? this.baseUrl ?? this.baseUrl,
+                coverE,
+              );
+            }
+          }
+        }
+        const _titleE = name ? element.querySelector(name) : element;
         const titleE =
-          element.querySelector(name)?.textContent ||
-          element.querySelector(name)?.getAttribute('title') ||
-          element.querySelector(name)?.getAttribute('alt');
+          _titleE?.textContent ||
+          _titleE?.getAttribute('title') ||
+          _titleE?.getAttribute('alt');
         const authorE = Array.from(element.querySelectorAll(artists).values());
         const durationE = element.querySelector(duration)?.textContent;
         const lyricE = element.querySelector(lyric)?.textContent;
-        const urlE = element.querySelector(url)?.getAttribute('href')?.trim();
+        const _urlE = url ? element.querySelector(url) : element;
+        const urlE = _urlE?.getAttribute('href')?.trim();
         const playUrlE = element
           .querySelector(playUrl)
           ?.getAttribute('href')
           ?.trim();
-        if (!titleE) continue;
         list.push({
           id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
           name: titleE?.trim() || '',

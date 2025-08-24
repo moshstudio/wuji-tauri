@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MNavBar from '@/components2/header/MNavBar.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
 </script>
 
 <template>

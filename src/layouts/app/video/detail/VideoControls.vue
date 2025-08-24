@@ -57,9 +57,12 @@ const isShowing = ref(false);
 function click() {
   props.playOrPause();
 }
+function dblClick() {}
+
 defineExpose({
   isShowing,
   click,
+  dblClick,
 });
 
 const longPressOptions = reactive({

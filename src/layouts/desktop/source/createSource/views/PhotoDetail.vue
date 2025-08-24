@@ -5,9 +5,9 @@ import {
   PhotoList,
 } from '@wuji-tauri/source-extension';
 import { showDialog, showNotify } from 'vant';
-import PHOTO_TEMPLATE from '@/components2/codeEditor/templates/photoTemplate.txt?raw';
+import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
 import { ref } from 'vue';
-import MPagination from '@/components2/pagination/MPagination.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
 import { LoadImage } from '@wuji-tauri/components/src';
 
 enum RunStatus {
@@ -43,9 +43,11 @@ const props = defineProps<{
     padded: boolean,
   ) => void;
   close: () => void;
+  log: (...args: any[]) => void;
 }>();
 
 async function initLoad() {
+  result.value = undefined;
   return await load(1);
 }
 
@@ -93,6 +95,7 @@ async function load(pageNo: number) {
     if (!cls.baseUrl) {
       throw new Error('初始化中的baseUrl未定义!');
     }
+    cls.log = props.log;
     const item =
       findPage('list')?.result?.list?.[0] ||
       findPage('searchList')?.result?.list?.[0];
@@ -109,6 +112,7 @@ async function load(pageNo: number) {
   } catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
+    props.updateResult('photo', 'detail', result.value, false);
   }
 }
 

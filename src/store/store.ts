@@ -1,5 +1,9 @@
 import type { HotItem } from '@wuji-tauri/hot-api';
-import type { Extension } from '@wuji-tauri/source-extension';
+import type {
+  Extension,
+  MarketSource,
+  MarketSourceContent,
+} from '@wuji-tauri/source-extension';
 
 import type {
   BookChapter,
@@ -61,6 +65,7 @@ import {
   showConfirmDialog,
   showFailToast,
   showLoadingToast,
+  showSuccessToast,
   showToast,
 } from 'vant';
 import { onBeforeMount, ref, triggerRef } from 'vue';
@@ -80,6 +85,7 @@ import { createKVStore } from './utils';
 import { useVideoShelfStore } from './videoShelfStore';
 import { useServerStore } from './serverStore';
 import { useTTSStore } from './ttsStore';
+import { router } from '@/router';
 
 export const useStore = defineStore('store', () => {
   const hotItems = ref<HotItem[]>([]); // 热搜榜
@@ -101,42 +107,64 @@ export const useStore = defineStore('store', () => {
 
   const sourceClasses = new Map<string, Extension | null>();
   const sourceClass = async (
-    item: SubscribeItem,
+    item: SubscribeItem | MarketSourceContent,
   ): Promise<Extension | null | undefined> => {
-    if (item.id && sourceClasses.has(item.id)) {
-      return sourceClasses.get(item.id);
+    const idKey = '_id' in item ? item._id : item.id;
+
+    if (idKey && sourceClasses.has(idKey)) {
+      return sourceClasses.get(idKey);
     }
     // for test
     if (item.code === 'test') {
       switch (item.type) {
         case SourceType.Photo:
-          sourceClasses.set(item.id, new TestPhotoExtension());
+          sourceClasses.set(idKey, new TestPhotoExtension());
           break;
         case SourceType.Song:
-          sourceClasses.set(item.id, new TestSongExtension());
+          sourceClasses.set(idKey, new TestSongExtension());
           break;
         case SourceType.Book:
-          sourceClasses.set(item.id, new TestBookExtension());
+          sourceClasses.set(idKey, new TestBookExtension());
           break;
         case SourceType.Comic:
-          sourceClasses.set(item.id, new TestComicExtension());
+          sourceClasses.set(idKey, new TestComicExtension());
           break;
         case SourceType.Video:
-          sourceClasses.set(item.id, new TestVideoExtension());
+          sourceClasses.set(idKey, new TestVideoExtension());
           break;
         default:
           break;
       }
-      return sourceClasses.get(item.id);
+      return sourceClasses.get(idKey);
     }
     if (!item.code) {
       try {
-        item.code = await (await fetch(item.url)).text();
+        if (item.url.startsWith('http')) {
+          item.code = await (await fetch(item.url)).text();
+        } else {
+          const response = await serverStore.request(item.url);
+          if (!response.ok) {
+            const error = await response.json();
+            console.log(error);
+            showFailToast({
+              message: error.message,
+            });
+            return null;
+          }
+          const json = await response.json();
+
+          item.code = json.code;
+        }
       } catch (error) {
         console.log('加载扩展失败:', item);
-        sourceClasses.set(item.id, null);
+        sourceClasses.set(idKey, null);
         return null;
       }
+    }
+    if (!item.code) {
+      showFailToast(`加载 ${item.name} 失败`);
+      sourceClasses.set(idKey, null);
+      return null;
     }
     let extensionClass:
       | PhotoExtension
@@ -166,16 +194,21 @@ export const useStore = defineStore('store', () => {
         break;
     }
     if (!extensionClass) {
-      showToast(`添加 ${item.name} 订阅源失败`);
-      sourceClasses.delete(item.id);
+      showToast(`添加 ${item.name} 订阅失败`);
+      sourceClasses.delete(idKey);
       return null;
     }
     // 防止报错
     extensionClass = tryCatchProxy(extensionClass);
     extensionClass.codeString = item.code;
-    item.id ||= extensionClass.id; // item.id默认可以为空
+    if ('id' in item) {
+      item.id ||= extensionClass.id; // item.id默认可以为空
+    } else {
+      item._id = extensionClass.id;
+    }
+
     item.name ||= extensionClass.name; // item.name默认可以为空
-    sourceClasses.set(item.id, extensionClass);
+    sourceClasses.set(idKey, extensionClass);
     return extensionClass;
   };
 
@@ -266,7 +299,9 @@ export const useStore = defineStore('store', () => {
   };
 
   const getPhotoSource = (sourceId: string): PhotoSource | undefined => {
-    return photoSources.value.find((item) => item.item.id === sourceId);
+    return photoSources.value.find((item) => {
+      return item.item.id === sourceId;
+    });
   };
   /**
    * 根据id获取图片
@@ -903,6 +938,66 @@ export const useStore = defineStore('store', () => {
       displayStore.closeToast(t);
     }
   };
+  // 添加市场中的订阅源
+  const addMarketSource = async (marketSource: MarketSource) => {
+    const t = showLoadingToast('导入中');
+    try {
+      // 2. 检查是否已存在，然后同步disable状态
+      const oldSource = subscribeSourceStore.getSubscribeSource(
+        marketSource._id,
+      );
+      // 3.测试是否可用，然后添加
+      const source: SubscribeSource = {
+        url: 'marketSource',
+        detail: {
+          id: marketSource._id,
+          name: marketSource.name,
+          version: marketSource.version,
+          urls: [],
+        },
+        disable: oldSource?.disable || false,
+      };
+      for (const sourceContent of marketSource.sourceContents || []) {
+        try {
+          const sc = await sourceClass(sourceContent);
+          if (!sc) {
+            return;
+          }
+          const item = {
+            id: sc.id,
+            name: sc.name,
+            code: sc.codeString || sourceContent.code,
+            type: sourceContent.type,
+            url: sourceContent.url,
+          };
+          addToSource(
+            {
+              item,
+            },
+            true,
+          );
+          source.detail.urls.push(item);
+        } catch (error) {
+          showToast(`添加 ${marketSource.name} 订阅源失败`);
+          break; // 跳出循环
+        }
+      }
+      // 同步disable状态
+      if (source.detail.urls.every((item) => item.disable)) {
+        source.disable = true;
+      }
+      source.detail.urls.forEach((item) => {
+        item.disable =
+          oldSource?.detail.urls.find((s) => s.id === item.id)?.disable ||
+          false;
+      });
+      subscribeSourceStore.addSubscribeSource(source); // 保存
+    } catch (error) {
+      showToast('添加订阅源失败');
+    } finally {
+      t.close();
+    }
+  };
 
   const localSourceId = 'localSource-wuji';
 
@@ -985,35 +1080,50 @@ export const useStore = defineStore('store', () => {
       showToast('添加订阅源失败');
     }
   };
-  const updateSubscribeSources = async () => {
+  const updateSubscribeSources = async (source?: SubscribeSource) => {
     if (!subscribeSourceStore.subscribeSources.length) {
-      const dialog = await showConfirmDialog({
-        message: '您需要添加订阅源才能正常使用，\n是否立即导入默认订阅源？',
-      });
-      if (dialog === 'confirm') {
-        await addSubscribeSource(DEFAULT_SOURCE_URL);
-        showToast('默认源已导入');
-      }
+      showToast('请先添加订阅源');
       return;
     }
     const displayStore = useDisplayStore();
+    showLoadingToast({
+      message: '正在更新订阅源',
+      closeOnClick: true,
+      closeOnClickOverlay: true,
+    });
     const t = displayStore.showToast();
     const failed: string[] = [];
-    await Promise.all(
-      subscribeSourceStore.subscribeSources.map(async (source) => {
-        const url = source.url;
-        try {
-          if (source.detail.id === localSourceId) {
-            await addLocalSubscribeSource(url);
+
+    const update = async (source: SubscribeSource) => {
+      const url = source.url;
+      try {
+        if (source.detail.id === localSourceId) {
+          await addLocalSubscribeSource(url);
+        } else {
+          if (url === 'marketSource') {
+            const marketSource = await serverStore.getMarketSourceById(
+              source.detail.id,
+            );
+
+            if (marketSource) {
+              await addMarketSource(marketSource);
+            }
           } else {
             await addSubscribeSource(url, true);
           }
-        } catch (error) {
-          console.log(error);
-          failed.push(source.detail.name);
         }
-      }),
-    );
+      } catch (error) {
+        console.log(error);
+        failed.push(source.detail.name);
+      }
+    };
+    if (!source) {
+      await Promise.all(subscribeSourceStore.subscribeSources.map(update));
+      loadSubscribeSources(true);
+    } else {
+      await update(source);
+    }
+
     // for (const source of subscribeSourceStore.subscribeSources) {
     //   const url = source.url;
     //   try {
@@ -1039,7 +1149,6 @@ export const useStore = defineStore('store', () => {
     }
     displayStore.closeToast(t);
     await subscribeSourceStore.saveSubscribeSources();
-    loadSubscribeSources(true);
   };
   /**
    * 将当前source添加到对应的列表中
@@ -1189,8 +1298,6 @@ export const useStore = defineStore('store', () => {
         if (source.item.id.includes('test') && keepTest.value) {
           continue;
         }
-        console.log('removeFromSource', source.item.name);
-
         removeFromSource(source.item.id, source.item.type);
       }
     }
@@ -1355,10 +1462,10 @@ export const useStore = defineStore('store', () => {
     await subscribeSourceStore.init();
     if (!subscribeSourceStore.isEmpty) {
       // 更新订阅源
-      if (Date.now() - latestUpdateSource.value > 1000 * 60 * 60 * 24 * 3) {
-        await updateSubscribeSources();
-        latestUpdateSource.value = Date.now();
-      }
+      // if (Date.now() - latestUpdateSource.value > 1000 * 60 * 60 * 24 * 3) {
+      //   await updateSubscribeSources();
+      //   latestUpdateSource.value = Date.now();
+      // }
       // try {
       //   const dialog = await showConfirmDialog({
       //     title: "订阅更新",
@@ -1369,17 +1476,28 @@ export const useStore = defineStore('store', () => {
       //   }
       // } catch (error) {}
     } else {
-      try {
-        const dialog = await showConfirmDialog({
-          message: '您需要添加订阅源才能正常使用，\n是否立即导入默认订阅源？',
-        });
-        if (dialog === 'confirm') {
-          await addSubscribeSource(DEFAULT_SOURCE_URL);
-          showToast('默认源已导入');
+      showConfirmDialog({
+        message: '需要添加订阅源才能使用, \n是否立即导入默认订阅源?',
+      }).then(async (action) => {
+        if (action === 'confirm') {
+          const source = await serverStore.getDefaultMarketSource();
+          if (source) {
+            await addMarketSource(source);
+            showSuccessToast('默认源已导入');
+          } else {
+            await sleep(2000);
+          }
+          showConfirmDialog({
+            title: '提示',
+            message: '您可以在 订阅源市场 添加更多订阅源',
+            confirmButtonText: '去添加',
+          }).then((action) => {
+            if (action === 'confirm') {
+              router.push({ name: 'SourceMarket' });
+            }
+          });
         }
-      } catch (error) {
-        _;
-      }
+      });
     }
     // keepTest.value = true;
     // addTestSource(new TestSongExtension(), SourceType.Song);
@@ -1438,12 +1556,15 @@ export const useStore = defineStore('store', () => {
     getVideoSource,
     getVideoItem,
 
+    getSource,
+
     addSubscribeSource,
     localSourceId,
     addLocalSubscribeSource,
     loadSubscribeSources,
     updateSubscribeSources,
     removeFromSource,
+    addMarketSource,
 
     clearData,
     clearCache,

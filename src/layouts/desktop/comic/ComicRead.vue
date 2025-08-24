@@ -8,11 +8,11 @@ import type { ComicSource } from '@/types';
 import { LoadImage } from '@wuji-tauri/components/src';
 import { useDisplayStore } from '@/store';
 import { Icon } from '@iconify/vue';
-import { nextTick, onActivated, ref, watch } from 'vue';
+import { nextTick, onActivated, onDeactivated, ref, watch } from 'vue';
 import { useBackStore } from '@/store/backStore';
 import { storeToRefs } from 'pinia';
 import { router } from '@/router';
-import AddShelfButton from '@/components2/button/AddShelfButton.vue';
+import AddShelfButton from '@/components/button/AddShelfButton.vue';
 
 defineProps<{
   comic?: ComicItem;
@@ -66,6 +66,9 @@ watch(
 );
 onActivated(() => {
   showTabBar.value = showMenu.value;
+});
+onDeactivated(() => {
+  showTabBar.value = true;
 });
 </script>
 
@@ -146,7 +149,6 @@ onActivated(() => {
       <van-floating-bubble
         v-model:offset="bubbleOffset"
         axis="xy"
-        magnetic="x"
         :gap="6"
         class="!h-[90px] !w-[40px] !border !border-[var(--van-border-color)] !bg-[color:rgb(var(--van-background)/0.5)] active:!opacity-100"
       >

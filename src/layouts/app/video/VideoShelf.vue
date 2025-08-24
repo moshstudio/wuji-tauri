@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { MVideoShelfCard } from '@wuji-tauri/components/src';
-import MNavBar from '@/components2/header/MNavBar.vue';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import { useStore, useVideoShelfStore } from '@/store';
 import { showPromptDialog } from '@/utils/usePromptDialog';
 import { router } from '@/router';

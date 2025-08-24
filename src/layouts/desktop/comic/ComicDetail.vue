@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { ComicChapter, ComicItem } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
-import MNavBar from '@/components2/header/MNavBar.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
 import { LoadImage } from '@wuji-tauri/components/src';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
-import AddShelfButton from '@/components2/button/AddShelfButton.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import _ from 'lodash';
 import tinycolor from 'tinycolor2';
 import { router } from '@/router';

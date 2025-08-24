@@ -115,6 +115,7 @@ abstract class PhotoExtension extends Extension {
 
 function loadPhotoExtensionString(
   codeString: string,
+  raise = false,
 ): PhotoExtension | undefined {
   try {
     const func = new Function('PhotoExtension', codeString);
@@ -122,6 +123,7 @@ function loadPhotoExtensionString(
     return new extensionclass();
   } catch (error) {
     console.error('Error executing code:\n', error);
+    if (raise) throw error;
     // showNotify({
     //   type: 'danger',
     //   message: String(error),

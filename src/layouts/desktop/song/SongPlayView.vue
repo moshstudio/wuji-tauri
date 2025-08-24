@@ -9,7 +9,7 @@ import { computed, ref } from 'vue';
 import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
 import { Icon } from '@iconify/vue';
 import { SongPlayMode } from '@wuji-tauri/source-extension';
-import PlayingSongList from '@/components2/list/PlayingSongList.vue';
+import PlayingSongList from '@/components/list/PlayingSongList.vue';
 
 withDefaults(
   defineProps<{
@@ -114,7 +114,7 @@ const actions = computed(() => {
                 :class="activeIndex === index ? 'active-line' : ''"
                 :data-index="index"
               >
-                {{ item.lyric }}
+                <p>{{ item.lyric }}</p>
               </li>
             </ul>
           </div>

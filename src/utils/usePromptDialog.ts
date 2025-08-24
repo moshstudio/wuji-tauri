@@ -1,7 +1,7 @@
 import { h, ref, type Ref } from 'vue';
 import { closeDialog, showDialog, showToast } from 'vant';
 import type { DialogOptions, FieldType } from 'vant';
-import PromptDialog from '@/components2/dialog/PromptDialog.vue';
+import PromptDialog from '@/components/dialog/PromptDialog.vue';
 
 interface PromptDialogOptions {
   title?: string;

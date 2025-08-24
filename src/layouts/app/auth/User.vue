@@ -1,17 +1,18 @@
 <script lang="ts" setup>
 import { ref, reactive, watch, nextTick } from 'vue';
-import {
-  showConfirmDialog,
-  showSuccessToast,
-  showFailToast,
-  showToast,
-} from 'vant';
-import { useBackStore, UserInfo, useServerStore } from '@/store';
-import MNavBar from '@/components2/header/MNavBar.vue';
+import { showToast } from 'vant';
+import { UserInfo } from '@/store';
+import MNavBar from '@/components/header/MNavBar.vue';
 import { router } from '@/router';
 
 const props = defineProps<{
   userInfo?: UserInfo;
+  updateUserInfo: (
+    userInfo: Partial<Omit<UserInfo, 'uuid' | 'email' | 'isVerified'>>,
+  ) => Promise<void>;
+  resetPassword: () => void;
+  logout: () => void;
+  clickEmail: () => void;
 }>();
 
 const tmpUserInfo = reactive<Partial<UserInfo>>({});
@@ -26,9 +27,6 @@ watch(
   { immediate: true },
 );
 
-const backStore = useBackStore();
-const serverStore = useServerStore();
-
 const usernameField = ref<HTMLInputElement>();
 const usernameEdit = ref(false);
 const toggleUsernameEdit = () => {
@@ -38,49 +36,14 @@ const toggleUsernameEdit = () => {
       usernameField.value?.blur();
     });
     // 发送修改用户名请求
-    showToast('修改用户名实现中');
+    props.updateUserInfo({
+      name: tmpUserInfo.name,
+    });
   } else {
     usernameEdit.value = true;
     nextTick(() => {
       usernameField.value?.focus();
     });
-  }
-};
-
-// 重置密码
-const handleResetPassword = () => {
-  showConfirmDialog({
-    title: '重置密码',
-    message: '将向您的邮箱发送重置密码链接，确定继续吗？',
-  }).then(async () => {
-    if (!props.userInfo?.email) {
-      showFailToast('请先绑定邮箱');
-      return;
-    }
-    // 调用重置密码API
-    await serverStore.forgetPasswordEmail(props.userInfo.email);
-  });
-};
-
-// 退出登录
-const handleLogout = () => {
-  showConfirmDialog({
-    title: '退出登录',
-    message: '确定要退出当前账号吗？',
-  }).then(() => {
-    // 调用退出登录API
-    // 清除用户数据
-    // 跳转到登录页
-    serverStore.logout();
-    backStore.back();
-    showSuccessToast('已退出登录');
-  });
-};
-
-const copyEmail = () => {
-  if (tmpUserInfo.email) {
-    navigator.clipboard.writeText(tmpUserInfo.email);
-    showToast('已复制到剪贴板');
   }
 };
 </script>
@@ -149,7 +112,7 @@ const copyEmail = () => {
           <van-cell
             title="邮箱"
             :value="tmpUserInfo.email"
-            @click="copyEmail"
+            @click="clickEmail"
             clickable
           />
         </van-cell-group>
@@ -169,8 +132,8 @@ const copyEmail = () => {
 
         <!-- 操作按钮 -->
         <van-cell-group inset class="action-section">
-          <van-cell title="重置密码" is-link @click="handleResetPassword" />
-          <van-cell title="退出登录" is-link @click="handleLogout" />
+          <van-cell title="重置密码" is-link @click="resetPassword" />
+          <van-cell title="退出登录" is-link @click="logout" />
         </van-cell-group>
       </template>
     </div>

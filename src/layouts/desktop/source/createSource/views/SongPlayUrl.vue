@@ -7,9 +7,9 @@ import {
 } from '@wuji-tauri/source-extension';
 import { showDialog, showFailToast, showNotify } from 'vant';
 import { LoadImage } from '@wuji-tauri/components/src';
-import SONG_TEMPLATE from '@/components2/codeEditor/templates/songTemplate.txt?raw';
+import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
 import { nextTick, ref } from 'vue';
-import { joinSongArtists } from '@/utils';
+import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
 import fetch from '@wuji-tauri/fetch';
 
 enum RunStatus {
@@ -48,9 +48,11 @@ const props = defineProps<{
     padded: boolean,
   ) => void;
   close: () => void;
+  log: (...args: any[]) => void;
 }>();
 
 async function initLoad() {
+  result.value = undefined;
   return await load(1);
 }
 
@@ -98,6 +100,7 @@ async function load(pageNo: number) {
     if (!cls.baseUrl) {
       throw new Error('初始化中的baseUrl未定义!');
     }
+    cls.log = props.log;
     item.value =
       findPage('songList')?.result?.list?.[0] ||
       findPage('searchSongList')?.result?.list?.[0];
@@ -123,6 +126,7 @@ async function load(pageNo: number) {
   } catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
+    props.updateResult('song', 'playUrl', result.value, false);
   }
 }
 

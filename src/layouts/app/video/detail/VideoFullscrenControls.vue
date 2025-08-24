@@ -36,6 +36,7 @@ const props = withDefaults(
     play: (resource: VideoResource, episode: VideoEpisode) => Promise<void>;
     playPrev: (resource?: VideoResource, episode?: VideoEpisode) => void;
     playNext: (resource?: VideoResource, episode?: VideoEpisode) => void;
+    seek: (offset: number) => void;
     playOrPause: () => void;
     addToShelf: (video: VideoItem) => void;
     toggleFullScreen: (fullscreen: boolean) => void;
@@ -60,16 +61,22 @@ function refreshTimer() {
   if (isShowing.value) {
     isShowingTimer = setTimeout(() => {
       isShowing.value = false;
-    }, 6000);
+    }, 8000);
   }
 }
 function click() {
   isShowing.value = !isShowing.value;
   refreshTimer();
 }
+
+function dblClick() {
+  props.playOrPause();
+}
+
 defineExpose({
   isShowing,
   click,
+  dblClick,
 });
 
 const longPressOptions = reactive({
@@ -182,28 +189,67 @@ const dragHandler = (dragState: AnyGestureEventTypes['drag'], event: any) => {
     <!-- 播放暂停按钮 -->
     <div
       v-if="isShowing && videoDuration"
-      class="van-haptics-feedback absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all"
-      @click.stop="
-        () => {
-          playOrPause();
-          refreshTimer();
-        }
-      "
+      class="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-[100px] transition-all"
     >
-      <Icon
-        v-if="playerState?.paused"
-        icon="solar:play-bold"
-        width="60"
-        height="60"
-        color="rgba(220, 220, 220, 0.5)"
-      />
-      <Icon
-        v-if="playerState?.playing"
-        icon="solar:pause-bold"
-        width="60"
-        height="60"
-        color="rgba(220, 220, 220, 0.5)"
-      />
+      <div
+        class="van-haptics-feedback"
+        @click.stop="
+          () => {
+            seek(-10);
+            refreshTimer();
+          }
+        "
+        @dblclick.stop
+      >
+        <Icon
+          icon="material-symbols:replay-10-rounded"
+          width="40"
+          height="40"
+          color="rgba(220, 220, 220, 0.8)"
+        />
+      </div>
+      <div
+        class="van-haptics-feedback"
+        @click.stop="
+          () => {
+            playOrPause();
+            refreshTimer();
+          }
+        "
+        @dblclick.stop
+      >
+        <Icon
+          v-if="!!playerState?.paused"
+          icon="solar:play-bold"
+          width="60"
+          height="60"
+          color="rgba(220, 220, 220, 0.8)"
+        />
+        <Icon
+          v-else
+          icon="solar:pause-bold"
+          width="60"
+          height="60"
+          color="rgba(220, 220, 220, 0.5)"
+        />
+      </div>
+      <div
+        class="van-haptics-feedback"
+        @click.stop="
+          () => {
+            seek(10);
+            refreshTimer();
+          }
+        "
+        @dblclick.stop
+      >
+        <Icon
+          icon="material-symbols:forward-10-rounded"
+          width="40"
+          height="40"
+          color="rgba(220, 220, 220, 0.8)"
+        />
+      </div>
     </div>
   </transition>
   <!-- 下方控制栏 -->
@@ -232,68 +278,70 @@ const dragHandler = (dragState: AnyGestureEventTypes['drag'], event: any) => {
             {{ formatTime(videoDuration) }}
           </span>
         </div>
-        <div v-if="!videoSrc?.isLive">
-          <span class="text-xs text-gray-100">
-            {{ formatTime(videoPosition) }}
-          </span>
-          <span class="text-xs text-gray-400">/</span>
-          <span class="text-xs text-gray-400">
-            {{ formatTime(videoDuration) }}
-          </span>
-        </div>
         <div
           v-if="!videoSrc?.isLive"
           :ref="(el) => (slideOptions.slideElement = el as HTMLElement)"
-          class="relative h-[10px] w-full rounded-lg bg-gray-600/80"
+          class="relative h-[12px] w-full cursor-pointer rounded-lg bg-gray-600/60"
           @click.stop
           v-drag="dragHandler"
         >
           <div
-            class="absolute left-0 h-[10px] rounded-lg bg-gray-100"
+            class="absolute left-0 h-[12px] rounded-lg bg-gray-100/60"
             :style="{ width: `${(videoPosition / videoDuration) * 100}%` }"
           ></div>
         </div>
         <div
-          class="pointer-events-none flex w-full items-center justify-end gap-4 px-4"
+          class="pointer-events-none flex w-full items-center justify-between gap-4 px-4"
         >
-          <div
-            v-if="longPressOptions.isPressing"
-            class="pointer-events-none p-1"
-          >
-            2倍速播放中
+          <div>
+            <span class="text-xs text-gray-100">
+              {{ formatTime(videoPosition) }}
+            </span>
+            <span class="text-xs text-gray-400">/</span>
+            <span class="text-xs text-gray-400">
+              {{ formatTime(videoDuration) }}
+            </span>
           </div>
-          <van-icon
-            :name="inShelf ? 'like' : 'like-o'"
-            :color="inShelf ? 'red' : 'white'"
-            size="26"
-            class="van-haptics-feedback pointer-events-auto"
-            @click.stop="
-              () => {
-                if (inShelf) {
-                  router.push({ name: 'VideoShelf' }).then(() => {
-                    toggleFullScreen(false);
-                  });
-                } else {
-                  if (videoItem) {
-                    addToShelf(videoItem);
+          <div class="flex items-center gap-2">
+            <div
+              v-if="longPressOptions.isPressing"
+              class="pointer-events-none px-1 text-sm"
+            >
+              2倍速播放中
+            </div>
+            <van-icon
+              :name="inShelf ? 'like' : 'like-o'"
+              :color="inShelf ? 'red' : 'white'"
+              size="26"
+              class="van-haptics-feedback pointer-events-auto"
+              @click.stop="
+                () => {
+                  if (inShelf) {
+                    router.push({ name: 'VideoShelf' }).then(() => {
+                      toggleFullScreen(false);
+                    });
+                  } else {
+                    if (videoItem) {
+                      addToShelf(videoItem);
+                    }
+                    refreshTimer();
                   }
+                }
+              "
+            />
+            <van-icon
+              name="bars"
+              color="white"
+              size="26"
+              class="van-haptics-feedback pointer-events-auto"
+              @click.stop="
+                () => {
+                  showComponent?.(!componentIsShowing);
                   refreshTimer();
                 }
-              }
-            "
-          />
-          <van-icon
-            name="bars"
-            color="white"
-            size="26"
-            class="van-haptics-feedback pointer-events-auto"
-            @click.stop="
-              () => {
-                showComponent?.(!componentIsShowing);
-                refreshTimer();
-              }
-            "
-          />
+              "
+            />
+          </div>
         </div>
       </div>
     </div>

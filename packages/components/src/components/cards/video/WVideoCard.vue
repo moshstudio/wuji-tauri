@@ -20,7 +20,7 @@ defineProps<{
       fit="cover"
       :src="video.cover!"
       :headers="video.coverHeaders || undefined"
-      class="rounded-t-lg"
+      class="h-full min-h-[120px] w-full rounded-t-lg"
     />
 
     <p
@@ -31,7 +31,7 @@ defineProps<{
     </p>
     <p
       v-if="video.tags"
-      class="absolute bottom-6 left-0 max-w-[140px] truncate rounded bg-gray-800/60 p-1 text-xs text-gray-200"
+      class="absolute bottom-[22px] left-0 max-w-[140px] truncate rounded bg-gray-800/60 p-1 text-xs text-gray-200"
     >
       {{ _.castArray(video.tags).join(',') }}
     </p>

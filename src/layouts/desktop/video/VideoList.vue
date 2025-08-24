@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { VideoSource } from '@/types';
-import WHeader from '@/components2/header/WHeader.vue';
-import WVideoTab from '@/components2/tab/WVideoTab.vue';
+import WHeader from '@/components/header/WHeader.vue';
+import WVideoTab from '@/components/tab/WVideoTab.vue';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
 import { ref } from 'vue';

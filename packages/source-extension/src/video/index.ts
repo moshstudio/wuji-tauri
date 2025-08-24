@@ -224,6 +224,7 @@ abstract class VideoExtension extends Extension {
 
 function loadVideoExtensionString(
   codeString: string,
+  raise = false,
 ): VideoExtension | undefined {
   try {
     const func = new Function('VideoExtension', codeString);
@@ -231,6 +232,7 @@ function loadVideoExtensionString(
     return new extensionclass();
   } catch (error) {
     console.error('Error executing code:\n', error);
+    if (raise) throw error;
   }
 }
 

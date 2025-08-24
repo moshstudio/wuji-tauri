@@ -1,0 +1,48 @@
+export interface BookChapter {
+  id: string;
+  title: string;
+  url?: string;
+  readingPage?: number;
+}
+
+export type ChapterList = BookChapter[];
+
+export interface BookItem {
+  id: string;
+  title: string;
+  intro?: string;
+  cover?: string;
+  coverHeaders?: Record<string, string>;
+  author?: string;
+  tags?: string[] | string;
+  status?: string;
+  latestChapter?: string | BookChapter;
+  latestUpdate?: string;
+  url?: string;
+  chapters?: ChapterList;
+  extra?: any;
+  sourceId: string;
+}
+
+/**
+ * Queries and extracts book elements from a document
+ * @param body The document to query elements from
+ * @param tags Selectors for different book elements
+ * @returns A promise that resolves to an array of BookItem objects
+ */
+export declare function queryBookElements(
+  body: Document,
+  tags: {
+    element?: string;
+    cover?: string;
+    title?: string;
+    intro?: string;
+    author?: string;
+    tags?: string;
+    status?: string;
+    url?: string;
+    latestChapter?: string;
+    latestUpdate?: string;
+    coverDomain?: string;
+  },
+): Promise<BookItem[]>;

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { SourceType, type SubscribeItem, type SubscribeSource } from '@/types';
-import MNavBar from '@/components2/header/MNavBar.vue';
+import { SubscribeSourceCard } from '@wuji-tauri/components/src';
+import MNavBar from '@/components/header/MNavBar.vue';
 import { Icon } from '@iconify/vue';
 import { ref, computed } from 'vue';
 
 withDefaults(
   defineProps<{
     sources: SubscribeSource[];
-
     sourceDisabled: (source: SubscribeSource) => boolean;
     enableSource: (source: SubscribeSource, enable: boolean) => void;
     enableItem: (
@@ -15,8 +15,11 @@ withDefaults(
       item: SubscribeItem,
       enable: boolean,
     ) => void;
+    importSource: () => void;
+    updateSources: (source?: SubscribeSource) => void;
     removeSource: (source: SubscribeSource) => void;
     isLocalSource: (source: SubscribeSource) => boolean;
+    updateItem: (source: SubscribeSource, item: SubscribeItem) => void;
     removeItem: (source: SubscribeSource, item: SubscribeItem) => void;
   }>(),
   {},
@@ -37,47 +40,6 @@ const getSourceStats = (source: SubscribeSource) => {
     enabled: total - disabled,
   };
 };
-
-const getTypeProperty = (type: SourceType) => {
-  switch (type) {
-    case SourceType.Book:
-      return {
-        name: '书籍',
-        bgColor: '#dcfce7', // 绿色系
-        textColor: '#166534',
-      };
-    case SourceType.Comic:
-      return {
-        name: '漫画',
-        bgColor: '#fef3c7', // 黄色系
-        textColor: '#92400e',
-      };
-    case SourceType.Photo:
-      return {
-        name: '图片',
-        bgColor: '#f5f5f5', // 浅灰色系 (适合图片中性色)
-        textColor: '#525252', // 深灰色
-      };
-    case SourceType.Song:
-      return {
-        name: '音乐',
-        bgColor: '#fce7f3', // 粉色系
-        textColor: '#9d174d',
-      };
-    case SourceType.Video:
-      return {
-        name: '影视',
-        bgColor: '#fee2e2', // 红色系 (常见影视关联色)
-        textColor: '#991b1b',
-      };
-    case SourceType.Resource:
-      return {
-        name: '资源',
-        bgColor: '#e0e7ff', // 紫色系 (中性资源色)
-        textColor: '#4338ca',
-      };
-  }
-};
 </script>
 
 <template>
@@ -86,6 +48,14 @@ const getTypeProperty = (type: SourceType) => {
     <div
       class="flex w-full flex-grow flex-col overflow-y-auto bg-[--van-background] p-2"
     >
+      <div class="flex items-center gap-2 p-2">
+        <van-button size="small" type="primary" plain @click="updateSources">
+          更新订阅源
+        </van-button>
+        <van-button size="small" type="success" plain @click="importSource">
+          导入订阅源
+        </van-button>
+      </div>
       <van-cell-group
         v-for="source in sources"
         :key="source.detail.id"
@@ -105,6 +75,12 @@ const getTypeProperty = (type: SourceType) => {
               </div>
             </div>
             <div class="flex items-center gap-3">
+              <div
+                class="van-haptics-feedback rounded bg-blue-500 p-1 text-white"
+                @click.stop="() => updateSources(source)"
+              >
+                <Icon :icon="'dashicons:update-alt'" width="16" height="16" />
+              </div>
               <div
                 class="van-haptics-feedback rounded p-1 text-white"
                 :class="sourceDisabled(source) ? 'bg-gray-400' : 'bg-green-500'"
@@ -147,30 +123,22 @@ const getTypeProperty = (type: SourceType) => {
           }"
         >
           <div class="overflow-hidden">
-            <van-cell
+            <SubscribeSourceCard
               v-for="item in source.detail.urls"
               :key="item.url"
-              clickable
-              @click="() => enableItem(source, item, !!!item.disable)"
+              :source="source"
+              :item="item"
+              :on-click="() => enableItem(source, item, !!!item.disable)"
+              :class="!!item.disable ? 'opacity-50' : ''"
             >
-              <template #title>
-                <div
-                  class="flex items-center gap-2"
-                  :class="!!item.disable ? 'opacity-50' : ''"
-                >
-                  <van-tag
-                    :color="getTypeProperty(item.type).bgColor"
-                    :text-color="getTypeProperty(item.type).textColor"
-                  >
-                    {{ getTypeProperty(item.type).name }}
-                  </van-tag>
-                  <div>
-                    {{ item.name }}
-                  </div>
-                </div>
-              </template>
-              <template #value>
+              <template #right>
                 <div class="flex items-center gap-3">
+                  <div
+                    class="van-haptics-feedback rounded bg-blue-500 p-1 text-white"
+                    @click.stop="() => updateItem(source, item)"
+                  >
+                    <Icon :icon="'uil:edit'" width="16" height="16" />
+                  </div>
                   <div
                     class="van-haptics-feedback rounded p-1 text-white"
                     :class="item.disable ? 'bg-gray-400' : 'bg-green-500'"
@@ -192,7 +160,7 @@ const getTypeProperty = (type: SourceType) => {
                   </div>
                 </div>
               </template>
-            </van-cell>
+            </SubscribeSourceCard>
           </div>
         </div>
       </van-cell-group>
@@ -200,12 +168,4 @@ const getTypeProperty = (type: SourceType) => {
   </div>
 </template>
 
-<style scoped lang="less">
-:deep(.van-cell__title) {
-  flex: none;
-  flex-grow: 1;
-}
-:deep(.van-cell__value) {
-  flex: none;
-}
-</style>
+<style scoped lang="less"></style>

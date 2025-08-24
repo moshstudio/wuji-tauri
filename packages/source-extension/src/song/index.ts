@@ -270,6 +270,7 @@ abstract class SongExtension extends Extension {
 
 function loadSongExtensionString(
   codeString: string,
+  raise = false,
 ): SongExtension | undefined {
   try {
     const func = new Function('SongExtension', codeString);
@@ -277,6 +278,7 @@ function loadSongExtensionString(
     return new extensionclass();
   } catch (error) {
     console.error('Error executing code:\n', error);
+    if (raise) throw error;
   }
 }
 

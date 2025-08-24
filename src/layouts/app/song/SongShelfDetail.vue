@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import MNavBar from '@/components2/header/MNavBar.vue';
-import MSongBar from '@/components2/songbar/MSongBar.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
+import MSongBar from '@/components/songbar/MSongBar.vue';
 import { MSongShelfCard } from '@wuji-tauri/components/src';
-import MPagination from '@/components2/pagination/MPagination.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
 import { useSongShelfStore, useSongStore } from '@/store';
 import { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
 

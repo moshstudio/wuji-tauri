@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { VideoSource } from '@/types';
-import MHeader from '@/components2/header/MHeader.vue';
-import MVideoTab from '@/components2/tab/MVideoTab.vue';
+import MHeader from '@/components/header/MHeader.vue';
+import MVideoTab from '@/components/tab/MVideoTab.vue';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
 import { ref } from 'vue';

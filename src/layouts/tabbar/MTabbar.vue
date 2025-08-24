@@ -58,25 +58,24 @@ const pages = computed(() => {
 function updateActiveKey(newPath?: string) {
   newPath ||= route.path;
   displayStore.routerCurrPath = newPath;
-  if (
-    !newPath.startsWith('/book-read/') &&
-    !newPath.startsWith('/comic-read/')
-  ) {
+  const pathName = route.name;
+  if (typeof pathName !== 'string') return;
+  if (pathName !== 'BookRead' && pathName !== 'ComicRead') {
     displayStore.showTabBar = true;
   }
-  if (newPath.startsWith('/photo')) {
+  if (pathName.startsWith('Photo')) {
     photoPath.value = newPath;
     activeKey.value = pages.value.findIndex((page) => page.name === 'Photo');
-  } else if (newPath.startsWith('/song')) {
+  } else if (pathName.startsWith('Song')) {
     songPath.value = newPath;
     activeKey.value = pages.value.findIndex((page) => page.name === 'Song');
-  } else if (newPath.startsWith('/book')) {
+  } else if (pathName.startsWith('Book')) {
     bookPath.value = newPath;
     activeKey.value = pages.value.findIndex((page) => page.name === 'Book');
-  } else if (newPath.startsWith('/comic')) {
+  } else if (pathName.startsWith('Comic')) {
     comicPath.value = newPath;
     activeKey.value = pages.value.findIndex((page) => page.name === 'Comic');
-  } else if (newPath.startsWith('/video')) {
+  } else if (pathName.startsWith('Video')) {
     videoPath.value = newPath;
     activeKey.value = pages.value.findIndex((page) => page.name === 'Video');
   } else {

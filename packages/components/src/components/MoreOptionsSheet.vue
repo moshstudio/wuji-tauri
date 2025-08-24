@@ -1,10 +1,19 @@
 <script setup lang="ts">
 import type { ActionSheetAction } from 'vant';
 
-const { actions } = defineProps<{
-  actions: ActionSheetAction[];
-}>();
 const show = defineModel<boolean>();
+
+withDefaults(
+  defineProps<{
+    actions: ActionSheetAction[];
+    title?: string;
+    closeOnClickAction?: boolean;
+  }>(),
+  {
+    title: '更多选项',
+    closeOnClickAction: true,
+  },
+);
 </script>
 
 <template>
@@ -12,8 +21,9 @@ const show = defineModel<boolean>();
     v-model:show="show"
     :actions="actions"
     cancel-text="取消"
-    title="更多选项"
+    :title="title"
     teleport="body"
+    :close-on-click-action="closeOnClickAction"
   />
 </template>
 

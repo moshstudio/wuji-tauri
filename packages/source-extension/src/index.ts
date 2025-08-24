@@ -59,7 +59,7 @@ export type {
   VideoShelf,
 } from './video/index';
 
-export { SourceType } from './source/index';
+export { SourceType, MarketSourcePermission } from './source/index';
 
 export type {
   SubscribeItem,
@@ -71,4 +71,7 @@ export type {
   BookSource,
   ComicSource,
   VideoSource,
+  MarketSourceContent,
+  MarketSource,
+  PagedMarketSource,
 } from './source/index';

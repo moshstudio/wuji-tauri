@@ -1,0 +1,17 @@
+class CustomBookExtension extends BookExtension {
+  id = 'testBook';
+  name = '测试';
+
+  constructor() {}
+
+  async getRecommendBooks(pageNo, type) {}
+
+  async search(keyword, pageNo) {}
+
+  async getBookDetail(item, pageNo) {}
+
+  async getContent(item, chapter) {}
+
+}
+
+return CustomBookExtension;

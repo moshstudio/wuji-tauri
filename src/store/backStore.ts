@@ -36,41 +36,39 @@ export const useBackStore = defineStore('back', () => {
     }
   };
   const getPrevPath = (): RoutePath | undefined | null => {
-    const path = route.path;
-    const pathName = route.name;
-    if (!(typeof pathName === 'string')) {
+    // null: 退出软件
+    // undefined: 返回首页
+    const pathName = route.name?.toString();
+    if (pathName) {
+      for (const name of names) {
+        if (pathName.toLowerCase() === name) {
+          // 主路径可以返回桌面
+          return null;
+        } else if (pathName.toLowerCase().startsWith(name)) {
+          // 子路径返回上一级
+          while (_catelogPaths[name].length) {
+            const ret = _catelogPaths[name].pop();
+            if (ret && ret.name !== pathName) {
+              return ret;
+            }
+          }
+          return {
+            name: _.capitalize(name),
+            path: '/' + name,
+            params: {},
+            query: {},
+          };
+        }
+      }
+      // 默认返回上一级
       while (_paths.length) {
         const ret = _paths.pop();
-        if (ret && ret.path !== path) {
+        if (ret && ret.name !== pathName) {
           return ret;
         }
       }
-      return undefined;
     }
-    for (const name of names) {
-      if (pathName.toLowerCase() === name) {
-        // 主路径可以返回桌面
-        return null;
-      }
-    }
-    for (const name of names) {
-      if (pathName.toLowerCase().startsWith(name)) {
-        // 子路径返回上一级
-        while (_catelogPaths[name].length) {
-          const ret = _catelogPaths[name].pop();
-          if (ret && ret.path !== path) {
-            return ret;
-          }
-        }
-        return {
-          name: _.capitalize(name),
-          path: '/' + name,
-          params: {},
-          query: {},
-        };
-      }
-    }
-    return _.findLast(_paths, (p) => p.path !== path);
+    return undefined;
   };
   const back = async () => {
     if (displayStore.fullScreenMode) {
@@ -78,10 +76,13 @@ export const useBackStore = defineStore('back', () => {
       return;
     }
     const prevPath = getPrevPath();
+    console.log('get prev path:', prevPath);
+
     if (prevPath === undefined) {
-      if (!window.history.length) {
+      if (_paths.length === 0) {
         await router.push('/');
       } else {
+        _paths.pop();
         router.back();
       }
     } else if (prevPath === null) {
@@ -90,7 +91,11 @@ export const useBackStore = defineStore('back', () => {
         await displayStore.exitApp();
       }
     } else {
-      await router.push(prevPath);
+      await router.push({
+        name: prevPath.name,
+        params: prevPath.params,
+        query: prevPath.query,
+      });
     }
   };
 

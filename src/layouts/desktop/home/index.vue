@@ -6,7 +6,7 @@ import { open } from '@tauri-apps/plugin-shell';
 import { storeToRefs } from 'pinia';
 import { showFailToast } from 'vant';
 import { onMounted, ref } from 'vue';
-import WTaichiAnimate from '@/components2/animate/WTaichiAnimate.vue';
+import WTaichiAnimate from '@/components/animate/WTaichiAnimate.vue';
 
 const store = useStore();
 const { hotItems } = storeToRefs(store);

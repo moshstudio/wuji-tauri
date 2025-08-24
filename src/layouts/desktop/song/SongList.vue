@@ -3,11 +3,11 @@ import type { SongInfo } from '@wuji-tauri/source-extension';
 import type { SongSource } from '@/types';
 import { WPlaylistCard } from '@wuji-tauri/components/src';
 import { WSongCard } from '@wuji-tauri/components/src';
-import WHeader from '@/components2/header/WHeader.vue';
-import HorizonList from '@/components2/list/HorizonList.vue';
-import MPagination from '@/components2/pagination/MPagination.vue';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
-import WSongBar from '@/components2/songbar/WSongBar.vue';
+import WHeader from '@/components/header/WHeader.vue';
+import HorizonList from '@/components/list/HorizonList.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import WSongBar from '@/components/songbar/WSongBar.vue';
 import {
   useDisplayStore,
   useSongShelfStore,
@@ -88,7 +88,7 @@ const { songSources } = storeToRefs(store);
               :playlist="p"
               :click="
                 (playlist) => {
-                  $router.push({
+                  router.push({
                     name: 'SongPlaylistDetail',
                     params: {
                       playlistId: playlist.id,

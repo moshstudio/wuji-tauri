@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import MNavBar from '@/components2/header/MNavBar.vue';
-import WSongBar from '@/components2/songbar/WSongBar.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
+import WSongBar from '@/components/songbar/WSongBar.vue';
 import { WSongShelfCard } from '@wuji-tauri/components/src';
-import MPagination from '@/components2/pagination/MPagination.vue';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
 import { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
 import { ref } from 'vue';

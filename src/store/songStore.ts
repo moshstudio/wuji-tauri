@@ -2,7 +2,8 @@ import type { SongExtension, SongInfo } from '@wuji-tauri/source-extension';
 
 import type { PluginListener } from '@tauri-apps/api/core';
 import { SongPlayMode } from '@wuji-tauri/source-extension';
-import { joinSongArtists, songUrlToString } from '@/utils';
+import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
+import { songUrlToString } from '@/utils';
 import { fetch } from '@wuji-tauri/fetch';
 import { getSongCover } from '@/utils/songCover';
 import { useStorageAsync } from '@vueuse/core';

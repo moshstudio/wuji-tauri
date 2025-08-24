@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PhotoDetail, PhotoItem } from '@wuji-tauri/source-extension';
 import { LoadImage } from '@wuji-tauri/components/src';
-import WNavbar from '@/components2/header/WNavbar.vue';
+import WNavbar from '@/components/header/WNavbar.vue';
 import { computed, watch } from 'vue';
 
 const props = withDefaults(

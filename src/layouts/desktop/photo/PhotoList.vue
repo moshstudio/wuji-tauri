@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { PhotoSource } from '@/types';
 import { WPhotoCard } from '@wuji-tauri/components/src';
-import WHeader from '@/components2/header/WHeader.vue';
-import MPagination from '@/components2/pagination/MPagination.vue';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
+import WHeader from '@/components/header/WHeader.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
 import { ref } from 'vue';

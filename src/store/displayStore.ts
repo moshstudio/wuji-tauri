@@ -83,15 +83,13 @@ export const useDisplayStore = defineStore('display', () => {
   const bookKeepScreenOn = useStorageAsync('bookKeepScreenOn', false);
   const comicKeepScreenOn = useStorageAsync('comicKeepScreenOn', false);
 
-  const trayId = ref('');
+  const tray = ref<TrayIcon>();
   if (isWindows.value) {
     onMounted(async () => {
-      trayId.value = (await buildTray()).id;
-    });
-    onBeforeUnmount(async () => {
-      if (trayId.value && (await TrayIcon.getById(trayId.value))) {
-        await TrayIcon.removeById(trayId.value);
-      }
+      tray.value = await buildTray();
+      window.addEventListener('beforeunload', () => {
+        tray.value?.close();
+      });
     });
   }
 
@@ -109,7 +107,7 @@ export const useDisplayStore = defineStore('display', () => {
   const songPath = useStorageAsync('songPath', '/song');
   const bookPath = useStorageAsync('bookPath', '/book');
   const comicPath = useStorageAsync('comicPath', '/comic');
-  const videoPath = useStorageAsync('videoPath', '/video');
+  const videoPath = ref('/video');
 
   const searchHistories = useStorageAsync<string[]>('searchHistories', []);
   onMounted(() => {
@@ -216,7 +214,7 @@ export const useDisplayStore = defineStore('display', () => {
     bookKeepScreenOn,
     comicKeepScreenOn,
 
-    trayId,
+    tray,
     toastActive,
     showToast,
     closeToast,

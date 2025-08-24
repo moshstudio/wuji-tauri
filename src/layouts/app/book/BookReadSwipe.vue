@@ -3,8 +3,8 @@ import type { BookChapter, BookItem } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
 import type { LineData, ReaderResult } from '@/utils/reader/types';
 import { Swiper, SwiperSlide } from 'swiper/vue';
-import AddShelfButton from '@/components2/button/AddShelfButton.vue';
-import MBookTTSButton from '@/components2/button/MBookTTSButton.vue';
+import AddShelfButton from '@/components/button/AddShelfButton.vue';
+import MBookTTSButton from '@/components/button/MBookTTSButton.vue';
 import {
   useBookChapterStore,
   useBookStore,
@@ -410,54 +410,66 @@ onActivated(() => {
     :class="[showMenu ? '' : 'hide_menu']"
   >
     <!-- 顶部菜单 -->
-    <div
-      class="top_menu absolute left-0 top-0 z-[5] flex w-full flex-col gap-2 bg-[var(--van-background)] p-2 shadow transition"
+    <transition
+      enter-active-class="transition-all duration-100 ease-out"
+      enter-from-class="opacity-0 transform -translate-y-full"
+      enter-to-class="opacity-100 transform translate-y-0"
+      leave-active-class="transition-all duration-100 ease-in"
+      leave-from-class="opacity-100 transform translate-y-0"
+      leave-to-class="opacity-0 transform -translate-y-full"
     >
-      <div class="flex flex-nowrap items-center justify-between">
-        <div class="flex flex-nowrap items-center">
-          <van-icon
-            name="arrow-left"
-            color="var(--van-text-color)"
-            size="22"
-            class="van-haptics-feedback p-1"
-            @click="backStore.back"
-          />
-          <span class="ml-2 line-clamp-1 text-sm text-[var(--van-text-color)]">
-            {{ book?.title }}
-          </span>
-        </div>
-        <div class="options flex items-center gap-3 pr-2">
-          <van-icon
-            name="replay"
-            class="van-haptics-feedback text-[var(--van-text-color)]"
-            @click="() => refreshChapter()"
-          />
-          <van-icon
-            name="exchange"
-            class="van-haptics-feedback text-[var(--van-text-color)]"
-            @click="showSwitchSource"
-          />
-
-          <AddShelfButton
-            size="mini"
-            :is-added="inShelf"
-            :add-click="addToShelf"
-            :added-click="() => router.push({ name: 'BookShelf' })"
-          />
-        </div>
-      </div>
       <div
-        class="flex flex-nowrap items-center justify-between text-xs text-[var(--van-text-color)]"
+        v-show="showMenu"
+        class="top_menu absolute left-0 top-0 z-[5] flex w-full flex-col gap-2 bg-[var(--van-background)] p-2 shadow transition"
       >
-        <span v-if="readingChapter">{{ readingChapter?.title }}</span>
+        <div class="flex flex-nowrap items-center justify-between">
+          <div class="flex flex-nowrap items-center">
+            <van-icon
+              name="arrow-left"
+              color="var(--van-text-color)"
+              size="22"
+              class="van-haptics-feedback p-1"
+              @click="backStore.back"
+            />
+            <span
+              class="ml-2 line-clamp-1 text-sm text-[var(--van-text-color)]"
+            >
+              {{ book?.title }}
+            </span>
+          </div>
+          <div class="options flex items-center gap-3 pr-2">
+            <van-icon
+              name="replay"
+              class="van-haptics-feedback text-[var(--van-text-color)]"
+              @click="() => refreshChapter()"
+            />
+            <van-icon
+              name="exchange"
+              class="van-haptics-feedback text-[var(--van-text-color)]"
+              @click="showSwitchSource"
+            />
+
+            <AddShelfButton
+              size="mini"
+              :is-added="inShelf"
+              :add-click="addToShelf"
+              :added-click="() => router.push({ name: 'BookShelf' })"
+            />
+          </div>
+        </div>
         <div
-          v-if="bookSource"
-          class="mr-2 rounded p-1 text-[var(--van-primary-color)]"
+          class="flex flex-nowrap items-center justify-between text-xs text-[var(--van-text-color)]"
         >
-          {{ bookSource?.item.name }}
+          <span v-if="readingChapter">{{ readingChapter?.title }}</span>
+          <div
+            v-if="bookSource"
+            class="mr-2 rounded p-1 text-[var(--van-primary-color)]"
+          >
+            {{ bookSource?.item.name }}
+          </div>
         </div>
       </div>
-    </div>
+    </transition>
 
     <!-- 阅读内容页 -->
     <Swiper
@@ -569,59 +581,70 @@ onActivated(() => {
     </Swiper>
 
     <!-- 底部菜单 -->
-    <div
-      class="bottom up-shadow absolute bottom-0 left-0 z-[6] flex w-full flex-col bg-[var(--van-background)] p-2 pb-[50px] text-[var(--van-text-color)] transition"
+    <transition
+      enter-active-class="transition-all duration-100 ease-out"
+      enter-from-class="opacity-0 transform translate-y-full"
+      enter-to-class="opacity-100 transform translate-y-0"
+      leave-active-class="transition-all duration-100 ease-in"
+      leave-from-class="opacity-100 transform translate-y-0"
+      leave-to-class="opacity-0 transform translate-y-full"
     >
-      <div class="flex items-center gap-2">
-        <div
-          class="van-haptics-feedback shrink-0 text-nowrap px-2 text-sm"
-          @click="() => prevChapter()"
-        >
-          上一章
+      <div
+        v-show="showMenu"
+        class="bottom-menu up-shadow absolute bottom-0 left-0 z-[6] flex w-full flex-col bg-[var(--van-background)] p-2 pb-[50px] text-[var(--van-text-color)] transition"
+      >
+        <div class="flex items-center gap-2">
+          <div
+            class="van-haptics-feedback shrink-0 text-nowrap px-2 text-sm"
+            @click="() => prevChapter()"
+          >
+            上一章
+          </div>
+          <van-slider
+            v-model="sliderToPageValue"
+            class="w-[calc(100%-120px)]"
+            :button-size="16"
+            :min="1"
+            :step="1"
+            :max="readingContent ? readingContent.length : 1"
+          />
+          <div
+            class="van-haptics-feedback shrink-0 text-nowrap px-2 text-sm"
+            @click="nextChapter"
+          >
+            下一章
+          </div>
         </div>
-        <van-slider
-          v-model="sliderToPageValue"
-          class="w-[calc(100%-120px)]"
-          :button-size="16"
-          :min="1"
-          :step="1"
-          :max="readingContent ? readingContent.length : 1"
-        />
-        <div
-          class="van-haptics-feedback shrink-0 text-nowrap px-2 text-sm"
-          @click="nextChapter"
-        >
-          下一章
+        <div class="flex w-full items-center justify-between gap-1 text-sm">
+          <div
+            class="van-haptics-feedback flex flex-col items-center gap-1 p-2"
+            @click="() => showChapterList()"
+          >
+            <Icon icon="tabler:list" width="20" height="20" />
+            章节
+          </div>
+          <MBookTTSButton
+            :reading-paged-content="readingContent || [[]]"
+            :onPlay="playTts"
+          ></MBookTTSButton>
+          <div
+            class="van-haptics-feedback flex flex-col items-center gap-1 p-2"
+            @click="showViewSetting"
+          >
+            <Icon icon="ci:font" width="20" height="20" />
+            界面
+          </div>
+          <div
+            class="van-haptics-feedback flex flex-col items-center gap-1 p-2"
+            @click="showSetting"
+          >
+            <Icon icon="tabler:settings" width="20" height="20" />
+            设置
+          </div>
         </div>
       </div>
-      <div class="flex w-full items-center justify-between gap-1 text-sm">
-        <div
-          class="van-haptics-feedback flex flex-col items-center gap-1 p-2"
-          @click="() => showChapterList()"
-        >
-          <Icon icon="tabler:list" width="20" height="20" />
-          章节
-        </div>
-        <MBookTTSButton
-          :reading-paged-content="readingContent || [[]]"
-          :onPlay="playTts"
-        ></MBookTTSButton>
-        <div
-          class="van-haptics-feedback flex flex-col items-center gap-1 p-2"
-          @click="showViewSetting"
-        >
-          <Icon icon="ci:font" width="20" height="20" />
-          界面
-        </div>
-        <div
-          class="van-haptics-feedback flex flex-col items-center gap-1 p-2"
-          @click="showSetting"
-        >
-          <Icon icon="tabler:settings" width="20" height="20" />
-          设置
-        </div>
-      </div>
-    </div>
+    </transition>
+
     <van-popup
       v-model:show="isShowChapterList"
       teleport="body"
@@ -679,14 +702,4 @@ onActivated(() => {
   </div>
 </template>
 
-<style lang="less" scoped>
-/* 菜单显示隐藏 */
-.hide_menu {
-  .top_menu {
-    transform: translateY(-100%);
-  }
-  .bottom {
-    transform: translateY(100%);
-  }
-}
-</style>
+<style lang="less" scoped></style>

@@ -173,6 +173,7 @@ abstract class BookExtension extends Extension {
 
 function loadBookExtensionString(
   codeString: string,
+  raise = false,
 ): BookExtension | undefined {
   try {
     const func = new Function('BookExtension', codeString);
@@ -180,6 +181,7 @@ function loadBookExtensionString(
     return new extensionclass();
   } catch (error) {
     console.error('Error executing code:\n', error);
+    if (raise) throw error;
   }
 }
 

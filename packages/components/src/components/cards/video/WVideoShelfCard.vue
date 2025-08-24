@@ -52,7 +52,7 @@ const lastWatchEpisode = computed((): VideoEpisode | undefined => {
       fit="cover"
       :src="video.video.cover"
       :headers="video.video.coverHeaders"
-      class="h-full"
+      class="h-full min-h-[120px] w-full"
     >
       <template #loading>
         <Icon icon="codicon:comic" width="48" height="48" />
@@ -69,7 +69,7 @@ const lastWatchEpisode = computed((): VideoEpisode | undefined => {
       {{ video.video.title }}
     </p>
     <p
-      class="absolute bottom-6 max-w-full truncate bg-slate-600/80 p-1 text-xs text-gray-200"
+      class="absolute bottom-[22px] max-w-full truncate bg-slate-600/80 p-1 text-xs text-gray-200"
     >
       {{ lastWatchEpisode?.title || '未观看' }}
     </p>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { PhotoSource } from '@/types';
 import { MPhotoCard } from '@wuji-tauri/components/src';
-import MHeader from '@/components2/header/MHeader.vue';
-import MPagination from '@/components2/pagination/MPagination.vue';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
+import MHeader from '@/components/header/MHeader.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
 import { ref } from 'vue';
@@ -73,7 +73,7 @@ async function onRefresh() {
                   :item="photo"
                   @click="
                     (item) => {
-                      $router.push({
+                      router.push({
                         name: 'PhotoDetail',
                         params: { id: item.id, sourceId: item.sourceId },
                       });

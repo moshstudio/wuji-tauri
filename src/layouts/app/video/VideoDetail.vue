@@ -9,7 +9,7 @@ import type {
 import type { VideoSource } from '@/types';
 import type videojs from 'video.js';
 
-import MVideoPlayer from '@/components2/media/MVideoPlayer.vue';
+import MVideoPlayer from '@/components/media/MVideoPlayer.vue';
 import VideoComponent from './detail/VideoComponent.vue';
 import VideoFullscreenComponent from './detail/VideoFullscreenComponent.vue';
 import VideoControls from './detail/VideoControls.vue';
@@ -39,6 +39,7 @@ const props = defineProps<{
   addToShelf: (video: VideoItem) => void;
   playPrev: (resource?: VideoResource, episode?: VideoEpisode) => void;
   playNext: (resource?: VideoResource, episode?: VideoEpisode) => void;
+  seek: (offset: number) => void;
   toggleFullScreen: (fullscreen: boolean) => void;
   onCanPlay: (args: any) => void;
   onPlayFinished: (args: any) => void;
@@ -154,8 +155,9 @@ function formatTime(seconds: number) {
       </SwiperSlide>
       <SwiperSlide>
         <div
-          class="relative flex h-full w-full items-center justify-center transition-all duration-300"
+          class="relative flex h-full w-full cursor-auto items-center justify-center transition-all duration-300"
           @click="controlRef?.click"
+          @dblclick="controlRef?.dblClick"
         >
           <MVideoPlayer
             v-model:player="player"
@@ -219,6 +221,7 @@ function formatTime(seconds: number) {
             :play="play"
             :play-prev="playPrev"
             :play-next="playNext"
+            :seek="seek"
             :play-or-pause="playOrPause"
             :toggle-full-screen="toggleFullScreen"
             :add-to-shelf="addToShelf"

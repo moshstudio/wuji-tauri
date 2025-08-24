@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { WPhotoShelfCard } from '@wuji-tauri/components/src';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
-import WNavbar from '@/components2/header/WNavbar.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import WNavbar from '@/components/header/WNavbar.vue';
 import { useDisplayStore, usePhotoShelfStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import { router } from '@/router';

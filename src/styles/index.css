@@ -4,7 +4,7 @@
 
 @layer components {
   .active-bg-scale {
-    @apply transform cursor-pointer select-none transition-all duration-150 active:scale-[0.98] active:bg-[var(--van-background)];
+    @apply transform cursor-pointer select-none transition-all duration-150 active:scale-[0.99] active:bg-[var(--van-background)];
   }
   .text-button {
     @apply cursor-pointer select-none border-b-2 border-b-orange-600 text-sm text-[--van-text-color] active:opacity-50;
@@ -73,8 +73,8 @@ body,
   --van-collapse-item-content-padding: 10px 10px;
   --van-tabs-nav-background: var(--van-background-2);
 }
-.van-button:not(.van-button--primary),
-.van-button:not(.van-button--primary)
+.van-button:not(.van-button--primary):not(.van-button--success),
+.van-button:not(.van-button--primary):not(.van-button--success)
   > .van-button__content
   > .van-button__text,
 .van-cell__title {
@@ -99,11 +99,11 @@ body,
   }
 
   :hover::-webkit-scrollbar-thumb {
-    background-color: rgba(110, 110, 110, 0.2);
+    background-color: rgba(110, 110, 110, 0.5);
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(110, 110, 110, 0.6);
+    background-color: rgba(110, 110, 110, 0.8);
   }
 }
 
@@ -115,16 +115,16 @@ body,
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: rgba(110, 110, 110, 0.2);
+    background-color: rgba(110, 110, 110, 0.4);
     border-radius: 6px;
   }
 
   :hover::-webkit-scrollbar-thumb {
-    background-color: rgba(110, 110, 110, 0.6);
+    background-color: rgba(110, 110, 110, 0.7);
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(110, 110, 110, 0.8);
+    background-color: rgba(110, 110, 110, 0.9);
   }
 }
 

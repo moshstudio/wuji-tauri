@@ -305,11 +305,14 @@ export async function cachedFetch(
             fileType: 'image/webp', // 可选转 WebP
           });
           response = new Response(compressedFile);
+          cache.put(cacheKey, response.clone());
         } catch (error) {
           console.error('LoadImage压缩错误:', cacheKey, error);
+          return new Response(blob);
         }
+      } else {
+        cache.put(cacheKey, response.clone());
       }
-      cache.put(cacheKey, response.clone());
     }
     return response;
   } else {

@@ -1,0 +1,59 @@
+export interface VideoEpisode {
+  id: string;
+  title: string;
+  url?: string;
+  extra?: any;
+  lastWatchPosition?: number;
+}
+
+export interface VideoResource {
+  id: string;
+  title: string;
+  url?: string;
+  episodes?: VideoEpisode[];
+  extra?: any;
+}
+
+export interface VideoItem {
+  id: string;
+  title: string;
+  intro?: string;
+  cover?: string;
+  coverHeaders?: Record<string, string> | null;
+  releaseDate?: string;
+  country?: string;
+  duration?: string;
+  director?: string;
+  cast?: string;
+  tags?: string[] | string;
+  status?: string;
+  latestUpdate?: string;
+  url?: string;
+  resources?: VideoResource[];
+  lastWatchResourceId?: string;
+  lastWatchEpisodeId?: string;
+  extra?: Record<string, any>;
+  sourceId: string;
+}
+
+export declare function queryVideoElements(
+  body: Document,
+  tags: {
+    element?: string;
+    cover?: string;
+    title?: string;
+    intro?: string;
+    releaseDate?: string;
+    country?: string;
+    duration?: string;
+    director?: string;
+    cast?: string;
+    tags?: string;
+    status?: string;
+    url?: string;
+    latestUpdate?: string;
+    coverDomain?: string;
+    coverHeaders?: Record<string, string>;
+    baseUrl?: string;
+  },
+): Promise<VideoItem[]>;

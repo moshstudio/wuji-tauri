@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { ComicItem } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
-import WHeader from '@/components2/header/WHeader.vue';
-import WComicTab from '@/components2/tab/WComicTab.vue';
+import WHeader from '@/components/header/WHeader.vue';
+import WComicTab from '@/components/tab/WComicTab.vue';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
 import { ref } from 'vue';

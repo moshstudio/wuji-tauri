@@ -1,0 +1,59 @@
+export interface ProxyConfig {
+  /**
+   * The URL of the proxy server.
+   */
+  url: string;
+  /**
+   * Set the `Proxy-Authorization` header using Basic auth.
+   */
+  basicAuth?: {
+    username: string;
+    password: string;
+  };
+  /**
+   * A configuration for filtering out requests that shouldn't be proxied.
+   * Entries are expected to be comma-separated (whitespace between entries is ignored)
+   */
+  noProxy?: string;
+}
+
+export interface Proxy {
+  /**
+   * Proxy all traffic to the passed URL.
+   */
+  all?: string | ProxyConfig;
+  /**
+   * Proxy all HTTP traffic to the passed URL.
+   */
+  http?: string | ProxyConfig;
+  /**
+   * Proxy all HTTPS traffic to the passed URL.
+   */
+  https?: string | ProxyConfig;
+}
+
+export interface ClientOptions {
+  /**
+   * Defines the maximum number of redirects the client should follow.
+   * If set to 0, no redirects will be followed.
+   */
+  maxRedirections?: number;
+  /** Timeout in milliseconds */
+  connectTimeout?: number;
+  /**
+   * Configuration of a proxy that a Client should pass requests to.
+   */
+  proxy?: Proxy;
+  /**
+   * 是否验证证书
+   */
+  verify?: boolean;
+  noProxy?: boolean;
+}
+
+export declare function fetchDom(
+  input: URL | Request | string,
+  init?: RequestInit & ClientOptions,
+  domType?: DOMParserSupportedType,
+  encoding?: 'utf8' | 'gbk',
+): Promise<Document>;

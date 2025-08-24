@@ -8,7 +8,7 @@ import {
   VideoSource,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import type videojs from 'video.js';
 import { computed, nextTick, ref, watch } from 'vue';
 

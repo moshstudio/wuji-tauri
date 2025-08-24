@@ -1,0 +1,100 @@
+export interface SongInfo {
+  name?: string;
+  artists?: ArtistInfo[] | string[];
+  id: string;
+  cid?: string;
+  lyric?: string;
+  album?: AlbumInfo;
+  mvId?: string;
+  mvCid?: string;
+  playUrl?: string | SongUrlMap;
+  picUrl?: string;
+  bigPicUrl?: string;
+  picHeaders?: Record<string, string>;
+  flac?: string;
+  duration?: number;
+  sourceId: string;
+  extra?: Record<string, string>;
+}
+
+export interface SongList {
+  list: SongInfo[];
+  page: number;
+  pageSize?: number | null;
+  totalPage?: number | null;
+}
+
+// 艺人 信息
+export interface ArtistInfo {
+  name: string;
+  id: string;
+  picUrl?: string;
+  songCount?: string | number;
+  mvCount?: number;
+  albumCount?: string | number;
+}
+
+// 专辑 信息
+export interface AlbumInfo {
+  name: string;
+  id: string;
+  artists?: ArtistInfo[] | string[];
+  picUrl?: string;
+  publishTime?: string;
+  desc?: string;
+  company?: string;
+  songList?: SongList;
+  songCount?: string | number;
+  duration?: number;
+}
+
+export interface PlaylistInfo {
+  name: string;
+  id: string;
+  url?: string;
+  picUrl: string;
+  picHeaders?: Record<string, string>;
+  songCount?: string | number;
+  playCount?: string | number;
+  desc?: string;
+  creator?: {
+    id?: string;
+    name?: string;
+  };
+  createTime?: string;
+  updateTime?: string;
+  totalPage?: number;
+  list?: SongList;
+  sourceId: string;
+  extra?: Record<string, string>;
+}
+
+export declare function querySongElements(
+  body: Document,
+  tags: {
+    element?: string;
+    picUrl?: string;
+    name?: string;
+    artists?: string;
+    duration?: string;
+    url?: string;
+    playUrl?: string;
+    lyric?: string;
+    coverDomain?: string;
+  },
+): Promise<SongInfo[]>;
+
+export declare function queryPlaylistElements(
+  body: Document,
+  tags: {
+    element?: string;
+    picUrl?: string;
+    name?: string;
+    desc?: string;
+    creator?: string;
+    createTime?: string;
+    updateTime?: string;
+    url?: string;
+    coverDomain?: string;
+  },
+): Promise<PlaylistInfo[]>;

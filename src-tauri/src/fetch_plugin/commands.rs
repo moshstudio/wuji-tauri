@@ -255,6 +255,7 @@ fn build_request(
             }
 
             if no_proxy.unwrap_or(false) {
+                dbg!("no_proxy", true);
                 builder = builder.no_proxy();
             } else {
                 if let Some(proxy_config) = proxy {

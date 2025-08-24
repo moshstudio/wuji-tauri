@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { BookItem } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
-import WHeader from '@/components2/header/WHeader.vue';
-import WBookTab from '@/components2/tab/WBookTab.vue';
+import WHeader from '@/components/header/WHeader.vue';
+import WBookTab from '@/components/tab/WBookTab.vue';
 import { useDisplayStore, useStore } from '@/store';
 import { sleep } from '@/utils';
 import { ref } from 'vue';

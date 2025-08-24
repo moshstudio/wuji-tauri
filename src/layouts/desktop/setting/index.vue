@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import WNavbar from '@/components2/header/WNavbar.vue';
+import WNavbar from '@/components/header/WNavbar.vue';
 
 const isDark = defineModel<boolean>('isDark', { required: true });
 defineProps<{

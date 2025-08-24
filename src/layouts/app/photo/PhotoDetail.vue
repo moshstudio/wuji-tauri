@@ -2,8 +2,8 @@
 import type { PhotoDetail, PhotoItem } from '@wuji-tauri/source-extension';
 import { MoreOptionsSheet } from '@wuji-tauri/components/src';
 import { LoadImage } from '@wuji-tauri/components/src';
-import MNavBar from '@/components2/header/MNavBar.vue';
-import MPagination from '@/components2/pagination/MPagination.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
 import { computed, ref, watch } from 'vue';
 
 const props = withDefaults(

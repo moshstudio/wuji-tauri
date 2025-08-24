@@ -1,0 +1,17 @@
+class CustomVideoExtension extends VideoExtension {
+  id = 'testVideo';
+  name = '测试';
+
+  constructor() {}
+
+  async getRecommendVideos(pageNo, type) {}
+
+  async search(keyword, pageNo) {}
+
+  async getVideoDetail(item, pageNo) {}
+
+  async getPlayUrl(item, resource, episode) {}
+
+}
+
+return CustomVideoExtension;

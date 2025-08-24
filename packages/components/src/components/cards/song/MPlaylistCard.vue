@@ -39,9 +39,7 @@ function onMouseLeave() {
       class="rounded-t-lg"
     >
       <template #loading>
-        <div class="p-1 text-center text-lg" :style="{ color }">
-          {{ playlist.name }}
-        </div>
+        <Icon icon="mdi:playlist-music" width="60" height="60" :color="color" />
       </template>
       <template #error>
         <Icon icon="mdi:playlist-music" width="60" height="60" />

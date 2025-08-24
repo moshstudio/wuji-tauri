@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import MNavBar from '@/components2/header/MNavBar.vue';
-import WSongBar from '@/components2/songbar/WSongBar.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
+import WSongBar from '@/components/songbar/WSongBar.vue';
 import { WPlaylistShelfCard } from '@wuji-tauri/components/src';
 import { useDisplayStore, useSongShelfStore } from '@/store';
 import { showPromptDialog } from '@/utils/usePromptDialog';

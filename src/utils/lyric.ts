@@ -1,5 +1,8 @@
 import { fetch } from '@wuji-tauri/fetch';
 import { lyric as neteaseLyric, search as neteaseSearch } from './neteaseMusic';
+import kuwoMusic from './kuwoMusic';
+import miguMusic from './miguMusic';
+import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
 
 const cache = new Map<string, Lyric>();
 
@@ -46,7 +49,37 @@ export async function getLyric(
       const lyricResponseText = await l.text();
       return JSON.parse(lyricResponseText).lrc.lyric;
     };
-    const lyricText = (await lyricFromNetease()) || (await lyricFromLongZhu());
+
+    const lyricFromKuWo = async (): Promise<string | null> => {
+      const songs = await kuwoMusic.searchSongs(songName);
+      for (const song of songs.list) {
+        if (
+          song.name === songName &&
+          joinSongArtists(song.artists).includes(singerName || '')
+        ) {
+          return kuwoMusic.getLyric(song);
+        }
+      }
+      return null;
+    };
+
+    const lyricFromMiGu = async (): Promise<string | null> => {
+      const songs = await miguMusic.searchSongs(songName);
+      for (const song of songs.list) {
+        if (
+          song.name === songName &&
+          joinSongArtists(song.artists).includes(singerName || '')
+        ) {
+          return miguMusic.getLyric(song);
+        }
+      }
+      return null;
+    };
+    const lyricText =
+      (await lyricFromNetease()) ||
+      (await lyricFromLongZhu()) ||
+      (await lyricFromKuWo()) ||
+      (await lyricFromMiGu());
 
     if (!lyricText) return;
     const lyric = parseLyric(lyricText);

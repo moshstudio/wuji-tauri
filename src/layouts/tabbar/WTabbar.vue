@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import ImportSubscribeSource from '@/components2/dialog/ImportSubscribeSource.vue';
 import { Icon } from '@iconify/vue';
 import { storeToRefs } from 'pinia';
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useDisplayStore, useServerStore, useStore } from '@/store';
 import { router } from '@/router';
-import WLoginButton from '@/components2/button/WLoginButton.vue';
+import WLoginButton from '@/components/button/WLoginButton.vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -69,7 +68,6 @@ const pages = computed(() => {
 const activeKey = ref('0');
 
 const route = useRoute();
-const showImportSubscribeDialog = ref(false);
 const showSettingPopover = ref(false);
 
 const showSourcePopover = ref(false);
@@ -89,27 +87,21 @@ const settingActions = [
 ];
 const sourceActions = [
   {
-    text: '导入订阅源',
-    onClick: () => {
-      showImportSubscribeDialog.value = true;
-    },
-  },
-  {
-    text: '更新订阅源',
-    onClick: async () => {
-      await store.updateSubscribeSources();
-    },
-  },
-  {
     text: '管理订阅源',
     onClick: () => {
       router.push({ name: 'SourceManage' });
     },
   },
   {
+    text: '订阅源市场',
+    onClick: () => {
+      router.push({ name: 'SourceMarket' });
+    },
+  },
+  {
     text: '创建订阅源',
     onClick: () => {
-      router.push({ name: 'SourceCreate' });
+      router.push({ name: 'SourceContentCreate' });
     },
   },
 ];
@@ -120,37 +112,36 @@ function onClickAction(action: { text: string; onClick: Function }) {
 function updateActiveKey(newPath?: string) {
   newPath ||= route.path;
   displayStore.routerCurrPath = newPath;
-  if (
-    !newPath.startsWith('/book-read/') &&
-    !newPath.startsWith('/comic-read/')
-  ) {
+  const pathName = route.name;
+  if (typeof pathName !== 'string') return;
+  if (pathName !== 'BookRead' && pathName !== 'ComicRead') {
     displayStore.showTabBar = true;
   }
-  if (newPath.startsWith('/home')) {
+  if (pathName.startsWith('Home')) {
     activeKey.value = String(
       pages.value.findIndex((page) => page.name === 'Home'),
     );
-  } else if (newPath.startsWith('/photo')) {
+  } else if (pathName.startsWith('Photo')) {
     photoPath.value = newPath;
     activeKey.value = String(
       pages.value.findIndex((page) => page.name === 'Photo'),
     );
-  } else if (newPath.startsWith('/song')) {
+  } else if (pathName.startsWith('Song')) {
     songPath.value = newPath;
     activeKey.value = String(
       pages.value.findIndex((page) => page.name === 'Song'),
     );
-  } else if (newPath.startsWith('/book')) {
+  } else if (pathName.startsWith('Book')) {
     bookPath.value = newPath;
     activeKey.value = String(
       pages.value.findIndex((page) => page.name === 'Book'),
     );
-  } else if (newPath.startsWith('/comic')) {
+  } else if (pathName.startsWith('Comic')) {
     comicPath.value = newPath;
     activeKey.value = String(
       pages.value.findIndex((page) => page.name === 'Comic'),
     );
-  } else if (newPath.startsWith('/video')) {
+  } else if (pathName.startsWith('Video')) {
     videoPath.value = newPath;
     activeKey.value = String(
       pages.value.findIndex((page) => page.name === 'Video'),
@@ -174,7 +165,7 @@ watch(
       enter-active-class="transition-all duration-100 ease-out"
       enter-from-class="opacity-0 transform translate-x-[-50px]"
       enter-to-class="opacity-100 transform translate-x-0"
-      leave-active-class="transition-all duration-100 ease-in"
+      leave-active-class="transition-all duration-100 ease-in absolute"
       leave-from-class="opacity-100 transform translate-x-0"
       leave-to-class="opacity-0 transform translate-x-[-50px]"
     >
@@ -197,7 +188,7 @@ watch(
             </template>
           </van-sidebar-item>
         </van-sidebar>
-        <div class="flex flex-col items-center justify-center gap-2 pb-2">
+        <div class="flex flex-col items-center justify-center gap-4 pb-2">
           <WLoginButton :user-info="serverStore.userInfo"></WLoginButton>
           <van-popover
             v-model:show="showSettingPopover"
@@ -246,9 +237,6 @@ watch(
         height="4"
         @click="() => displayStore.closeToast()"
       />
-    </div>
-    <div class="dialogs">
-      <ImportSubscribeSource v-model:show="showImportSubscribeDialog" />
     </div>
   </div>
 </template>

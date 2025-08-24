@@ -16,6 +16,12 @@ import { router } from './router';
 import HorizontalScrollDirective from './utils/directives/horizontalScroll';
 import RememberScrollDirective from './utils/directives/rememberScroll';
 import HoverDelay from './utils/directives/hoverDelay';
+import { loader } from '@guolao/vue-monaco-editor';
+loader.config({
+  paths: {
+    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs',
+  },
+});
 
 import 'vuetify/styles';
 import 'vant/es/toast/style';

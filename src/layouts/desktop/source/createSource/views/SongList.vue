@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { showFailToast, showNotify } from 'vant';
-import SONG_TEMPLATE from '@/components2/codeEditor/templates/songTemplate.txt?raw';
+import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
 import { ref } from 'vue';
-import MPagination from '@/components2/pagination/MPagination.vue';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import { SongExtension, SongList } from '@wuji-tauri/source-extension';
-import { joinSongArtists } from '@/utils';
 import { WSongCard } from '@wuji-tauri/components/src';
 
 enum RunStatus {
@@ -34,9 +33,10 @@ const props = defineProps<{
     type: 'song',
     page: 'songList',
     result: SongList | undefined,
-    padded: boolean,
+    passed: boolean,
   ) => void;
   close: () => void;
+  log: (...args: any[]) => void;
 }>();
 
 const runStatus = ref<RunStatus>(RunStatus.not_running);
@@ -44,6 +44,7 @@ const errorMessage = ref('运行失败');
 const result = ref<SongList | undefined>();
 
 async function initLoad() {
+  result.value = undefined;
   return await load(1);
 }
 
@@ -68,6 +69,7 @@ async function load(pageNo: number) {
     if (!cls.baseUrl) {
       throw new Error('初始化中的baseUrl未定义!');
     }
+    cls.log = props.log;
     const res = await cls?.execGetRecommendSongs(pageNo);
     if (!res) {
       throw new Error('获取推荐列表失败! 返回结果为空');
@@ -78,6 +80,7 @@ async function load(pageNo: number) {
   } catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
+    props.updateResult('song', 'songList', result.value, false);
   }
 }
 
@@ -124,6 +127,7 @@ defineExpose({
             :add-to-like-shelf="() => {}"
             :remove-from-like-shelf="() => {}"
             :add-to-shelf="() => {}"
+            :show-more-options="() => {}"
           ></WSongCard>
         </template>
       </ResponsiveGrid2>

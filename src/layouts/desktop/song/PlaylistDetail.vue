@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import type { PlaylistInfo } from '@wuji-tauri/source-extension';
+import type { PlaylistInfo, SongInfo } from '@wuji-tauri/source-extension';
 import { WSongCard } from '@wuji-tauri/components/src';
 import { LoadImage } from '@wuji-tauri/components/src';
-import MNavBar from '@/components2/header/MNavBar.vue';
-import WSongBar from '@/components2/songbar/WSongBar.vue';
-import MPagination from '@/components2/pagination/MPagination.vue';
-import AddShelfButton from '@/components2/button/AddShelfButton.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
+import WSongBar from '@/components/songbar/WSongBar.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import { router } from '@/router';
 
 withDefaults(
@@ -18,6 +18,7 @@ withDefaults(
     toPage: (playlist: PlaylistInfo, pageNo: number) => void;
     playAll: (playlist: PlaylistInfo) => void;
     addToShelf: (playlist: PlaylistInfo) => void;
+    showMoreOptions: (playlist: PlaylistInfo, song: SongInfo) => void;
   }>(),
   { inShelf: false },
 );
@@ -122,9 +123,7 @@ const shelfStore = useSongShelfStore();
           :in-like-shelf="shelfStore.songInLikeShelf(item)"
           :add-to-like-shelf="shelfStore.addSongToShelf"
           :remove-from-like-shelf="shelfStore.removeSongFromShelf"
-          :add-to-shelf="
-            (song, shelf) => shelfStore.addSongToShelf(song, shelf.playlist.id)
-          "
+          :show-more-options="(song) => showMoreOptions(playlist!, song)"
         />
       </ResponsiveGrid2>
 

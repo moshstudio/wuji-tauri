@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { showFailToast, showNotify } from 'vant';
-import SONG_TEMPLATE from '@/components2/codeEditor/templates/songTemplate.txt?raw';
+import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
 import { ref } from 'vue';
-import SearchField from '@/components2/search/SearchField.vue';
-import MPagination from '@/components2/pagination/MPagination.vue';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
+import SearchField from '@/components/search/SearchField.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import HorizonList from '@/components/list/HorizonList.vue';
+import { MPlaylistCard } from '@wuji-tauri/components/src';
 import { SongExtension, PlaylistList } from '@wuji-tauri/source-extension';
-import { LoadImage } from '@wuji-tauri/components/src';
 
 enum RunStatus {
   not_running = 'not_running',
@@ -37,6 +37,7 @@ const props = defineProps<{
     padded: boolean,
   ) => void;
   close: () => void;
+  log: (...args: any[]) => void;
 }>();
 
 const searchHistories = ref([]);
@@ -46,6 +47,7 @@ const result = ref<PlaylistList | undefined>();
 const keyword = ref('你');
 
 async function initLoad() {
+  result.value = undefined;
   return await load(1);
 }
 
@@ -73,6 +75,7 @@ async function load(pageNo: number) {
     if (!cls.baseUrl) {
       throw new Error('初始化中的baseUrl未定义!');
     }
+    cls.log = props.log;
     const res = await cls?.execSearchPlaylists(keyword.value, pageNo);
     if (!res) {
       throw new Error('搜索歌单失败! 返回结果为空');
@@ -83,6 +86,7 @@ async function load(pageNo: number) {
   } catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
+    props.updateResult('song', 'searchPlaylist', result.value, false);
   }
 }
 
@@ -123,35 +127,14 @@ defineExpose({
           :to-page="(page) => load(page)"
         />
       </div>
-      <ResponsiveGrid2 min-width="80" max-width="100">
-        <template v-for="playlist in result?.list" :key="photo">
-          <div
-            class="active-bg-scale flex transform cursor-pointer select-none flex-col rounded-lg transition-all duration-100"
-          >
-            <LoadImage
-              fit="cover"
-              :src="playlist.picUrl"
-              :headers="playlist.picHeaders"
-              class="rounded-t-lg"
-            >
-              <template #loading>
-                <div class="p-1 text-center text-lg">
-                  {{ playlist.name }}
-                </div>
-              </template>
-              <template #error>
-                <Icon icon="mdi:playlist-music" width="60" height="60" />
-              </template>
-            </LoadImage>
-            <p
-              v-if="playlist.name"
-              class="truncate py-1 text-center text-xs text-[--van-text-color]"
-            >
-              {{ playlist.name }}
-            </p>
-          </div>
-        </template>
-      </ResponsiveGrid2>
+      <HorizonList>
+        <MPlaylistCard
+          v-for="playlist in result?.list"
+          :key="playlist.id"
+          :playlist="playlist"
+          :click="() => {}"
+        ></MPlaylistCard>
+      </HorizonList>
     </div>
   </div>
 </template>

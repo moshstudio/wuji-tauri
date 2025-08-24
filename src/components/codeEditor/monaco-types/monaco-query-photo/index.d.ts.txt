@@ -1,0 +1,31 @@
+export interface PhotoItem {
+  id: string;
+  title?: string | null;
+  desc?: string | null;
+  cover: string | string[];
+  coverHeaders?: Record<string, string> | null;
+  author?: string | null;
+  datetime?: string | null;
+  hot?: string | number | null;
+  view?: number | null;
+  url?: string | null;
+  noDetail?: boolean;
+  extra?: any | null;
+  sourceId: string;
+}
+
+export declare function queryPhotoElements(
+  body: Document,
+  tags: {
+    element?: string;
+    cover?: string;
+    title?: string;
+    desc?: string;
+    author?: string;
+    datetime?: string;
+    hot?: string;
+    view?: string;
+    url?: string;
+    coverDomain?: string;
+  },
+): Promise<PhotoItem[]>;

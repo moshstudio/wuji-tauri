@@ -2,10 +2,10 @@
 import type { PlaylistInfo } from '@wuji-tauri/source-extension';
 import { MSongCard } from '@wuji-tauri/components/src';
 import { LoadImage } from '@wuji-tauri/components/src';
-import MNavBar from '@/components2/header/MNavBar.vue';
-import MSongBar from '@/components2/songbar/MSongBar.vue';
-import MPagination from '@/components2/pagination/MPagination.vue';
-import AddShelfButton from '@/components2/button/AddShelfButton.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
+import MSongBar from '@/components/songbar/MSongBar.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import { useDisplayStore, useSongStore } from '@/store';
 import { router } from '@/router';
 

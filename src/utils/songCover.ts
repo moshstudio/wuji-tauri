@@ -1,5 +1,5 @@
 import type { SongInfo } from '@wuji-tauri/source-extension';
-import { joinSongArtists } from '.';
+import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
 import {
   search as neteaseSearch,
   songDetail as neteaseSongDetail,

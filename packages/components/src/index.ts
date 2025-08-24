@@ -33,6 +33,11 @@ import MVideoShelfCard from './components/cards/video/MVideoShelfCard.vue';
 import WVideoCard from './components/cards/video/WVideoCard.vue';
 import WVideoShelfCard from './components/cards/video/WVideoShelfCard.vue';
 
+import MarketSourceCard from './components/cards/source/MarketSourceCard.vue';
+import MyMarketSourceCard from './components/cards/source/MyMarketSourceCard.vue';
+import MarketSourceContentCard from './components/cards/source/MarketSourceContentCard.vue';
+import SubscribeSourceCard from './components/cards/source/SubscribeSourceCard.vue';
+
 export {
   LoadImage,
   MoreOptionsSheet,
@@ -63,4 +68,8 @@ export {
   MVideoShelfCard,
   WVideoCard,
   WVideoShelfCard,
+  MarketSourceCard,
+  MyMarketSourceCard,
+  MarketSourceContentCard,
+  SubscribeSourceCard,
 };

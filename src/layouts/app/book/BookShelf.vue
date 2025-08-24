@@ -5,7 +5,7 @@ import type {
   BookSource,
 } from '@wuji-tauri/source-extension';
 import { MBookShelfCard } from '@wuji-tauri/components/src';
-import MNavBar from '@/components2/header/MNavBar.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
 import _ from 'lodash';
 import { showPromptDialog } from '@/utils/usePromptDialog';
 

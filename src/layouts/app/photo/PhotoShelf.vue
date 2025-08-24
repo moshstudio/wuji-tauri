@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { MPhotoShelfCard } from '@wuji-tauri/components/src';
-import MNavBar from '@/components2/header/MNavBar.vue';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import { useDisplayStore, usePhotoShelfStore, useStore } from '@/store';
 import { showPromptDialog } from '@/utils/usePromptDialog';
+import { router } from '@/router';
 
 const activeIndex = defineModel<number>('activeIndex', {
   required: true,
@@ -86,7 +87,7 @@ const shelfStore = usePhotoShelfStore();
         :key="shelf.id"
         :title="shelf.name"
       >
-        <ResponsiveGrid2 min-width="80" max-width="100" >
+        <ResponsiveGrid2 min-width="80" max-width="100">
           <template v-for="photo in shelf.photos" :key="photo">
             <MPhotoShelfCard
               v-model:selected="photo.extra.selected"
@@ -95,7 +96,7 @@ const shelfStore = usePhotoShelfStore();
               :source="store.getPhotoSource(photo.sourceId)"
               @click="
                 (item) => {
-                  $router.push({
+                  router.push({
                     name: 'PhotoDetail',
                     params: { id: item.id, sourceId: item.sourceId },
                   });

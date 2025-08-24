@@ -1,7 +1,6 @@
 import { relaunch } from '@tauri-apps/plugin-process';
 import { check } from '@tauri-apps/plugin-updater';
 import { showConfirmDialog, showDialog } from 'vant';
-import { sleep } from '.';
 import { getVersion } from '@tauri-apps/api/app';
 
 function calculateProgress(currentBytes: number) {

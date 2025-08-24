@@ -1,6 +1,5 @@
 import type { ArtistInfo, SongUrlMap } from '@wuji-tauri/source-extension';
-import type { ClientOptions } from '@wuji-tauri/fetch';
-import { fetch, fetchAndSave } from '@wuji-tauri/fetch';
+import { fetch } from '@wuji-tauri/fetch';
 import { debug, error, info, trace, warn } from '@tauri-apps/plugin-log';
 import * as fs from '@tauri-apps/plugin-fs';
 import * as commands from 'tauri-plugin-commands-api';
@@ -12,7 +11,7 @@ import { useDisplayStore } from '@/store';
 export * from './extensionUtils';
 
 export const DEFAULT_SOURCE_URL =
-  'https://wuji.s3.bitiful.net/wuji%2Fdefault_source.json';
+  'https://wuji.moshangwangluo.com/wuji%2Fdefault_source.json';
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -45,19 +44,20 @@ function formatTime(value: string) {
   return time;
 }
 
-export function joinSongArtists(
-  artists: ArtistInfo[] | string[] | undefined | null,
-): string {
-  if (!artists) return '';
-  return artists
-    .map((artist) => {
-      if (typeof artist === 'string') {
-        return artist;
-      }
-      return artist.name;
-    })
-    .join(',');
-}
+// export function joinSongArtists(
+//   artists: ArtistInfo[] | string[] | undefined | null,
+// ): string {
+//   if (!artists) return '';
+//   return artists
+//     .map((artist) => {
+//       if (!artist) return '';
+//       if (typeof artist === 'string') {
+//         return artist;
+//       }
+//       return artist.name;
+//     })
+//     .join(',');
+// }
 
 export function songUrlToString(url: string | SongUrlMap | undefined): string {
   if (!url) return '';

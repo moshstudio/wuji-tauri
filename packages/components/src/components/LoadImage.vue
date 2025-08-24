@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import type { PropType } from 'vue';
 import { cachedFetch } from '@wuji-tauri/fetch';
 import { Image as VanImage } from 'vant';
 import { ref, useAttrs, watch } from 'vue';
-import imageCompression from 'browser-image-compression';
 
 // 定义 props
 const props = withDefaults(
@@ -58,7 +56,6 @@ async function processSrc(
       },
       props.compress,
     );
-
     if (!response.ok) {
       throw new Error('maxRedirections == 0 failed');
     }
@@ -67,7 +64,7 @@ async function processSrc(
       props.src,
       {
         headers,
-        verify: false,
+        verify: true,
       },
       props.compress,
     );

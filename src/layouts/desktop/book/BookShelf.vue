@@ -5,8 +5,8 @@ import type {
   BookSource,
 } from '@wuji-tauri/source-extension';
 import { MBookShelfCard } from '@wuji-tauri/components/src';
-import WNavbar from '@/components2/header/WNavbar.vue';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
+import WNavbar from '@/components/header/WNavbar.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import _ from 'lodash';
 import { showPromptDialog } from '@/utils/usePromptDialog';
 

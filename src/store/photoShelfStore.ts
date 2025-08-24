@@ -91,8 +91,6 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
       }
       return i.id !== item.id;
     });
-    console.log(shelf.photos);
-
     return true;
   };
   const removeShelf = (shelfId: string) => {

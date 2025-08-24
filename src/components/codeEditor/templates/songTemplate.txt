@@ -1,0 +1,22 @@
+class CustomSongExtension extends SongExtension {
+  id = 'testSong';
+  name = '测试';
+  
+  constructor() {}
+
+  async getRecommendPlaylists(pageNo) {}
+
+  async getRecommendSongs(pageNo) {}
+
+  async searchPlaylists(keyword, pageNo) {}
+
+  async searchSongs(keyword, pageNo) {}
+
+  async getPlaylistDetail(item, pageNo) {}
+
+  async getSongUrl(item, size) {}
+
+  async getLyric(item) {}
+}
+
+return CustomSongExtension;

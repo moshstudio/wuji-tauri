@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
-import { onMounted, watch } from 'vue';
+import { nextTick, onMounted, watch } from 'vue';
 import { useDisplayStore, useStore } from '@/store';
 import { checkAndUpdate } from '@/utils/update';
 import { useBackStore } from '@/store/backStore';
 import { useRoute } from 'vue-router';
 import { router } from './router';
-import RouterView from '@/views2/tabbar/RouterView.vue';
+import RouterView from '@/views/tabbar/RouterView.vue';
+import { allowMultipleToast } from 'vant';
+
+allowMultipleToast();
 
 useStore();
 useBackStore();
@@ -16,13 +19,13 @@ const route = useRoute();
 
 onMounted(() => {
   // 初始化路径
-  // nextTick(async () => {
-  //   router.replace(displayStore.routerCurrPath);
-  // });
+  nextTick(async () => {
+    router.replace(displayStore.routerCurrPath);
+  });
 });
 
 onMounted(async () => {
-  if (!displayStore.isAndroid) {
+  if (displayStore.isWindows) {
     try {
       await checkAndUpdate();
     } catch (error) {
@@ -46,10 +49,17 @@ watch(
 <template>
   <van-config-provider
     :theme="isDark ? 'dark' : 'light'"
-    class="h-full w-full bg-[--van-background]"
+    class="h-full w-full overflow-hidden bg-[--van-background]"
     :class="isAppView ? 'hide-vertical-scrollbar' : 'not-mobile-scrollbar'"
   >
     <RouterView></RouterView>
+    <!-- <router-view v-slot="{ Component }">
+      <transition :name="'fade'">
+        <keep-alive>
+          <component :is="Component" />
+        </keep-alive>
+      </transition>
+    </router-view> -->
   </van-config-provider>
 </template>
 

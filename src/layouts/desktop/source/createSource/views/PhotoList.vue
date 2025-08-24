@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { PhotoExtension, PhotoList } from '@wuji-tauri/source-extension';
 import { showFailToast, showNotify } from 'vant';
-import PHOTO_TEMPLATE from '@/components2/codeEditor/templates/photoTemplate.txt?raw';
+import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
 import { ref } from 'vue';
-import MPagination from '@/components2/pagination/MPagination.vue';
-import ResponsiveGrid2 from '@/components2/grid/ResponsiveGrid2.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import { LoadImage, MPhotoCard } from '@wuji-tauri/components/src';
 
 enum RunStatus {
@@ -36,13 +36,17 @@ const props = defineProps<{
     padded: boolean,
   ) => void;
   close: () => void;
+  log: (...args: any[]) => void;
 }>();
 
 const runStatus = ref<RunStatus>(RunStatus.not_running);
+let cls: PhotoExtension | undefined = undefined;
 const errorMessage = ref('运行失败');
 const result = ref<PhotoList | undefined>();
 
 async function initLoad() {
+  result.value = undefined;
+  cls = undefined;
   return await load(1);
 }
 
@@ -60,13 +64,19 @@ async function load(pageNo: number) {
     findPage('constructor')!.code,
   ).replace('async getRecommendList(pageNo) {}', findPage('list')!.code);
   runStatus.value = RunStatus.running;
+
   try {
-    const func = new Function('PhotoExtension', code);
-    const extensionclass = func(PhotoExtension);
-    const cls = new extensionclass() as PhotoExtension;
-    if (!cls.baseUrl) {
-      throw new Error('初始化中的baseUrl未定义!');
+    if (!cls) {
+      const func = new Function('PhotoExtension', code);
+      const extensionclass = func(PhotoExtension);
+      cls = new extensionclass() as PhotoExtension;
+      if (!cls.baseUrl) {
+        cls = undefined;
+        throw new Error('初始化中的baseUrl未定义!');
+      }
+      cls.log = props.log;
     }
+
     const res = await cls?.execGetRecommendList(pageNo);
     if (!res) {
       throw new Error('获取推荐列表失败! 返回结果为空');
@@ -77,6 +87,7 @@ async function load(pageNo: number) {
   } catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
+    props.updateResult('photo', 'list', result.value, false);
   }
 }
 
