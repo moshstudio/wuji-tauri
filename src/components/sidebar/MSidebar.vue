@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import MLoginButton from '@/components/button/MLoginButton.vue';
 import { router } from '@/router';
 import { useDisplayStore, useServerStore, useStore } from '@/store';
-import MLoginButton from '@/components/button/MLoginButton.vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -10,29 +10,27 @@ const serverStore = useServerStore();
 const options = [
   {
     text: '管理订阅源',
+    color: '#1989fa',
     onClick: () => {
-      displayStore.showLeftPopup = false;
       router.push({ name: 'SourceManage' });
     },
   },
   {
     text: '订阅源市场',
+    color: '#07c160',
     onClick: () => {
-      displayStore.showLeftPopup = false;
       router.push({ name: 'SourceMarket' });
     },
   },
   {
     text: '设置',
     onClick: () => {
-      displayStore.showLeftPopup = false;
       router.push({ name: 'Setting' });
     },
   },
   {
     text: '关于',
     onClick: () => {
-      displayStore.showLeftPopup = false;
       router.push({ name: 'About' });
     },
   },
@@ -59,18 +57,21 @@ const options = [
           <!-- <van-image width="50" height="50" radius="4" :src="logo" /> -->
           <div class="text-lg font-bold text-[--van-text-color]">无极</div>
         </div>
-        <MLoginButton :user-info="serverStore.userInfo"></MLoginButton>
+        <MLoginButton :user-info="serverStore.userInfo" />
 
         <van-cell-group>
           <van-cell
             v-for="(option, index) in options"
             :key="index"
-            :title="option.text"
             clickable
             is-link
-            class="mb-2 text-[--van-text-color]"
+            class="mb-2"
             @click="option.onClick"
-          />
+          >
+            <template #title>
+              <span :style="{ color: option.color }">{{ option.text }}</span>
+            </template>
+          </van-cell>
         </van-cell-group>
       </div>
     </van-popup>

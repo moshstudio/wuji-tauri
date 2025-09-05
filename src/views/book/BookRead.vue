@@ -5,19 +5,10 @@ import type {
   BookList,
 } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
-import { router } from '@/router';
-import {
-  useBookShelfStore,
-  useBookStore,
-  useDisplayStore,
-  useStore,
-  useTTSStore,
-} from '@/store';
-import { retryOnFalse } from '@/utils';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
 import _ from 'lodash';
+import { storeToRefs } from 'pinia';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
-import { showToast } from 'vant';
+import { showFailToast, showToast } from 'vant';
 import {
   computed,
   nextTick,
@@ -26,11 +17,20 @@ import {
   ref,
   watch,
 } from 'vue';
-import BookSwitchSourceDialog from '@/components/dialog/BookSwitchSource.vue';
-import BookReadSwiper from './BookReadSwiper.vue';
 import { useRoute } from 'vue-router';
+import BookSwitchSourceDialog from '@/components/dialog/BookSwitchSource.vue';
+import { router } from '@/router';
+import {
+  useBookShelfStore,
+  useBookStore,
+  useDisplayStore,
+  useStore,
+  useTTSStore,
+} from '@/store';
 import { useBackStore } from '@/store/backStore';
-import { storeToRefs } from 'pinia';
+import { retryOnFalse } from '@/utils';
+import { createCancellableFunction } from '@/utils/cancelableFunction';
+import BookReadSwiper from './BookReadSwiper.vue';
 
 const {
   chapterId,
@@ -79,16 +79,6 @@ const bookInShelf = computed(() => {
   return false;
 });
 
-const addToShelf = () => {
-  if (!book.value) {
-    return;
-  }
-  if (shelfStore.bookShelf.length === 1) {
-    shelfStore.addToBookSelf(book.value);
-  } else {
-    showSelectShelf.value = true;
-  }
-};
 const showSelectShelf = ref(false);
 const selectShelfActions = computed(() => {
   return shelfStore.bookShelf.map((shelf) => {
@@ -104,6 +94,17 @@ const selectShelfActions = computed(() => {
     };
   });
 });
+
+function addToShelf() {
+  if (!book.value) {
+    return;
+  }
+  if (shelfStore.bookShelf.length === 1) {
+    shelfStore.addToBookSelf(book.value);
+  } else {
+    showSelectShelf.value = true;
+  }
+}
 
 /**
  * 实现切换源功能
@@ -206,6 +207,16 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
     backStore.back();
     return;
   }
+  if (!book.value.chapters?.length) {
+    if (!bookSource.value) {
+      showFailToast('源不存在或未启用');
+      return;
+    }
+    const ret = await store.bookDetail(bookSource.value, book.value);
+    if (ret) {
+      book.value = ret;
+    }
+  }
   if (!chapter) {
     chapter = book.value.chapters?.find((chapter) => chapter.id === chapterId);
   }
@@ -261,15 +272,31 @@ function prevChapter(toLast: boolean = false) {
       chapterList.value[index - 1].readingPage = undefined;
     }
     ttsStore.resetReadingPage();
-    router.replace({
-      // name: 'BookRead',
-      params: {
-        chapterId: chapterList.value[index - 1].id,
-        bookId: book.value?.id,
-        sourceId: book.value?.sourceId,
-        isPrev: toLast ? 'true' : '',
-      },
-    });
+    if (route.name === 'BookRead') {
+      router.replace({
+        params: {
+          chapterId: chapterList.value[index - 1].id,
+          bookId: book.value?.id,
+          sourceId: book.value?.sourceId,
+          isPrev: toLast ? 'true' : '',
+        },
+      });
+    } else {
+      const currPath = route.path;
+      router
+        .replace({
+          name: 'BookRead',
+          params: {
+            chapterId: chapterList.value[index - 1].id,
+            bookId: book.value?.id,
+            sourceId: book.value?.sourceId,
+            isPrev: toLast ? 'true' : '',
+          },
+        })
+        .then(() => {
+          router.replace(currPath);
+        });
+    }
   } else {
     showToast('没有上一章了');
   }
@@ -497,6 +524,16 @@ onDeactivated(() => {
           <van-cell title="字体大小">
             <template #value>
               <van-stepper v-model="bookStore.fontSize" min="10" max="40" />
+            </template>
+          </van-cell>
+          <van-cell title="字体粗细">
+            <template #value>
+              <van-stepper
+                v-model="bookStore.fontWeight"
+                min="400"
+                max="600"
+                step="200"
+              />
             </template>
           </van-cell>
           <van-cell title="行间距">

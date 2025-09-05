@@ -17,6 +17,7 @@ export const useBookStore = defineStore('book', () => {
     },
   );
   const fontSize = useStorageAsync('readFontSize', 20);
+  const fontWeight = useStorageAsync('readFontWeight', 400);
   const fontFamily = useStorageAsync('eradFontFamily', 'alipuhui');
   const lineHeight = useStorageAsync('readLineHeight', 1.5);
   const readPGap = useStorageAsync('readPGap', 8);
@@ -100,6 +101,7 @@ export const useBookStore = defineStore('book', () => {
   return {
     readMode,
     fontSize,
+    fontWeight,
     fontFamily,
     lineHeight,
     readPGap,

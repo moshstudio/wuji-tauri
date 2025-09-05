@@ -1,20 +1,22 @@
 import antfu from '@antfu/eslint-config';
+const eslintPluginPrettierRecommended = require('eslint-plugin-prettier/recommended');
 
 export default antfu({
   vue: true,
   typescript: true,
-  stylistic: {
-    semi: true, // 分号（与 Prettier 的 `semi: true` 一致）
-    quotes: ['error', 'single'], // 单引号（与 Prettier 的 `singleQuote: true` 一致）
-    indent: 2, // 缩进（与 Prettier 的 `tabWidth: 2` 一致）
-  },
-  rules: {
-    'no-console': 'off',
-    'vue/script-indent': 'off',
-    // 禁用与 Prettier 冲突的规则（@antfu/eslint-config 已内置 eslint-config-prettier）
-    // 如果仍有冲突，可手动禁用：
-    // 'operator-linebreak': 'off', // 关闭运算符换行检查（由 Prettier 接管）
-  },
+  // stylistic: false,
+  // rules: {
+  //   'no-console': 'off',
+  //   'vue/script-indent': 'off',
+  //   // 确保所有与 Prettier 冲突的规则都被禁用
+  //   'arrow-body-style': 'off',
+  //   'prefer-arrow-callback': 'off',
+  //   'no-unused-vars': 'off',
+  //   '@typescript-eslint/no-unused-vars': 'off',
+  //   'unused-imports/no-unused-vars': 'off',
+  //   'no-new-func': 'off',
+  //   'no-empty-object-type': 'off',
+  // },
   ignores: [
     '**/node_modules/**',
     '**/dist/**',
@@ -22,5 +24,7 @@ export default antfu({
     '**/src-tauri/**',
     '**/tauri-plugin-commands/**',
     '**/tauri-plugin-mediasession/**',
+    '**/*.md',
   ],
+  eslintPluginPrettierRecommended,
 });

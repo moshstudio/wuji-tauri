@@ -4,19 +4,19 @@ import type {
   SongInfo,
   SongShelf,
 } from '@wuji-tauri/source-extension';
+import type { SongSource } from '@/types';
 import {
   MoreOptionsSheet,
   SongSelectShelfSheet,
 } from '@wuji-tauri/components/src';
-import type { SongSource } from '@/types';
-import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
-import { useSongShelfStore, useStore } from '@/store';
-import { retryOnFalse } from '@/utils';
 import { showLoadingToast, showToast } from 'vant';
 import { ref, watch } from 'vue';
+import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppPlaylistDetail from '@/layouts/app/song/PlaylistDetail.vue';
 import DesktopPlaylistDetail from '@/layouts/desktop/song/PlaylistDetail.vue';
+import { useSongShelfStore, useStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
+import { retryOnFalse } from '@/utils';
 
 const { playlistId, sourceId } = defineProps({
   playlistId: String,
@@ -35,11 +35,11 @@ const moreOptions = ref(false);
 const moreOptionsSong = ref<SongInfo>();
 const showAddToShelfSheet = ref(false);
 
-const clear = () => {
+function clear() {
   songSource.value = undefined;
   playlist.value = undefined;
   currentPage.value = 1;
-};
+}
 
 const toPage = retryOnFalse({ onFailed: backStore.back })(async (
   pageNo?: number,

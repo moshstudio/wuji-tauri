@@ -1,17 +1,15 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue';
-import { useClickAway } from '@vant/use';
 import _ from 'lodash';
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 
+const props = defineProps<{
+  search: (value: string) => void;
+}>();
 const value = defineModel<string>('value', { required: true });
 const searchHistories = defineModel<string[]>('searchHistories', {
   required: true,
 });
-const props = defineProps<{
-  search: (value: string) => void;
-}>();
-
 const showHistory = ref(false);
 const searchInput = ref<HTMLInputElement>();
 

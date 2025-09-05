@@ -1,28 +1,16 @@
 <script setup lang="ts">
 import type { SongInfo } from '@wuji-tauri/source-extension';
 import type { SongSource } from '@/types';
-import { WPlaylistCard } from '@wuji-tauri/components/src';
-import { WSongCard } from '@wuji-tauri/components/src';
+import { WPlaylistCard, WSongCard } from '@wuji-tauri/components/src';
+import { storeToRefs } from 'pinia';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import WHeader from '@/components/header/WHeader.vue';
 import HorizonList from '@/components/list/HorizonList.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import WSongBar from '@/components/songbar/WSongBar.vue';
-import {
-  useDisplayStore,
-  useSongShelfStore,
-  useSongStore,
-  useStore,
-} from '@/store';
-import { storeToRefs } from 'pinia';
 import { router } from '@/router';
+import { useSongShelfStore, useSongStore, useStore } from '@/store';
 
-const searchValue = defineModel<string>('searchValue', {
-  default: '',
-});
-const activeTabIndex = defineModel<number>('activeTabIndex', {
-  default: 0,
-});
 defineProps<{
   search: (value: string) => void;
   recommend: (force?: boolean) => void;
@@ -32,7 +20,12 @@ defineProps<{
   openBaseUrl: (source: SongSource) => void;
   showMoreOptions: (source: SongSource, song: SongInfo) => void;
 }>();
-
+const searchValue = defineModel<string>('searchValue', {
+  default: '',
+});
+const activeTabIndex = defineModel<number>('activeTabIndex', {
+  default: 0,
+});
 const store = useStore();
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
@@ -97,7 +90,7 @@ const { songSources } = storeToRefs(store);
                   });
                 }
               "
-            ></WPlaylistCard>
+            />
           </div>
         </HorizonList>
         <div class="h-4" />

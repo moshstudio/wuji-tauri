@@ -16,8 +16,6 @@
     "core:event:allow-emit",
     "core:event:allow-emit-to",
     "core:event:allow-unlisten",
-    "shell:allow-open",
-    "shell:default",
     "store:allow-get",
     "store:allow-set",
     "store:allow-save",
@@ -60,12 +58,16 @@
     "fs:allow-appcache-read-recursive",
     "fs:allow-appcache-write-recursive",
     {
-
       "identifier": "fs:scope",
-      "allow": [{ "path": "**" }]
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
     },
     "dialog:default",
     "keep-screen-on:default",
-    "websocket:default"
+    "websocket:default",
+    "opener:default"
   ]
 }

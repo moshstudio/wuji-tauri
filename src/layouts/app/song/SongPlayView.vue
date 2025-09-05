@@ -1,21 +1,25 @@
 <script lang="ts" setup>
 import type { Lyric } from '@/utils/lyric';
-import { MoreOptionsSheet } from '@wuji-tauri/components/src';
-import { LoadImage, PlayPauseButton } from '@wuji-tauri/components/src';
-import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
-import { transTime } from '@/utils';
+import { Icon } from '@iconify/vue';
+import {
+  LoadImage,
+  MoreOptionsSheet,
+  PlayPauseButton,
+} from '@wuji-tauri/components/src';
+import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
+import { SongPlayMode } from '@wuji-tauri/source-extension';
 import { storeToRefs } from 'pinia';
 import { computed, ref } from 'vue';
-import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
-import { Icon } from '@iconify/vue';
-import { SongPlayMode } from '@wuji-tauri/source-extension';
 import PlayingSongList from '@/components/list/PlayingSongList.vue';
+import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
+import { transTime } from '@/utils';
 
 withDefaults(
   defineProps<{
     lyric?: Lyric;
     activeIndex?: number;
     transformStyle: string;
+    activeLyricColor: string;
     back: () => void;
   }>(),
   {
@@ -28,13 +32,15 @@ withDefaults(
     activeIndex: 0,
   },
 );
+const showPlayingList = defineModel<boolean>('showPlayingList', {
+  required: true,
+});
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
 const displayStore = useDisplayStore();
 const { playingSong } = storeToRefs(songStore);
 
 const showLyric = ref(true);
-const showPlayingSongList = ref(false);
 const showMoreOptions = ref(false);
 const showAddToShelfSheet = ref(false);
 const actions = computed(() => {
@@ -80,7 +86,7 @@ const actions = computed(() => {
       <div class="z-[12] bg-black/25 px-4 py-2 shadow-lg backdrop-blur-lg">
         <div
           class="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white to-transparent opacity-30"
-        ></div>
+        />
         <van-icon
           name="arrow-left"
           class="van-haptics-feedback text-white"
@@ -100,7 +106,7 @@ const actions = computed(() => {
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }"
-        ></div>
+        />
         <div v-if="showLyric">
           <div v-if="lyric">
             <ul
@@ -127,7 +133,7 @@ const actions = computed(() => {
       >
         <div
           class="absolute left-0 right-0 top-0 h-4 bg-gradient-to-b from-white to-transparent opacity-30"
-        ></div>
+        />
         <div class="flex w-full items-center justify-between pt-2">
           <div class="flex flex-col">
             <p class="text-base font-bold text-gray-200">
@@ -171,8 +177,8 @@ const actions = computed(() => {
           button-size="8px"
           active-color="rgba(220, 220, 220, 0.7)"
           inactive-color="rgba(255, 255, 255, 0.3)"
-          @change="(value) => songStore.seek(value)"
           class="mt-2"
+          @change="(value) => songStore.seek(value)"
         />
         <div class="mb-2 flex items-center justify-between">
           <span class="text-xs text-gray-300">
@@ -226,7 +232,7 @@ const actions = computed(() => {
             :is-playing="songStore.isPlaying"
             :play="songStore.onPlay"
             :pause="songStore.onPause"
-          ></PlayPauseButton>
+          />
           <Icon
             icon="ion:play-skip-forward"
             width="22px"
@@ -241,12 +247,12 @@ const actions = computed(() => {
             height="20"
             color="rgba(220, 220, 220, 0.7)"
             class="van-haptics-feedback"
-            @click="showPlayingSongList = !showPlayingSongList"
+            @click="showPlayingList = !showPlayingList"
           />
         </div>
       </div>
     </div>
-    <PlayingSongList v-model:show="showPlayingSongList" />
+    <PlayingSongList v-model:show="showPlayingList" />
     <MoreOptionsSheet
       v-model="showMoreOptions"
       :actions="[
@@ -280,7 +286,7 @@ const actions = computed(() => {
 }
 .lyric-line {
   &.active-line {
-    color: #2fff5c !important;
+    color: v-bind(activeLyricColor) !important;
     transform: scale(1.3);
     font-weight: bold;
   }

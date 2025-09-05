@@ -1,8 +1,8 @@
 {
   "name": "@wuji-tauri/hot-api",
-  "private": true,
-  "version": "1.0.0",
   "type": "module",
+  "version": "1.0.0",
+  "private": true,
   "main": "./dist/hot-api.umd.cjs",
   "module": "./dist/hot-api.js",
   "types": "./dist/index.d.ts",

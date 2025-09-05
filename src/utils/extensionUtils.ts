@@ -43,6 +43,7 @@ export function parseAndExecuteHtml(
   }
   return new Promise((resolve, reject) => {
     const iframe = document.createElement('iframe');
+    iframe.sandbox = 'allow-scripts allow-same-origin allow-forms';
     iframe.style.display = 'none';
     document.body.appendChild(iframe);
 
@@ -67,11 +68,11 @@ export function parseAndExecuteHtml(
     };
 
     // 3秒后移除
-    // setTimeout(() => {
-    //   // 清理 iframe
-    //   document.body.removeChild(iframe);
-    //   // reject(new Error('Timeout'));
-    // }, 3000);
+    setTimeout(() => {
+      // 清理 iframe
+      document.body.removeChild(iframe);
+      // reject(new Error('Timeout'));
+    }, 60000);
   });
 }
 

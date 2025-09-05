@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { PhotoItem } from '@wuji-tauri/source-extension';
-import type { PhotoSource } from '@wuji-tauri/source-extension';
+import type { PhotoItem, PhotoSource } from '@wuji-tauri/source-extension';
 import type { PropType } from 'vue';
 import LoadImage from '../../LoadImage.vue';
 
@@ -18,11 +17,11 @@ const { item, selecteMode, source } = defineProps({
     required: true,
   },
 });
-const selected = defineModel('selected');
-
 const emit = defineEmits<{
   (e: 'click', item: PhotoItem, source?: PhotoSource): void;
 }>();
+
+const selected = defineModel('selected');
 
 function onClick() {
   if (selecteMode) {

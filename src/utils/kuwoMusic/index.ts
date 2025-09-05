@@ -1,5 +1,6 @@
+import type { SongInfo, SongList } from '@wuji-tauri/source-extension';
 import { fetch } from '@wuji-tauri/fetch';
-import { SongInfo, SongList } from '@wuji-tauri/source-extension';
+
 const baseUrl = 'https://www.kuwo.cn/';
 let cookies:
   | {
@@ -27,11 +28,11 @@ async function generateSecret() {
   const t = cookies.value;
   const e = cookies.key;
 
-  if (null == e || e.length <= 0) return '';
+  if (e == null || e.length <= 0) return '';
   let n: string | number = '';
   for (let i = 0; i < e.length; i++) n += e.charCodeAt(i).toString();
   const r = Math.floor(n.length / 5);
-  const o = parseInt(
+  const o = Number.parseInt(
     n.charAt(r) +
       n.charAt(2 * r) +
       n.charAt(3 * r) +
@@ -39,13 +40,14 @@ async function generateSecret() {
       n.charAt(5 * r),
   );
   const l = Math.ceil(e.length / 2);
-  const c = Math.pow(2, 31) - 1;
+  const c = 2 ** 31 - 1;
   if (o < 2) return '';
-  let d = Math.round(1e9 * Math.random()) % 1e8;
+  const d = Math.round(1e9 * Math.random()) % 1e8;
   n += d.toString();
   while (n.length > 10) {
     n = (
-      parseInt(n.substring(0, 10)) + parseInt(n.substring(10, n.length))
+      Number.parseInt(n.substring(0, 10)) +
+      Number.parseInt(n.substring(10, n.length))
     ).toString();
   }
   n = (o * Number(n) + l) % c;
@@ -58,7 +60,7 @@ async function generateSecret() {
     n = (o * n + l) % c;
   }
   let dHex = d.toString(16);
-  while (dHex.length < 8) dHex = '0' + dHex;
+  while (dHex.length < 8) dHex = `0${dHex}`;
   return f + dHex;
 }
 
@@ -80,7 +82,7 @@ export async function searchSongs(
   params.append('issubtitle', `1`);
   params.append('show_copyright_off', `1`);
   params.append('all', keyword);
-  const response = await fetch(url + '?' + params.toString(), {
+  const response = await fetch(`${url}?${params.toString()}`, {
     headers: {
       Secret: await generateSecret(),
       cookie: `${cookies!.key}=${cookies!.value}`,
@@ -114,7 +116,7 @@ export async function getLyric(item: SongInfo) {
   const url = `${baseUrl}openapi/v1/www/`;
   const params = new URLSearchParams();
   params.append('musicId', item.id);
-  const response = await fetch(url + '?' + params.toString(), {
+  const response = await fetch(`${url}?${params.toString()}`, {
     headers: {
       Secret: await generateSecret(),
       cookie: `${cookies!.key}=${cookies!.value}`,

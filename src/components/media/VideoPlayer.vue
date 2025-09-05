@@ -1,13 +1,19 @@
 <script lang="ts" setup>
+import type { VideoPlayerState } from '@videojs-player/vue';
 import type {
   VideoEpisode,
   VideoResource,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
-import type { VideoPlayerState } from '@videojs-player/vue';
 import type videojs from 'video.js';
 import type { PropType } from 'vue';
 import { Icon } from '@iconify/vue';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { VideoPlayer } from '@videojs-player/vue';
+import { onBeforeUnmount, ref, shallowRef } from 'vue';
+import { useRoute } from 'vue-router';
+import { clearTimeout, setTimeout } from 'worker-timers';
+import { getErrorDisplayHTML } from '@/components/media/error';
 import FullScreenButton from '@/components/media/FullScreenButton.vue';
 import PlaybackRateButton from '@/components/media/PlaybackRateButton.vue';
 import PlayPauseButton from '@/components/media/PlayPauseButton.vue';
@@ -15,15 +21,9 @@ import VideoProgressBar from '@/components/media/ProgressBar.vue';
 import QuickSeekButton from '@/components/media/QuickSeekButton.vue';
 import TimeShow from '@/components/media/TimeShow.vue';
 import { useDisplayStore } from '@/store';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { VideoPlayer } from '@videojs-player/vue';
-import { onBeforeUnmount, ref, shallowRef } from 'vue';
-import { useRoute } from 'vue-router';
-import { clearTimeout, setTimeout } from 'worker-timers';
 import BrowserFullScreenButton from './BrowserFullScreenButton.vue';
 import PlayNextButton from './PlayNextButton.vue';
 import 'video.js/dist/video-js.css';
-import { getErrorDisplayHTML } from '@/components/media/error';
 
 type VideoJsPlayer = ReturnType<typeof videojs>;
 

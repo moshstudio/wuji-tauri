@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { ComicItem } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
+import { storeToRefs } from 'pinia';
+import { ref, triggerRef } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+import AppComicList from '@/layouts/app/comic/ComicList.vue';
+import DesktopComicList from '@/layouts/desktop/comic/ComicList.vue';
 import { router } from '@/router';
 import { useDisplayStore, useStore } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
-import { storeToRefs } from 'pinia';
-import { ref, triggerRef } from 'vue';
-import AppComicList from '@/layouts/app/comic/ComicList.vue';
-import DesktopComicList from '@/layouts/desktop/comic/ComicList.vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();

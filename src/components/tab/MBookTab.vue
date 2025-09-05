@@ -5,10 +5,10 @@ import type {
   BooksList,
 } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
+import { MBookCard } from '@wuji-tauri/components/src';
 import { debounce } from 'lodash';
 import { nanoid } from 'nanoid';
 import { ref, watch } from 'vue';
-import { MBookCard } from '@wuji-tauri/components/src';
 import MPagination from '@/components/pagination/MPagination.vue';
 
 const props = defineProps<{
@@ -57,7 +57,7 @@ watch(
 </script>
 
 <template>
-  <div v-if="!source.list"></div>
+  <div v-if="!source.list" />
   <van-tabs
     v-else-if="Array.isArray(source.list)"
     :key="tabKey"
@@ -85,7 +85,7 @@ watch(
       <div class="flex flex-col">
         <MBookCard
           v-for="book in item.list"
-          :key="book.id"
+          :key="`${source.item.id}_${book.id}`"
           :book="book"
           :click="toDetail"
         />
@@ -107,7 +107,10 @@ watch(
     </van-row>
     <van-loading v-if="!source.list.list.length" class="p-2" />
     <div class="flex flex-col">
-      <template v-for="book in source.list.list" :key="book.id">
+      <template
+        v-for="book in source.list.list"
+        :key="`${source.item.id}_${book.id}`"
+      >
         <MBookCard :book="book" :click="toDetail" />
       </template>
     </div>

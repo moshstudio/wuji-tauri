@@ -13,12 +13,11 @@ abstract getLyric(item: SongInfo): Promise<string | null>;
 
 ## 从DOM获取元素
 
-```javascript
-
-```
+````javascript
+``
 
 ## 从api获取元素
 
 ```javascript
-
-```
+``
+````

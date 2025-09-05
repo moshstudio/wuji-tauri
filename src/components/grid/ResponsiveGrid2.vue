@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAttrs, computed } from 'vue';
+import { computed, useAttrs } from 'vue';
 
 const props = withDefaults(
   defineProps<{
@@ -14,7 +14,7 @@ const props = withDefaults(
   },
 );
 
-const parseDimension = (value: string | number): string => {
+function parseDimension(value: string | number): string {
   // If it's a number, just add 'px'
   if (typeof value === 'number') return `${value}px`;
 
@@ -23,7 +23,7 @@ const parseDimension = (value: string | number): string => {
 
   // Otherwise, assume it's a valid CSS dimension (like '10rem', '50%', etc.)
   return value;
-};
+}
 
 const minWidth = computed(() => parseDimension(props.minWidth));
 const maxWidth = computed(() => parseDimension(props.maxWidth));
@@ -39,6 +39,6 @@ const attrs = useAttrs();
       'grid-template-columns': `repeat(auto-fill, minmax(min(${maxWidth}, max(${minWidth}, 100%)), 1fr))`,
     }"
   >
-    <slot></slot>
+    <slot />
   </div>
 </template>

@@ -1,25 +1,17 @@
 <script setup lang="ts">
 import type { SongInfo } from '@wuji-tauri/source-extension';
 import type { SongSource } from '@/types';
-import { MPlaylistCard } from '@wuji-tauri/components/src';
-import { MSongCard } from '@wuji-tauri/components/src';
-import HorizonList from '@/components/list/HorizonList.vue';
-import MHeader from '@/components/header/MHeader.vue';
-import MSongBar from '@/components/songbar/MSongBar.vue';
-import MPagination from '@/components/pagination/MPagination.vue';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import { useSongStore, useStore } from '@/store';
-import { sleep } from '@/utils';
+import { MPlaylistCard, MSongCard } from '@wuji-tauri/components/src';
 import { storeToRefs } from 'pinia';
 import { ref } from 'vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import MHeader from '@/components/header/MHeader.vue';
+import HorizonList from '@/components/list/HorizonList.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import MSongBar from '@/components/songbar/MSongBar.vue';
 import { router } from '@/router';
-
-const searchValue = defineModel<string>('searchValue', {
-  default: '',
-});
-const activeTabIndex = defineModel<number>('activeTabIndex', {
-  default: 0,
-});
+import { useSongStore, useStore } from '@/store';
+import { sleep } from '@/utils';
 
 const props = defineProps<{
   search: (value: string) => void;
@@ -29,6 +21,12 @@ const props = defineProps<{
   playSong: (source: SongSource, song: SongInfo) => void;
   openBaseUrl: (source: SongSource) => void;
 }>();
+const searchValue = defineModel<string>('searchValue', {
+  default: '',
+});
+const activeTabIndex = defineModel<number>('activeTabIndex', {
+  default: 0,
+});
 
 const store = useStore();
 const songStore = useSongStore();
@@ -117,7 +115,7 @@ async function onRefresh() {
                   />
                 </div>
               </HorizonList>
-              <div class="h-4"></div>
+              <div class="h-4" />
               <van-row
                 v-if="item.songList && item.songList.totalPage"
                 justify="space-between"

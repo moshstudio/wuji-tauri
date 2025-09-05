@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useDisplayStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import { useAttrs } from 'vue';
+import { useDisplayStore } from '@/store';
 
 const attrs = useAttrs();
 
@@ -12,12 +12,12 @@ const { isAppView } = storeToRefs(displayStore);
 <template>
   <div class="h-full w-full overflow-hidden">
     <template v-if="isAppView">
-      <slot name="app" v-bind="attrs"></slot>
+      <slot name="app" v-bind="attrs" />
     </template>
     <template v-else>
-      <slot name="desktop" v-bind="attrs"></slot>
+      <slot name="desktop" v-bind="attrs" />
     </template>
-    <slot></slot>
+    <slot />
   </div>
 </template>
 

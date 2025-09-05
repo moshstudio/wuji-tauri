@@ -66,7 +66,7 @@ async function search(keyword, pageNo) {
     const body = `show=title&tempid=1&tbname=article&mid=1&dopost=search&submit=&keyboard=${keyword}`;
     const response = await this.fetch(url, {
       method: 'POST',
-      body: body,
+      body,
       headers: this.headers,
     });
     const text = await response.text();

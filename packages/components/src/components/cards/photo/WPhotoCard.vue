@@ -16,9 +16,5 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <MPhotoCard
-    v-bind="$attrs"
-    :item="item"
-    @click="() => emit('click', item)"
-  ></MPhotoCard>
+  <MPhotoCard v-bind="$attrs" :item="item" @click="() => emit('click', item)" />
 </template>

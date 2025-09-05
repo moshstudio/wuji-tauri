@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import MNavBar from '@/components/header/MNavBar.vue';
+import type { MarketSource } from '@wuji-tauri/source-extension';
+import type { TagProps } from 'vant';
 import { MyMarketSourceCard } from '@wuji-tauri/components/src';
-import { MarketSource } from '@wuji-tauri/source-extension';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import _ from 'lodash';
-import { TagProps } from 'vant';
-
-const isFreshing = defineModel<boolean>('isFreshing');
+import MNavBar from '@/components/header/MNavBar.vue';
 
 defineProps<{
   sources?: MarketSource[];
@@ -17,15 +14,17 @@ defineProps<{
   onClick: (source: MarketSource) => void;
   showMoreOptions: (source: MarketSource) => void;
 }>();
+
+const isFreshing = defineModel<boolean>('isFreshing');
 </script>
 
 <template>
   <div class="relative flex h-full w-full flex-col">
-    <MNavBar title="我创建的订阅源"></MNavBar>
+    <MNavBar title="我创建的订阅源" />
     <van-pull-refresh
       v-model="isFreshing"
-      @refresh="refresh"
       class="flex w-full flex-grow flex-col overflow-y-auto bg-[--van-background-2] p-2"
+      @refresh="refresh"
     >
       <div class="flex w-full items-center justify-start gap-2 pl-2">
         <van-button size="small" type="primary" @click="createSource">
@@ -40,8 +39,8 @@ defineProps<{
           :click="() => onClick(source)"
           :permission-text="permissionText"
           :permission-style="permissionStyle"
-          :showMoreOptions="showMoreOptions"
-        ></MyMarketSourceCard>
+          :show-more-options="showMoreOptions"
+        />
       </ResponsiveGrid2>
     </van-pull-refresh>
   </div>

@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import WNavbar from '@/components/header/WNavbar.vue';
 
-const isDark = defineModel<boolean>('isDark', { required: true });
 defineProps<{
   clearCache: () => void;
   clearData: () => void;
 }>();
+const isDark = defineModel<boolean>('isDark', { required: true });
 </script>
 
 <template>
   <div class="relative flex h-full flex-col overflow-hidden">
-    <WNavbar title="设置"></WNavbar>
+    <WNavbar title="设置" />
     <div
       class="flex w-full flex-grow flex-col items-center overflow-y-auto bg-[--van-background] p-4"
     >
@@ -22,7 +22,7 @@ defineProps<{
           @click="() => (isDark = !isDark)"
         >
           <template #right-icon>
-            <van-switch @click.stop v-model="isDark" />
+            <van-switch v-model="isDark" @click.stop />
           </template>
         </van-cell>
         <van-cell center title="清除缓存" is-link @click="clearCache" />

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
+import type { SongShelf } from '@wuji-tauri/source-extension';
+import { ref } from 'vue';
 import LoadImage from '../../LoadImage.vue';
 import MoreOptionsSheet from '../../MoreOptionsSheet.vue';
-import { ref } from 'vue';
 
 withDefaults(
   defineProps<{
@@ -47,7 +47,7 @@ const showMoreOptions = ref(false);
       name="ellipsis"
       class="clickable p-2 text-[var(--van-text-color)]"
       @click.stop="showMoreOptions = !showMoreOptions"
-    ></van-icon>
+    />
     <MoreOptionsSheet
       v-if="removeable"
       v-model="showMoreOptions"

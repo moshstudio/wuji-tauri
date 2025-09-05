@@ -126,8 +126,8 @@ window.androidBackCallback = async () => {
   <div
     class="flex h-screen w-screen flex-col overflow-hidden bg-[var(--van-background-2)]"
   >
-    <div class="content h-full w-full flex-grow overflow-hidden">
-      <slot></slot>
+    <div class="content relative h-full w-full flex-grow overflow-hidden">
+      <slot />
     </div>
     <transition
       enter-active-class="transition-all duration-100 ease-out"
@@ -168,7 +168,7 @@ window.androidBackCallback = async () => {
         @click="() => displayStore.closeToast()"
       />
     </div>
-    <div class="dialogs"></div>
+    <div class="dialogs" />
   </div>
 </template>
 

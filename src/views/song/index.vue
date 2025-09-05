@@ -5,7 +5,11 @@ import {
   MoreOptionsSheet,
   SongSelectShelfSheet,
 } from '@wuji-tauri/components/src';
+import { storeToRefs } from 'pinia';
+import { ref } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+import AppSongList from '@/layouts/app/song/SongList.vue';
+import DesktopSongList from '@/layouts/desktop/song/SongList.vue';
 import {
   useDisplayStore,
   useSongShelfStore,
@@ -13,10 +17,6 @@ import {
   useStore,
 } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
-import { storeToRefs } from 'pinia';
-import { ref } from 'vue';
-import AppSongList from '@/layouts/app/song/SongList.vue';
-import DesktopSongList from '@/layouts/desktop/song/SongList.vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();

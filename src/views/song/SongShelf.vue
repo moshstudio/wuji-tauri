@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import { showToast } from 'vant';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppSongShelf from '@/layouts/app/song/SongShelf.vue';
 import DesktopSongShelf from '@/layouts/desktop/song/SongShelf.vue';
 import { useSongShelfStore } from '@/store';
-import { showToast } from 'vant';
 
 const shelfStore = useSongShelfStore();
 function createShelf(name: string) {

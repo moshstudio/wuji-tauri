@@ -1,28 +1,13 @@
 <script setup lang="ts">
-import {
-  BooksList,
-  BookExtension,
-  BookList,
-} from '@wuji-tauri/source-extension';
-import { showDialog, showFailToast } from 'vant';
-import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
-import { ref } from 'vue';
-import MPagination from '@/components/pagination/MPagination.vue';
+import type { BookList, BooksList } from '@wuji-tauri/source-extension';
 import { MBookCard } from '@wuji-tauri/components/src';
-import SearchField from '@/components/search/SearchField.vue';
+import { BookExtension } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
-
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
-const errorMessage = ref('运行失败');
-const result = ref<BooksList>();
-const keyword = ref('你');
+import { showDialog, showFailToast } from 'vant';
+import { ref } from 'vue';
+import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
+import MPagination from '@/components/pagination/MPagination.vue';
+import SearchField from '@/components/search/SearchField.vue';
 
 const props = defineProps<{
   content: {
@@ -49,10 +34,24 @@ const props = defineProps<{
   log: (...args: any[]) => void;
 }>();
 
+enum RunStatus {
+  not_running = 'not_running',
+  running = 'running',
+  success = 'success',
+  error = 'error',
+}
+
+const runStatus = ref<RunStatus>(RunStatus.not_running);
+const errorMessage = ref('运行失败');
+const result = ref<BooksList>();
+const keyword = ref('你');
+const tabActive = ref('');
+
 const searchHistories = ref<string[]>([]);
 
 async function initLoad() {
   result.value = undefined;
+  tabActive.value = '';
   return await load(1);
 }
 
@@ -111,7 +110,7 @@ async function load(pageNo?: number, type?: string) {
   }
 }
 
-const loadTab = (index: number, pageNo?: number) => {
+function loadTab(index: number, pageNo?: number) {
   if (!result.value) return;
   let t: BookList;
   if (Array.isArray(result.value)) {
@@ -120,12 +119,12 @@ const loadTab = (index: number, pageNo?: number) => {
     t = result.value;
   }
   load(pageNo ?? 1, t.type);
-};
+}
 
-const findPage = (name: string) => {
+function findPage(name: string) {
   return props.content.pages.find((page) => page.type === name);
-};
-const tabActive = ref('');
+}
+
 defineExpose({
   initLoad,
 });
@@ -154,7 +153,7 @@ defineExpose({
           :search="() => initLoad()"
         />
       </div>
-      <div v-if="!result"></div>
+      <div v-if="!result" />
       <van-tabs
         v-else-if="Array.isArray(result)"
         v-model:active="tabActive"
@@ -164,7 +163,7 @@ defineExpose({
       >
         <van-tab
           v-for="(item, index) in result"
-          :key="index"
+          :key="item.id || index"
           :title="item.type"
         >
           <van-row
@@ -181,7 +180,7 @@ defineExpose({
           <div class="flex flex-col">
             <MBookCard
               v-for="book in item.list"
-              :key="book.id"
+              :key="`${item.id}_${book.id}`"
               :book="book"
               :click="() => {}"
             />

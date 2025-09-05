@@ -1,17 +1,12 @@
-import { defineStore } from 'pinia';
-import { onMounted, onUnmounted, PropType, reactive, ref, watch } from 'vue';
-import { EdgeTTSClient } from '@/utils/edge-tts';
-import { showFailToast, showToast } from 'vant';
+import type { LineData } from '@/utils/reader/types';
 import { useStorageAsync } from '@vueuse/core';
 import CryptoJS from 'crypto-js';
+import { defineStore } from 'pinia';
+import { showFailToast, showToast } from 'vant';
+import { onMounted, reactive, ref } from 'vue';
+import { clearTimeout, setInterval, setTimeout } from 'worker-timers';
+import { EdgeTTSClient } from '@/utils/edge-tts';
 import { SimpleLRUCache } from '@/utils/lruCache';
-import { LineData } from '@/utils/reader/types';
-import {
-  setTimeout,
-  clearTimeout,
-  setInterval,
-  clearInterval,
-} from 'worker-timers';
 
 export interface Voice {
   Name: string;

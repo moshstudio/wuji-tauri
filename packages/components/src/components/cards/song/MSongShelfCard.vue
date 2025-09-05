@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
 import { SongShelfType } from '@wuji-tauri/source-extension';
-import SongPhoto from './SongPhoto.vue';
-import { joinSongArtists } from './index';
 import { ref } from 'vue';
+import { joinSongArtists } from './index';
+import SongPhoto from './SongPhoto.vue';
 
 withDefaults(
   defineProps<{

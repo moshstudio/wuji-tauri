@@ -5,13 +5,9 @@ import type {
   BookSource,
 } from '@wuji-tauri/source-extension';
 import { MBookShelfCard } from '@wuji-tauri/components/src';
-import MNavBar from '@/components/header/MNavBar.vue';
 import _ from 'lodash';
+import MNavBar from '@/components/header/MNavBar.vue';
 import { showPromptDialog } from '@/utils/usePromptDialog';
-
-const activeIndex = defineModel<number>('activeIndex', {
-  required: true,
-});
 
 withDefaults(
   defineProps<{
@@ -27,11 +23,15 @@ withDefaults(
   }>(),
   { isChapterRefreshing: false },
 );
+
+const activeIndex = defineModel<number>('activeIndex', {
+  required: true,
+});
 </script>
 
 <template>
   <div class="flex h-full w-full flex-col overflow-hidden">
-    <MNavBar title="书架"></MNavBar>
+    <MNavBar title="书架" />
     <div class="flex w-full flex-shrink-0 gap-2 px-4 pt-2">
       <van-button
         icon="replay"

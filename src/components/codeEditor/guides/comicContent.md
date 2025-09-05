@@ -49,7 +49,7 @@ async function getContent(item, chapter) {
   function test(p, a, c, k, e, d) {
     e = function (c) {
       return (
-        (c < a ? '' : e(parseInt(c / a))) +
+        (c < a ? '' : e(Number.parseInt(c / a))) +
         ((c = c % a) > 35 ? String.fromCharCode(c + 29) : c.toString(36))
       );
     };
@@ -69,7 +69,7 @@ async function getContent(item, chapter) {
     }
     while (c--) {
       if (k[c]) {
-        p = p.replace(new RegExp('\\b' + e(c) + '\\b', 'g'), k[c]);
+        p = p.replace(new RegExp(`\\b${e(c)}\\b`, 'g'), k[c]);
       }
     }
     return p;
@@ -77,7 +77,7 @@ async function getContent(item, chapter) {
 
   const response = await this.fetch(chapter.url);
   const text = await response.text();
-  const regx = /return p}\((.*)\)/;
+  const regx = /return p\}\((.*)\)/;
   const params = regx.exec(text)[1].split(',');
   const ret = test(
     params[0],
@@ -88,7 +88,7 @@ async function getContent(item, chapter) {
     {},
   );
   const imageS = /img_s=(\d+);/.exec(ret)[1];
-  const regx2 = /msg=\\\'([^;]*)\\\';/;
+  const regx2 = /msg=\\'([^;]*)\\';/;
   const images = regx2.exec(ret)[1].split('|');
   return {
     photos: images.map((item) => `https://picsh.77dm.top/h${imageS}/${item.replace("'", '')}`),
@@ -112,7 +112,7 @@ async function getContent(item, chapter) {
     comic_id: `${item.id}`,
     chapter_id: `${chapter.id}`,
   });
-  const response = await this.fetch(url + '?' + params.toString());
+  const response = await this.fetch(`${url}?${params.toString()}`);
   const json = await response.json();
 
   return {

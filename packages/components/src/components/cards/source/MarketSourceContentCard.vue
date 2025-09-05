@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import {
+import type {
   MarketSource,
   MarketSourceContent,
-  SourceType,
 } from '@wuji-tauri/source-extension';
+import { SourceType } from '@wuji-tauri/source-extension';
 
 defineProps<{
   source: MarketSource;
@@ -11,7 +11,7 @@ defineProps<{
   onClick: (source: MarketSource, item: MarketSourceContent) => void;
 }>();
 
-const getTypeProperty = (type: SourceType) => {
+function getTypeProperty(type: SourceType) {
   switch (type) {
     case SourceType.Book:
       return {
@@ -50,14 +50,14 @@ const getTypeProperty = (type: SourceType) => {
         textColor: '#4338ca',
       };
   }
-};
+}
 </script>
 
 <template>
   <van-cell
     clickable
-    @click="() => onClick(source, item)"
     class="flex items-center gap-2"
+    @click="() => onClick(source, item)"
   >
     <template #title>
       <div class="flex items-center gap-2">
@@ -74,7 +74,7 @@ const getTypeProperty = (type: SourceType) => {
       </div>
     </template>
     <template #value>
-      <slot name="right"></slot>
+      <slot name="right" />
     </template>
   </van-cell>
 </template>

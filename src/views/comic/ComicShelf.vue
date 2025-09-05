@@ -3,14 +3,14 @@ import type {
   ComicItemInShelf,
   ComicSource,
 } from '@wuji-tauri/source-extension';
-import { router } from '@/router';
-import { useComicShelfStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import { showLoadingToast, showToast } from 'vant';
 import { computed, ref } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppComicShelf from '@/layouts/app/comic/ComicShelf.vue';
 import DesktopComicShelf from '@/layouts/desktop/comic/ComicShelf.vue';
+import { router } from '@/router';
+import { useComicShelfStore, useStore } from '@/store';
 
 const store = useStore();
 const shelfStore = useComicShelfStore();
@@ -130,11 +130,11 @@ function removeComicFromShelf(comic: ComicItemInShelf, shelfId: string) {
       />
     </template>
     <van-action-sheet
-      title="删除书架"
       v-model:show="showRemoveShelfSheet"
+      title="删除书架"
       :actions="removeShelfSheetActions"
       teleport="body"
-    ></van-action-sheet>
+    />
   </PlatformSwitch>
 </template>
 

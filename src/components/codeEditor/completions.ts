@@ -1,4 +1,8 @@
-import lodashTypes from '@/components/codeEditor/monaco-types/monaco-lodash/index.d.ts.txt?raw';
+import type * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
+import cryptoJsTypes from '@/components/codeEditor/monaco-types/monaco-crypto/index.d.ts.txt?raw';
+import fetchDomTypes from '@/components/codeEditor/monaco-types/monaco-fetch-dom/index.d.ts.txt?raw';
+import fetchTypes from '@/components/codeEditor/monaco-types/monaco-fetch/index.d.ts.txt?raw';
+import iconvTypes from '@/components/codeEditor/monaco-types/monaco-iconv/index.d.ts.txt?raw';
 import lodashCommonArrayTypes from '@/components/codeEditor/monaco-types/monaco-lodash/common/array.d.ts.txt?raw';
 import lodashCommonCollectionTypes from '@/components/codeEditor/monaco-types/monaco-lodash/common/collection.d.ts.txt?raw';
 import lodashCommonCommonTypes from '@/components/codeEditor/monaco-types/monaco-lodash/common/common.d.ts.txt?raw';
@@ -11,21 +15,17 @@ import lodashCommonObjectTypes from '@/components/codeEditor/monaco-types/monaco
 import lodashCommonSeqTypes from '@/components/codeEditor/monaco-types/monaco-lodash/common/seq.d.ts.txt?raw';
 import lodashCommonStringTypes from '@/components/codeEditor/monaco-types/monaco-lodash/common/string.d.ts.txt?raw';
 import lodashCommonUtilTypes from '@/components/codeEditor/monaco-types/monaco-lodash/common/util.d.ts.txt?raw';
-import cryptoJsTypes from '@/components/codeEditor/monaco-types/monaco-crypto/index.d.ts.txt?raw';
-import forgeTypes from '@/components/codeEditor/monaco-types/monaco-node-forge/index.d.ts.txt?raw';
-import iconvTypes from '@/components/codeEditor/monaco-types/monaco-iconv/index.d.ts.txt?raw';
+import lodashTypes from '@/components/codeEditor/monaco-types/monaco-lodash/index.d.ts.txt?raw';
 import m3u8ParserTypes from '@/components/codeEditor/monaco-types/monaco-m3u8-parser/index.d.ts.txt?raw';
+import forgeTypes from '@/components/codeEditor/monaco-types/monaco-node-forge/index.d.ts.txt?raw';
 import proxyTypes from '@/components/codeEditor/monaco-types/monaco-proxy/index.d.ts.txt?raw';
-import fetchTypes from '@/components/codeEditor/monaco-types/monaco-fetch/index.d.ts.txt?raw';
-import fetchDomTypes from '@/components/codeEditor/monaco-types/monaco-fetch-dom/index.d.ts.txt?raw';
 import queryBookElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-book/index.d.ts.txt?raw';
 import queryComicElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-comic/index.d.ts.txt?raw';
-import queryVideoElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-video/index.d.ts.txt?raw';
 import queryPhotoElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-photo/index.d.ts.txt?raw';
 import querySongElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-song/index.d.ts.txt?raw';
-import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
+import queryVideoElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-video/index.d.ts.txt?raw';
 
-export const addCompletions = (monaco: typeof monacoEditor) => {
+export function addCompletions(monaco: typeof monacoEditor) {
   monaco.languages.typescript.javascriptDefaults.addExtraLib(
     lodashTypes,
     'node_modules/@types/lodash/index.d.ts',
@@ -231,4 +231,4 @@ export const addCompletions = (monaco: typeof monacoEditor) => {
     allowJs: true,
     typeRoots: ['node_modules/@types'],
   });
-};
+}

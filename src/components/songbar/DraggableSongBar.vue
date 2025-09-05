@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { Swiper as SwiperClass } from 'swiper/types';
-import { useSongStore } from '@/store';
+import { Icon } from '@iconify/vue';
+import { LoadImage } from '@wuji-tauri/components/src';
 import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
 import { storeToRefs } from 'pinia';
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { computed, reactive } from 'vue';
-import { Icon } from '@iconify/vue';
-import { LoadImage } from '@wuji-tauri/components/src';
+import { useSongStore } from '@/store';
 
 import 'swiper/css';
 

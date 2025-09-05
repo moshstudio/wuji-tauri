@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type { BookItemInShelf, BookSource } from '@wuji-tauri/source-extension';
-import { router } from '@/router';
-import { useBookShelfStore, useStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import { showLoadingToast, showToast } from 'vant';
 import { computed, ref } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppBookShelf from '@/layouts/app/book/BookShelf.vue';
 import DesktopBookShelf from '@/layouts/desktop/book/BookShelf.vue';
+import { router } from '@/router';
+import { useBookShelfStore, useStore } from '@/store';
 
 const store = useStore();
 const shelfStore = useBookShelfStore();
@@ -127,11 +127,11 @@ function removeBookFromShelf(book: BookItemInShelf, shelfId: string) {
       />
     </template>
     <van-action-sheet
-      title="删除书架"
       v-model:show="showRemoveShelfSheet"
+      title="删除书架"
       :actions="removeShelfSheetActions"
       teleport="body"
-    ></van-action-sheet>
+    />
   </PlatformSwitch>
 </template>
 

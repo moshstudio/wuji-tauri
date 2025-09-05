@@ -4,6 +4,7 @@ import { Channel, invoke, PluginListener } from '@tauri-apps/api/core';
 
 import { Store } from '@tauri-apps/plugin-store';
 import { defineStore } from 'pinia';
+import { estimateJsonSize } from '@/utils';
 
 export async function tauriAddPluginListener<T>(
   plugin: string,
@@ -15,7 +16,6 @@ export async function tauriAddPluginListener<T>(
     cb(response as T);
   };
   console.log('tauriAddPluginListener', plugin, event);
-
   return invoke(`plugin:${plugin}|register_listener`, { event, handler }).then(
     () => new PluginListener(plugin, event, handler.id),
   );
@@ -60,6 +60,10 @@ export function createKVStore(name?: string) {
       async clear(): Promise<void> {
         this.middleware.clear();
         await store?.clear();
+      }
+
+      size() {
+        return estimateJsonSize(this.middleware);
       }
     }
     const storage = new KVStorage();

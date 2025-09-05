@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { ComicItem } from '@wuji-tauri/source-extension';
-import LoadImage from '../../LoadImage.vue';
 import { Icon } from '@iconify/vue';
 import _ from 'lodash';
+import LoadImage from '../../LoadImage.vue';
 
 defineProps<{
   comic: ComicItem;
@@ -27,7 +27,7 @@ defineProps<{
     </div>
 
     <div
-      class="flex grow flex-col justify-around text-sm text-[--van-text-color]"
+      class="flex min-w-0 grow flex-col justify-around text-sm text-[--van-text-color]"
     >
       <p
         class="w-full text-base font-bold"

@@ -1,25 +1,10 @@
 <script setup lang="ts">
-import {
-  ComicItem,
-  ComicExtension,
-  ComicContent,
-} from '@wuji-tauri/source-extension';
-import { showDialog } from 'vant';
-import COMIC_TEMPLATE from '@/components/codeEditor/templates/comicTemplate.txt?raw';
-import { ref } from 'vue';
-import _ from 'lodash';
+import type { ComicContent, ComicItem } from '@wuji-tauri/source-extension';
 import LoadImage from '@wuji-tauri/components/src/components/LoadImage.vue';
-
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
-const errorMessage = ref('运行失败');
-const result = ref<ComicContent>();
+import { ComicExtension } from '@wuji-tauri/source-extension';
+import { showDialog } from 'vant';
+import { ref } from 'vue';
+import COMIC_TEMPLATE from '@/components/codeEditor/templates/comicTemplate.txt?raw';
 
 const props = defineProps<{
   content: {
@@ -45,6 +30,17 @@ const props = defineProps<{
   close: () => void;
   log: (...args: any[]) => void;
 }>();
+
+enum RunStatus {
+  not_running = 'not_running',
+  running = 'running',
+  success = 'success',
+  error = 'error',
+}
+
+const runStatus = ref<RunStatus>(RunStatus.not_running);
+const errorMessage = ref('运行失败');
+const result = ref<ComicContent>();
 
 async function initLoad() {
   result.value = undefined;
@@ -93,7 +89,7 @@ async function load() {
       throw new Error('初始化中的baseUrl未定义!');
     }
     cls.log = props.log;
-    let item = findPage('detail')?.result;
+    const item = findPage('detail')?.result;
     if (!item?.chapters?.length) {
       throw new Error('请先保证《书籍详情》中章节不为空');
     }
@@ -111,9 +107,9 @@ async function load() {
   }
 }
 
-const findPage = (name: string) => {
+function findPage(name: string) {
   return props.content.pages.find((page) => page.type === name);
-};
+}
 
 defineExpose({
   initLoad,

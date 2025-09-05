@@ -1,5 +1,6 @@
+import type { SongInfo } from '@wuji-tauri/source-extension';
 import { fetch } from '@wuji-tauri/fetch';
-import { SongInfo } from '@wuji-tauri/source-extension';
+
 async function getData(url: string, options: Record<string, any> = {}) {
   options ||= {};
   const headers = new Headers(options.headers || {});

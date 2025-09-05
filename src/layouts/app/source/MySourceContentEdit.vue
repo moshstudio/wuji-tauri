@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import {
+import type {
   MarketSource,
   MarketSourceContent,
 } from '@wuji-tauri/source-extension';
-import MNavBar from '@/components/header/MNavBar.vue';
-import { ref, reactive, watch, computed } from 'vue';
-import { FormInstance, showToast } from 'vant';
+import type { FormInstance } from 'vant';
+import { showToast } from 'vant';
+import { computed, ref, watch } from 'vue';
 import IEditor from '@/components/codeEditor/IEditor.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
 import { useServerStore } from '@/store';
 
 const props = defineProps<{
@@ -27,7 +27,7 @@ const formRef = ref<FormInstance>();
 const nameRules = [
   { required: true, message: '请输入名称' },
   {
-    pattern: /^[a-zA-Z0-9_\u4e00-\u9fa5]{2,80}$/,
+    pattern: /^[\w\u4E00-\u9FA5]{2,80}$/,
     message: '名称只能包含字母、数字、下划线，2-80个字符',
   },
 ];
@@ -53,7 +53,7 @@ const isModified = computed(() => {
   );
 });
 
-const save = async () => {
+async function save() {
   if (!sourceContentWithCode.value || !props.source) return;
   try {
     // 验证表单
@@ -69,7 +69,7 @@ const save = async () => {
     showToast('请检查输入内容');
     return false;
   }
-};
+}
 </script>
 
 <template>
@@ -86,9 +86,9 @@ const save = async () => {
       </template>
     </MNavBar>
     <div
-      class="flex w-full flex-grow flex-col overflow-y-auto bg-[--van-background-2] p-2"
+      class="flex w-full flex-grow flex-col overflow-y-auto bg-[--van-background-1] p-2"
     >
-      <van-form class="px-4 py-1" ref="formRef">
+      <van-form ref="formRef" class="px-4 py-1">
         <van-field
           v-model="sourceContentName"
           name="name"
@@ -101,7 +101,7 @@ const save = async () => {
         v-model:value="sourceContentCode"
         path="my-source-content-edit"
         :init="() => {}"
-        :editorChange="() => {}"
+        :editor-change="() => {}"
       />
     </div>
   </div>

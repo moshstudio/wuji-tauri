@@ -1,28 +1,15 @@
 <script setup lang="ts">
-import {
+import type {
   VideoItem,
-  VideoExtension,
-  VideosList,
   VideoResource,
+  VideosList,
 } from '@wuji-tauri/source-extension';
-import { showDialog, showNotify } from 'vant';
-import BOOK_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
-import { ref } from 'vue';
-import { LoadImage } from '@wuji-tauri/components/src';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import { VideoExtension } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
-
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
-const errorMessage = ref('运行失败');
-const result = ref<VideoItem>();
-const selectedResource = ref<VideoResource>();
+import { showDialog } from 'vant';
+import { ref } from 'vue';
+import BOOK_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 
 const props = defineProps<{
   content: {
@@ -48,6 +35,18 @@ const props = defineProps<{
   close: () => void;
   log: (...args: any[]) => void;
 }>();
+
+enum RunStatus {
+  not_running = 'not_running',
+  running = 'running',
+  success = 'success',
+  error = 'error',
+}
+
+const runStatus = ref<RunStatus>(RunStatus.not_running);
+const errorMessage = ref('运行失败');
+const result = ref<VideoItem>();
+const selectedResource = ref<VideoResource>();
 
 async function initLoad() {
   result.value = undefined;
@@ -145,9 +144,9 @@ async function load() {
   }
 }
 
-const findPage = (name: string) => {
+function findPage(name: string) {
   return props.content.pages.find((page) => page.type === name);
-};
+}
 
 defineExpose({
   initLoad,
@@ -176,7 +175,9 @@ defineExpose({
             class="flex w-full flex-shrink-0 items-center justify-start gap-2 overflow-hidden"
           >
             <div class="flex min-w-[100px] flex-col gap-1">
-              <h2 class="font-bold">{{ result?.title }}</h2>
+              <h2 class="font-bold">
+                {{ result?.title }}
+              </h2>
               <div class="flex gap-1 overflow-x-auto">
                 <van-tag
                   v-for="tag in _.castArray(result?.tags)"
@@ -230,7 +231,7 @@ defineExpose({
           >
             <van-button
               v-for="resource in result?.resources"
-              :key="`resource` + resource.id"
+              :key="`resource${resource.id}`"
               class="flex-shrink-0"
               size="small"
               :type="
@@ -262,10 +263,10 @@ defineExpose({
           >
             <van-button
               v-for="episode in selectedResource?.episodes"
-              :key="`episode` + episode.id"
+              :key="`episode${episode.id}`"
               class="flex-shrink-0"
               size="small"
-              :type="'default'"
+              type="default"
               @click="() => {}"
             >
               {{ episode.title }}
@@ -273,7 +274,7 @@ defineExpose({
           </ResponsiveGrid2>
         </div>
         <div v-if="!result" class="flex w-full items-center justify-center">
-          <van-loading></van-loading>
+          <van-loading />
         </div>
       </div>
     </div>

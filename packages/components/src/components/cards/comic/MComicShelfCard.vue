@@ -4,10 +4,10 @@ import type {
   ComicShelf,
   ComicSource,
 } from '@wuji-tauri/source-extension';
-import MoreOptionsSheet from '../../MoreOptionsSheet.vue';
 import { Icon } from '@iconify/vue';
 import _ from 'lodash';
 import { ref } from 'vue';
+import MoreOptionsSheet from '../../MoreOptionsSheet.vue';
 
 defineProps<{
   comic: ComicItemInShelf;
@@ -43,7 +43,7 @@ const showMoreOptions = ref(false);
     </div>
 
     <div
-      class="flex grow flex-col justify-around text-sm text-[--van-text-color]"
+      class="flex min-w-0 grow flex-col justify-around text-sm text-[--van-text-color]"
     >
       <div class="flex items-center gap-2">
         <p class="line-clamp-2 h-6 text-base font-bold">

@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { PhotoSource } from '@/types';
+import { debounce } from 'lodash';
+import { storeToRefs } from 'pinia';
+import { showLoadingToast } from 'vant';
+import { ref } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppPhotoList from '@/layouts/app/photo/PhotoList.vue';
 import DesktopPhotoList from '@/layouts/desktop/photo/PhotoList.vue';
 import { useDisplayStore, useStore } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
-import { debounce } from 'lodash';
-import { storeToRefs } from 'pinia';
-import { showLoadingToast } from 'vant';
-import { ref } from 'vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();

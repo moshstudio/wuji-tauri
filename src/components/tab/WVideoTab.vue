@@ -16,7 +16,7 @@ defineProps<{
     :source="source"
     :to-page="toPage"
     :to-detail="toDetail"
-  ></MVideoTab>
+  />
 </template>
 
 <style scoped lang="less"></style>

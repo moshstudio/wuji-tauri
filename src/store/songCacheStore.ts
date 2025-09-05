@@ -1,13 +1,13 @@
-import type { ArtistInfo, SongInfo } from '@wuji-tauri/source-extension';
-
 import type { ClientOptions } from '@wuji-tauri/fetch';
 
-import { sanitizePathName } from '@/utils';
+import type { ArtistInfo, SongInfo } from '@wuji-tauri/source-extension';
+
+import * as fsApi from '@tauri-apps/plugin-fs';
 import { fetch, fetchAndSave } from '@wuji-tauri/fetch';
 import _ from 'lodash';
 import { defineStore } from 'pinia';
-import * as fsApi from '@tauri-apps/plugin-fs';
 import { ref, watch } from 'vue';
+import { sanitizePathName } from '@/utils';
 import { useDisplayStore } from './displayStore';
 
 export const useSongCacheStore = defineStore('songCacheStore', () => {
@@ -362,7 +362,7 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
           return undefined;
         }
         const blobUrl = URL.createObjectURL(
-          new Blob([buffer], { type: 'audio/mpeg' }),
+          new Blob([new Uint8Array(buffer)], { type: 'audio/mpeg' }),
         );
         return blobUrl;
       } catch (error) {
@@ -397,7 +397,7 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
             return undefined;
           }
           const blobUrl = URL.createObjectURL(
-            new Blob([buffer], { type: 'image/png' }),
+            new Blob([new Uint8Array(buffer)], { type: 'image/png' }),
           );
           return blobUrl;
         } catch (error) {

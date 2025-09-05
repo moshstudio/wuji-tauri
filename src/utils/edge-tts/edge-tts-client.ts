@@ -79,6 +79,7 @@ export class EdgeTTSClient {
   private ws: WebSocket | null = null;
   private outputFormat: OUTPUT_FORMAT | null =
     OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3;
+
   private requestQueue: Record<string, EventEmitter> = {};
   private connectionStartTime = 0;
 

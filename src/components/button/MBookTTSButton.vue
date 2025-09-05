@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useTTSStore } from '@/store';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import type { ReaderResult } from '@/utils/reader/types';
 import { Icon } from '@iconify/vue';
-import { ReaderResult } from '@/utils/reader/types';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { useTTSStore } from '@/store';
 
 const props = defineProps<{
   readingPagedContent: ReaderResult;
@@ -12,15 +12,15 @@ const props = defineProps<{
 const ttsStore = useTTSStore();
 const showDialog = ref(false);
 
-const onPlay = () => {
+function onPlay() {
   if (ttsStore.autoStopOptions.enable) {
     ttsStore.startAutoStopTimer();
   }
   props.onPlay();
-};
-const onShowDialog = () => {
+}
+function onShowDialog() {
   showDialog.value = true;
-};
+}
 
 const showVoiceSelectSheet = ref(false);
 const voiceSelectSheetActions = computed(() => {
@@ -111,7 +111,7 @@ const remainingTime = computed(() => {
     teleport="body"
     title="听书设置"
     class="select-none transition"
-    :confirmButtonText="ttsStore.isReading ? '停止' : '开始听书'"
+    :confirm-button-text="ttsStore.isReading ? '停止' : '开始听书'"
     @confirm="
       () => {
         if (ttsStore.isReading) {
@@ -125,14 +125,14 @@ const remainingTime = computed(() => {
     <van-cell
       title="语音"
       :value="ttsStore.selectedVoice.ChineseName"
-      @click="showVoiceSelectSheet = true"
       is-link
+      @click="showVoiceSelectSheet = true"
     />
     <van-cell
       title="语速"
-      :value="ttsStore.playbackRate + 'x'"
+      :value="`${ttsStore.playbackRate}x`"
       :border="false"
-    ></van-cell>
+    />
     <div class="px-[16px]">
       <van-slider
         v-model="ttsStore.playbackRate"
@@ -151,13 +151,10 @@ const remainingTime = computed(() => {
 
     <van-cell title="定时关闭" :border="false">
       <template #value>
-        <van-switch
-          v-model="ttsStore.autoStopOptions.enable"
-          size="22"
-        ></van-switch>
+        <van-switch v-model="ttsStore.autoStopOptions.enable" size="22" />
       </template>
     </van-cell>
-    <div class="px-[16px]" v-if="ttsStore.autoStopOptions.enable">
+    <div v-if="ttsStore.autoStopOptions.enable" class="px-[16px]">
       <div class="flex flex-nowrap items-center gap-3">
         <van-slider
           v-model="ttsStore.autoStopOptions.duration"
@@ -181,8 +178,8 @@ const remainingTime = computed(() => {
     </div>
   </van-dialog>
   <van-action-sheet
-    teleport="body"
     v-model:show="showVoiceSelectSheet"
+    teleport="body"
     :actions="voiceSelectSheetActions"
   />
 </template>

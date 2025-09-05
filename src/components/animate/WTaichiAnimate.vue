@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { CSSProperties } from 'vue';
-import { useDisplayStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import { onMounted, ref, watch } from 'vue';
+import { useDisplayStore } from '@/store';
 
 interface Part {
   x: number;
@@ -183,7 +183,7 @@ watch(taichiAnimateRandomized, (v) => {
           class="part"
           :style="getPartStyle(part)"
           @click="toggle"
-        ></div>
+        />
       </div>
     </div>
   </div>

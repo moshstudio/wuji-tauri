@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import type { PlaylistInfo } from '@wuji-tauri/source-extension';
-import { MSongCard } from '@wuji-tauri/components/src';
-import { LoadImage } from '@wuji-tauri/components/src';
-import MNavBar from '@/components/header/MNavBar.vue';
-import MSongBar from '@/components/songbar/MSongBar.vue';
-import MPagination from '@/components/pagination/MPagination.vue';
+import { LoadImage, MSongCard } from '@wuji-tauri/components/src';
 import AddShelfButton from '@/components/button/AddShelfButton.vue';
-import { useDisplayStore, useSongStore } from '@/store';
+import MNavBar from '@/components/header/MNavBar.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import MSongBar from '@/components/songbar/MSongBar.vue';
 import { router } from '@/router';
+import { useDisplayStore, useSongStore } from '@/store';
 
 withDefaults(
   defineProps<{
@@ -27,7 +26,7 @@ const displayStore = useDisplayStore();
 
 <template>
   <div class="flex h-full w-full flex-col overflow-hidden">
-    <MNavBar :title="'歌单详情'"></MNavBar>
+    <MNavBar title="歌单详情" />
     <div class="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
       <div class="flex flex-col items-center gap-2 rounded p-4 shadow">
         <div class="flex items-center justify-center gap-2">

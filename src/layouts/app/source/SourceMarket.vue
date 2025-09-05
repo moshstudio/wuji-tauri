@@ -1,16 +1,15 @@
 <script setup lang="ts">
-import { router } from '@/router';
-import SearchField from '@/components/search/SearchField.vue';
+import type {
+  MarketSource,
+  PagedMarketSource,
+} from '@wuji-tauri/source-extension';
+import { MarketSourceCard } from '@wuji-tauri/components/src';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import WNavbar from '@/components/header/WNavbar.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import { MarketSourceCard } from '@wuji-tauri/components/src';
-import { MarketSource, PagedMarketSource } from '@wuji-tauri/source-extension';
-import { permissionText, permissionStyle } from '@/utils/marketSource';
-import _ from 'lodash';
-
-const searchValue = defineModel<string>('searchValue', { default: '' });
-const isFreshing = defineModel<boolean>('isFreshing', { default: false });
+import SearchField from '@/components/search/SearchField.vue';
+import { router } from '@/router';
+import { permissionStyle, permissionText } from '@/utils/marketSource';
 
 defineProps<{
   source?: PagedMarketSource;
@@ -22,6 +21,8 @@ defineProps<{
   onImport: (source: MarketSource) => void;
   onLike: (source: MarketSource) => void;
 }>();
+const searchValue = defineModel<string>('searchValue', { default: '' });
+const isFreshing = defineModel<boolean>('isFreshing', { default: false });
 </script>
 
 <template>
@@ -34,7 +35,7 @@ defineProps<{
           router.push({ name: 'SourceMy' });
         }
       "
-    ></WNavbar>
+    />
     <van-pull-refresh
       v-model="isFreshing"
       v-remember-scroll
@@ -47,14 +48,14 @@ defineProps<{
           v-model:value="searchValue"
           :search="() => {}"
           :search-histories="[]"
-        ></SearchField>
+        />
       </div>
       <div class="flex w-full items-center justify-start gap-2">
         <MPagination
           :page-no="source?.page"
           :page-count="source?.totalPages || 1"
           :to-page="(page: number) => toPage(page, sortType)"
-        ></MPagination>
+        />
         <van-button
           size="small"
           type="primary"
@@ -76,7 +77,7 @@ defineProps<{
           :permission-text="permissionText"
           :permission-style="permissionStyle"
           :on-like="onLike"
-        ></MarketSourceCard>
+        />
       </ResponsiveGrid2>
     </van-pull-refresh>
   </div>

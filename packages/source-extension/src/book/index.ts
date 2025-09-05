@@ -1,7 +1,7 @@
-import { purifyText } from '../utils/element';
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
 import { Extension, transformResult } from '../baseExtension';
+import { purifyText } from '../utils/element';
 
 export interface BookChapter {
   id: string;

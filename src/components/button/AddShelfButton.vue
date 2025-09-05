@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ButtonSize } from 'vant';
+import type { ButtonSize } from 'vant';
 
 withDefaults(
   defineProps<{

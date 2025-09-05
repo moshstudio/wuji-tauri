@@ -1,9 +1,11 @@
+/* eslint-disable perfectionist/sort-imports */
+import 'reflect-metadata';
+import { loader } from '@guolao/vue-monaco-editor';
+import { GesturePlugin } from '@vueuse/gesture';
 import { createPinia } from 'pinia';
-import { Lazyload } from 'vant';
-import { Toast, Dialog, Notify, ImagePreview, Sticky } from 'vant';
+import { Dialog, ImagePreview, Lazyload, Notify, Sticky, Toast } from 'vant';
 
 import { createApp } from 'vue';
-import { GesturePlugin } from '@vueuse/gesture';
 import { createVuetify } from 'vuetify';
 import * as components from 'vuetify/components';
 
@@ -14,14 +16,8 @@ import App from './App.vue';
 import { router } from './router';
 
 import HorizontalScrollDirective from './utils/directives/horizontalScroll';
-import RememberScrollDirective from './utils/directives/rememberScroll';
 import HoverDelay from './utils/directives/hoverDelay';
-import { loader } from '@guolao/vue-monaco-editor';
-loader.config({
-  paths: {
-    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs',
-  },
-});
+import RememberScrollDirective from './utils/directives/rememberScroll';
 
 import 'vuetify/styles';
 import 'vant/es/toast/style';
@@ -33,6 +29,12 @@ import '@vant/touch-emulator';
 import '@/styles/index.css';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 import 'animate.css';
+
+loader.config({
+  paths: {
+    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs',
+  },
+});
 
 createApp(App)
   .use(createPinia())

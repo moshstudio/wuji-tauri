@@ -1,18 +1,15 @@
-import type { SongShelf } from '@wuji-tauri/source-extension';
-
 import type { PluginListener } from '@tauri-apps/api/core';
 
+import type { TrayIcon } from '@tauri-apps/api/tray';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { useDark, useStorage, useStorageAsync, useToggle } from '@vueuse/core';
 import { defineStore } from 'pinia';
-import * as commands from 'tauri-plugin-commands-api';
 
-import { onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue';
-import { tauriAddPluginListener } from './utils';
-import _ from 'lodash';
-import { TrayIcon } from '@tauri-apps/api/tray';
+import * as commands from 'tauri-plugin-commands-api';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import buildTray from '@/utils/tray';
+import { tauriAddPluginListener } from './utils';
 
 export const useDisplayStore = defineStore('display', () => {
   const showTabBar = ref(true);
@@ -44,7 +41,7 @@ export const useDisplayStore = defineStore('display', () => {
       if (val) {
         showTabBar.value = false;
         if (isAndroid.value) {
-          //横屏
+          // 横屏
           await commands.set_screen_orientation('landscape');
         } else if (isWindows.value) {
           await getCurrentWindow().setFullscreen(true);
@@ -77,6 +74,8 @@ export const useDisplayStore = defineStore('display', () => {
   const isDark = useDark();
   const toggleDark = useToggle(isDark);
 
+  const showVideoComponent = ref(false);
+  const showSongPlayingList = ref(false);
   const showLeftPopup = ref(false);
 
   // 仅移动端有效
@@ -209,6 +208,8 @@ export const useDisplayStore = defineStore('display', () => {
     toggleDark,
     showTabBar,
 
+    showVideoComponent,
+    showSongPlayingList,
     showLeftPopup,
 
     bookKeepScreenOn,

@@ -1,8 +1,8 @@
 {
   "name": "@wuji-tauri/components",
-  "private": true,
-  "version": "1.0.0",
   "type": "module",
+  "version": "1.0.0",
+  "private": true,
   "main": "./dist/components.umd.cjs",
   "module": "./dist/components.js",
   "types": "./dist/index.d.ts",

@@ -10,7 +10,6 @@
 
 一款界面简洁的资源聚合浏览软件，支持在一个软件中浏览图片、音乐、书籍等资源。
 
-
 ## 下载方式
 
 在 [release](https://github.com/moshstudio/wuji-tauri/releases) 中进行下载

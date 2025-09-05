@@ -1,8 +1,8 @@
-import { BooksList } from '@se/book';
-import { ComicsList } from '@se/comic';
-import { PhotoList } from '@se/photo';
-import { PlaylistList, SongList } from '@se/song';
-import { VideosList } from '@se/video';
+import type { BooksList } from '@se/book';
+import type { ComicsList } from '@se/comic';
+import type { PhotoList } from '@se/photo';
+import type { PlaylistList, SongList } from '@se/song';
+import type { VideosList } from '@se/video';
 
 export enum SourceType {
   Photo = 'photo',

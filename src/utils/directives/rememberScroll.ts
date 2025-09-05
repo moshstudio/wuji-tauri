@@ -1,6 +1,6 @@
 import type { Directive } from 'vue';
 import { useScroll } from '@vueuse/core';
-import { onActivated, onDeactivated, onMounted, onUnmounted } from 'vue';
+import { onActivated, onDeactivated } from 'vue';
 
 export const vRememberScroll: Directive<HTMLElement, string | undefined> = {
   mounted(el, binding) {

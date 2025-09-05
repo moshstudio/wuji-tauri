@@ -1,10 +1,10 @@
 import type { BookChapter, BookItem } from '@wuji-tauri/source-extension';
-import { sanitizePathName } from '@/utils';
+import * as fs from '@tauri-apps/plugin-fs';
 import CryptoJS from 'crypto-js';
 import _ from 'lodash';
 import { defineStore } from 'pinia';
-import * as fs from '@tauri-apps/plugin-fs';
 import { ref, watch } from 'vue';
+import { sanitizePathName } from '@/utils';
 import { SimpleLRUCache } from '@/utils/lruCache';
 import { useBookShelfStore } from './bookShelfStore';
 
@@ -24,9 +24,11 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
       cache_chapter_id: string;
     }[]
   >([]);
+  const booksMap = ref<Map<string, number>>(new Map());
   let inited = false;
-  const lruCache = new SimpleLRUCache<string, string>(100);
+  const lruCache = new SimpleLRUCache<string, string>(30);
   const ensureBase = async () => {
+    if (inited) return;
     if (!(await fs.exists(dirName, { baseDir }))) {
       await fs.mkdir(dirName, {
         baseDir,
@@ -64,7 +66,16 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
         await removeBookCache2(cacheBookId);
       }
     }
+    refreshBooksMap();
     inited = true;
+  };
+
+  const refreshBooksMap = () => {
+    const tmpMap = new Map();
+    books.value.forEach((book, index) => {
+      tmpMap.set(`${book.cache_book_id}_${book.cache_chapter_id}`, index);
+    });
+    booksMap.value = tmpMap;
   };
   watch(
     books,
@@ -82,7 +93,8 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
           baseDir,
         },
       );
-    }, 500),
+      refreshBooksMap();
+    }, 1000),
     {
       deep: true,
     },
@@ -113,17 +125,21 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     const cache_book_id = genBookCacheId(book);
     const cache_chapter_id = genChapterCacheId(book, chapter);
 
-    const find = books.value.find(
-      (b) =>
-        b.cache_book_id === cache_book_id &&
-        b.cache_chapter_id === cache_chapter_id,
-    );
+    const key = `${cache_book_id}_${cache_chapter_id}`;
+    const find = booksMap.value.has(key)
+      ? books.value[booksMap.value.get(key)!]
+      : books.value.find(
+          (b) =>
+            b.cache_book_id === cache_book_id &&
+            b.cache_chapter_id === cache_chapter_id,
+        );
+
     if (find && !force) {
       // 已经有了，不需要重复保存
       return;
     }
     if (!find) {
-      books.value.unshift({
+      books.value.push({
         book_id: book.id,
         book_name: book.title,
         source_id: book.sourceId,
@@ -166,16 +182,19 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     }
     const cache_book_id = genBookCacheId(book);
     const cache_chapter_id = genChapterCacheId(book, chapter);
-    const key = cache_book_id + '/' + cache_chapter_id;
+    const key = `${cache_book_id}/${cache_chapter_id}`;
     if (lruCache.has(key)) {
       return lruCache.get(key);
     }
-    const find = books.value.find((b) => {
-      return (
-        b.cache_book_id === cache_book_id &&
-        b.cache_chapter_id === cache_chapter_id
-      );
-    });
+
+    const tmpKey = `${cache_book_id}_${cache_chapter_id}`;
+    const find = booksMap.value.has(tmpKey)
+      ? books.value[booksMap.value.get(tmpKey)!]
+      : books.value.find(
+          (b) =>
+            b.cache_book_id === cache_book_id &&
+            b.cache_chapter_id === cache_chapter_id,
+        );
 
     if (find) {
       try {
@@ -252,12 +271,8 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     const cache_book_id = genBookCacheId(book);
     const cache_chapter_id = genChapterCacheId(book, chapter);
 
-    const find = books.value.find(
-      (b) =>
-        b.cache_book_id === cache_book_id &&
-        b.cache_chapter_id === cache_chapter_id,
-    );
-    return !!find;
+    const key = `${cache_book_id}_${cache_chapter_id}`;
+    return booksMap.value.has(key);
   };
   return {
     getBookChapter,

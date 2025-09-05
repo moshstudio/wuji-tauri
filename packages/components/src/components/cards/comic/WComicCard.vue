@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import MComicCard from './MComicCard.vue';
 import type { ComicItem } from '@wuji-tauri/source-extension';
-import _ from 'lodash';
+import MComicCard from './MComicCard.vue';
 
 defineProps<{
   comic: ComicItem;
@@ -10,7 +9,7 @@ defineProps<{
 </script>
 
 <template>
-  <MComicCard v-bind="$attrs" :comic="comic" :click="click"></MComicCard>
+  <MComicCard v-bind="$attrs" :comic="comic" :click="click" />
 </template>
 <!-- <script setup lang="ts">
 import type { ComicItem } from '@wuji-tauri/source-extension';

@@ -1,7 +1,7 @@
-import type { ArtistInfo, SongUrlMap } from '@wuji-tauri/source-extension';
-import { fetch } from '@wuji-tauri/fetch';
-import { debug, error, info, trace, warn } from '@tauri-apps/plugin-log';
+import type { SongUrlMap } from '@wuji-tauri/source-extension';
 import * as fs from '@tauri-apps/plugin-fs';
+import { debug, error, info, trace, warn } from '@tauri-apps/plugin-log';
+import { fetch } from '@wuji-tauri/fetch';
 import * as commands from 'tauri-plugin-commands-api';
 import _urlJoin from 'url-join';
 import { showToast } from 'vant';
@@ -10,8 +10,6 @@ import { useDisplayStore } from '@/store';
 // import * as dialog from '@tauri-apps/plugin-dialog';
 export * from './extensionUtils';
 
-export const DEFAULT_SOURCE_URL =
-  'https://wuji.moshangwangluo.com/wuji%2Fdefault_source.json';
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -179,29 +177,6 @@ export function purifyText(text: string): string {
   return text;
 }
 
-export function levenshteinDistance(a: string, b: string): number {
-  const matrix: number[][] = Array.from<number, number[]>(
-    { length: a.length + 1 },
-    () => Array.from<number>({ length: b.length + 1 }).fill(0),
-  );
-
-  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
-  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
-
-  for (let i = 1; i <= a.length; i++) {
-    for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1, // 删除
-        matrix[i][j - 1] + 1, // 插入
-        matrix[i - 1][j - 1] + cost, // 替换
-      );
-    }
-  }
-
-  return matrix[a.length][b.length];
-}
-
 export function useElementResize(
   elementSelector: string,
   callback: (width: number, height: number) => void,
@@ -271,6 +246,7 @@ export function useElementResize(
     });
   });
 }
+
 export function forwardConsoleLog() {
   function forwardConsole(
     fnName: 'log' | 'debug' | 'info' | 'warn' | 'error',
@@ -485,6 +461,30 @@ export function sanitizePathName(
   }
 
   return sanitizedName;
+}
+
+export function estimateJsonSize(obj: any): number {
+  const jsonString = JSON.stringify(obj);
+  const encoder = new TextEncoder();
+  const encoded = encoder.encode(jsonString);
+  return encoded.length; // 返回字节数
+}
+
+export function bytesToSize(bytes: number): string {
+  if (bytes === 0) return '0 B';
+
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const base = 1024;
+
+  // 计算单位级别
+  const exponent = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(base)),
+    units.length - 1,
+  );
+  const size = bytes / base ** exponent;
+
+  // 保留两位小数，但整数不显示小数
+  return `${size.toFixed(2).replace(/\.00$/, '')} ${units[exponent]}`;
 }
 
 export function updateReactive<T extends object>(

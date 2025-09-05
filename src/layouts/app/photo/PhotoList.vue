@@ -1,17 +1,14 @@
 <script setup lang="ts">
 import type { PhotoSource } from '@/types';
 import { MPhotoCard } from '@wuji-tauri/components/src';
+import { ref } from 'vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MHeader from '@/components/header/MHeader.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import { router } from '@/router';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
-import { ref } from 'vue';
-import { router } from '@/router';
 
-const searchValue = defineModel<string>('searchValue', {
-  required: true,
-});
 const props = defineProps<{
   photoSources: PhotoSource[];
   recommend: (force?: boolean) => void;
@@ -19,7 +16,9 @@ const props = defineProps<{
   toPage: (source: PhotoSource, pageNo: number) => void;
   openBaseUrl: (item: PhotoSource) => void;
 }>();
-
+const searchValue = defineModel<string>('searchValue', {
+  required: true,
+});
 const displayStore = useDisplayStore();
 
 const isRefreshing = ref(false);

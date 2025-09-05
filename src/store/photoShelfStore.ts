@@ -1,5 +1,5 @@
 import type { PhotoItem, PhotoShelf } from '@wuji-tauri/source-extension';
-import { useStorageAsync } from '@vueuse/core';
+import { debounceFilter, useStorageAsync } from '@vueuse/core';
 
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
@@ -8,9 +8,12 @@ import { defineStore } from 'pinia';
 
 import { showToast } from 'vant';
 import { createKVStore } from './utils';
+import { estimateJsonSize } from '@/utils';
+import { markRaw } from 'vue';
 
 export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
   const kvStorage = createKVStore('photoShelfStore');
+  const storage = kvStorage.storage;
 
   const photoShelf = useStorageAsync<PhotoShelf[]>(
     'photoShelf',
@@ -22,7 +25,10 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
         createTime: Date.now(),
       },
     ],
-    kvStorage.storage,
+    storage,
+    {
+      eventFilter: debounceFilter(500),
+    },
   );
   const photoInShelf = (itemId: string, shelfId?: string): boolean => {
     if (shelfId) {
@@ -101,7 +107,14 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
     _.remove(photoShelf.value, (item) => item.id === shelfId);
     return true;
   };
-  const clear = () => {
+
+  const syncData = () => {
+    return markRaw(photoShelf.value);
+  };
+  const loadSyncData = async (data: PhotoShelf[]) => {
+    photoShelf.value = data;
+  };
+  const clear = async () => {
     photoShelf.value = [
       {
         id: nanoid(),
@@ -110,14 +123,19 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
         createTime: Date.now(),
       },
     ];
+    await storage.clear();
   };
+
   return {
+    storage,
     photoShelf,
     photoInShelf,
     addPhotoToShelf,
     createShelf,
     removePhotoFromShelf,
     removeShelf,
+    syncData,
+    loadSyncData,
     clear,
   };
 });

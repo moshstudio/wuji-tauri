@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import { VideoPlayerState } from '@videojs-player/vue';
-import {
+import type { VideoPlayerState } from '@videojs-player/vue';
+import type {
   VideoEpisode,
   VideoItem,
   VideoResource,
   VideoSource,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import type videojs from 'video.js';
+import _ from 'lodash';
 import { computed, nextTick, ref, watch } from 'vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -44,8 +44,7 @@ const props = withDefaults(
     controlsIsShowing: false,
   },
 );
-
-const isShowing = ref(false);
+const isShowing = defineModel<boolean>('show');
 async function showComponent(show: boolean) {
   isShowing.value = show;
   await nextTick();
@@ -126,7 +125,9 @@ watch(
             />
           </div> -->
           <div class="flex min-w-[100px] flex-col gap-1">
-            <h2 class="font-bold">{{ videoItem?.title }}</h2>
+            <h2 class="font-bold">
+              {{ videoItem?.title }}
+            </h2>
             <div class="flex gap-1 overflow-x-auto">
               <van-tag
                 v-for="tag in _.castArray(videoItem?.tags)"
@@ -180,7 +181,7 @@ watch(
         >
           <van-button
             v-for="resource in videoItem?.resources"
-            :key="`resource` + resource.id"
+            :key="`resource${resource.id}`"
             class="flex-shrink-0"
             size="small"
             :plain="
@@ -219,7 +220,7 @@ watch(
         >
           <van-button
             v-for="episode in selectedResource?.episodes"
-            :key="`episode` + episode.id"
+            :key="`episode${episode.id}`"
             class="flex-shrink-0"
             size="small"
             :type="episode.id === playingEpisode?.id ? 'success' : 'default'"

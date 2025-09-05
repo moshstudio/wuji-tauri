@@ -1,20 +1,21 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import {
+import type {
   MarketSource,
   MarketSourceContent,
   MarketSourcePermission,
 } from '@wuji-tauri/source-extension';
-import MNavBar from '@/components/header/MNavBar.vue';
-import {
-  MoreOptionsSheet,
-  MarketSourceContentCard,
-} from '@wuji-tauri/components/src';
-import { ref, reactive, watch, computed } from 'vue';
-import { FormInstance, showToast } from 'vant';
-import { permissionRules } from '@/utils/marketSource';
-import { router } from '@/router';
+import type { FormInstance } from 'vant';
 import { Icon } from '@iconify/vue';
+import {
+  MarketSourceContentCard,
+  MoreOptionsSheet,
+} from '@wuji-tauri/components/src';
+import _ from 'lodash';
+import { showToast } from 'vant';
+import { computed, reactive, ref, watch } from 'vue';
+import MNavBar from '@/components/header/MNavBar.vue';
+import { router } from '@/router';
+import { permissionRules } from '@/utils/marketSource';
 
 const props = defineProps<{
   source?: MarketSource;
@@ -36,7 +37,7 @@ const formRef = ref<FormInstance>();
 const nameRules = [
   { required: true, message: '请输入名称' },
   {
-    pattern: /^[a-zA-Z0-9_\u4e00-\u9fa5]{2,80}$/,
+    pattern: /^[\w\u4E00-\u9FA5]{2,80}$/,
     message: '名称只能包含字母、数字、下划线，2-80个字符',
   },
 ];
@@ -50,9 +51,9 @@ const permissionOptions = permissionRules.map((rule) => {
   };
 });
 
-const refreshPermission = (...permissions: MarketSourcePermission[]) => {
+function refreshPermission(...permissions: MarketSourcePermission[]) {
   formData.permissions = permissions;
-};
+}
 
 const showPublicMoreOptions = ref(false);
 const publicOptions = [
@@ -81,7 +82,7 @@ const isModified = computed(() => {
   return JSON.stringify(props.source) !== JSON.stringify(formData);
 });
 
-const save = async () => {
+async function save() {
   if (!props.source) return;
   try {
     // 验证表单
@@ -94,6 +95,7 @@ const save = async () => {
       sourceContents: formData.sourceContents!,
       isPublic: formData.isPublic!,
       isBanned: formData.isBanned!,
+      thumbsUp: formData.thumbsUp!,
     };
 
     props.save(data);
@@ -101,7 +103,7 @@ const save = async () => {
     showToast('请检查输入内容');
     return false;
   }
-};
+}
 </script>
 
 <template>
@@ -118,10 +120,10 @@ const save = async () => {
       </template>
     </MNavBar>
     <div
-      class="flex w-full flex-grow flex-col overflow-y-auto bg-[--van-background-2] p-2"
+      class="flex w-full flex-grow flex-col overflow-y-auto bg-[--van-background-1] p-2"
     >
-      <div class="flex w-full items-center justify-start gap-2"></div>
-      <van-form class="p-4" ref="formRef">
+      <div class="flex w-full items-center justify-start gap-2" />
+      <van-form ref="formRef" class="p-4">
         <van-field
           v-model="formData.name"
           name="name"
@@ -139,14 +141,14 @@ const save = async () => {
           clickable
           is-link
           @click="() => (showPermissionMoreOptions = true)"
-        ></van-cell>
+        />
         <van-cell
           title="是否公开"
           :value="formData.isPublic ? '公开' : '私有'"
           clickable
           is-link
           @click="() => (showPublicMoreOptions = true)"
-        ></van-cell>
+        />
       </van-form>
       <van-list v-if="source" class="p-2">
         <MarketSourceContentCard
@@ -154,7 +156,7 @@ const save = async () => {
           :key="source._id"
           :source="source"
           :item="sourceContent"
-          :onClick="() => clickSourceContent(source!, sourceContent)"
+          :on-click="() => clickSourceContent(source!, sourceContent)"
         >
           <template #right>
             <div class="flex items-center gap-3">
@@ -162,7 +164,7 @@ const save = async () => {
                 class="van-haptics-feedback rounded bg-green-500 p-1 text-white"
                 @click.stop="() => clickSourceContent(source!, sourceContent)"
               >
-                <Icon :icon="'uil:edit'" width="16" height="16" />
+                <Icon icon="uil:edit" width="16" height="16" />
               </div>
               <div
                 class="van-haptics-feedback bg-red rounded p-1 text-white"
@@ -178,7 +180,7 @@ const save = async () => {
         v-if="!source?.sourceContents?.length"
         class="flex items-center justify-center"
       >
-        <span class="pr-2">未添加任何源</span>
+        <span class="pr-2 text-[var(--van-text-color)]">未添加任何源</span>
         <span
           class="van-haptics-feedback text-[var(--van-nav-bar-text-color)]"
           @click="
@@ -192,15 +194,15 @@ const save = async () => {
       </div>
     </div>
     <MoreOptionsSheet
-      title="使用权限"
       v-model="showPermissionMoreOptions"
+      title="使用权限"
       :actions="permissionOptions"
-    ></MoreOptionsSheet>
+    />
     <MoreOptionsSheet
-      title="是否公开"
       v-model="showPublicMoreOptions"
+      title="是否公开"
       :actions="publicOptions"
-    ></MoreOptionsSheet>
+    />
   </div>
 </template>
 

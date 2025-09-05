@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { useDisplayStore } from '@/store';
-import MSidebar from '../sidebar/MSidebar.vue';
 import SearchField from '@/components/search/SearchField.vue';
+import { useDisplayStore } from '@/store';
 
 const emit = defineEmits<{
   (e: 'search'): void;
@@ -17,7 +16,7 @@ const displayStore = useDisplayStore();
   <div
     class="z-[100] flex h-[50px] items-center justify-between gap-2 bg-[--van-background-2] px-4"
   >
-    <div class="placeholder"></div>
+    <div class="placeholder" />
     <SearchField
       v-model:value="value"
       v-model:search-histories="displayStore.searchHistories"

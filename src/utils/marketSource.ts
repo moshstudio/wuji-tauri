@@ -1,9 +1,7 @@
-import {
-  MarketSource,
-  MarketSourcePermission,
-} from '@wuji-tauri/source-extension';
+import type { MarketSource } from '@wuji-tauri/source-extension';
+import type { TagProps } from 'vant';
+import { MarketSourcePermission } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
-import { TagProps } from 'vant';
 
 export const permissionRules: {
   name: string;
@@ -52,15 +50,15 @@ export const permissionRules: {
   },
 ];
 
-export const permissionText = (source: MarketSource) => {
+export function permissionText(source: MarketSource) {
   return permissionRules.find((rule) =>
     _.isEqual(rule.permissions, source.permissions),
   )?.name;
-};
-export const permissionStyle = (source: MarketSource) => {
+}
+export function permissionStyle(source: MarketSource) {
   return permissionRules.find((rule) =>
     _.isEqual(rule.permissions, source.permissions),
   )?.style;
-};
+}
 
 export default { permissionRules, permissionText, permissionStyle };

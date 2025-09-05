@@ -6,7 +6,15 @@ import type {
   ComicList,
 } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
+import _ from 'lodash';
+import { storeToRefs } from 'pinia';
+import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
+import { showFailToast, showToast } from 'vant';
+import { computed, onActivated, onDeactivated, ref, watch } from 'vue';
+import ComicSwitchSourceDialog from '@/components/dialog/ComicSwitchSource.vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+import AppComicRead from '@/layouts/app/comic/ComicRead.vue';
+import DesktopComicRead from '@/layouts/desktop/comic/ComicRead.vue';
 import { router } from '@/router';
 import {
   useComicShelfStore,
@@ -14,17 +22,10 @@ import {
   useDisplayStore,
   useStore,
 } from '@/store';
+import { useBackStore } from '@/store/backStore';
 import { retryOnFalse } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
-import _ from 'lodash';
-import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
-import { showToast } from 'vant';
-import { onActivated, onDeactivated, ref, watch, computed } from 'vue';
-import ComicSwitchSourceDialog from '@/components/dialog/ComicSwitchSource.vue';
-import AppComicRead from '@/layouts/app/comic/ComicRead.vue';
-import DesktopComicRead from '@/layouts/desktop/comic/ComicRead.vue';
-import { useBackStore } from '@/store/backStore';
-import { storeToRefs } from 'pinia';
+import { onMountedOrActivated } from '@vant/use';
 
 const { chapterId, comicId, sourceId } = defineProps<{
   sourceId: string;
@@ -141,6 +142,16 @@ async function loadChapter(chapter?: ComicChapter) {
     backStore.back();
     return;
   }
+  if (!comic.value.chapters?.length) {
+    if (!comicSource.value) {
+      showFailToast('源不存在或未启用');
+      return;
+    }
+    const ret = await store.comicDetail(comicSource.value, comic.value);
+    if (ret) {
+      comic.value = ret;
+    }
+  }
   if (!chapter) {
     chapter = comic.value.chapters?.find((chapter) => chapter.id === chapterId);
   }
@@ -239,7 +250,8 @@ const comicInShelf = computed(() => {
   return false;
 });
 
-const addToShelf = () => {
+const showSelectShelf = ref(false);
+function addToShelf() {
   if (!comic.value) {
     return;
   }
@@ -248,8 +260,8 @@ const addToShelf = () => {
   } else {
     showSelectShelf.value = true;
   }
-};
-const showSelectShelf = ref(false);
+}
+
 const selectShelfActions = computed(() => {
   return shelfStore.comicShelf.map((shelf) => {
     return {
@@ -286,7 +298,7 @@ watch(readingChapter, (c) => (comicStore.readingChapter = c), {
   immediate: true,
 });
 
-onActivated(() => {
+onMountedOrActivated(() => {
   if (displayStore.isAndroid && displayStore.comicKeepScreenOn) {
     keepScreenOn(true);
   }
@@ -376,7 +388,7 @@ onDeactivated(() => {
             />
           </template>
         </van-cell>
-        <van-cell v-else title="暂无设置"></van-cell>
+        <van-cell v-else title="暂无设置" />
       </div>
     </van-dialog>
     <van-action-sheet

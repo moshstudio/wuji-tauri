@@ -1,61 +1,62 @@
 <script setup lang="ts">
-import WNavbar from '@/components/header/WNavbar.vue';
-import { useServerStore, useStore } from '@/store';
-import { computed, nextTick, reactive, ref, watch } from 'vue';
-import IEditor from '@/components/codeEditor/IEditor.vue';
-import Guide from '@/components/codeEditor/Guide.vue';
-import LocalSaveDialog from '@/components/codeEditor/dialogs/LocalSave.vue';
-import { MoreOptionsSheet } from '@wuji-tauri/components/src';
-import { guideExamplesMD } from '@/components/codeEditor/guides';
-import PhotoList from './views/PhotoList.vue';
-import PhotoSearchList from './views/PhotoSearchList.vue';
-import PhotoDetail from './views/PhotoDetail.vue';
-import SongList from './views/SongList.vue';
-import SongSearchList from './views/SongSearchList.vue';
-import SongPlaylist from './views/SongPlaylist.vue';
-import SongSearchPlaylist from './views/SongSearchPlaylist.vue';
-import SongPlaylistDetail from './views/SongPlaylistDetail.vue';
-import SongPlayUrl from './views/SongPlayUrl.vue';
-import SongLyric from './views/SongLyric.vue';
-import BookList from './views/BookList.vue';
-import BookSearchList from './views/BookSearchList.vue';
-import BookDetail from './views/BookDetail.vue';
-import BookContent from './views/BookContent.vue';
-import ComicList from './views/ComicList.vue';
-import ComicSearchList from './views/ComicSearchList.vue';
-import ComicDetail from './views/ComicDetail.vue';
-import ComicContent from './views/ComicContent.vue';
-import VideoList from './views/VideoList.vue';
-import VideoSearchList from './views/VideoSearchList.vue';
-import VideoDetail from './views/VideoDetail.vue';
-import VideoPlayUrl from './views/VideoPlayUrl.vue';
-import _ from 'lodash';
-import { format } from 'date-fns';
+import type { SourceType } from '@wuji-tauri/source-extension';
 import { save as saveToDialog } from '@tauri-apps/plugin-dialog';
 import * as fsApi from '@tauri-apps/plugin-fs';
-import {
-  showConfirmDialog,
-  showFailToast,
-  showLoadingToast,
-  showToast,
-} from 'vant';
-import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
-import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
-import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
-import COMIC_TEMPLATE from '@/components/codeEditor/templates/comicTemplate.txt?raw';
-import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
+import { MoreOptionsSheet } from '@wuji-tauri/components/src';
 import {
   loadBookExtensionString,
   loadComicExtensionString,
   loadPhotoExtensionString,
   loadSongExtensionString,
   loadVideoExtensionString,
-  SourceType,
 } from '@wuji-tauri/source-extension';
-import { router } from '@/router';
-import { storeToRefs } from 'pinia';
-import { useSourceCreateStore } from '@/store/sourceCreateStore';
+import { format } from 'date-fns';
+import _ from 'lodash';
 import { nanoid } from 'nanoid';
+import { storeToRefs } from 'pinia';
+import {
+  showConfirmDialog,
+  showFailToast,
+  showLoadingToast,
+  showToast,
+} from 'vant';
+import { computed, nextTick, ref, watch } from 'vue';
+import LocalSaveDialog from '@/components/codeEditor/dialogs/LocalSave.vue';
+import Guide from '@/components/codeEditor/Guide.vue';
+import { guideExamplesMD } from '@/components/codeEditor/guides';
+import IEditor from '@/components/codeEditor/IEditor.vue';
+import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
+import COMIC_TEMPLATE from '@/components/codeEditor/templates/comicTemplate.txt?raw';
+import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
+import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
+import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
+import WNavbar from '@/components/header/WNavbar.vue';
+import { router } from '@/router';
+import { useServerStore, useStore } from '@/store';
+import { useSourceCreateStore } from '@/store/sourceCreateStore';
+import BookContent from './views/BookContent.vue';
+import BookDetail from './views/BookDetail.vue';
+import BookList from './views/BookList.vue';
+import BookSearchList from './views/BookSearchList.vue';
+import ComicContent from './views/ComicContent.vue';
+import ComicDetail from './views/ComicDetail.vue';
+import ComicList from './views/ComicList.vue';
+import ComicSearchList from './views/ComicSearchList.vue';
+import PhotoDetail from './views/PhotoDetail.vue';
+import PhotoList from './views/PhotoList.vue';
+import PhotoSearchList from './views/PhotoSearchList.vue';
+import SongList from './views/SongList.vue';
+import SongLyric from './views/SongLyric.vue';
+import SongPlaylist from './views/SongPlaylist.vue';
+import SongPlaylistDetail from './views/SongPlaylistDetail.vue';
+import SongPlayUrl from './views/SongPlayUrl.vue';
+import SongSearchList from './views/SongSearchList.vue';
+import SongSearchPlaylist from './views/SongSearchPlaylist.vue';
+import VideoDetail from './views/VideoDetail.vue';
+import VideoList from './views/VideoList.vue';
+import VideoPlayUrl from './views/VideoPlayUrl.vue';
+import VideoSearchList from './views/VideoSearchList.vue';
+
 type Type = 'photo' | 'song' | 'book';
 
 const store = useStore();
@@ -249,7 +250,7 @@ function deepToString(
   return `{${singleLineEntries.join(', ')}}`;
 }
 
-const logFunction = (...args: any[]) => {
+function logFunction(...args: any[]) {
   logs.value.push({
     id: nanoid(),
     message: args
@@ -259,7 +260,7 @@ const logFunction = (...args: any[]) => {
       .join(' '),
     time: Date.now(),
   });
-};
+}
 
 const selectedPage = ref<string>('constructor');
 const showingCode = computed({
@@ -272,7 +273,7 @@ const showingCode = computed({
     const page = form.value[showingType.value].pages.find(
       (p) => p.type === selectedPage.value,
     );
-    if (page != undefined) {
+    if (page !== undefined) {
       page.code = newValue || '';
     }
   },
@@ -322,18 +323,18 @@ const previewPage = computed(() => {
   return previewComponent.value?.page;
 });
 
-const updatePreviewResult = (
+function updatePreviewResult(
   type: Type,
   page: string,
   result: any,
   passed: boolean,
-) => {
+) {
   const f = form.value[type].pages.find((p) => p.type === page);
   if (f) {
     f.passed = passed;
     f.result = result;
   }
-};
+}
 
 const allPassed = computed(() => {
   return form.value[showingType.value].pages.every((p) => {
@@ -346,42 +347,42 @@ const allPassed = computed(() => {
 
 const onCodeChange = _.debounce(() => {}, 500);
 
-const onSelectType = (typeName: Type) => {
+function onSelectType(typeName: Type) {
   showingType.value = typeName;
   selectedPage.value = form.value[typeName].pages[0].type;
-};
+}
 
-const backDefaultCode = () => {
+function backDefaultCode() {
   const page = form.value[showingType.value].pages.find(
     (p) => p.type === selectedPage.value,
   );
   if (page) {
     page.code = page.defaultCode;
   }
-};
+}
 
-const handleRun = async () => {
+async function handleRun() {
   showPreview.value = true;
   logs.value = [];
   nextTick(() => {
     (previewComponentRef.value as any)?.initLoad();
   });
-};
+}
 
 const showButtonMoreOptions = ref(false);
 const showLocalSaveDialog = ref(false);
 const showMarketSaveDialog = ref(false);
-const generateSaveCode = async (data: {
+async function generateSaveCode(data: {
   id: string;
   name: string;
-}): Promise<string | undefined> => {
+}): Promise<string | undefined> {
   const findPage = (name: string) => {
     return form.value[showingType.value].pages.find(
       (page) => page.type === name,
     );
   };
 
-  let code = undefined;
+  let code;
   switch (showingType.value) {
     case 'photo':
       code = PHOTO_TEMPLATE.replace("id = 'testPhoto';", `id = '${data.id}';`)
@@ -509,11 +510,11 @@ const generateSaveCode = async (data: {
     }
     return code;
   } catch (error) {
-    showFailToast('代码错误: ' + error);
+    showFailToast(`代码错误: ${error}`);
   }
-};
+}
 
-const showLocalSave = () => {
+function showLocalSave() {
   if (allPassed.value) {
     showLocalSaveDialog.value = true;
   } else {
@@ -521,11 +522,10 @@ const showLocalSave = () => {
       title: '保存失败',
       message: '请先运行通过所有接口',
     });
-    return;
   }
-};
+}
 
-const handleSaveLocal = async (data: { id: string; name: string }) => {
+async function handleSaveLocal(data: { id: string; name: string }) {
   const code = await generateSaveCode(data);
   if (!code) return;
   const path = await saveToDialog({
@@ -541,6 +541,7 @@ const handleSaveLocal = async (data: { id: string; name: string }) => {
   try {
     await fsApi.writeTextFile(path, code);
   } catch (error) {
+    console.log(error);
     showConfirmDialog({
       title: '保存失败',
       message: '请检查文件权限',
@@ -562,7 +563,7 @@ const handleSaveLocal = async (data: { id: string; name: string }) => {
       await store.addLocalSubscribeSource(path);
     }
   });
-};
+}
 
 const showAddSourceDialog = ref(false);
 
@@ -576,7 +577,7 @@ const addSourceDialogActions = computed(() => {
       subname: exist
         ? '已存在'
         : `共 ${item.sourceContents?.length || 0} 个内容`,
-      disabled: exist ? true : false,
+      disabled: !!exist,
       callback: async () => {
         console.log('添加到源', item.name);
         const data = form.value[showingType.value];
@@ -591,7 +592,7 @@ const addSourceDialogActions = computed(() => {
           type: data.type as SourceType,
           disabled: false,
           source: item._id,
-          code: code,
+          code,
           url: '',
         });
       },
@@ -599,7 +600,7 @@ const addSourceDialogActions = computed(() => {
   });
 });
 
-const showMarketSave = () => {
+function showMarketSave() {
   if (allPassed.value) {
     showMarketSaveDialog.value = true;
   } else {
@@ -607,11 +608,10 @@ const showMarketSave = () => {
       title: '失败',
       message: '请先运行通过所有接口',
     });
-    return;
   }
-};
+}
 
-const handleSaveMarket = async (data: { id: string; name: string }) => {
+async function handleSaveMarket(data: { id: string; name: string }) {
   const code = await generateSaveCode(data);
   if (!code) return;
   const toast = showLoadingToast('获取中');
@@ -628,18 +628,17 @@ const handleSaveMarket = async (data: { id: string; name: string }) => {
         router.push({ name: 'SourceMy' });
       }
     });
-    return;
   } else {
     form.value[showingType.value].id = data.id;
     form.value[showingType.value].name = data.name;
     showAddSourceDialog.value = true;
   }
-};
+}
 </script>
 
 <template>
   <div class="relative flex h-full w-full flex-col overflow-hidden">
-    <WNavbar title="创建订阅源"></WNavbar>
+    <WNavbar title="创建订阅源" />
     <div
       class="container flex h-full w-full min-w-full flex-grow gap-1 overflow-hidden bg-[var(--van-background-2)]"
     >
@@ -650,15 +649,15 @@ const handleSaveMarket = async (data: { id: string; name: string }) => {
           {{ form[showingType].chineseName }}
         </van-button>
         <van-button
-          v-for="(page, index) in form[showingType].pages"
+          v-for="page in form[showingType].pages"
           :key="page.type"
           :icon="page.passed ? 'success' : ''"
           size="small"
           class="border-none"
-          :type="selectedPage == page.type ? 'primary' : 'default'"
+          :type="selectedPage === page.type ? 'primary' : 'default'"
           @click="selectedPage = page.type"
         >
-          <span :class="selectedPage == page.type ? 'text-white' : ''">
+          <span :class="selectedPage === page.type ? 'text-white' : ''">
             {{ page.chineseName }}
           </span>
         </van-button>
@@ -670,10 +669,10 @@ const handleSaveMarket = async (data: { id: string; name: string }) => {
         >
           <!-- 按钮组 -->
           <van-button
+            v-if="selectedPage !== 'constructor'"
             size="small"
             type="primary"
             @click="handleRun"
-            v-if="selectedPage != 'constructor'"
           >
             运行
           </van-button>
@@ -695,9 +694,9 @@ const handleSaveMarket = async (data: { id: string; name: string }) => {
         <IEditor
           v-model:value="showingCode"
           path="create-source-content"
-          :lang="'javascript'"
+          lang="javascript"
           :init="() => {}"
-          :editorChange="onCodeChange"
+          :editor-change="onCodeChange"
         />
       </div>
       <Guide v-model:show="showGuide" :content="guideContent" />
@@ -713,7 +712,7 @@ const handleSaveMarket = async (data: { id: string; name: string }) => {
             name="cross"
             class="van-haptics-feedback p-2"
             @click="() => (showPreview = false)"
-          ></van-icon>
+          />
         </div>
         <div class="flex h-full w-full flex-grow flex-col overflow-auto">
           <keep-alive>
@@ -725,12 +724,12 @@ const handleSaveMarket = async (data: { id: string; name: string }) => {
               :log="logFunction"
               :close="() => (showPreview = false)"
               class="code-preview-page"
-            ></component>
+            />
           </keep-alive>
         </div>
         <div
-          class="flex items-center justify-between p-1 text-xs"
           v-if="logs.length"
+          class="flex items-center justify-between p-1 text-xs"
         >
           <div>日志</div>
           <van-icon
@@ -741,16 +740,16 @@ const handleSaveMarket = async (data: { id: string; name: string }) => {
                 logs.length = 0;
               }
             "
-          ></van-icon>
+          />
         </div>
         <div
-          class="log-area not-mobile-scrollbar h-[40%] flex-shrink-0 overflow-auto p-1 text-xs"
           v-if="logs.length"
+          class="log-area not-mobile-scrollbar h-[40%] flex-shrink-0 overflow-auto p-1 text-xs"
         >
           <div
-            class="log-item border-1 border"
             v-for="log in logs"
             :key="log.id"
+            class="log-item border-1 border"
           >
             <div class="text-[var(--van-text-color-2)]">
               {{ format(log.time, 'HH:mm:ss') }}
@@ -792,7 +791,7 @@ const handleSaveMarket = async (data: { id: string; name: string }) => {
       v-model:show="showAddSourceDialog"
       title="选择订阅源"
       :actions="addSourceDialogActions"
-    ></MoreOptionsSheet>
+    />
   </div>
 </template>
 

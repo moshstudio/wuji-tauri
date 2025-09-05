@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useDisplayStore, useStore } from '@/store';
 import { Icon } from '@iconify/vue';
 import * as dialog from '@tauri-apps/plugin-dialog';
 import { ref } from 'vue';
+import { useDisplayStore, useStore } from '@/store';
 
 const show = defineModel<boolean>('show');
 

@@ -1,25 +1,11 @@
 <script setup lang="ts">
-import {
-  PhotoDetail,
-  PhotoExtension,
-  PhotoList,
-} from '@wuji-tauri/source-extension';
-import { showDialog, showNotify } from 'vant';
-import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
-import { ref } from 'vue';
-import MPagination from '@/components/pagination/MPagination.vue';
+import type { PhotoDetail, PhotoList } from '@wuji-tauri/source-extension';
 import { LoadImage } from '@wuji-tauri/components/src';
-
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
-const errorMessage = ref('运行失败');
-const result = ref<PhotoDetail>();
+import { PhotoExtension } from '@wuji-tauri/source-extension';
+import { showDialog } from 'vant';
+import { ref } from 'vue';
+import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
+import MPagination from '@/components/pagination/MPagination.vue';
 
 const props = defineProps<{
   content: {
@@ -45,6 +31,17 @@ const props = defineProps<{
   close: () => void;
   log: (...args: any[]) => void;
 }>();
+
+enum RunStatus {
+  not_running = 'not_running',
+  running = 'running',
+  success = 'success',
+  error = 'error',
+}
+
+const runStatus = ref<RunStatus>(RunStatus.not_running);
+const errorMessage = ref('运行失败');
+const result = ref<PhotoDetail>();
 
 async function initLoad() {
   result.value = undefined;
@@ -116,9 +113,9 @@ async function load(pageNo: number) {
   }
 }
 
-const findPage = (name: string) => {
+function findPage(name: string) {
   return props.content.pages.find((page) => page.type === name);
-};
+}
 
 defineExpose({
   initLoad,

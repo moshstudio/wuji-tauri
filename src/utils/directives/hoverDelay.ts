@@ -1,4 +1,4 @@
-import { Directive, DirectiveBinding } from 'vue';
+import type { Directive, DirectiveBinding } from 'vue';
 
 const handlerMap = new WeakMap<
   HTMLElement,

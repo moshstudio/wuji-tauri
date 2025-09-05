@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { MPlaylistShelfCard } from '@wuji-tauri/components/src';
 import MNavBar from '@/components/header/MNavBar.vue';
 import MSongBar from '@/components/songbar/MSongBar.vue';
-import { MPlaylistShelfCard } from '@wuji-tauri/components/src';
+import { router } from '@/router';
 import { useDisplayStore, useSongShelfStore } from '@/store';
 import { showPromptDialog } from '@/utils/usePromptDialog';
-import { router } from '@/router';
 
 defineProps<{
   createShelf: (name: string) => void;
@@ -12,9 +12,9 @@ defineProps<{
 const displayStore = useDisplayStore();
 const shelfStore = useSongShelfStore();
 
-const toDetail = (shelfId: string) => {
+function toDetail(shelfId: string) {
   router.push({ name: 'SongShelfDetail', params: { shelfId } });
-};
+}
 </script>
 
 <template>
@@ -39,7 +39,7 @@ const toDetail = (shelfId: string) => {
               });
             }
           "
-        ></van-icon>
+        />
       </template>
     </MNavBar>
 
@@ -51,13 +51,13 @@ const toDetail = (shelfId: string) => {
             toDetail(shelfStore.songLikeShelf.playlist.id);
           }
         "
-      ></MPlaylistShelfCard>
+      />
       <p class="text-gray-400">
         创建的歌单({{ shelfStore.songCreateShelf.length }})
       </p>
       <MPlaylistShelfCard
         v-for="shelf in shelfStore.songCreateShelf"
-        :key="shelf.playlist.id + 'create'"
+        :key="`${shelf.playlist.id}create`"
         :shelf="shelf"
         :removeable="true"
         :click="
@@ -70,13 +70,13 @@ const toDetail = (shelfId: string) => {
             shelfStore.removeSongShelf(shelf.playlist.id);
           }
         "
-      ></MPlaylistShelfCard>
+      />
       <p class="text-gray-400">
         收藏的歌单({{ shelfStore.songPlaylistShelf.length }})
       </p>
       <MPlaylistShelfCard
         v-for="shelf in shelfStore.songPlaylistShelf"
-        :key="shelf.playlist.id + 'collect'"
+        :key="`${shelf.playlist.id}collect`"
         :shelf="shelf"
         :removeable="true"
         :click="
@@ -89,9 +89,9 @@ const toDetail = (shelfId: string) => {
             shelfStore.removeSongShelf(shelf.playlist.id);
           }
         "
-      ></MPlaylistShelfCard>
+      />
     </div>
-    <MSongBar></MSongBar>
+    <MSongBar />
   </div>
 </template>
 

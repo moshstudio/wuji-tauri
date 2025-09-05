@@ -53,7 +53,7 @@ let cacheData = {
 };
 
 // 获取指定元素的 CSS 样式
-const getStyle = (attr) => {
+function getStyle(attr) {
   if (!inBrowser) {
     return '';
   }
@@ -61,17 +61,17 @@ const getStyle = (attr) => {
     return getComputedStyle(document.documentElement)[attr];
   }
   return document.documentElement.currentStyle[attr]; // ie
-};
+}
 
 // 删除字符串中的空格
-const trimAll = (str) => {
+function trimAll(str) {
   if (str) {
-    return String(str).replace(/[\s]+/gim, '');
+    return String(str).replace(/\s+/g, '');
   }
   return '';
-};
+}
 
-const emptyLine = (content) => {
+function emptyLine(content) {
   return [
     [
       {
@@ -86,12 +86,12 @@ const emptyLine = (content) => {
       },
     ],
   ];
-};
+}
 
 /**
  * 把文本内容转化成特定数组输出
  * @param {string} content 章节内容
- * @param {Object} option 详细参数
+ * @param {object} option 详细参数
  * @return {Array} [] 输出转化好的行数组
  */
 function Reader(content, option) {
@@ -208,7 +208,7 @@ function p2line(pText, index, maxLen, pIndent) {
   const isTitle = pText === title;
   let p = pText;
   let tag = 0;
-  let lines = [];
+  const lines = [];
 
   while (p) {
     tag += 1;
@@ -283,7 +283,7 @@ function p2line(pText, index, maxLen, pIndent) {
 
 /**
  * 计算1行刚好能放下的文字
- * @param {Object} params 参数
+ * @param {object} params 参数
  * @param {string} text 文本内容
  * @param {boolean} [base] 是否是最大标准字数计算
  * @param {number} [fontW] 计算出来的行文本宽度
@@ -350,7 +350,7 @@ function getTextWidth(text, fontSize, fontFamily, weight) {
     canvas = document.createElement('canvas');
     ctx = canvas.getContext('2d');
   }
-  ctx.font = `${weight ? weight : 'normal'} ${fontSize}px ${fontFamily}`;
+  ctx.font = `${weight || 'normal'} ${fontSize}px ${fontFamily}`;
   const { width } = ctx.measureText(text);
   return width;
 }
@@ -408,7 +408,7 @@ function joinLine2Pages(lines) {
   // console.log(333, '1页能放多少标准行', cacheData.maxLine)
 
   let pageLines = lines.slice(0);
-  let pages = [];
+  const pages = [];
   while (pageLines.length > 0) {
     const page = getPage(pageLines, cacheData.maxLine);
     pages.push(page);
@@ -519,7 +519,7 @@ function getPageHeight(lines) {
  * 标点符号处理
  * @param {string} line 单行文字
  * @param {string} p 减去 line 的段落文字
- * @return {Object} {} 经过标点处理后的对象
+ * @return {object} {} 经过标点处理后的对象
  */
 function transDot(line, p) {
   let transLine = line; // 转化后的行文字
@@ -552,7 +552,7 @@ function transDot(line, p) {
  * 数字、英文处理
  * @param {string} line 单行文字
  * @param {string} p 减去 line 的段落文字
- * @return {Object} {} 经过处理后的对象
+ * @return {object} {} 经过处理后的对象
  */
 function transNumEn(line, p, center) {
   const pFirst = p.slice(0, 1); // 下行行首字符
@@ -561,7 +561,7 @@ function transNumEn(line, p, center) {
   let transP = p; // 转化过后剩下的段文字
   let canCenter = center; // 是否可两端对齐
 
-  if (/\d/gi.test(pFirst)) {
+  if (/\d/.test(pFirst)) {
     // 下行行首是数字
     const endNum = getEndNum(line); // 本行尾连续数字数量
     if (endNum && endNum.length > 0) {
@@ -571,7 +571,7 @@ function transNumEn(line, p, center) {
         transLen = len;
       }
     }
-  } else if (/[a-zA-Z]/gi.test(pFirst)) {
+  } else if (/[a-z]/i.test(pFirst)) {
     // 下行行首是英文
     const endEn = getEndEn(line); // 本行尾连续英文数量
     if (endEn && endEn.length > 0) {
@@ -645,18 +645,18 @@ function getEndDot(str) {
   // 35 个结束符 ，。：；！？、）》」】, . : ; ! ? ^ ) > } ] … ~ % · ’ ” ` - — _ | \ /
   // 15 个开始符（《「【 ( < { [ ‘ “ @ # ￥ $ & uff08
   return str.match(
-    /[\uff0c|\u3002|\uff1a|\uff1b|\uff01|\uff1f|\u3001|\uff09|\u300b|\u300d|\u3011|\u002c|\u002e|\u003a|\u003b|\u0021|\u003f|\u005e|\u0029|\u003e|\u007d|\u005d|\u2026|\u007e|\u0025|\u00b7|\u2019|\u201d|\u0060|\u002d|\u2014|\u005f|\u007c|\u005c|\u002f\uff08|\u300a|\u300c|\u3010|\u0028|\u003c|\u007b|\u005b|\u2018|\u201c|\u0040|\u0023|\uffe5|\u0024|\u0026]+$/gi,
+    /[\uFF0C|\u3002\uFF1A\uFF1B\uFF01\uFF1F\u3001\uFF09\u300B\u300D\u3011\u002C\u002E\u003A\u003B\u0021\u003F\u005E\u0029\u003E\u007D\u005D\u2026\u007E\u0025\u00B7\u2019\u201D\u0060\u002D\u2014\u005F\u005C\u002F\uFF08\u300A\u300C\u3010\u0028\u003C\u007B\u005B\u2018\u201C\u0040\u0023\uFFE5\u0024\u0026]+$/g,
   );
 }
 
 // 获取字符串结尾连续数字
 function getEndNum(str) {
-  return str.match(/[0-9]+$/gi);
+  return str.match(/\d+$/g);
 }
 
 // 获取字符串结尾连续英文
 function getEndEn(str) {
-  return str.match(/[a-zA-Z]+$/gi);
+  return str.match(/[a-z]+$/gi);
 }
 export default Reader;
 

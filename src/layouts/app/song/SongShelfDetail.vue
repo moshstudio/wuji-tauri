@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import MNavBar from '@/components/header/MNavBar.vue';
-import MSongBar from '@/components/songbar/MSongBar.vue';
+import type { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
 import { MSongShelfCard } from '@wuji-tauri/components/src';
+import MNavBar from '@/components/header/MNavBar.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
+import MSongBar from '@/components/songbar/MSongBar.vue';
 import { useSongShelfStore, useSongStore } from '@/store';
-import { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
 
 withDefaults(
   defineProps<{
@@ -23,9 +23,9 @@ const shelfStore = useSongShelfStore();
 
 <template>
   <div class="flex h-full w-full flex-col overflow-hidden">
-    <MNavBar :title="shelf?.playlist.name || '歌单详情'"></MNavBar>
+    <MNavBar :title="shelf?.playlist.name || '歌单详情'" />
     <div class="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
-      <div class="flex gap-2" v-if="shelf">
+      <div v-if="shelf" class="flex gap-2">
         <van-button
           size="small"
           @click="
@@ -69,7 +69,7 @@ const shelfStore = useSongShelfStore();
           "
           :pause="songStore.onPause"
           :show-more-options="(song) => showMoreOptions(shelf!, song)"
-        ></MSongShelfCard>
+        />
         <div
           v-if="!shelf.playlist.list?.list.length"
           class="flex w-full items-center justify-center text-gray-400"
@@ -78,10 +78,10 @@ const shelfStore = useSongShelfStore();
         </div>
       </div>
       <div v-else class="flex w-full items-center justify-center">
-        <van-loading></van-loading>
+        <van-loading />
       </div>
     </div>
-    <MSongBar></MSongBar>
+    <MSongBar />
   </div>
 </template>
 

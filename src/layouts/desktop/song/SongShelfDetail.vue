@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import MNavBar from '@/components/header/MNavBar.vue';
-import WSongBar from '@/components/songbar/WSongBar.vue';
+import type { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
 import { WSongShelfCard } from '@wuji-tauri/components/src';
-import MPagination from '@/components/pagination/MPagination.vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
-import { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
-import { ref } from 'vue';
+import MNavBar from '@/components/header/MNavBar.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import WSongBar from '@/components/songbar/WSongBar.vue';
+import { useSongShelfStore, useSongStore } from '@/store';
 
 withDefaults(
   defineProps<{
@@ -25,9 +24,9 @@ const shelfStore = useSongShelfStore();
 
 <template>
   <div class="flex h-full w-full flex-col overflow-hidden">
-    <MNavBar :title="shelf?.playlist.name || '歌单详情'"></MNavBar>
+    <MNavBar :title="shelf?.playlist.name || '歌单详情'" />
     <div class="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
-      <div class="flex gap-2" v-if="shelf">
+      <div v-if="shelf" class="flex gap-2">
         <van-button
           size="small"
           @click="
@@ -75,7 +74,7 @@ const shelfStore = useSongShelfStore();
             :add-to-like-shelf="shelfStore.addSongToShelf"
             :remove-from-like-shelf="shelfStore.removeSongFromShelf"
             :show-more-options="(song) => showMoreOptions(shelf!, song)"
-          ></WSongShelfCard>
+          />
         </ResponsiveGrid2>
 
         <div
@@ -86,10 +85,10 @@ const shelfStore = useSongShelfStore();
         </div>
       </div>
       <div v-else class="flex w-full items-center justify-center">
-        <van-loading></van-loading>
+        <van-loading />
       </div>
     </div>
-    <WSongBar></WSongBar>
+    <WSongBar />
   </div>
 </template>
 

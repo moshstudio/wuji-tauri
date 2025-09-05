@@ -1,15 +1,14 @@
 <script lang="ts" setup>
-import { ref, reactive, onMounted, onActivated } from 'vue';
-import { showToast } from 'vant';
-import { v4 as uuidv4 } from 'uuid';
 import type { FormInstance } from 'vant';
 import { nanoid } from 'nanoid';
-
-const show = defineModel<boolean>();
+import { showToast } from 'vant';
+import { reactive, ref } from 'vue';
 
 const props = defineProps<{
   confirm: (data: { id: string; name: string }) => void;
 }>();
+
+const show = defineModel<boolean>();
 
 const formRef = ref<FormInstance>();
 
@@ -22,7 +21,7 @@ const formData = reactive({
 const nameRules = [
   { required: true, message: '请输入名称' },
   {
-    pattern: /^[a-zA-Z0-9_\u4e00-\u9fa5]{2,80}$/,
+    pattern: /^[\w\u4E00-\u9FA5]{2,80}$/,
     message: '名称只能包含字母、数字、下划线，2-80个字符',
   },
 ];
@@ -75,7 +74,7 @@ async function beforeClose(action: string): Promise<boolean> {
         class="!hidden"
       >
         <template #button>
-          <van-button size="small" @click="generateUUID" class="ml-2">
+          <van-button size="small" class="ml-2" @click="generateUUID">
             <template #icon>
               <van-icon name="replay" />
             </template>

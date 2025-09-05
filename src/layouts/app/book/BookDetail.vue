@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { BookChapter, BookItem } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
-import MNavBar from '@/components/header/MNavBar.vue';
 import { LoadImage } from '@wuji-tauri/components/src';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import _ from 'lodash';
 import tinycolor from 'tinycolor2';
+import AddShelfButton from '@/components/button/AddShelfButton.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
 import { router } from '@/router';
 
 withDefaults(
@@ -23,7 +23,7 @@ withDefaults(
 
 <template>
   <div class="relative flex h-full w-full flex-col">
-    <MNavBar title="书籍详情"></MNavBar>
+    <MNavBar title="书籍详情" />
     <main
       v-remember-scroll
       class="flex w-full grow select-none flex-col items-center overflow-y-auto bg-[--van-background-2] p-2"
@@ -125,7 +125,7 @@ withDefaults(
         </van-tabs>
       </div>
       <div v-if="!book" class="flex w-full items-center justify-center">
-        <van-loading></van-loading>
+        <van-loading />
       </div>
       <van-back-top bottom="60" right="10" />
     </main>

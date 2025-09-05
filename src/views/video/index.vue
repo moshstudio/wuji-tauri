@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { VideoItem } from '@wuji-tauri/source-extension';
 import type { VideoSource } from '@/types';
+import { storeToRefs } from 'pinia';
+import { ref, triggerRef } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+import AppVideoList from '@/layouts/app/video/VideoList.vue';
+import DesktopVideoList from '@/layouts/desktop/video/VideoList.vue';
 import { router } from '@/router';
 import { useDisplayStore, useStore } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
-import { storeToRefs } from 'pinia';
-import { ref, triggerRef } from 'vue';
-import AppVideoList from '@/layouts/app/video/VideoList.vue';
-import DesktopVideoList from '@/layouts/desktop/video/VideoList.vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();

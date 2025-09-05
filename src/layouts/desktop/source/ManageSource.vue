@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type SubscribeItem, type SubscribeSource } from '@/types';
+import type { SubscribeItem, SubscribeSource } from '@/types';
 import AppManageSource from '@/layouts/app/source/ManageSource.vue';
 
 withDefaults(
@@ -36,7 +36,7 @@ withDefaults(
     :update-item="updateItem"
     :remove-item="removeItem"
     :is-local-source="isLocalSource"
-  ></AppManageSource>
+  />
 </template>
 
 <style scoped lang="less"></style>

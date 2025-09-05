@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import MComicShelfCard from './MComicShelfCard.vue';
 import type {
   ComicItemInShelf,
   ComicShelf,
   ComicSource,
 } from '@wuji-tauri/source-extension';
-import _ from 'lodash';
+import MComicShelfCard from './MComicShelfCard.vue';
 
 defineProps<{
   comic: ComicItemInShelf;
@@ -26,7 +25,7 @@ defineProps<{
     :unread="unread"
     :click="click"
     :remove-from-shelf="removeFromShelf"
-  ></MComicShelfCard>
+  />
 </template>
 <!-- <script setup lang="ts">
 import type {

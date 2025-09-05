@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { useStore, useSubscribeSourceStore } from '@/store';
+import type {
+  SubscribeItem,
+  SubscribeSource,
+} from '@wuji-tauri/source-extension';
 import { showConfirmDialog } from 'vant';
+import { onDeactivated, ref } from 'vue';
+import ImportSubscribeSource from '@/components/dialog/ImportSubscribeSource.vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppManageSource from '@/layouts/app/source/ManageSource.vue';
 import DesktopManageSource from '@/layouts/desktop/source/ManageSource.vue';
-import ImportSubscribeSource from '@/components/dialog/ImportSubscribeSource.vue';
-import { SubscribeItem, SubscribeSource } from '@wuji-tauri/source-extension';
-import { sleep } from '@/utils';
-import { onDeactivated, ref } from 'vue';
 import { router } from '@/router';
+import { useStore, useSubscribeSourceStore } from '@/store';
+import { sleep } from '@/utils';
 
 const store = useStore();
 const sourceStore = useSubscribeSourceStore();
@@ -30,7 +33,6 @@ function enableSource(source: SubscribeSource, enable: boolean) {
       url.disable = false;
     });
   }
-  save();
 }
 function enableItem(
   source: SubscribeSource,
@@ -48,7 +50,6 @@ function enableItem(
     item.disable = false;
     source.disable = false;
   }
-  save();
 }
 
 function importSource() {
@@ -93,10 +94,6 @@ function isLocalSource(source: SubscribeSource) {
   return source.detail.id === store.localSourceId;
 }
 
-function save() {
-  sourceStore.saveSubscribeSources();
-}
-
 onDeactivated(async () => {
   await sleep(500);
   store.loadSubscribeSources(true, 200);
@@ -117,7 +114,7 @@ onDeactivated(async () => {
         :update-item="updateItem"
         :remove-item="removeItem"
         :is-local-source="isLocalSource"
-      ></AppManageSource>
+      />
     </template>
     <template #desktop>
       <DesktopManageSource
@@ -131,7 +128,7 @@ onDeactivated(async () => {
         :update-item="updateItem"
         :remove-item="removeItem"
         :is-local-source="isLocalSource"
-      ></DesktopManageSource>
+      />
     </template>
     <ImportSubscribeSource v-model:show="showImportSubscribeDialog" />
   </PlatformSwitch>

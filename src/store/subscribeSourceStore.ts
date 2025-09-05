@@ -1,53 +1,55 @@
 import type { SubscribeSource } from '@/types';
-import { Store } from '@tauri-apps/plugin-store';
 import _ from 'lodash';
 import { defineStore } from 'pinia';
-import { computed, reactive } from 'vue';
+import { computed, markRaw } from 'vue';
+import { createKVStore } from './utils';
+import { debounceFilter, useStorageAsync } from '@vueuse/core';
+import { estimateJsonSize } from '@/utils';
 
 export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
-  let store: Store | undefined;
-  const subscribeSources = reactive<SubscribeSource[]>([]);
-  const init = async () => {
-    store = await Store.load('subscribeSourceStore.json');
-    const stored = await store?.get<SubscribeSource[]>('subscribeSources');
-    if (stored) {
-      subscribeSources.push(...stored);
-    }
-  };
+  const kvStorage = createKVStore('subscribeSourceStore');
+  const storage = kvStorage.storage;
+
+  const subscribeSources = useStorageAsync<SubscribeSource[]>(
+    'subscribeSources',
+    [],
+    storage,
+    {
+      eventFilter: debounceFilter(1000),
+    },
+  );
+
   const addSubscribeSource = async (source: SubscribeSource) => {
-    const index = subscribeSources.findIndex(
+    const index = subscribeSources.value.findIndex(
       (item) => item.detail.id === source.detail.id,
     );
-    if (index != -1) {
-      subscribeSources[index] = source;
+    if (index !== -1) {
+      subscribeSources.value[index] = source;
     } else {
-      subscribeSources.push(source);
+      subscribeSources.value.push(source);
     }
-    await saveSubscribeSources();
   };
   const removeSubscribeSource = async (source: SubscribeSource) => {
-    const index = subscribeSources.findIndex(
+    const index = subscribeSources.value.findIndex(
       (s) => s.detail.id === source.detail.id,
     );
     if (index !== -1) {
-      subscribeSources.splice(index, 1);
+      subscribeSources.value.splice(index, 1);
     }
-    await saveSubscribeSources();
   };
   const removeItemFromSubscribeSource = async (
     itemId: string,
     sourceId: string,
   ) => {
-    const source = subscribeSources.find((s) => s.detail.id === sourceId);
+    const source = subscribeSources.value.find((s) => s.detail.id === sourceId);
     if (source) {
       _.remove(source.detail.urls, (item) => item.id === itemId);
-      await saveSubscribeSources();
     }
   };
   const getSubscribeSource = (
     sourceId: string,
   ): SubscribeSource | undefined => {
-    return subscribeSources.find((item) => item.detail.id === sourceId);
+    return subscribeSources.value.find((item) => item.detail.id === sourceId);
   };
 
   const updateSubscribeSourceContent = async (
@@ -70,31 +72,33 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
         if (sourceContent.code) {
           item.code = sourceContent.code;
         }
-        await saveSubscribeSources();
         return item;
       }
     }
   };
-  const saveSubscribeSources = _.debounce(async () => {
-    await store?.set('subscribeSources', subscribeSources);
-  }, 500);
-  const clearSubscribeSources = async () => {
-    subscribeSources.length = 0;
-    await store?.clear();
+  const syncData = () => {
+    return markRaw(subscribeSources.value);
   };
-  const isEmpty = computed(() => subscribeSources.length === 0);
+  const loadSyncData = async (data: SubscribeSource[]) => {
+    subscribeSources.value = data;
+  };
+  const clearSubscribeSources = async () => {
+    subscribeSources.value.splice(0);
+    await storage.clear();
+  };
+  const isEmpty = computed(() => subscribeSources.value.length === 0);
 
   return {
-    store,
-    init,
+    storage,
     subscribeSources,
     addSubscribeSource,
     removeSubscribeSource,
     removeItemFromSubscribeSource,
     getSubscribeSource,
     updateSubscribeSourceContent,
-    saveSubscribeSources,
     clearSubscribeSources,
+    syncData,
+    loadSyncData,
     isEmpty,
   };
 });

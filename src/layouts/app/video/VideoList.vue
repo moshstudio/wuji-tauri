@@ -1,14 +1,12 @@
 <script setup lang="ts">
+import type { VideoItem } from '@wuji-tauri/source-extension';
 import type { VideoSource } from '@/types';
+import { ref } from 'vue';
 import MHeader from '@/components/header/MHeader.vue';
 import MVideoTab from '@/components/tab/MVideoTab.vue';
+import { router } from '@/router';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
-import { ref } from 'vue';
-import { router } from '@/router';
-import { VideoItem } from '@wuji-tauri/source-extension';
-
-const searchValue = defineModel<string>('searchValue', { required: true });
 
 const props = defineProps<{
   videoSources: VideoSource[];
@@ -18,6 +16,8 @@ const props = defineProps<{
   toDetail: (source: VideoSource, item: VideoItem) => void;
   openBaseUrl: (item: VideoSource) => void;
 }>();
+
+const searchValue = defineModel<string>('searchValue', { required: true });
 
 const displayStore = useDisplayStore();
 

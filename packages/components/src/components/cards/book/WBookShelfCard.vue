@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import MBookShelfCard from './MBookShelfCard.vue';
 import type {
   BookItemInShelf,
   BookShelf,
   BookSource,
 } from '@wuji-tauri/source-extension';
-import _ from 'lodash';
+import MBookShelfCard from './MBookShelfCard.vue';
 
 defineProps<{
   book: BookItemInShelf;
@@ -26,7 +25,7 @@ defineProps<{
     :unread="unread"
     :click="click"
     :remove-from-shelf="removeFromShelf"
-  ></MBookShelfCard>
+  />
 </template>
 
 <!-- <script setup lang="ts">

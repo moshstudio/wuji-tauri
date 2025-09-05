@@ -1,16 +1,15 @@
 <script setup lang="ts">
-import { useSongStore } from '@/store';
 import { Icon } from '@iconify/vue';
 import { storeToRefs } from 'pinia';
-import DraggableSongBar from './DraggableSongBar.vue';
-import PlayingSongList from '../list/PlayingSongList.vue';
 import { router } from '@/router';
-import { ref } from 'vue';
+import { useDisplayStore, useSongStore } from '@/store';
+import PlayingSongList from '../list/PlayingSongList.vue';
+import DraggableSongBar from './DraggableSongBar.vue';
 
 const songStore = useSongStore();
+const displayStore = useDisplayStore();
 const { playingSong } = storeToRefs(songStore);
-
-const showPlayingSongList = ref(false);
+const { showSongPlayingList } = storeToRefs(displayStore);
 
 function togglePlay() {
   if (songStore.isPlaying) {
@@ -68,14 +67,14 @@ function togglePlay() {
               width="24px"
               height="24px"
               class="van-haptics-feedback cursor-pointer text-gray-400 hover:scale-105"
-              @click.stop="() => (showPlayingSongList = !showPlayingSongList)"
+              @click.stop="() => (showSongPlayingList = !showSongPlayingList)"
             />
           </div>
         </div>
       </div>
     </div>
   </transition>
-  <PlayingSongList v-model:show="showPlayingSongList" />
+  <PlayingSongList v-model:show="showSongPlayingList" />
 </template>
 
 <style scoped lang="less">

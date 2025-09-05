@@ -1,5 +1,5 @@
+import type { BaseDirectory } from '@tauri-apps/plugin-fs';
 import { Channel, invoke } from '@tauri-apps/api/core';
-import { BaseDirectory } from '@tauri-apps/plugin-fs';
 import imageCompression from 'browser-image-compression';
 
 export interface Proxy {

@@ -28,7 +28,6 @@ export interface BookItem {
     sourceId: string;
 }
 
-
 /**
  * 抽象方法 - 获取书籍章节详情
  * @param item 书籍对象（必传）
@@ -42,9 +41,9 @@ abstract getContent(item: BookItem, chapter: BookChapter): Promise<string | null
 
 ```javascript
 async function getContent(item, chapter) {
-  let url = chapter.url;
+  const url = chapter.url;
   const document = await this.fetchDom(url);
-  let contentElements = document.querySelectorAll('.content p');
+  const contentElements = document.querySelectorAll('.content p');
   return Array.from(contentElements.values())
     .map((element) => element.textContent)
     .join('\n');

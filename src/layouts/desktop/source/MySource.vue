@@ -1,10 +1,7 @@
 <script setup lang="ts">
-import { MarketSource } from '@wuji-tauri/source-extension';
-import _ from 'lodash';
-import { TagProps } from 'vant';
+import type { MarketSource } from '@wuji-tauri/source-extension';
+import type { TagProps } from 'vant';
 import AppMySource from '@/layouts/app/source/MySource.vue';
-
-const isFreshing = defineModel<boolean>('isFreshing');
 
 defineProps<{
   sources?: MarketSource[];
@@ -15,6 +12,8 @@ defineProps<{
   onClick: (source: MarketSource) => void;
   showMoreOptions: (source: MarketSource) => void;
 }>();
+
+const isFreshing = defineModel<boolean>('isFreshing');
 </script>
 
 <template>
@@ -27,7 +26,7 @@ defineProps<{
     :create-source="createSource"
     :on-click="onClick"
     :show-more-options="showMoreOptions"
-  ></AppMySource>
+  />
 </template>
 
 <style scoped lang="less"></style>

@@ -4,46 +4,62 @@ import type {
   SongShelf,
 } from '@wuji-tauri/source-extension';
 
-import HeartSVG from '@/assets/heart-fill.svg';
+import { debounceFilter, useStorageAsync } from '@vueuse/core';
 
 import { SongShelfType } from '@wuji-tauri/source-extension';
-import { useStorageAsync } from '@vueuse/core';
-
 import _ from 'lodash';
+
 import { nanoid } from 'nanoid';
 import { defineStore } from 'pinia';
 import { showToast } from 'vant';
+import HeartSVG from '@/assets/heart-fill.svg';
 
 import { createKVStore } from './utils';
+import { estimateJsonSize } from '@/utils';
+import { markRaw } from 'vue';
 
 export const useSongShelfStore = defineStore('songShelfStore', () => {
   const kvStorage = createKVStore('songShelfStore');
+  const storage = kvStorage.storage;
 
   const songCreateShelf = useStorageAsync<SongShelf[]>(
     'songShelf',
     [],
-    kvStorage.storage,
+    storage,
+    {
+      eventFilter: debounceFilter(500),
+    },
   );
   const songPlaylistShelf = useStorageAsync<SongShelf[]>(
     'songPlaylistShelf',
     [],
-    kvStorage.storage,
-  );
-  const songLikeShelf = useStorageAsync<SongShelf>('songLikeShelf', {
-    type: SongShelfType.like,
-    playlist: {
-      id: nanoid(),
-      name: '我喜欢的音乐',
-      picUrl: HeartSVG,
-      sourceId: '',
-      list: {
-        list: [],
-        page: 1,
-        totalPage: 1,
-      },
+    storage,
+    {
+      eventFilter: debounceFilter(500),
     },
-    createTime: Date.now(),
-  });
+  );
+  const songLikeShelf = useStorageAsync<SongShelf>(
+    'songLikeShelf',
+    {
+      type: SongShelfType.like,
+      playlist: {
+        id: nanoid(),
+        name: '我喜欢的音乐',
+        picUrl: HeartSVG,
+        sourceId: '',
+        list: {
+          list: [],
+          page: 1,
+          totalPage: 1,
+        },
+      },
+      createTime: Date.now(),
+    },
+    storage,
+    {
+      eventFilter: debounceFilter(500),
+    },
+  );
   const songInLikeShelf = (song: SongInfo) => {
     if (!song) return false;
     return (
@@ -156,7 +172,24 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     }
     return false;
   };
-  const clear = () => {
+
+  const syncData = () => {
+    return {
+      songCreateShelf: markRaw(songCreateShelf.value),
+      songPlaylistShelf: markRaw(songPlaylistShelf.value),
+      songLikeShelf: markRaw(songLikeShelf.value),
+    };
+  };
+  const loadSyncData = async (data: {
+    songCreateShelf: SongShelf[];
+    songPlaylistShelf: SongShelf[];
+    songLikeShelf: SongShelf;
+  }) => {
+    songCreateShelf.value = data.songCreateShelf;
+    songPlaylistShelf.value = data.songPlaylistShelf;
+    songLikeShelf.value = data.songLikeShelf;
+  };
+  const clear = async () => {
     songCreateShelf.value = [];
     songPlaylistShelf.value = [];
     songLikeShelf.value = {
@@ -174,8 +207,10 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
       },
       createTime: Date.now(),
     };
+    await storage.clear();
   };
   return {
+    storage,
     songCreateShelf,
     songPlaylistShelf,
     songLikeShelf,
@@ -186,6 +221,8 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     removeSongFromShelf,
     addPlaylistToShelf,
     removeSongShelf,
+    syncData,
+    loadSyncData,
     clear,
   };
 });

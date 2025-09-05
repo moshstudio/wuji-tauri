@@ -95,12 +95,11 @@ abstract searchPlaylists(
 
 ## 从DOM获取元素
 
-```javascript
-
-```
+````javascript
+``
 
 ## 从api获取元素
 
 ```javascript
-
-```
+``
+````

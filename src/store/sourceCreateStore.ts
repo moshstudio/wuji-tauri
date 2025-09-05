@@ -1,7 +1,7 @@
-import { defineStore } from 'pinia';
+import { debounceFilter, useStorageAsync } from '@vueuse/core';
 import _ from 'lodash';
-import { createKVStore } from './utils';
-import { debounceFilter, useStorage, useStorageAsync } from '@vueuse/core';
+import { defineStore } from 'pinia';
+import { watch } from 'vue';
 import {
   BOOK_CONSTRUCTOR,
   BOOK_CONTENT,
@@ -31,10 +31,9 @@ import {
   VIDEO_PLAY_URL,
   VIDEO_SEARCH,
 } from '@/components/codeEditor/templates';
-import { sleep } from '@/utils';
-import { watch } from 'vue';
+import { createKVStore } from './utils';
 
-type FormItem = {
+interface FormItem {
   type: string;
   chineseName: string;
   id: string;
@@ -48,13 +47,14 @@ type FormItem = {
     passed: boolean;
     result: undefined;
   }[];
-};
+}
 
 type Type = 'photo' | 'song' | 'book' | 'comic' | 'video';
 type Form = Record<Type, FormItem>;
 
 export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
   const kvStorage = createKVStore('sourceCreateStore');
+  const storage = kvStorage.storage;
 
   const defaultForm = {
     photo: {
@@ -320,17 +320,39 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
     },
   };
 
-  const form = useStorageAsync<Form>('form', defaultForm, kvStorage.storage, {
+  const form = useStorageAsync<Form>('form', defaultForm, storage, {
     eventFilter: debounceFilter(1000),
     deep: true,
+    serializer: {
+      read: async (raw: string) => {
+        if (!raw) return undefined;
+        return JSON.parse(raw);
+      },
+      write: async (value: Form | undefined) => {
+        if (!value) return '';
+        const cloneForm = _.cloneDeep(value);
+        Object.values(cloneForm).forEach((item) => {
+          item.pages.forEach((page) => {
+            page.result = undefined;
+          });
+        });
+        return JSON.stringify(value);
+      },
+    },
   });
   const showingType = useStorageAsync<Type>('createSourceShowingType', 'photo');
+
+  const clear = async () => {
+    form.value = defaultForm;
+    showingType.value = 'photo';
+    await storage.clear();
+  };
 
   watch(
     form,
     (_) => {
       // 同步defaultForm的改动
-      if (Object.keys(form.value).length != Object.keys(defaultForm).length) {
+      if (Object.keys(form.value).length !== Object.keys(defaultForm).length) {
         form.value = defaultForm;
       }
       Object.entries(form.value).forEach(([type, page]) => {
@@ -345,5 +367,5 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
     { once: true },
   );
 
-  return { form, showingType };
+  return { form, showingType, clear };
 });

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useDisplayStore } from '@/store';
-import MSidebar from '@/components/sidebar/MSidebar.vue';
 import SearchField from '@/components/search/SearchField.vue';
+import MSidebar from '@/components/sidebar/MSidebar.vue';
+import { useDisplayStore } from '@/store';
 
 const emit = defineEmits<{
   (e: 'search'): void;

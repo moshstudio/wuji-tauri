@@ -1,26 +1,12 @@
 <script setup lang="ts">
-import {
-  BookItem,
-  BookExtension,
-  BooksList,
-} from '@wuji-tauri/source-extension';
-import { showDialog, showNotify } from 'vant';
-import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
-import { ref } from 'vue';
+import type { BookItem, BooksList } from '@wuji-tauri/source-extension';
 import { LoadImage } from '@wuji-tauri/components/src';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import { BookExtension } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
-
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
-const errorMessage = ref('运行失败');
-const result = ref<BookItem>();
+import { showDialog } from 'vant';
+import { ref } from 'vue';
+import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 
 const props = defineProps<{
   content: {
@@ -46,6 +32,17 @@ const props = defineProps<{
   close: () => void;
   log: (...args: any[]) => void;
 }>();
+
+enum RunStatus {
+  not_running = 'not_running',
+  running = 'running',
+  success = 'success',
+  error = 'error',
+}
+
+const runStatus = ref<RunStatus>(RunStatus.not_running);
+const errorMessage = ref('运行失败');
+const result = ref<BookItem>();
 
 async function initLoad() {
   result.value = undefined;
@@ -136,9 +133,9 @@ async function load() {
   }
 }
 
-const findPage = (name: string) => {
+function findPage(name: string) {
   return props.content.pages.find((page) => page.type === name);
-};
+}
 
 defineExpose({
   initLoad,
@@ -172,7 +169,7 @@ defineExpose({
                 :src="result.cover"
                 :Headers="result.coverHeaders"
                 class="mr-4"
-              ></LoadImage>
+              />
             </div>
 
             <div
@@ -232,7 +229,7 @@ defineExpose({
           </van-tabs>
         </div>
         <div v-if="!result" class="flex w-full items-center justify-center">
-          <van-loading></van-loading>
+          <van-loading />
         </div>
       </div>
     </div>

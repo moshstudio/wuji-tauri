@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import type { PhotoDetail, PhotoItem } from '@wuji-tauri/source-extension';
-import { MoreOptionsSheet } from '@wuji-tauri/components/src';
-import { LoadImage } from '@wuji-tauri/components/src';
+import { LoadImage, MoreOptionsSheet } from '@wuji-tauri/components/src';
+import { computed, ref, watch } from 'vue';
 import MNavBar from '@/components/header/MNavBar.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
-import { computed, ref, watch } from 'vue';
 
 const props = withDefaults(
   defineProps<{
@@ -60,7 +59,7 @@ watch(
           }
         }
       "
-    ></MNavBar>
+    />
 
     <main
       v-remember-scroll
@@ -86,7 +85,7 @@ watch(
         </div>
       </template>
       <div v-else class="flex flex-col items-center justify-center">
-        <van-loading></van-loading>
+        <van-loading />
       </div>
 
       <van-floating-bubble

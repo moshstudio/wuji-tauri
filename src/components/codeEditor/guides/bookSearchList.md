@@ -77,10 +77,10 @@ async function search(keyword, pageNo) {
     const match = a.getAttribute('onClick').match(regex);
     if (match && match[1]) {
       list.push({
-        cover: cover,
-        title: title,
-        author: author,
-        intro: intro,
+        cover,
+        title,
+        author,
+        intro,
         url: this.openUrl(match[1], numB64),
       });
     }

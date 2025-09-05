@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import { SubscribeItem, SubscribeSource } from '@wuji-tauri/source-extension';
-import MNavBar from '@/components/header/MNavBar.vue';
+import type {
+  SubscribeItem,
+  SubscribeSource,
+} from '@wuji-tauri/source-extension';
 import AppManageSourceContentEdit from '@/layouts/app/source/ManageSourceContentEdit.vue';
-import IEditor from '@/components/codeEditor/IEditor.vue';
 
 const props = defineProps<{
   source?: SubscribeSource;
@@ -24,7 +24,7 @@ const props = defineProps<{
     :source="source"
     :source-content="sourceContent"
     :save="save"
-  ></AppManageSourceContentEdit>
+  />
 </template>
 
 <style scoped lang="less"></style>

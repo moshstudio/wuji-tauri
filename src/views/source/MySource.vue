@@ -1,25 +1,24 @@
 <script setup lang="ts">
+import type {
+  MarketSource,
+  MarketSourcePermission,
+} from '@wuji-tauri/source-extension';
+import { MoreOptionsSheet } from '@wuji-tauri/components/src';
+import { storeToRefs } from 'pinia';
+import { showConfirmDialog, showToast } from 'vant';
+import { computed, onActivated, onMounted, ref } from 'vue';
+import MarketSourceCreateDialog from '@/components/dialog/MarketSourceCreate.vue';
+import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+import AppMySource from '@/layouts/app/source/MySource.vue';
+import DesktopMySource from '@/layouts/desktop/source/MySource.vue';
+import { router } from '@/router';
 import {
   useBackStore,
   useServerStore,
   useStore,
   useSubscribeSourceStore,
 } from '@/store';
-import { MoreOptionsSheet } from '@wuji-tauri/components/src';
-import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
-import AppMySource from '@/layouts/app/source/MySource.vue';
-import DesktopMySource from '@/layouts/desktop/source/MySource.vue';
-import MarketSourceCreateDialog from '@/components/dialog/MarketSourceCreate.vue';
-import { computed, onActivated, onMounted, ref } from 'vue';
-import { storeToRefs } from 'pinia';
-import {
-  MarketSource,
-  MarketSourcePermission,
-} from '@wuji-tauri/source-extension';
-import { permissionText, permissionStyle } from '@/utils/marketSource';
-import _ from 'lodash';
-import { router } from '@/router';
-import { showConfirmDialog, showToast } from 'vant';
+import { permissionStyle, permissionText } from '@/utils/marketSource';
 
 const backStore = useBackStore();
 const store = useStore();
@@ -129,7 +128,6 @@ onActivated(() => {
     backStore.back().then(() => {
       showToast('请先登录');
     });
-    return;
   }
 });
 </script>
@@ -146,7 +144,7 @@ onActivated(() => {
         :create-source="() => (showCreateDialog = true)"
         :on-click="onClick"
         :show-more-options="showMoreOptionsAction"
-      ></AppMySource>
+      />
     </template>
     <template #desktop>
       <DesktopMySource
@@ -158,17 +156,17 @@ onActivated(() => {
         :create-source="() => (showCreateDialog = true)"
         :on-click="onClick"
         :show-more-options="showMoreOptionsAction"
-      ></DesktopMySource>
+      />
     </template>
     <MoreOptionsSheet
       v-model="showMoreOptions"
       :title="moreOptionSource?.name"
       :actions="moreOptionActions"
-    ></MoreOptionsSheet>
+    />
     <MarketSourceCreateDialog
       v-model:show="showCreateDialog"
       :create="createSourceAction"
-    ></MarketSourceCreateDialog>
+    />
   </PlatformSwitch>
 </template>
 

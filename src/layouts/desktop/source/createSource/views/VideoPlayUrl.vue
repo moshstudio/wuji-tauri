@@ -1,34 +1,18 @@
 <script setup lang="ts">
-import {
+import type { VideoPlayerState } from '@videojs-player/vue';
+import type {
+  VideoEpisode,
   VideoItem,
-  VideoExtension,
-  VideosList,
   VideoResource,
   VideoUrlMap,
-  VideoEpisode,
-  VideoSource,
 } from '@wuji-tauri/source-extension';
-import { showDialog, showNotify } from 'vant';
-import BOOK_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
+import type { VideoJsPlayer } from 'video.js';
+import { VideoExtension } from '@wuji-tauri/source-extension';
+import { showDialog } from 'vant';
 import { computed, ref, watch } from 'vue';
+import BOOK_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MVideoPlayer from '@/components/media/MVideoPlayer.vue';
-import _ from 'lodash';
-import { VideoJsPlayer } from 'video.js';
-import { VideoPlayerState } from '@videojs-player/vue';
-
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
-const errorMessage = ref('运行失败');
-const result = ref<VideoUrlMap>();
-const selectedResource = ref<VideoResource>();
-const selectedEpisode = ref<VideoEpisode>();
 
 const props = defineProps<{
   content: {
@@ -54,6 +38,19 @@ const props = defineProps<{
   close: () => void;
   log: (...args: any[]) => void;
 }>();
+
+enum RunStatus {
+  not_running = 'not_running',
+  running = 'running',
+  success = 'success',
+  error = 'error',
+}
+
+const runStatus = ref<RunStatus>(RunStatus.not_running);
+const errorMessage = ref('运行失败');
+const result = ref<VideoUrlMap>();
+const selectedResource = ref<VideoResource>();
+const selectedEpisode = ref<VideoEpisode>();
 
 async function initLoad() {
   result.value = undefined;
@@ -162,9 +159,9 @@ async function load() {
   }
 }
 
-const findPage = (name: string) => {
+function findPage(name: string) {
   return props.content.pages.find((page) => page.type === name);
-};
+}
 const sourceItem = computed(() => findPage('detail')?.result);
 const videoPlayer = ref<VideoJsPlayer>();
 const playerState = ref<VideoPlayerState>();
@@ -219,10 +216,10 @@ watch(
   { immediate: true },
 );
 
-const loadEpisode = (episode: VideoEpisode) => {
+function loadEpisode(episode: VideoEpisode) {
   selectedEpisode.value = episode;
   load();
-};
+}
 
 defineExpose({
   initLoad,
@@ -257,14 +254,16 @@ defineExpose({
         <div
           class="flex w-full flex-shrink-0 items-center justify-start gap-2 overflow-hidden"
         >
-          <h2 class="font-bold">{{ sourceItem?.title }}</h2>
+          <h2 class="font-bold">
+            {{ sourceItem?.title }}
+          </h2>
         </div>
         <div
           class="flex flex-shrink-0 gap-2 overflow-x-auto overflow-y-hidden pb-2"
         >
           <van-button
             v-for="resource in sourceItem?.resources"
-            :key="`resource` + resource.id"
+            :key="`resource${resource.id}`"
             class="flex-shrink-0"
             size="small"
             :type="resource.id === selectedResource?.id ? 'primary' : 'default'"
@@ -294,7 +293,7 @@ defineExpose({
         >
           <van-button
             v-for="episode in selectedResource?.episodes"
-            :key="`episode` + episode.id"
+            :key="`episode${episode.id}`"
             class="flex-shrink-0"
             size="small"
             :type="selectedEpisode?.id !== episode.id ? 'default' : 'success'"
@@ -308,7 +307,7 @@ defineExpose({
           </van-button>
         </ResponsiveGrid2>
         <div v-if="!result" class="flex w-full items-center justify-center">
-          <van-loading></van-loading>
+          <van-loading />
         </div>
       </div>
     </div>

@@ -5,12 +5,12 @@ import type {
   VideosList,
 } from '@wuji-tauri/source-extension';
 import type { VideoSource } from '@/types';
+import { MVideoCard } from '@wuji-tauri/components/src';
 import { debounce } from 'lodash';
 import { nanoid } from 'nanoid';
 import { ref, watch } from 'vue';
-import { MVideoCard } from '@wuji-tauri/components/src';
-import MPagination from '@/components/pagination/MPagination.vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
 
 const props = defineProps<{
   source: VideoSource;
@@ -58,7 +58,7 @@ watch(
 </script>
 
 <template>
-  <div v-if="!source.list"></div>
+  <div v-if="!source.list" />
 
   <van-tabs
     v-else-if="Array.isArray(source.list)"

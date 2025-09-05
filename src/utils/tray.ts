@@ -1,9 +1,9 @@
 import type { TrayIconEvent, TrayIconOptions } from '@tauri-apps/api/tray';
-import ico from '@/assets/icon.ico';
 import { Image } from '@tauri-apps/api/image';
 import { Menu } from '@tauri-apps/api/menu';
 import { TrayIcon } from '@tauri-apps/api/tray';
 import { Window } from '@tauri-apps/api/window';
+import ico from '@/assets/icon.ico';
 
 export default async function buildTray() {
   const options: TrayIconOptions = {
@@ -34,7 +34,15 @@ export default async function buildTray() {
       }
     },
   };
+  const trayId = localStorage.getItem('trayId');
 
+  if (trayId) {
+    try {
+      await TrayIcon.removeById(trayId);
+    } catch (error) {}
+  }
   const tray = await TrayIcon.new(options);
+  localStorage.setItem('trayId', tray.id);
+
   return tray;
 }

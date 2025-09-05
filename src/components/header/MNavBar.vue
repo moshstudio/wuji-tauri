@@ -25,14 +25,14 @@ withDefaults(
     @click-left="() => clickLeft()"
     @click-right="() => clickRight?.()"
   >
-    <template #title v-if="Object.keys($slots).includes('title')">
-      <slot name="title"></slot>
+    <template v-if="Object.keys($slots).includes('title')" #title>
+      <slot name="title" />
     </template>
-    <template #left v-if="Object.keys($slots).includes('left')">
-      <slot name="left"></slot>
+    <template v-if="Object.keys($slots).includes('left')" #left>
+      <slot name="left" />
     </template>
-    <template #right v-if="Object.keys($slots).includes('right')">
-      <slot name="right"></slot>
+    <template v-if="Object.keys($slots).includes('right')" #right>
+      <slot name="right" />
     </template>
   </van-nav-bar>
 </template>

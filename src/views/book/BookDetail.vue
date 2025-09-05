@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import type { BookChapter, BookItem } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
-import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+import { storeToRefs } from 'pinia';
 
-import { router } from '@/router';
-import { useBookShelfStore, useStore } from '@/store';
-import { retryOnFalse } from '@/utils';
 import { showLoadingToast, showToast } from 'vant';
 import { computed, ref, watch } from 'vue';
+import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppBookDetail from '@/layouts/app/book/BookDetail.vue';
 import DesktopBookDetail from '@/layouts/desktop/book/BookDetail.vue';
+import { router } from '@/router';
+import { useBookShelfStore, useStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
-import { storeToRefs } from 'pinia';
+import { retryOnFalse } from '@/utils';
 
 const { bookId, sourceId } = defineProps({
   bookId: String,
@@ -47,10 +47,10 @@ const addShelfActions = computed(() => {
   }));
 });
 
-const clear = () => {
+function clear() {
   book.value = undefined;
   bookSource.value = undefined;
-};
+}
 
 const loadData = retryOnFalse({ onFailed: backStore.back })(async () => {
   clear();
@@ -127,10 +127,10 @@ watch(
       />
     </template>
     <van-action-sheet
-      title="添加到书架"
       v-model:show="showAddShelfSheet"
+      title="添加到书架"
       :actions="addShelfActions"
-    ></van-action-sheet>
+    />
   </PlatformSwitch>
 </template>
 

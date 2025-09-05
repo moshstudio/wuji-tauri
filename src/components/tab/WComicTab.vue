@@ -5,10 +5,10 @@ import type {
   ComicsList,
 } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
+import WComicCard from '@wuji-tauri/components/src/components/cards/comic/WComicCard.vue';
 import { debounce } from 'lodash';
 import { nanoid } from 'nanoid';
 import { ref, watch } from 'vue';
-import WComicCard from '@wuji-tauri/components/src/components/cards/comic/WComicCard.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
 import ResponsiveGrid2 from '../grid/ResponsiveGrid2.vue';
 
@@ -57,7 +57,7 @@ watch(
 </script>
 
 <template>
-  <div v-if="!source.list"></div>
+  <div v-if="!source.list" />
 
   <van-tabs
     v-else-if="Array.isArray(source.list)"

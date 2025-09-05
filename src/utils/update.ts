@@ -1,7 +1,7 @@
+import { getVersion } from '@tauri-apps/api/app';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { check } from '@tauri-apps/plugin-updater';
 import { showConfirmDialog, showDialog } from 'vant';
-import { getVersion } from '@tauri-apps/api/app';
 
 function calculateProgress(currentBytes: number) {
   // 假设文件大小为20M, 越接近越到100%

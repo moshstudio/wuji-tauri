@@ -1,41 +1,26 @@
 <script lang="ts" setup>
+import type { VideoPlayerState } from '@videojs-player/vue';
 import type {
   VideoEpisode,
   VideoResource,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
-import type { VideoPlayerState } from '@videojs-player/vue';
 import type videojs from 'video.js';
-import { useDisplayStore } from '@/store';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { VideoPlayer } from '@videojs-player/vue';
-
 import {
   hide_status_bar,
   set_screen_orientation,
 } from 'tauri-plugin-commands-api';
+
 import { showToast } from 'vant';
-import {
-  onActivated,
-  onDeactivated,
-  onMounted,
-  onUnmounted,
-  ref,
-  shallowRef,
-} from 'vue';
+import { onActivated, onDeactivated, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import 'video.js/dist/video-js.css';
 import { getErrorDisplayHTML } from '@/components/media/error';
+import { useDisplayStore } from '@/store';
+import 'video.js/dist/video-js.css';
 
 type VideoJsPlayer = ReturnType<typeof videojs>;
-
-const player = defineModel<VideoJsPlayer>('player');
-const state = defineModel<VideoPlayerState>('state');
-
-const videoDirection = defineModel<'vertical' | 'horizontal'>('direction');
-
-const position = defineModel<number>('position');
-const duration = defineModel<number>('duration');
 
 // any-touch 或  vue-guesture motion-v
 
@@ -47,11 +32,18 @@ const props = defineProps<{
   onCanPlay: (args: any) => void;
   onPlayFinished: (args: any) => void;
 }>();
+const player = defineModel<VideoJsPlayer>('player');
+const state = defineModel<VideoPlayerState>('state');
+
+const videoDirection = defineModel<'vertical' | 'horizontal'>('direction');
+
+const position = defineModel<number>('position');
+const duration = defineModel<number>('duration');
 
 const displayStore = useDisplayStore();
 const route = useRoute();
 
-const checkVideoDirection = () => {
+function checkVideoDirection() {
   // 判断是不是竖向视频
   const width = player.value?.videoWidth() || 0;
   const height = player.value?.videoHeight() || 0;
@@ -60,7 +52,7 @@ const checkVideoDirection = () => {
   } else {
     videoDirection.value = 'horizontal';
   }
-};
+}
 
 const videoWrapper = ref<HTMLElement | null>(null);
 const controlBarOptions = {
@@ -145,7 +137,7 @@ function onError(e: any) {
   }
 }
 
-const handleKeyDown = (e: KeyboardEvent) => {
+function handleKeyDown(e: KeyboardEvent) {
   switch (e.key) {
     case 'Escape':
       // ESC 键逻辑
@@ -178,17 +170,17 @@ const handleKeyDown = (e: KeyboardEvent) => {
       // Enter 键逻辑
       break;
   }
-};
+}
 
 // 添加监听
-const addListeners = () => {
+function addListeners() {
   document.addEventListener('keydown', handleKeyDown);
-};
+}
 
 // 移除监听
-const removeListeners = () => {
+function removeListeners() {
   document.removeEventListener('keydown', handleKeyDown);
-};
+}
 
 onMounted(() => {
   addListeners();
@@ -236,7 +228,7 @@ onActivated(() => {
     @mounted="handleMounted"
     @error="onError"
     @fullscreenchange="onFullScreenChange"
-  ></VideoPlayer>
+  />
 </template>
 
 <style lang="less" scoped>

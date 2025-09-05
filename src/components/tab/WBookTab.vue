@@ -5,12 +5,12 @@ import type {
   BooksList,
 } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
-import ResponsiveGrid2 from '../grid/ResponsiveGrid2.vue';
+import { WBookCard } from '@wuji-tauri/components/src';
 import { debounce } from 'lodash';
 import { nanoid } from 'nanoid';
-import { onMounted, ref, watch } from 'vue';
-import { WBookCard } from '@wuji-tauri/components/src';
+import { ref, watch } from 'vue';
 import MPagination from '@/components/pagination/MPagination.vue';
+import ResponsiveGrid2 from '../grid/ResponsiveGrid2.vue';
 
 const props = defineProps<{
   source: BookSource;
@@ -57,7 +57,7 @@ watch(
 </script>
 
 <template>
-  <div v-if="!source.list"></div>
+  <div v-if="!source.list" />
 
   <van-tabs
     v-else-if="Array.isArray(source.list)"
@@ -83,7 +83,10 @@ watch(
 
       <ResponsiveGrid2>
         <van-loading v-if="item.list.length === 0" class="p-2" />
-        <template v-for="book in item.list" :key="book.id">
+        <template
+          v-for="book in item.list"
+          :key="`${source.item.id}_${book.id}`"
+        >
           <WBookCard :book="book" :click="toDetail" />
         </template>
       </ResponsiveGrid2>
@@ -102,7 +105,10 @@ watch(
       />
     </div>
     <ResponsiveGrid2>
-      <template v-for="book in source.list.list" :key="book.id">
+      <template
+        v-for="book in source.list.list"
+        :key="`${source.item.id}_${book.id}`"
+      >
         <WBookCard :book="book" :click="toDetail" />
       </template>
     </ResponsiveGrid2>

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { SongInfo } from '@wuji-tauri/source-extension';
-import { useSongStore } from '@/store';
-import { SongPlayMode } from '@wuji-tauri/source-extension';
 import { Icon } from '@iconify/vue';
 import { MSongCard } from '@wuji-tauri/components/src';
+import { SongPlayMode } from '@wuji-tauri/source-extension';
 import { nextTick, watch } from 'vue';
+import { useSongStore } from '@/store';
 
-const show = defineModel<boolean>('show', { default: false });
+const show = defineModel<boolean>('show', { required: true });
 
 const songStore = useSongStore();
 

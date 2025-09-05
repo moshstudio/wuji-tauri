@@ -1,21 +1,21 @@
 import type { ClientOptions } from '@wuji-tauri/fetch';
 import type { BookItem } from './book';
-import type { PhotoItem } from './photo';
 import type { ComicItem } from './comic';
-import type { VideoItem } from './video';
+import type { PhotoItem } from './photo';
 import type { PlaylistInfo, SongInfo } from './song';
-import {
-  maxPageNoFromElements,
-  urlJoin as myUrlJoin,
-} from './utils/element.ts';
+import type { VideoItem } from './video';
 import { fetch } from '@wuji-tauri/fetch';
-import { getM3u8ProxyUrl, getProxyUrl } from './utils/proxy.ts';
 import CryptoJS from 'crypto-js';
 import * as iconv from 'iconv-lite';
 import _ from 'lodash';
 import * as m3u8Parser from 'm3u8-parser';
 import { nanoid } from 'nanoid';
 import forge from 'node-forge';
+import {
+  maxPageNoFromElements,
+  urlJoin as myUrlJoin,
+} from './utils/element.ts';
+import { getM3u8ProxyUrl, getProxyUrl } from './utils/proxy.ts';
 
 // 定义一个装饰器工厂函数，允许传入目标类型
 export function transformResult<T>(func: (result: T) => T) {
@@ -29,7 +29,6 @@ export function transformResult<T>(func: (result: T) => T) {
         return func(result);
       } catch (error) {
         console.warn(`function ${key} failed`, error);
-
         return null;
       }
     };
@@ -59,6 +58,7 @@ abstract class Extension {
     tags: {
       element?: string;
       cover?: string;
+      coverHeaders?: Record<string, string>;
       title?: string;
       intro?: string;
       author?: string;
@@ -76,6 +76,7 @@ abstract class Extension {
     tags: {
       element?: string;
       cover?: string;
+      coverHeaders?: Record<string, string>;
       title?: string;
       intro?: string;
       author?: string;
@@ -92,6 +93,7 @@ abstract class Extension {
     tags: {
       element?: string;
       cover?: string;
+      coverHeaders?: Record<string, string>;
       title?: string;
       intro?: string;
       releaseDate?: string;
@@ -104,7 +106,6 @@ abstract class Extension {
       url?: string;
       latestUpdate?: string;
       coverDomain?: string;
-      coverHeaders?: Record<string, string>;
       baseUrl?: string;
     },
   ) => Promise<VideoItem[]>;
@@ -114,6 +115,7 @@ abstract class Extension {
     tags: {
       element?: string;
       cover?: string;
+      coverHeaders?: Record<string, string>;
       title?: string;
       desc?: string;
       author?: string;
@@ -130,6 +132,7 @@ abstract class Extension {
     tags: {
       element?: string;
       picUrl?: string;
+      picHeaders?: Record<string, string>;
       name?: string;
       desc?: string;
       creator?: string;
@@ -145,6 +148,7 @@ abstract class Extension {
     tags: {
       element?: string;
       picUrl?: string;
+      picHeaders?: Record<string, string>;
       name?: string;
       artists?: string;
       duration?: string;
@@ -221,6 +225,7 @@ abstract class Extension {
       {
         element = '.bookbox',
         cover = 'img',
+        coverHeaders = undefined,
         title = 'h3 a',
         intro = '.intro',
         author = '.author a',
@@ -278,11 +283,15 @@ abstract class Extension {
 
         const _urlE = url ? element.querySelector(url) : element;
         const urlE = _urlE?.getAttribute('href') || _urlE?.getAttribute('href');
+        if (!titleE?.trim() || !urlE) {
+          continue;
+        }
         list.push({
-          id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
-          title: titleE?.trim() || '',
+          id: this.urlJoin(this.baseUrl, urlE),
+          title: titleE.trim(),
           intro: introE?.trim() || undefined,
           cover: coverE ? this.urlJoin(this.baseUrl, coverE) : undefined,
+          coverHeaders,
           author: authorE?.trim() || undefined,
           tags: tagsE.length
             ? tagsE.length === 1
@@ -292,7 +301,7 @@ abstract class Extension {
           status: statusE?.trim() || undefined,
           latestChapter: latestChapterE?.trim() || undefined,
           latestUpdate: latestUpdateE?.trim() || undefined,
-          url: urlE ? this.urlJoin(this.baseUrl, urlE) : undefined,
+          url: this.urlJoin(this.baseUrl, urlE),
           sourceId: '',
         });
       }
@@ -371,16 +380,17 @@ abstract class Extension {
 
         const _urlE = url ? element.querySelector(url) : element;
         const urlE = _urlE?.getAttribute('href') || _urlE?.getAttribute('href');
+        if (!titleE?.trim() || !urlE) {
+          continue;
+        }
         list.push({
-          id: urlE
-            ? this.urlJoin(baseUrl ?? this.baseUrl, urlE)
-            : this.nanoid(),
-          title: titleE?.trim() || '',
+          id: this.urlJoin(baseUrl ?? this.baseUrl, urlE),
+          title: titleE.trim(),
           intro: introE?.trim() || undefined,
           cover: coverE
             ? this.urlJoin(baseUrl ?? this.baseUrl, coverE)
             : undefined,
-          coverHeaders: coverHeaders,
+          coverHeaders,
           releaseDate: releaseDateE?.trim() || undefined,
           country: countryE?.trim() || undefined,
           duration: durationE?.trim() || undefined,
@@ -393,7 +403,7 @@ abstract class Extension {
             : undefined,
           status: statusE?.trim() || undefined,
           latestUpdate: latestUpdateE?.trim() || undefined,
-          url: urlE ? this.urlJoin(baseUrl ?? this.baseUrl, urlE) : undefined,
+          url: this.urlJoin(baseUrl ?? this.baseUrl, urlE),
           sourceId: '',
         });
       }
@@ -404,6 +414,7 @@ abstract class Extension {
       {
         element = '.update_area_content',
         cover = 'img',
+        coverHeaders = undefined,
         title = '.title',
         desc = '.desc',
         author = '.author',
@@ -459,18 +470,22 @@ abstract class Extension {
         const viewE = element.querySelector(view)?.textContent;
         const _urlE = url ? element.querySelector(url) : element;
         const urlE = _urlE?.getAttribute('href')?.trim();
+        if (!urlE) {
+          continue;
+        }
         list.push({
-          id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
+          id: this.urlJoin(this.baseUrl, urlE),
           title: titleE?.trim() || '',
           desc: descE?.trim() || undefined,
           cover: coverE
             ? this.urlJoin(coverDomain ?? this.baseUrl, coverE)
             : '',
+          coverHeaders,
           author: authorE?.trim() || undefined,
           datetime: datetimeE?.trim() || undefined,
           hot: hotE?.trim() || undefined,
           view: Number(viewE) || undefined,
-          url: urlE ? this.urlJoin(this.baseUrl, urlE) : undefined,
+          url: this.urlJoin(this.baseUrl, urlE),
           sourceId: '',
         });
       }
@@ -481,6 +496,7 @@ abstract class Extension {
       {
         element = '.update_area_content',
         picUrl = 'img',
+        picHeaders = undefined,
         name = 'a[href]',
         desc = '.desc',
         creator = '.author',
@@ -534,17 +550,21 @@ abstract class Extension {
         const updateTimeE = element.querySelector(updateTime)?.textContent;
         const _urlE = url ? element.querySelector(url) : element;
         const urlE = _urlE?.getAttribute('href')?.trim();
+        if (!titleE?.trim() || !urlE) {
+          continue;
+        }
         list.push({
-          id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
-          name: titleE?.trim() || '',
+          id: this.urlJoin(this.baseUrl, urlE),
+          name: titleE.trim(),
           desc: descE?.trim() || undefined,
           picUrl: coverE
             ? this.urlJoin(coverDomain ?? this.baseUrl, coverE)
             : '',
+          picHeaders,
           creator: authorE?.trim() ? { name: authorE.trim() } : undefined,
           createTime: datetimeE?.trim() || undefined,
           updateTime: updateTimeE?.trim() || undefined,
-          url: urlE ? this.urlJoin(this.baseUrl, urlE) : undefined,
+          url: this.urlJoin(this.baseUrl, urlE),
           sourceId: '',
         });
       }
@@ -555,6 +575,7 @@ abstract class Extension {
       {
         element = '.update_area_content',
         picUrl = 'img',
+        picHeaders = undefined,
         name = 'a[title]',
         artists = '.artist',
         duration = '.duration',
@@ -611,18 +632,22 @@ abstract class Extension {
           .querySelector(playUrl)
           ?.getAttribute('href')
           ?.trim();
+        if (!titleE?.trim() || !urlE) {
+          continue;
+        }
         list.push({
-          id: urlE ? this.urlJoin(this.baseUrl, urlE) : this.nanoid(),
-          name: titleE?.trim() || '',
+          id: this.urlJoin(this.baseUrl, urlE),
+          name: titleE.trim(),
           picUrl: coverE
             ? this.urlJoin(coverDomain ?? this.baseUrl, coverE)
             : '',
+          picHeaders,
           artists: authorE
             ? authorE.map((a) => a.textContent || '')
             : undefined,
           duration: durationE?.trim() ? Number(durationE.trim()) : undefined,
           lyric: lyricE?.trim() || undefined,
-          url: this.urlJoin(this.baseUrl, urlE || null),
+          url: this.urlJoin(this.baseUrl, urlE),
           playUrl: playUrlE ? this.urlJoin(this.baseUrl, playUrlE) : undefined,
           sourceId: '',
         });
@@ -639,10 +664,10 @@ abstract class Extension {
         const href = element.getAttribute('href');
         const title =
           element.textContent?.trim() || element.getAttribute('title');
-        if (href) {
+        if (href && title) {
           list.push({
             id: this.urlJoin(this.baseUrl, href),
-            title: title || '',
+            title,
             url: this.urlJoin(this.baseUrl, href),
           });
         }

@@ -1,9 +1,10 @@
+import type { LocationQuery, RouteParamsGeneric } from 'vue-router';
+import _ from 'lodash';
 import { defineStore } from 'pinia';
 import { onMounted, watch } from 'vue';
-import { useDisplayStore } from './displayStore';
-import { LocationQuery, RouteParamsGeneric, useRoute } from 'vue-router';
-import _ from 'lodash';
+import { useRoute } from 'vue-router';
 import { router } from '@/router';
+import { useDisplayStore } from './displayStore';
 
 type CatelogName = 'book' | 'photo' | 'song' | 'comic' | 'video';
 interface RoutePath {
@@ -54,7 +55,7 @@ export const useBackStore = defineStore('back', () => {
           }
           return {
             name: _.capitalize(name),
-            path: '/' + name,
+            path: `/${name}`,
             params: {},
             query: {},
           };
@@ -73,6 +74,20 @@ export const useBackStore = defineStore('back', () => {
   const back = async () => {
     if (displayStore.fullScreenMode) {
       displayStore.fullScreenMode = false;
+      return;
+    }
+    if (
+      route.name?.toString().startsWith('Video') &&
+      displayStore.showVideoComponent
+    ) {
+      displayStore.showVideoComponent = false;
+      return;
+    }
+    if (
+      route.name?.toString().startsWith('Song') &&
+      displayStore.showSongPlayingList
+    ) {
+      displayStore.showSongPlayingList = false;
       return;
     }
     const prevPath = getPrevPath();

@@ -1,20 +1,9 @@
 <script setup lang="ts">
-import { BookItem, BookExtension } from '@wuji-tauri/source-extension';
+import type { BookItem } from '@wuji-tauri/source-extension';
+import { BookExtension } from '@wuji-tauri/source-extension';
 import { showDialog } from 'vant';
-import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
 import { ref } from 'vue';
-import _ from 'lodash';
-
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
-const errorMessage = ref('运行失败');
-const result = ref<string>();
+import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
 
 const props = defineProps<{
   content: {
@@ -40,6 +29,17 @@ const props = defineProps<{
   close: () => void;
   log: (...args: any[]) => void;
 }>();
+
+enum RunStatus {
+  not_running = 'not_running',
+  running = 'running',
+  success = 'success',
+  error = 'error',
+}
+
+const runStatus = ref<RunStatus>(RunStatus.not_running);
+const errorMessage = ref('运行失败');
+const result = ref<string>();
 
 async function initLoad() {
   result.value = undefined;
@@ -85,7 +85,7 @@ async function load() {
       throw new Error('初始化中的baseUrl未定义!');
     }
     cls.log = props.log;
-    let item = findPage('detail')?.result;
+    const item = findPage('detail')?.result;
     if (!item?.chapters?.length) {
       throw new Error('请先保证《书籍详情》中章节不为空');
     }
@@ -103,9 +103,9 @@ async function load() {
   }
 }
 
-const findPage = (name: string) => {
+function findPage(name: string) {
   return props.content.pages.find((page) => page.type === name);
-};
+}
 
 defineExpose({
   initLoad,
@@ -125,7 +125,9 @@ defineExpose({
       {{ errorMessage }}
     </div>
     <div v-else class="flex flex-col overflow-auto">
-      <p v-for="line in result?.split('\n')">{{ line }}</p>
+      <p v-for="line in result?.split('\n')">
+        {{ line }}
+      </p>
     </div>
   </div>
 </template>

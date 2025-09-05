@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { MarketSource } from '@wuji-tauri/source-extension';
-import _ from 'lodash';
-import { TagProps } from 'vant';
+import type { MarketSource } from '@wuji-tauri/source-extension';
+import type { TagProps } from 'vant';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -40,12 +39,12 @@ const permissionStyle = computed(() => {
             showMoreOptions(source);
           }
         "
-      ></van-button>
+      />
     </div>
     <div class="text-xs text-[var(--van-text-color)]">
       共 {{ source.sourceContents?.length || 0 }} 个源
     </div>
-    <van-divider :vertical="false"></van-divider>
+    <van-divider :vertical="false" />
     <div class="flex items-center gap-2">
       <van-tag
         size="medium"

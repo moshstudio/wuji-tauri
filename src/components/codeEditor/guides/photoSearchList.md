@@ -39,7 +39,7 @@ abstract search(keyword: string, pageNo?: number): Promise<PhotoList | null>;
 ```javascript
 async function search(keyword, pageNo) {
   pageNo ||= 1;
-  let url = `${this.baseUrl}search/page/${pageNo}/?s=${keyword}`;
+  const url = `${this.baseUrl}search/page/${pageNo}/?s=${keyword}`;
   const document = await this.fetchDom(url);
   const list = await this.queryPhotoElements(document, {
     element: '.image-container .excerpt',

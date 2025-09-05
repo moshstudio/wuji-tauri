@@ -3,19 +3,20 @@ import type {
   BookItem,
   BookShelf,
 } from '@wuji-tauri/source-extension';
-import { useStorageAsync } from '@vueuse/core';
+import { debounceFilter, useStorageAsync } from '@vueuse/core';
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
 import { defineStore } from 'pinia';
 
 import { showToast } from 'vant';
-import { ref } from 'vue';
 import { useBookChapterStore } from './bookChaptersStore';
 import { useStore } from './store';
 import { createKVStore } from './utils';
+import { estimateJsonSize } from '@/utils';
 
 export const useBookShelfStore = defineStore('bookShelfStore', () => {
   const kvStorage = createKVStore('bookShelfStore');
+  const storage = kvStorage.storage;
 
   // 书籍书架⬇️
   const bookShelf = useStorageAsync<BookShelf[]>(
@@ -28,7 +29,10 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
         createTime: Date.now(),
       },
     ],
-    kvStorage.storage,
+    storage,
+    {
+      eventFilter: debounceFilter(500),
+    },
   );
 
   const createBookShelf = (name: string) => {
@@ -178,7 +182,20 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     );
     showToast('刷新章节完成');
   };
-  const clear = () => {
+
+  const syncData = () => {
+    const clone = _.cloneDeep(bookShelf.value);
+    clone.forEach((shelf) => {
+      shelf.books.forEach((book) => {
+        book.book.chapters = undefined;
+      });
+    });
+    return clone;
+  };
+  const loadSyncData = async (data: BookShelf[]) => {
+    bookShelf.value = data;
+  };
+  const clear = async () => {
     bookShelf.value = [
       {
         id: nanoid(),
@@ -187,9 +204,11 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
         createTime: Date.now(),
       },
     ];
+    await storage.clear();
   };
 
   return {
+    storage,
     bookShelf,
     createBookShelf,
     removeBookShelf,
@@ -199,6 +218,8 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     updateBookReadInfo,
     deleteBookFromShelf,
     bookRefreshChapters,
+    syncData,
+    loadSyncData,
     clear,
   };
 });

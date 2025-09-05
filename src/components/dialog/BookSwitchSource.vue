@@ -2,11 +2,6 @@
 import type { BookItem } from '@wuji-tauri/source-extension';
 import { useStore } from '@/store';
 
-const show = defineModel('show', {
-  type: Boolean,
-  required: true,
-});
-
 withDefaults(
   defineProps<{
     book?: BookItem;
@@ -18,6 +13,11 @@ withDefaults(
     searchResult: () => [],
   },
 );
+
+const show = defineModel('show', {
+  type: Boolean,
+  required: true,
+});
 
 const store = useStore();
 </script>

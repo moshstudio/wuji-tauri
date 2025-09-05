@@ -1,19 +1,13 @@
 <script setup lang="ts">
-import { showFailToast, showNotify } from 'vant';
-import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
-import { ref } from 'vue';
-import SearchField from '@/components/search/SearchField.vue';
-import MPagination from '@/components/pagination/MPagination.vue';
-import HorizonList from '@/components/list/HorizonList.vue';
+import type { PlaylistList } from '@wuji-tauri/source-extension';
 import { MPlaylistCard } from '@wuji-tauri/components/src';
-import { SongExtension, PlaylistList } from '@wuji-tauri/source-extension';
-
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
+import { SongExtension } from '@wuji-tauri/source-extension';
+import { showFailToast } from 'vant';
+import { ref } from 'vue';
+import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
+import HorizonList from '@/components/list/HorizonList.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import SearchField from '@/components/search/SearchField.vue';
 
 const props = defineProps<{
   content: {
@@ -39,6 +33,13 @@ const props = defineProps<{
   close: () => void;
   log: (...args: any[]) => void;
 }>();
+
+enum RunStatus {
+  not_running = 'not_running',
+  running = 'running',
+  success = 'success',
+  error = 'error',
+}
 
 const searchHistories = ref([]);
 const runStatus = ref<RunStatus>(RunStatus.not_running);
@@ -90,9 +91,9 @@ async function load(pageNo: number) {
   }
 }
 
-const findPage = (name: string) => {
+function findPage(name: string) {
   return props.content.pages.find((page) => page.type === name);
-};
+}
 
 defineExpose({
   initLoad,
@@ -133,7 +134,7 @@ defineExpose({
           :key="playlist.id"
           :playlist="playlist"
           :click="() => {}"
-        ></MPlaylistCard>
+        />
       </HorizonList>
     </div>
   </div>

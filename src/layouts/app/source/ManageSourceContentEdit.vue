@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import { SubscribeItem, SubscribeSource } from '@wuji-tauri/source-extension';
-import MNavBar from '@/components/header/MNavBar.vue';
-import { ref, watch, computed } from 'vue';
-import { FormInstance, showToast } from 'vant';
+import type {
+  SubscribeItem,
+  SubscribeSource,
+} from '@wuji-tauri/source-extension';
+import type { FormInstance } from 'vant';
+import { showToast } from 'vant';
+import { computed, ref, watch } from 'vue';
 import IEditor from '@/components/codeEditor/IEditor.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
 
 const props = defineProps<{
   source?: SubscribeSource;
@@ -27,7 +30,7 @@ const formRef = ref<FormInstance>();
 const nameRules = [
   { required: true, message: '请输入名称' },
   {
-    pattern: /^[a-zA-Z0-9_\u4e00-\u9fa5]{2,80}$/,
+    pattern: /^[\w\u4E00-\u9FA5]{2,80}$/,
     message: '名称只能包含字母、数字、下划线，2-80个字符',
   },
 ];
@@ -51,7 +54,7 @@ const isModified = computed(() => {
   );
 });
 
-const save = async () => {
+async function save() {
   if (!props.source || !props.sourceContent) return;
   try {
     // 验证表单
@@ -70,7 +73,7 @@ const save = async () => {
     showToast('请检查输入内容');
     return false;
   }
-};
+}
 </script>
 
 <template>
@@ -87,9 +90,9 @@ const save = async () => {
       </template>
     </MNavBar>
     <div
-      class="flex w-full flex-grow flex-col overflow-y-auto bg-[--van-background-2] p-2"
+      class="flex w-full flex-grow flex-col overflow-y-auto bg-[--van-background-1] p-2"
     >
-      <van-form class="px-4 py-1" ref="formRef">
+      <van-form ref="formRef" class="px-4 py-1">
         <van-field
           v-model="name"
           name="name"
@@ -102,7 +105,7 @@ const save = async () => {
         v-model:value="code"
         path="my-source-content-edit"
         :init="() => {}"
-        :editorChange="() => {}"
+        :editor-change="() => {}"
       />
     </div>
   </div>

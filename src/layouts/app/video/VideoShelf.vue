@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { MVideoShelfCard } from '@wuji-tauri/components/src';
-import MNavBar from '@/components/header/MNavBar.vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
+import { router } from '@/router';
 import { useStore, useVideoShelfStore } from '@/store';
 import { showPromptDialog } from '@/utils/usePromptDialog';
-import { router } from '@/router';
 
+defineProps<{
+  createShelf: (name: string) => void;
+  deleteShelf: () => void;
+  deleteSelected: () => void;
+}>();
 const activeIndex = defineModel<number>('activeIndex', {
   required: true,
 });
@@ -13,19 +18,13 @@ const selecteMode = defineModel<boolean>('selecteMode', {
   default: false,
 });
 
-defineProps<{
-  createShelf: (name: string) => void;
-  deleteShelf: () => void;
-  deleteSelected: () => void;
-}>();
-
 const store = useStore();
 const shelfStore = useVideoShelfStore();
 </script>
 
 <template>
   <div class="flex h-full w-full flex-col overflow-hidden">
-    <MNavBar title="视频收藏"></MNavBar>
+    <MNavBar title="视频收藏" />
     <div class="flex h-[44px] w-full shrink-0 gap-2 px-4 pt-2">
       <van-button
         icon="plus"

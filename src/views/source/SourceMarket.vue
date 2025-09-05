@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { useServerStore, useStore, useSubscribeSourceStore } from '@/store';
+import type { MarketSource } from '@wuji-tauri/source-extension';
+import { storeToRefs } from 'pinia';
+import { onMounted, ref } from 'vue';
+import MarketSourceDetail from '@/components/dialog/MarketSourceDetail.vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppSourceMarket from '@/layouts/app/source/SourceMarket.vue';
 import DesktopSourceMarket from '@/layouts/desktop/source/SourceMarket.vue';
-import MarketSourceDetail from '@/components/dialog/MarketSourceDetail.vue';
-import { onMounted, ref } from 'vue';
-import { storeToRefs } from 'pinia';
-import { MarketSource } from '@wuji-tauri/source-extension';
 import { router } from '@/router';
+import { useServerStore, useStore, useSubscribeSourceStore } from '@/store';
 
 const store = useStore();
 const serverStore = useServerStore();
@@ -92,7 +92,7 @@ onMounted(() => {
         :on-import="onImport"
         :on-like="onLike"
         :show-detail="onShowDetail"
-      ></AppSourceMarket>
+      />
     </template>
     <template #desktop>
       <DesktopSourceMarket
@@ -106,7 +106,7 @@ onMounted(() => {
         :on-import="onImport"
         :on-like="onLike"
         :show-detail="onShowDetail"
-      ></DesktopSourceMarket>
+      />
     </template>
     <van-action-sheet
       v-model:show="showSelectSort"
@@ -118,7 +118,7 @@ onMounted(() => {
     <MarketSourceDetail
       v-model:show="showDetailSheet"
       :source="showDetailSource"
-    ></MarketSourceDetail>
+    />
   </PlatformSwitch>
 </template>
 

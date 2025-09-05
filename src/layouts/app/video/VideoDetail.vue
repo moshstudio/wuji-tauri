@@ -1,30 +1,26 @@
 <script setup lang="ts">
-import _ from 'lodash';
+import type { VideoPlayerState } from '@videojs-player/vue';
 import type {
   VideoEpisode,
   VideoItem,
   VideoResource,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
-import type { VideoSource } from '@/types';
-import type videojs from 'video.js';
+import type { Swiper as SwiperType } from 'swiper/types';
 
-import MVideoPlayer from '@/components/media/MVideoPlayer.vue';
-import VideoComponent from './detail/VideoComponent.vue';
-import VideoFullscreenComponent from './detail/VideoFullscreenComponent.vue';
-import VideoControls from './detail/VideoControls.vue';
-import VideoFullscrenControls from './detail/VideoFullscrenControls.vue';
-import { useDisplayStore } from '@/store';
-import { computed, ref } from 'vue';
+import type videojs from 'video.js';
+import type { VideoSource } from '@/types';
 import { Swiper, SwiperSlide } from 'swiper/vue';
-import { Swiper as SwiperType } from 'swiper/types';
+import { computed, ref } from 'vue';
+import MVideoPlayer from '@/components/media/MVideoPlayer.vue';
+import { useDisplayStore } from '@/store';
+import VideoComponent from './detail/VideoComponent.vue';
+import VideoControls from './detail/VideoControls.vue';
+import VideoFullscreenComponent from './detail/VideoFullscreenComponent.vue';
+import VideoFullscrenControls from './detail/VideoFullscrenControls.vue';
 import 'swiper/css';
-import { VideoPlayerState } from '@videojs-player/vue';
 
 type VideoJsPlayer = ReturnType<typeof videojs>;
-
-const player = defineModel<VideoJsPlayer>('player');
-const playerState = defineModel<VideoPlayerState>('playerState');
 
 const props = defineProps<{
   videoSources: import('video.js').default.Tech.SourceObject[];
@@ -44,6 +40,11 @@ const props = defineProps<{
   onCanPlay: (args: any) => void;
   onPlayFinished: (args: any) => void;
 }>();
+const player = defineModel<VideoJsPlayer>('player');
+const playerState = defineModel<VideoPlayerState>('playerState');
+const showVideoComponent = defineModel<boolean>('showVideoComponent', {
+  default: false,
+});
 
 const displayStore = useDisplayStore();
 
@@ -138,10 +139,10 @@ function formatTime(seconds: number) {
       direction="vertical"
       :allow-slide-next="swipeable"
       :allow-slide-prev="swipeable"
-      :grabCursor="true"
-      :centeredSlides="true"
-      :slidesPerView="'auto'"
-      :initialSlide="1"
+      :grab-cursor="true"
+      :centered-slides="true"
+      slides-per-view="auto"
+      :initial-slide="1"
       @slide-change="handlePageChange"
       @slide-change-transition-end="handlePageChanged"
     >
@@ -185,9 +186,9 @@ function formatTime(seconds: number) {
             :playing-resource="playingResource"
             :playing-episode="playingEpisode"
             :video-src="videoSrc"
-            :videoDirection="videoDirection"
-            :videoDuration="videoDuration"
-            :videoPosition="videoPosition"
+            :video-direction="videoDirection"
+            :video-duration="videoDuration"
+            :video-position="videoPosition"
             :in-shelf="inShelf"
             :component-is-showing="componentRef?.isShowing"
             :show-component="componentRef?.showComponent"
@@ -200,7 +201,7 @@ function formatTime(seconds: number) {
             :on-can-play="onCanPlay"
             :on-play-finished="onPlayFinished"
             :format-time="formatTime"
-          ></VideoControls>
+          />
           <VideoFullscrenControls
             v-else
             ref="controlRef"
@@ -212,9 +213,9 @@ function formatTime(seconds: number) {
             :playing-resource="playingResource"
             :playing-episode="playingEpisode"
             :video-src="videoSrc"
-            :videoDirection="videoDirection"
-            :videoDuration="videoDuration"
-            :videoPosition="videoPosition"
+            :video-direction="videoDirection"
+            :video-duration="videoDuration"
+            :video-position="videoPosition"
             :in-shelf="inShelf"
             :component-is-showing="componentRef?.isShowing"
             :show-component="componentRef?.showComponent"
@@ -228,7 +229,7 @@ function formatTime(seconds: number) {
             :on-can-play="onCanPlay"
             :on-play-finished="onPlayFinished"
             :format-time="formatTime"
-          ></VideoFullscrenControls>
+          />
         </div>
       </SwiperSlide>
       <SwiperSlide>
@@ -244,6 +245,7 @@ function formatTime(seconds: number) {
     <VideoComponent
       v-if="!displayStore.fullScreenMode"
       ref="componentRef"
+      v-model:show="showVideoComponent"
       :player="player"
       :player-state="playerState"
       :video-sources="videoSources"
@@ -252,9 +254,9 @@ function formatTime(seconds: number) {
       :playing-resource="playingResource"
       :playing-episode="playingEpisode"
       :video-src="videoSrc"
-      :videoDirection="videoDirection"
-      :videoDuration="videoDuration"
-      :videoPosition="videoPosition"
+      :video-direction="videoDirection"
+      :video-duration="videoDuration"
+      :video-position="videoPosition"
       :in-shelf="inShelf"
       :play="play"
       :play-prev="playPrev"
@@ -265,10 +267,11 @@ function formatTime(seconds: number) {
       :on-can-play="onCanPlay"
       :on-play-finished="onPlayFinished"
       :format-time="formatTime"
-    ></VideoComponent>
+    />
     <VideoFullscreenComponent
       v-else
       ref="componentRef"
+      v-model:show="showVideoComponent"
       :player="player"
       :player-state="playerState"
       :video-sources="videoSources"
@@ -277,9 +280,9 @@ function formatTime(seconds: number) {
       :playing-resource="playingResource"
       :playing-episode="playingEpisode"
       :video-src="videoSrc"
-      :videoDirection="videoDirection"
-      :videoDuration="videoDuration"
-      :videoPosition="videoPosition"
+      :video-direction="videoDirection"
+      :video-duration="videoDuration"
+      :video-position="videoPosition"
       :in-shelf="inShelf"
       :play="play"
       :play-prev="playPrev"
@@ -290,7 +293,7 @@ function formatTime(seconds: number) {
       :on-can-play="onCanPlay"
       :on-play-finished="onPlayFinished"
       :format-time="formatTime"
-    ></VideoFullscreenComponent>
+    />
   </div>
 </template>
 

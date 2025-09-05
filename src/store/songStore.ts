@@ -1,23 +1,18 @@
-import type { SongExtension, SongInfo } from '@wuji-tauri/source-extension';
-
 import type { PluginListener } from '@tauri-apps/api/core';
-import { SongPlayMode } from '@wuji-tauri/source-extension';
-import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
-import { songUrlToString } from '@/utils';
-import { fetch } from '@wuji-tauri/fetch';
-import { getSongCover } from '@/utils/songCover';
+
+import type { SongExtension, SongInfo } from '@wuji-tauri/source-extension';
 import { useStorageAsync } from '@vueuse/core';
+import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
+import { fetch } from '@wuji-tauri/fetch';
+import { SongPlayMode } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
 import { defineStore } from 'pinia';
 import * as androidMedia from 'tauri-plugin-mediasession-api';
-import { showFailToast, showNotify, showToast } from 'vant';
+import { showFailToast, showToast } from 'vant';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
-import {
-  setTimeout,
-  clearTimeout,
-  setInterval,
-  clearInterval,
-} from 'worker-timers';
+import { setInterval, setTimeout } from 'worker-timers';
+import { songUrlToString } from '@/utils';
+import { getSongCover } from '@/utils/songCover';
 import { useDisplayStore } from './displayStore';
 import { useSongCacheStore } from './songCacheStore';
 import { useStore } from './store';
@@ -147,6 +142,10 @@ export const useSongStore = defineStore('song', () => {
       if (switchSource) {
         let newSrc: string | undefined;
         for await (const s of switchSongSource(song)) {
+          if (song.id != playingSong.value.id) {
+            // 切换了歌曲
+            return;
+          }
           console.log(`${song.name} 使用其他源播放地址`, JSON.stringify(s));
           newSrc = await getSongPlayUrl(s, false);
 
@@ -154,9 +153,6 @@ export const useSongStore = defineStore('song', () => {
             await songCacheStore.replaceSongSrc(song, s);
             break;
           }
-        }
-        if (!newSrc) {
-          showFailToast(`歌曲 ${song.name} 无法播放`);
         }
       }
     }
@@ -189,6 +185,7 @@ export const useSongStore = defineStore('song', () => {
       this.onSetVolume = this.onSetVolume.bind(this);
       this.seek = this.seek.bind(this);
     }
+
     onMounted() {
       onMounted(() => {
         if (!audioRef.value) return;
@@ -218,6 +215,7 @@ export const useSongStore = defineStore('song', () => {
         });
       });
     }
+
     watch() {
       watch(
         playMode,
@@ -243,6 +241,7 @@ export const useSongStore = defineStore('song', () => {
         },
       );
     }
+
     async setPlaylist(list: SongInfo[], firstSong: SongInfo): Promise<void> {
       if (list !== playlist.value) {
         playlist.value = list;
@@ -267,6 +266,7 @@ export const useSongStore = defineStore('song', () => {
       }
       await this.onPlay();
     }
+
     async onPlay() {
       if (!audioRef.value) return;
       if (!playingSong.value.picUrl) {
@@ -281,9 +281,14 @@ export const useSongStore = defineStore('song', () => {
         audioCurrent.value = 0;
         audioDuration.value = 0;
         isPlaying.value = false;
-        const url = await getSongPlayUrl(playingSong.value);
+        const song = _.cloneDeep(playingSong.value);
+        const url = await getSongPlayUrl(song);
+        if (song.id != playingSong.value.id) {
+          // 切换了歌曲
+          return;
+        }
         if (!url) {
-          showToast('歌曲无法播放');
+          showToast(`歌曲 ${song.name} 无法播放`);
           return;
         } else {
           audioRef.value.src = url;
@@ -356,6 +361,7 @@ export const useSongStore = defineStore('song', () => {
     constructor() {
       super();
     }
+
     onMounted(): void {
       super.onMounted();
       if ('mediaSession' in navigator) {

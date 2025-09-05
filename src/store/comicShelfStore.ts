@@ -4,7 +4,7 @@ import type {
   ComicShelf,
 } from '@wuji-tauri/source-extension';
 
-import { useStorageAsync } from '@vueuse/core';
+import { debounceFilter, useStorageAsync } from '@vueuse/core';
 
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
@@ -15,9 +15,11 @@ import { showToast } from 'vant';
 import { ref } from 'vue';
 import { useStore } from './store';
 import { createKVStore } from './utils';
+import { estimateJsonSize } from '@/utils';
 
 export const useComicShelfStore = defineStore('comicShelfStore', () => {
   const kvStorage = createKVStore('comicShelfStore');
+  const storage = kvStorage.storage;
 
   // 漫画书架⬇️
   const comicShelf = useStorageAsync<ComicShelf[]>(
@@ -30,7 +32,10 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
         createTime: Date.now(),
       },
     ],
-    kvStorage.storage,
+    storage,
+    {
+      eventFilter: debounceFilter(500),
+    },
   );
   const comicChapterRefreshing = ref(false);
 
@@ -151,7 +156,19 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
     comicChapterRefreshing.value = false;
     showToast('刷新章节完成');
   };
-  const clear = () => {
+  const syncData = () => {
+    const clone = _.cloneDeep(comicShelf.value);
+    clone.forEach((shelf) => {
+      shelf.comics.forEach((comic) => {
+        comic.comic.chapters = undefined;
+      });
+    });
+    return clone;
+  };
+  const loadSyncData = async (data: ComicShelf[]) => {
+    comicShelf.value = data;
+  };
+  const clear = async () => {
     comicShelf.value = [
       {
         id: nanoid(),
@@ -160,9 +177,11 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
         createTime: Date.now(),
       },
     ];
+    await storage.clear();
   };
 
   return {
+    storage,
     comicShelf,
     comicChapterRefreshing,
     createComicShelf,
@@ -173,6 +192,8 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
     updateComicReadInfo,
     deleteComicFromShelf,
     comicRefreshChapters,
+    syncData,
+    loadSyncData,
     clear,
   };
 });

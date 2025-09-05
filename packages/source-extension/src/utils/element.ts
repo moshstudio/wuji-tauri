@@ -1,4 +1,5 @@
 import _urlJoin from 'url-join';
+
 export function maxPageNoFromElements(
   elements?: NodeListOf<Element> | null,
   onlyKeepNumbers = true,
@@ -90,6 +91,7 @@ export function purifyText(text: string): string {
     /.*点击下一页继续阅读.*/g,
     /章节错误，点此举报/g,
     /请继续关注后续内容/g,
+    /章节错误/g,
     /退出阅读模式/g,
     /（本章完）|（本章未完，请翻页）|.*书友群.*/g,
     /為您提供精彩小說/g,

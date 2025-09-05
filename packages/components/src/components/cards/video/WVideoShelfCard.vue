@@ -5,9 +5,9 @@ import type {
   VideoSource,
 } from '@wuji-tauri/source-extension';
 
-import LoadImage from '../../LoadImage.vue';
 import { Icon } from '@iconify/vue';
 import { computed, ref } from 'vue';
+import LoadImage from '../../LoadImage.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -44,6 +44,7 @@ const lastWatchEpisode = computed((): VideoEpisode | undefined => {
 
 <template>
   <div
+    v-tooltip="video.video.title"
     class="active-bg-scale relative flex flex-col rounded-lg"
     :class="selectMode ? (selected ? '' : 'opacity-50') : ''"
     @click="onClick"

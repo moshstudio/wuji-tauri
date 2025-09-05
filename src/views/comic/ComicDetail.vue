@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import type { ComicChapter, ComicItem } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
+import { storeToRefs } from 'pinia';
+import { showLoadingToast, showToast } from 'vant';
+import { computed, ref, watch } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppComicDetail from '@/layouts/app/comic/ComicDetail.vue';
 import DesktopComicDetail from '@/layouts/desktop/comic/ComicDetail.vue';
 import { router } from '@/router';
-import { useComicShelfStore, useDisplayStore, useStore } from '@/store';
-import { retryOnFalse, sleep } from '@/utils';
-import { showLoadingToast, showToast } from 'vant';
-import { computed, onActivated, onMounted, ref, triggerRef, watch } from 'vue';
+import { useComicShelfStore, useStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
-import { storeToRefs } from 'pinia';
+import { retryOnFalse } from '@/utils';
 
 const { comicId, sourceId } = defineProps({
   comicId: String,
@@ -71,7 +71,6 @@ const loadData = retryOnFalse({ onFailed: backStore.back })(async () => {
     closeOnClickOverlay: false,
   });
   const detail = await store.comicDetail(comicSource.value, comic.value);
-  console.log(detail);
 
   toast.close();
   if (detail) {
@@ -124,10 +123,10 @@ watch(
       />
     </template>
     <van-action-sheet
-      title="添加到书架"
       v-model:show="showAddShelfSheet"
+      title="添加到书架"
       :actions="addShelfActions"
-    ></van-action-sheet>
+    />
   </PlatformSwitch>
 </template>
 

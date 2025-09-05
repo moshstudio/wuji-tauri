@@ -1,4 +1,4 @@
-import { ArtistInfo } from '@wuji-tauri/source-extension';
+import type { ArtistInfo } from '@wuji-tauri/source-extension';
 
 export function joinSongArtists(
   artists: ArtistInfo[] | string[] | undefined | null,

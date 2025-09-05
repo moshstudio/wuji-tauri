@@ -7,6 +7,7 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Color
 import android.media.AudioManager
+import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.os.VibrationEffect
@@ -18,6 +19,7 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
+import androidx.annotation.RequiresApi
 import androidx.core.view.WindowCompat
 import java.io.File
 import kotlin.math.roundToInt
@@ -293,7 +295,7 @@ class Commands(private val activity: Activity) {
             if (subPath.isNotEmpty()) {
                 File(baseDir, subPath).also { it.mkdirs() }
             } else {
-                baseDir
+                baseDir.also { it.mkdirs() } // 确保基础目录也存在
             }
         }
     }
@@ -302,21 +304,105 @@ class Commands(private val activity: Activity) {
         directoryType: BaseDirectory,
         fileName: String,
         content: ByteArray,
-        subPath: String = ""
+        subPath: String = "",
+        shouldRefreshMediaStore: Boolean = true // 新增参数，控制是否刷新媒体库
     ): File? {
-        val file =
-            getDirectoryPath(directoryType, subPath)?.let { dir ->
-                File(dir, fileName).apply {
-                    parentFile?.mkdirs()
-                    writeBytes(content)
-                }
+        return try {
+            val directory = getDirectoryPath(directoryType, subPath) ?: return null
+            val file = File(directory, fileName).apply {
+                parentFile?.mkdirs() // 确保父目录存在
             }
-        return file
+
+            // 写入文件内容
+            file.writeBytes(content)
+
+            // 如果需要刷新媒体库且文件是媒体类型
+            if (shouldRefreshMediaStore && isMediaFile(file)) {
+                refreshMediaStore(file)
+            }
+
+            file
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
+
+    /**
+     * 判断文件是否为媒体文件（需要刷新媒体库的类型）
+     */
+    private fun isMediaFile(file: File): Boolean {
+        val mediaExtensions = setOf(
+            "jpg", "jpeg", "png", "gif", "bmp", "webp",
+            "mp4", "avi", "mov", "mkv", "3gp",
+            "mp3", "wav", "ogg", "aac", "flac"
+        )
+        return file.extension.lowercase() in mediaExtensions
+    }
+
+    /**
+     * 获取文件的MIME类型
+     */
+    private fun getMimeType(file: File): String {
+        return when (file.extension.lowercase()) {
+            "jpg", "jpeg" -> "image/jpeg"
+            "png" -> "image/png"
+            "gif" -> "image/gif"
+            "bmp" -> "image/bmp"
+            "webp" -> "image/webp"
+            "mp4", "avi", "mov", "mkv", "3gp" -> "video/*"
+            "mp3", "wav", "ogg", "aac", "flac" -> "audio/*"
+            "pdf" -> "application/pdf"
+            "txt" -> "text/plain"
+            "html", "htm" -> "text/html"
+            "json" -> "application/json"
+            "xml" -> "application/xml"
+            else -> "application/octet-stream"
+        }
+    }
+
+    /**
+     * 刷新媒体库，使文件立即在图库等应用中可见
+     */
+    fun refreshMediaStore(file: File) {
+        val mimeType = getMimeType(file)
+        MediaScannerConnection.scanFile(
+            activity,
+            arrayOf(file.absolutePath),
+            arrayOf(mimeType)
+        ) { path, uri ->
+            // 扫描完成回调，可以在这里添加日志或处理逻辑
+            if (uri != null) {
+                // 扫描成功
+                Log.d("MediaScanner", "File scanned successfully: $path")
+            } else {
+                // 扫描失败
+                Log.w("MediaScanner", "Failed to scan file: $path")
+            }
+        }
+    }
+
+    /**
+     * 批量刷新多个文件
+     */
+    fun refreshMultipleFiles(files: List<File>) {
+        val paths = files.map { it.absolutePath }.toTypedArray()
+        val mimeTypes = files.map { getMimeType(it) }.toTypedArray()
+
+        MediaScannerConnection.scanFile(
+            activity,
+            paths,
+            mimeTypes
+        ) { path, uri ->
+            // 批量扫描完成回调
+        }
+    }
+
 
     fun vibrate(duration: Long = 100L, amplitude: Int = VibrationEffect.DEFAULT_AMPLITUDE) {
         val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = activity.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            val vibratorManager =
+                activity.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
             vibratorManager.defaultVibrator
         } else {
             @Suppress("DEPRECATION")
@@ -333,7 +419,8 @@ class Commands(private val activity: Activity) {
 
     fun vibratePattern(pattern: LongArray, repeat: Int = -1, amplitudes: IntArray? = null) {
         val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = activity.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            val vibratorManager =
+                activity.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
             vibratorManager.defaultVibrator
         } else {
             @Suppress("DEPRECATION")
@@ -355,7 +442,8 @@ class Commands(private val activity: Activity) {
 
     fun vibratePredefined(effectId: Int) {
         val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = activity.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            val vibratorManager =
+                activity.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
             vibratorManager.defaultVibrator
         } else {
             @Suppress("DEPRECATION")
@@ -376,7 +464,6 @@ class Commands(private val activity: Activity) {
             vibrator.vibrate(100L)
         }
     }
-
 
 
 }

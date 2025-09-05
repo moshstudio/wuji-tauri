@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { VideoItem } from '@wuji-tauri/source-extension';
-import LoadImage from '../../LoadImage.vue';
 import _ from 'lodash';
+import LoadImage from '../../LoadImage.vue';
 
 defineProps<{
   video: VideoItem;
@@ -11,6 +11,7 @@ defineProps<{
 
 <template>
   <div
+    v-tooltip="video.title"
     class="active-bg-scale relative flex w-[140px] flex-col rounded-lg"
     @click="() => click(video)"
   >

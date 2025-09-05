@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PlaylistInfo } from '@wuji-tauri/source-extension';
-import { LoadImage } from '@wuji-tauri/components/src';
 import { Icon } from '@iconify/vue';
+import { LoadImage } from '@wuji-tauri/components/src';
 import tinycolor from 'tinycolor2';
 import { ref } from 'vue';
 

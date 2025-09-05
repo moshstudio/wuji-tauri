@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import type { BookItem } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
+import { ref } from 'vue';
 import WHeader from '@/components/header/WHeader.vue';
 import WBookTab from '@/components/tab/WBookTab.vue';
-import { useDisplayStore, useStore } from '@/store';
-import { sleep } from '@/utils';
-import { ref } from 'vue';
 import { router } from '@/router';
-
-const searchValue = defineModel<string>('searchValue', { required: true });
+import { useDisplayStore } from '@/store';
+import { sleep } from '@/utils';
 
 const props = defineProps<{
   bookSources: BookSource[];
@@ -18,6 +16,8 @@ const props = defineProps<{
   toDetail: (source: BookSource, item: BookItem) => void;
   openBaseUrl: (item: BookSource) => void;
 }>();
+
+const searchValue = defineModel<string>('searchValue', { required: true });
 
 const displayStore = useDisplayStore();
 

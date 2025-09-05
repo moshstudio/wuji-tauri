@@ -1,21 +1,20 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import { VideoPlayerState } from '@videojs-player/vue';
-import { Icon } from '@iconify/vue';
-import type videojs from 'video.js';
-import * as commands from 'tauri-plugin-commands-api';
-import { AnyGestureEventTypes } from '@vueuse/gesture';
-import {
+import type { VideoPlayerState } from '@videojs-player/vue';
+import type { AnyGestureEventTypes } from '@vueuse/gesture';
+import type {
   VideoEpisode,
   VideoItem,
   VideoResource,
   VideoSource,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
+import type videojs from 'video.js';
+import { Icon } from '@iconify/vue';
+import * as commands from 'tauri-plugin-commands-api';
 import { reactive, ref } from 'vue';
-import { updateReactive } from '@/utils';
 import { router } from '@/router';
 import { useBackStore } from '@/store';
+import { updateReactive } from '@/utils';
 
 const props = withDefaults(
   defineProps<{
@@ -55,7 +54,11 @@ const backStore = useBackStore();
 
 const isShowing = ref(false);
 function click() {
-  props.playOrPause();
+  if (props.componentIsShowing) {
+    props.showComponent?.(false);
+  } else {
+    props.playOrPause();
+  }
 }
 function dblClick() {}
 
@@ -70,13 +73,13 @@ const longPressOptions = reactive({
   timer: undefined as NodeJS.Timeout | undefined,
 });
 
-const longPressHandler = (dragState: AnyGestureEventTypes['drag']) => {
+function longPressHandler(dragState: AnyGestureEventTypes['drag']) {
   if (dragState.first) {
     longPressOptions.timer = setTimeout(() => {
       isShowing.value = true;
       longPressOptions.isPressing = true;
       longPressOptions.timer = undefined;
-      commands.vibrate(50);
+      commands.vibrate(25);
       props.player?.playbackRate(2);
       props.player?.play();
     }, 1000);
@@ -99,7 +102,7 @@ const longPressHandler = (dragState: AnyGestureEventTypes['drag']) => {
       longPressOptions.timer = undefined;
     }
   }
-};
+}
 
 const slideOptions = reactive({
   isSliding: false,
@@ -110,7 +113,7 @@ const slideOptions = reactive({
   slideElement: undefined as HTMLElement | undefined,
 });
 
-const dragHandler = (dragState: AnyGestureEventTypes['drag'], event: any) => {
+function dragHandler(dragState: AnyGestureEventTypes['drag'], event: any) {
   if (dragState.first && dragState.axis != 'y') {
     clearTimeout(slideOptions.sliderTimer);
     updateReactive(slideOptions, {
@@ -143,20 +146,20 @@ const dragHandler = (dragState: AnyGestureEventTypes['drag'], event: any) => {
         slideOptions.startPosition,
     ),
   );
-};
+}
 </script>
 
 <template>
   <div
+    v-drag="longPressHandler"
     class="left-speed border-box absolute bottom-0 left-0 right-[calc(100%-40px)] top-0 rounded-r-[50%]"
     @click.stop
-    v-drag="longPressHandler"
-  ></div>
+  />
   <div
+    v-drag="longPressHandler"
     class="right-speed border-box absolute bottom-0 left-[calc(100%-40px)] right-0 top-0 rounded-l-[50%]"
     @click.stop
-    v-drag="longPressHandler"
-  ></div>
+  />
   <transition
     enter-active-class="transition-all duration-300 ease-out"
     enter-from-class="scale-[1.5] opacity-0"
@@ -210,7 +213,7 @@ const dragHandler = (dragState: AnyGestureEventTypes['drag'], event: any) => {
           <div
             class="absolute left-0 h-[2px] rounded-lg bg-gray-100"
             :style="{ width: `${(videoPosition / videoDuration) * 100}%` }"
-          ></div>
+          />
         </div>
         <div
           v-if="slideOptions.slideMode === 'mini'"
@@ -219,7 +222,7 @@ const dragHandler = (dragState: AnyGestureEventTypes['drag'], event: any) => {
           <div
             class="absolute left-0 h-[4px] rounded-lg bg-gray-100"
             :style="{ width: `${(videoPosition / videoDuration) * 100}%` }"
-          ></div>
+          />
         </div>
         <div
           v-if="slideOptions.slideMode === 'detail'"
@@ -246,7 +249,7 @@ const dragHandler = (dragState: AnyGestureEventTypes['drag'], event: any) => {
                   ? `${(slideOptions.targetPosition / videoDuration) * 100}%`
                   : `${(videoPosition / videoDuration) * 100}%`,
               }"
-            ></div>
+            />
           </div>
         </div>
       </div>
@@ -262,10 +265,10 @@ const dragHandler = (dragState: AnyGestureEventTypes['drag'], event: any) => {
   <div
     v-if="!componentIsShowing && videoDuration && !videoSrc?.isLive"
     :ref="(el) => (slideOptions.slideElement = el as HTMLElement)"
+    v-drag="dragHandler"
     class="pointer-events-auto absolute bottom-0 left-0 right-0 h-[12px] w-full"
     @click.stop
-    v-drag="dragHandler"
-  ></div>
+  />
   <!-- sidebar -->
   <transition
     enter-active-class="transition-all duration-300 delay-300"

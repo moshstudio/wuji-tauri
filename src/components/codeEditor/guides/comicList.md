@@ -57,7 +57,7 @@ abstract getRecommendComics(pageNo?: number, type?: string): Promise<ComicsList 
 
 ```javascript
 async function getRecommendComics(pageNo, type) {
-  let items = [
+  const items = [
     {
       name: '热血机甲',
       category: 'rexue',
@@ -106,7 +106,7 @@ async function getRecommendComics(pageNo, type) {
 
 ```javascript
 async function getRecommendComics(pageNo, type) {
-  let items = [
+  const items = [
     {
       name: '少年',
       tag: '3262',
@@ -173,7 +173,7 @@ async function getRecommendComics(pageNo, type) {
     tag: `${item.tag}`,
     theme: `${item.theme}`,
   });
-  const response = await this.fetch(url + '?' + params.toString());
+  const response = await this.fetch(`${url}?${params.toString()}`);
   const json = await response.json();
   const list = json.data.list.map((item) => {
     return {

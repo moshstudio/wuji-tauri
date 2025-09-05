@@ -19,14 +19,14 @@ const props = withDefaults(
 
 const isAnimating = ref(false);
 
-const handleClick = () => {
+function handleClick() {
   if (props.isPlaying) {
     props.pause();
   } else {
     props.play();
   }
   isAnimating.value = true;
-};
+}
 
 watch(
   () => props.isPlaying,
@@ -39,9 +39,9 @@ watch(
 
 <template>
   <div
-    @click="handleClick"
     class="van-haptics-feedback flex items-center justify-center"
     :class="{ 'scale-90': isAnimating }"
+    @click="handleClick"
   >
     <transition
       mode="out-in"

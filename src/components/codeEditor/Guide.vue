@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue';
-import { Marked } from 'marked';
-import { markedHighlight } from 'marked-highlight';
 import hljs from 'highlight.js';
-import 'github-markdown-css/github-markdown-dark.css';
-import 'highlight.js/styles/github-dark.css'; // 代码块的黑暗主题
+import css from 'highlight.js/lib/languages/css';
 import javascript from 'highlight.js/lib/languages/javascript';
 import typescript from 'highlight.js/lib/languages/typescript';
-import css from 'highlight.js/lib/languages/css';
 import html from 'highlight.js/lib/languages/xml';
+import { Marked } from 'marked';
+import { markedHighlight } from 'marked-highlight';
+import { computed, nextTick } from 'vue';
 import { guideCommonMD } from './guides';
+import 'github-markdown-css/github-markdown-dark.css';
+import 'highlight.js/styles/github-dark.css'; // 代码块的黑暗主题
 
+const props = withDefaults(defineProps<Props>(), {
+  title: '详情',
+  width: '50%',
+});
 hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('typescript', typescript);
 hljs.registerLanguage('css', css);
@@ -33,27 +37,22 @@ interface Props {
   width?: string;
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  title: '详情',
-  width: '50%',
-});
-
 const show = defineModel<boolean>('show');
 
 const htmlContent = computed(() => {
   return marked.parse(props.content);
 });
 
-const open = () => {
+function open() {
   show.value = true;
-};
+}
 
-const close = () => {
+function close() {
   show.value = false;
-};
+}
 
 // 添加复制功能
-const addCopyButtons = () => {
+function addCopyButtons() {
   nextTick(() => {
     document
       .querySelectorAll('.markdown-tab .markdown-body pre')
@@ -75,7 +74,7 @@ const addCopyButtons = () => {
         }
       });
   });
-};
+}
 
 // 暴露方法给父组件
 defineExpose({
@@ -92,12 +91,10 @@ defineExpose({
     <div
       class="flex h-[40px] flex-shrink-0 items-center justify-between border-b border-gray-200 text-[--van-text-color]"
     >
-      <div class="text-base font-semibold">{{ title }}</div>
-      <van-icon
-        name="cross"
-        class="van-haptics-feedback p-2"
-        @click="close"
-      ></van-icon>
+      <div class="text-base font-semibold">
+        {{ title }}
+      </div>
+      <van-icon name="cross" class="van-haptics-feedback p-2" @click="close" />
     </div>
 
     <!-- Markdown内容区域 -->
@@ -110,13 +107,13 @@ defineExpose({
         <div
           class="markdown-body github-markdown-dark flex-1 overflow-auto p-4"
           v-html="htmlContent"
-        ></div>
+        />
       </van-tab>
       <van-tab title="通用函数">
         <div
           class="markdown-body github-markdown-dark flex-1 overflow-auto p-4"
           v-html="marked.parse(guideCommonMD)"
-        ></div>
+        />
       </van-tab>
     </van-tabs>
   </div>

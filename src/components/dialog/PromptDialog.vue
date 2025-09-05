@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { sleep } from '@/utils';
-import { Field, FieldType } from 'vant';
+import type { FieldType } from 'vant';
+import { Field } from 'vant';
 import { onMounted, ref } from 'vue';
+import { sleep } from '@/utils';
 
 defineProps<{
   modelValue: string;
@@ -24,12 +25,12 @@ onMounted(async () => {
     <Field
       ref="inputRef"
       :model-value="modelValue"
-      @update:model-value="emit('update:modelValue', $event)"
-      @keydown.enter="emit('enter')"
       :placeholder="placeholder"
       :type="inputType"
       :formatter="formatter"
       class="prompt-input"
+      @update:model-value="emit('update:modelValue', $event)"
+      @keydown.enter="emit('enter')"
     />
   </div>
 </template>

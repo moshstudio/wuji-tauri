@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { PhotoDetail, PhotoItem } from '@wuji-tauri/source-extension';
 import { LoadImage } from '@wuji-tauri/components/src';
-import WNavbar from '@/components/header/WNavbar.vue';
 import { computed, watch } from 'vue';
+import WNavbar from '@/components/header/WNavbar.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -64,7 +64,7 @@ watch(
       </div>
     </main>
     <main v-else class="flex flex-col items-center justify-center">
-      <van-loading></van-loading>
+      <van-loading />
     </main>
     <van-row
       v-if="photoDetail?.totalPage && photoDetail?.totalPage > 1"

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import {
+import type {
   MarketSource,
   MarketSourceContent,
 } from '@wuji-tauri/source-extension';
@@ -26,7 +25,7 @@ defineProps<{
     :save="save"
     :click-source-content="clickSourceContent"
     :delete-source-content="deleteSourceContent"
-  ></AppMySourceEdit>
+  />
 </template>
 
 <style scoped lang="less"></style>

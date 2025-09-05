@@ -85,12 +85,12 @@ async function search(keyword, pageNo) {
   pageNo ||= 1;
   const url = `${this.baseUrl}api/v1/comic1/search`;
   const params = new URLSearchParams({
-    keyword: keyword,
+    keyword,
     page: pageNo,
     size: 20,
   });
 
-  const response = await this.fetch(url + '?' + params.toString());
+  const response = await this.fetch(`${url}?${params.toString()}`);
   const json = await response.json();
 
   const list = json.data.comic_list.map((item) => {

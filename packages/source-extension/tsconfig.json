@@ -1,11 +1,11 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    // 子项目特定的配置，会覆盖主项目的配置
-    "outDir": "./dist",
     "paths": {
       "@se/*": ["./src/*"]
-    }
+    },
+    // 子项目特定的配置，会覆盖主项目的配置
+    "outDir": "./dist"
   },
 
   "include": ["src/**/*.ts"],

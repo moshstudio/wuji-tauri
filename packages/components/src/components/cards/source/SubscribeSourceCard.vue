@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import {
-  SourceType,
+import type {
   SubscribeItem,
   SubscribeSource,
 } from '@wuji-tauri/source-extension';
+import { SourceType } from '@wuji-tauri/source-extension';
 
 defineProps<{
   source: SubscribeSource;
@@ -11,7 +11,7 @@ defineProps<{
   onClick: (source: SubscribeSource, item: SubscribeItem) => void;
 }>();
 
-const getTypeProperty = (type: SourceType) => {
+function getTypeProperty(type: SourceType) {
   switch (type) {
     case SourceType.Book:
       return {
@@ -50,7 +50,7 @@ const getTypeProperty = (type: SourceType) => {
         textColor: '#4338ca',
       };
   }
-};
+}
 </script>
 
 <template>
@@ -69,7 +69,7 @@ const getTypeProperty = (type: SourceType) => {
       </div>
     </template>
     <template #value>
-      <slot name="right"></slot>
+      <slot name="right" />
       <!-- <div class="flex items-center gap-3">
         <div
           class="van-haptics-feedback rounded p-1 text-white"

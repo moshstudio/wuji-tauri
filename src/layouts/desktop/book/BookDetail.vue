@@ -22,7 +22,7 @@ withDefaults(
     :in-shelf="inShelf"
     :to-chapter="toChapter"
     :add-to-shelf="addToShelf"
-  ></AppBookDetail>
+  />
 </template>
 
 <style scoped lang="less"></style>

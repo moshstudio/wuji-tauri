@@ -1,21 +1,20 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import { VideoPlayerState } from '@videojs-player/vue';
-import { Icon } from '@iconify/vue';
-import type videojs from 'video.js';
-import * as commands from 'tauri-plugin-commands-api';
-import { AnyGestureEventTypes } from '@vueuse/gesture';
-import {
+import type { VideoPlayerState } from '@videojs-player/vue';
+import type { AnyGestureEventTypes } from '@vueuse/gesture';
+import type {
   VideoEpisode,
   VideoItem,
   VideoResource,
   VideoSource,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
+import type videojs from 'video.js';
+import { Icon } from '@iconify/vue';
+import * as commands from 'tauri-plugin-commands-api';
 import { reactive, ref } from 'vue';
-import { updateReactive } from '@/utils';
 import { router } from '@/router';
 import { useBackStore } from '@/store';
+import { updateReactive } from '@/utils';
 
 const props = withDefaults(
   defineProps<{
@@ -83,13 +82,13 @@ const longPressOptions = reactive({
   timer: undefined as NodeJS.Timeout | undefined,
 });
 
-const longPressHandler = (dragState: AnyGestureEventTypes['drag']) => {
+function longPressHandler(dragState: AnyGestureEventTypes['drag']) {
   if (dragState.first) {
     longPressOptions.timer = setTimeout(() => {
       isShowing.value = true;
       longPressOptions.isPressing = true;
       longPressOptions.timer = undefined;
-      commands.vibrate(50);
+      commands.vibrate(25);
       props.player?.playbackRate(2);
       props.player?.play();
     }, 1000);
@@ -112,7 +111,7 @@ const longPressHandler = (dragState: AnyGestureEventTypes['drag']) => {
       longPressOptions.timer = undefined;
     }
   }
-};
+}
 
 const slideOptions = reactive({
   isSliding: false,
@@ -121,7 +120,7 @@ const slideOptions = reactive({
   slideElement: undefined as HTMLElement | undefined,
 });
 
-const dragHandler = (dragState: AnyGestureEventTypes['drag'], event: any) => {
+function dragHandler(dragState: AnyGestureEventTypes['drag'], event: any) {
   if (dragState.first && dragState.axis != 'y') {
     updateReactive(slideOptions, {
       isSliding: true,
@@ -163,20 +162,20 @@ const dragHandler = (dragState: AnyGestureEventTypes['drag'], event: any) => {
         slideOptions.startPosition,
     ),
   );
-};
+}
 </script>
 
 <template>
   <div
+    v-drag="longPressHandler"
     class="left-speed border-box absolute bottom-0 left-0 right-[calc(100%-60px)] top-0 rounded-r-[50%]"
     @click.stop
-    v-drag="longPressHandler"
-  ></div>
+  />
   <div
+    v-drag="longPressHandler"
     class="right-speed border-box absolute bottom-0 left-[calc(100%-60px)] right-0 top-0 rounded-l-[50%]"
     @click.stop
-    v-drag="longPressHandler"
-  ></div>
+  />
   <transition
     enter-active-class="transition-all duration-300 ease-out"
     enter-from-class="opacity-0"
@@ -279,14 +278,14 @@ const dragHandler = (dragState: AnyGestureEventTypes['drag'], event: any) => {
         </div>
         <div
           :ref="(el) => (slideOptions.slideElement = el as HTMLElement)"
+          v-drag="dragHandler"
           class="relative h-[10px] w-full cursor-pointer rounded-lg bg-gray-600/60"
           @click.stop
-          v-drag="dragHandler"
         >
           <div
             class="absolute left-0 h-[10px] rounded-lg bg-gray-100/60"
             :style="{ width: `${(videoPosition / videoDuration) * 100}%` }"
-          ></div>
+          />
         </div>
         <div
           class="pointer-events-none flex w-full items-center justify-between gap-4 px-4"

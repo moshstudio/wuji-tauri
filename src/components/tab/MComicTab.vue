@@ -5,10 +5,10 @@ import type {
   ComicsList,
 } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
+import MComicCard from '@wuji-tauri/components/src/components/cards/comic/MComicCard.vue';
 import { debounce } from 'lodash';
 import { nanoid } from 'nanoid';
 import { ref, watch } from 'vue';
-import MComicCard from '@wuji-tauri/components/src/components/cards/comic/MComicCard.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
 
 const props = defineProps<{
@@ -56,7 +56,7 @@ watch(
 </script>
 
 <template>
-  <div v-if="!source.list"></div>
+  <div v-if="!source.list" />
 
   <van-tabs
     v-else-if="Array.isArray(source.list)"

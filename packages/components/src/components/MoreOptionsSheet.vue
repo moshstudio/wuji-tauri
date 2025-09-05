@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import type { ActionSheetAction } from 'vant';
 
-const show = defineModel<boolean>();
-
 withDefaults(
   defineProps<{
     actions: ActionSheetAction[];
@@ -14,6 +12,8 @@ withDefaults(
     closeOnClickAction: true,
   },
 );
+
+const show = defineModel<boolean>();
 </script>
 
 <template>

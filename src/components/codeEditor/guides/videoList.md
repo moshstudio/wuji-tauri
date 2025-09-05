@@ -61,7 +61,7 @@ abstract getRecommendVideos(pageNo?: number, type?: string): Promise<VideosList 
 
 ```javascript
 async function getRecommendVideos(pageNo, type) {
-  let items = [
+  const items = [
     {
       name: '首页',
       tag: '',

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import MNavBar from './MNavBar.vue';
 import { useBackStore } from '@/store/backStore';
+import MNavBar from './MNavBar.vue';
 
 withDefaults(
   defineProps<{

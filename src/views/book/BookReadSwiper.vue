@@ -6,20 +6,21 @@ import type {
 } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
 import type { LineData, ReaderResult } from '@/utils/reader/types';
-import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
-
-import { useBookStore, useDisplayStore, useTTSStore } from '@/store';
-import { useElementResize } from '@/utils';
-
-import Reader from '@/utils/reader/reader-layout';
 import _ from 'lodash';
+
+import { storeToRefs } from 'pinia';
 import { get_system_font_scale } from 'tauri-plugin-commands-api';
 
+import { showToast } from 'vant';
 import { computed, nextTick, onActivated, onMounted, ref, watch } from 'vue';
+import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+
 import AppBookReadSwipe from '@/layouts/app/book/BookReadSwipe.vue';
 import DesktopBookReadSwipe from '@/layouts/desktop/book/BookReadSwipe.vue';
-import { storeToRefs } from 'pinia';
-import { showToast } from 'vant';
+import { useBookStore, useDisplayStore, useTTSStore } from '@/store';
+import { useElementResize } from '@/utils';
+import Reader from '@/utils/reader/reader-layout';
+import { onMountedOrActivated } from '@vant/use';
 
 const props = withDefaults(
   defineProps<{
@@ -49,6 +50,8 @@ const props = withDefaults(
 );
 
 const displayStore = useDisplayStore();
+const bookStore = useBookStore();
+const ttsStore = useTTSStore();
 const { showTabBar } = storeToRefs(displayStore);
 const checkIsPrev = ref(false);
 const checkTTS = ref(false);
@@ -68,12 +71,16 @@ const chapterIndex = computed(() => {
 });
 const chapterPagedContent = computed<ReaderResult>(() => {
   if (!props.chapterContent) return [];
-  const res = getPagedContent(props.chapterContent, props.chapter?.title);
+  return getPagedContent(props.chapterContent, props.chapter?.title);
+});
+
+// 新增 watch 来处理副作用逻辑
+watch(chapterPagedContent, (newContent) => {
   if (checkIsPrev.value) {
     checkIsPrev.value = false;
     nextTick(() => {
-      if (props.isPrev && res.length > 0) {
-        chapterPagedIndex.value = res.length - 1;
+      if (props.isPrev && newContent.length > 0) {
+        chapterPagedIndex.value = newContent.length - 1;
       } else {
         if (isNewOpen.value) {
           chapterPagedIndex.value = props.chapter?.readingPage || 0;
@@ -83,6 +90,7 @@ const chapterPagedContent = computed<ReaderResult>(() => {
       }
     });
   }
+
   if (checkTTS.value) {
     checkTTS.value = false;
     nextTick(() => {
@@ -92,8 +100,6 @@ const chapterPagedContent = computed<ReaderResult>(() => {
       }
     });
   }
-
-  return res;
 });
 
 const prevChapterPagedContent = computed<ReaderResult>(() => {
@@ -113,9 +119,6 @@ const nextChapterPagedContent = computed<ReaderResult>(() => {
   );
 });
 
-const bookStore = useBookStore();
-const ttsStore = useTTSStore();
-
 function getPagedContent(content: string, title?: string) {
   return Reader(content, {
     platform: 'browser', // 平台
@@ -128,7 +131,7 @@ function getPagedContent(content: string, title?: string) {
     lineHeight: bookStore.lineHeight, // 段落文字行高
     pGap: bookStore.readPGap, // 段落间距
     pIndent: 2,
-    title: title, // 标题
+    title, // 标题
     titleSize: bookStore.fontSize * 1.3 * fontScale.value, // 标题字体大小
     titleHeight: bookStore.lineHeight * 1.3, // 标题文字行高
     titleWeight: 'normal', // 标题文字字重
@@ -201,20 +204,18 @@ watch(showTabBar, async () => {
   }
 });
 
-const playTTS = () => {
+function playTTS() {
   if (!chapterPagedContent.value.length) {
     return;
   }
   const toNext = () => {
-    if (chapterPagedIndex.value == chapterPagedContent.value!.length - 1) {
+    if (chapterPagedIndex.value === chapterPagedContent.value!.length - 1) {
       // 去下一章
       nextChapter();
-      return;
     } else {
       // 去下一页
       chapterPagedIndex.value += 1;
       playTTS();
-      return;
     }
   };
   const playing = ttsStore.slideReadingContent;
@@ -287,7 +288,7 @@ const playTTS = () => {
       ttsStore.playbackRate,
     );
   }
-};
+}
 
 watch(
   () => props.chapter,
@@ -307,15 +308,11 @@ watch(chapterPagedContent, () => {
   }
 });
 
-onMounted(async () => {
+onMountedOrActivated(async () => {
   isNewOpen.value = true;
   fontScale.value = (await get_system_font_scale()) as number;
 });
 
-onActivated(async () => {
-  isNewOpen.value = true;
-  fontScale.value = (await get_system_font_scale()) as number;
-});
 </script>
 
 <template>
@@ -368,7 +365,7 @@ onActivated(async () => {
         :play-tts="playTTS"
       />
     </template>
-    <slot></slot>
+    <slot />
   </PlatformSwitch>
 </template>
 

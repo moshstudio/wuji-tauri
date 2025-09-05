@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { PhotoItem, PhotoShelf } from '@wuji-tauri/source-extension';
-import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
-import { usePhotoShelfStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import { computed, ref, triggerRef } from 'vue';
+import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppPhotoShelf from '@/layouts/app/photo/PhotoShelf.vue';
 import DesktopPhotoShelf from '@/layouts/desktop/photo/PhotoShelf.vue';
+import { usePhotoShelfStore } from '@/store';
 
 const shelfStore = usePhotoShelfStore();
 const { photoShelf } = storeToRefs(shelfStore);
@@ -44,7 +44,6 @@ function deleteSelected() {
     }
     removePhotoFromShelf(list, shelf);
   }
-  removePhotoFromShelf;
   selecteMode.value = false;
   triggerRef(photoShelf);
 }
@@ -63,7 +62,7 @@ function removePhotoFromShelf(
         v-model:active-index="activeIndex"
         v-model:selecte-mode="selecteMode"
         :create-shelf="createShelf"
-        :deleteShelf="deleteShelf"
+        :delete-shelf="deleteShelf"
         :delete-selected="deleteSelected"
       />
     </template>
@@ -72,7 +71,7 @@ function removePhotoFromShelf(
         v-model:active-index="activeIndex"
         v-model:selecte-mode="selecteMode"
         :create-shelf="createShelf"
-        :deleteShelf="deleteShelf"
+        :delete-shelf="deleteShelf"
         :delete-selected="deleteSelected"
       />
     </template>
@@ -81,7 +80,7 @@ function removePhotoFromShelf(
       title="删除图片收藏夹"
       :actions="deleteSheetActions"
       teleport="body"
-    ></van-action-sheet>
+    />
   </PlatformSwitch>
 </template>
 

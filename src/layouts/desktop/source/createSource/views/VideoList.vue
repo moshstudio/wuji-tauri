@@ -1,23 +1,13 @@
 <script setup lang="ts">
-import {
-  VideoExtension,
-  VideoList,
-  VideosList,
-} from '@wuji-tauri/source-extension';
-import { showFailToast } from 'vant';
-import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
-import { ref } from 'vue';
-import MPagination from '@/components/pagination/MPagination.vue';
+import type { VideoList, VideosList } from '@wuji-tauri/source-extension';
 import { MVideoCard } from '@wuji-tauri/components/src';
+import { VideoExtension } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
-
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
+import { showFailToast } from 'vant';
+import { ref } from 'vue';
+import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
+import MPagination from '@/components/pagination/MPagination.vue';
 
 const props = defineProps<{
   content: {
@@ -44,6 +34,13 @@ const props = defineProps<{
   log: (...args: any[]) => void;
 }>();
 
+enum RunStatus {
+  not_running = 'not_running',
+  running = 'running',
+  success = 'success',
+  error = 'error',
+}
+
 const runStatus = ref<RunStatus>(RunStatus.not_running);
 const errorMessage = ref('运行失败');
 const result = ref<VideosList | undefined>();
@@ -51,6 +48,7 @@ const tabKey = ref(nanoid());
 
 async function initLoad() {
   result.value = undefined;
+  tabActive.value = '';
   return await load(1);
 }
 
@@ -104,7 +102,7 @@ async function load(pageNo?: number, type?: string) {
   }
 }
 
-const loadTab = (index: number, pageNo?: number) => {
+function loadTab(index: number, pageNo?: number) {
   if (!result.value) return;
   let t: VideoList;
   if (Array.isArray(result.value)) {
@@ -113,11 +111,11 @@ const loadTab = (index: number, pageNo?: number) => {
     t = result.value;
   }
   load(pageNo ?? 1, t.type);
-};
+}
 
-const findPage = (name: string) => {
+function findPage(name: string) {
   return props.content.pages.find((page) => page.type === name);
-};
+}
 const tabActive = ref('');
 defineExpose({
   initLoad,
@@ -140,7 +138,7 @@ defineExpose({
       v-show="runStatus === RunStatus.success"
       class="flex flex-col overflow-auto"
     >
-      <div v-if="!result"></div>
+      <div v-if="!result" />
       <van-tabs
         v-else-if="Array.isArray(result)"
         :key="tabKey"
@@ -164,7 +162,6 @@ defineExpose({
               :to-page="(page: number) => loadTab(index, page)"
             />
           </van-row>
-          <van-loading v-if="!item.list?.length" class="p-2" />
           <div class="flex flex-col">
             <MVideoCard
               v-for="video in item.list"
@@ -173,6 +170,7 @@ defineExpose({
               :click="() => {}"
             />
           </div>
+          <van-loading v-if="!item.list?.length" class="p-2" />
         </van-tab>
       </van-tabs>
 

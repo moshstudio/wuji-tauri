@@ -1,29 +1,16 @@
 <script setup lang="ts">
-import {
+import type {
   SongInfo,
-  SongExtension,
   SongList,
   SongUrlMap,
 } from '@wuji-tauri/source-extension';
-import { showDialog, showFailToast, showNotify } from 'vant';
 import { LoadImage } from '@wuji-tauri/components/src';
-import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
-import { nextTick, ref } from 'vue';
 import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
 import fetch from '@wuji-tauri/fetch';
-
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
-const errorMessage = ref('运行失败');
-const audioRef = ref<HTMLAudioElement>();
-const item = ref<SongInfo>();
-const result = ref<SongUrlMap | string>();
+import { SongExtension } from '@wuji-tauri/source-extension';
+import { showDialog, showFailToast } from 'vant';
+import { nextTick, ref } from 'vue';
+import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
 
 const props = defineProps<{
   content: {
@@ -50,6 +37,19 @@ const props = defineProps<{
   close: () => void;
   log: (...args: any[]) => void;
 }>();
+
+enum RunStatus {
+  not_running = 'not_running',
+  running = 'running',
+  success = 'success',
+  error = 'error',
+}
+
+const runStatus = ref<RunStatus>(RunStatus.not_running);
+const errorMessage = ref('运行失败');
+const audioRef = ref<HTMLAudioElement>();
+const item = ref<SongInfo>();
+const result = ref<SongUrlMap | string>();
 
 async function initLoad() {
   result.value = undefined;
@@ -130,7 +130,7 @@ async function load(pageNo: number) {
   }
 }
 
-const parseUrl = async (src: SongUrlMap | string): Promise<string> => {
+async function parseUrl(src: SongUrlMap | string): Promise<string> {
   if (typeof src === 'string') {
     return src;
   } else {
@@ -145,11 +145,11 @@ const parseUrl = async (src: SongUrlMap | string): Promise<string> => {
       return url;
     }
   }
-};
+}
 
-const findPage = (name: string) => {
+function findPage(name: string) {
   return props.content.pages.find((page) => page.type === name);
-};
+}
 
 defineExpose({
   initLoad,
@@ -194,7 +194,7 @@ defineExpose({
             {{ joinSongArtists(item.artists) }}
           </div>
         </div>
-        <audio ref="audioRef" controls></audio>
+        <audio ref="audioRef" controls />
       </div>
     </div>
   </div>

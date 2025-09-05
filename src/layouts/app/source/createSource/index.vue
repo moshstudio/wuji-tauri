@@ -4,7 +4,7 @@ import MNavBar from '@/components/header/MNavBar.vue';
 
 <template>
   <div class="relative flex h-full w-full flex-col overflow-hidden">
-    <MNavBar title="创建订阅源"></MNavBar>
+    <MNavBar title="创建订阅源" />
     <div
       class="flex w-full flex-grow flex-col overflow-y-auto bg-[--van-background] p-2"
     >

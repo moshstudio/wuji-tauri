@@ -1,18 +1,12 @@
 <script setup lang="ts">
-import { PhotoExtension, PhotoList } from '@wuji-tauri/source-extension';
-import { showFailToast, showNotify } from 'vant';
-import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
+import type { PhotoList } from '@wuji-tauri/source-extension';
+import { MPhotoCard } from '@wuji-tauri/components/src';
+import { PhotoExtension } from '@wuji-tauri/source-extension';
+import { showFailToast } from 'vant';
 import { ref } from 'vue';
-import MPagination from '@/components/pagination/MPagination.vue';
+import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import { LoadImage, MPhotoCard } from '@wuji-tauri/components/src';
-
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
+import MPagination from '@/components/pagination/MPagination.vue';
 
 const props = defineProps<{
   content: {
@@ -39,8 +33,15 @@ const props = defineProps<{
   log: (...args: any[]) => void;
 }>();
 
+enum RunStatus {
+  not_running = 'not_running',
+  running = 'running',
+  success = 'success',
+  error = 'error',
+}
+
 const runStatus = ref<RunStatus>(RunStatus.not_running);
-let cls: PhotoExtension | undefined = undefined;
+let cls: PhotoExtension | undefined;
 const errorMessage = ref('运行失败');
 const result = ref<PhotoList | undefined>();
 
@@ -91,9 +92,9 @@ async function load(pageNo: number) {
   }
 }
 
-const findPage = (name: string) => {
+function findPage(name: string) {
   return props.content.pages.find((page) => page.type === name);
-};
+}
 
 defineExpose({
   initLoad,
@@ -123,7 +124,7 @@ defineExpose({
       </div>
       <ResponsiveGrid2 min-width="80" max-width="100">
         <template v-for="photo in result?.list" :key="photo.id">
-          <MPhotoCard :item="photo" @click="() => {}"></MPhotoCard>
+          <MPhotoCard :item="photo" @click="() => {}" />
         </template>
       </ResponsiveGrid2>
     </div>

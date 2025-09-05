@@ -4,17 +4,17 @@ import type {
   PhotoItem,
 } from '@wuji-tauri/source-extension';
 import type { PhotoSource } from '@/types';
-import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
-import { useDisplayStore, usePhotoShelfStore, useStore } from '@/store';
-import { downloadFile, retryOnFalse } from '@/utils';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { BaseDirectory } from '@tauri-apps/plugin-fs';
 import _ from 'lodash';
 import { showFailToast, showSuccessToast, showToast } from 'vant';
 import { computed, ref, watch } from 'vue';
+import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppPhotoDetail from '@/layouts/app/photo/PhotoDetail.vue';
 import DesktopPhotoDetail from '@/layouts/desktop/photo/PhotoDetail.vue';
+import { useDisplayStore, usePhotoShelfStore, useStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
-import { BaseDirectory } from '@tauri-apps/plugin-fs';
+import { downloadFile, retryOnFalse } from '@/utils';
+import { createCancellableFunction } from '@/utils/cancelableFunction';
 
 const { id, sourceId } = defineProps({
   id: String,
@@ -120,13 +120,12 @@ async function savePic(url: string, headers?: Record<string, string>) {
     ? BaseDirectory.Picture
     : BaseDirectory.Download;
   const res = await downloadFile(url, {
-    headers: headers,
+    headers,
     suffix: 'png',
-    baseDir: baseDir,
+    baseDir,
   });
   if (!res) {
     showFailToast('保存失败');
-    return;
   } else {
     showSuccessToast('已保存');
   }

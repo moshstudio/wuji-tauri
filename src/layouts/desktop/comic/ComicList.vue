@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import type { ComicItem } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
+import { ref } from 'vue';
 import WHeader from '@/components/header/WHeader.vue';
 import WComicTab from '@/components/tab/WComicTab.vue';
+import { router } from '@/router';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
-import { ref } from 'vue';
-import { router } from '@/router';
-
-const searchValue = defineModel('searchValue', { type: String, default: '' });
 
 const props = defineProps<{
   comicSources: ComicSource[];
@@ -18,6 +16,8 @@ const props = defineProps<{
   toDetail: (source: ComicSource, item: ComicItem) => void;
   openBaseUrl: (item: ComicSource) => void;
 }>();
+
+const searchValue = defineModel('searchValue', { type: String, default: '' });
 
 const displayStore = useDisplayStore();
 

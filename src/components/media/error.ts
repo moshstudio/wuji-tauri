@@ -1,4 +1,4 @@
-export const getErrorDisplayHTML = (errorCode: number) => {
+export function getErrorDisplayHTML(errorCode: number) {
   const errorConfig = {
     1: {
       title: '播放已中止',
@@ -48,7 +48,7 @@ export const getErrorDisplayHTML = (errorCode: number) => {
   //     </div>
   //   </div>
   // `;
-};
+}
 
 // 使用示例
 // player.value!.errorDisplay.contentEl().innerHTML = getErrorDisplayHTML(error.code);

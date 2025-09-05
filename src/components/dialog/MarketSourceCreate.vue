@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { useDisplayStore, useStore } from '@/store';
-import { permissionRules } from '@/utils/marketSource';
+import type { FormInstance } from 'vant';
 import { MoreOptionsSheet } from '@wuji-tauri/components/src';
 import { MarketSourcePermission } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
-import { FormInstance, showToast } from 'vant';
-import { computed, reactive, ref } from 'vue';
-
-const show = defineModel<boolean>('show');
+import { showToast } from 'vant';
+import { reactive, ref } from 'vue';
+import { permissionRules } from '@/utils/marketSource';
 
 const props = defineProps<{
   create: (
@@ -16,6 +14,8 @@ const props = defineProps<{
     isPublic: boolean,
   ) => void;
 }>();
+
+const show = defineModel<boolean>('show');
 
 const formRef = ref<FormInstance>();
 
@@ -28,7 +28,7 @@ const formData = reactive({
 const nameRules = [
   { required: true, message: '请输入名称' },
   {
-    pattern: /^[a-zA-Z0-9_\u4e00-\u9fa5]{2,80}$/,
+    pattern: /^[\w\u4E00-\u9FA5]{2,80}$/,
     message: '名称只能包含字母、数字、下划线，2-80个字符',
   },
 ];
@@ -54,9 +54,9 @@ const publicOptions = [
   },
 ];
 
-const refreshPermission = (...permissions: MarketSourcePermission[]) => {
+function refreshPermission(...permissions: MarketSourcePermission[]) {
   formData.permissions = permissions;
-};
+}
 
 async function beforeClose(action: string): Promise<boolean> {
   if (action === 'confirm') {
@@ -81,7 +81,7 @@ async function beforeClose(action: string): Promise<boolean> {
     show-cancel-button
     :before-close="beforeClose"
   >
-    <van-form class="p-4" ref="formRef">
+    <van-form ref="formRef" class="p-4">
       <van-field
         v-model="formData.name"
         name="name"
@@ -99,25 +99,25 @@ async function beforeClose(action: string): Promise<boolean> {
         clickable
         is-link
         @click="() => (showPermissionMoreOptions = true)"
-      ></van-cell>
+      />
       <van-cell
         title="是否公开"
         :value="formData.isPublic ? '公开' : '私有'"
         clickable
         is-link
         @click="() => (showPublicMoreOptions = true)"
-      ></van-cell>
+      />
     </van-form>
     <MoreOptionsSheet
-      title="使用权限"
       v-model="showPermissionMoreOptions"
+      title="使用权限"
       :actions="permissionOptions"
-    ></MoreOptionsSheet>
+    />
     <MoreOptionsSheet
-      title="是否公开"
       v-model="showPublicMoreOptions"
+      title="是否公开"
       :actions="publicOptions"
-    ></MoreOptionsSheet>
+    />
   </van-dialog>
 </template>
 

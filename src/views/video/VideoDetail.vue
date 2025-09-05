@@ -1,22 +1,14 @@
 <script setup lang="ts">
-import _ from 'lodash';
 import type {
   VideoEpisode,
   VideoItem,
   VideoResource,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
-import type { VideoSource } from '@/types';
 import type videojs from 'video.js';
-import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
-import {
-  useDisplayStore,
-  useStore,
-  useBackStore,
-  useVideoShelfStore,
-} from '@/store';
-import { retryOnFalse } from '@/utils';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
+import type { VideoSource } from '@/types';
+import _ from 'lodash';
+import { storeToRefs } from 'pinia';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 import { showFailToast, showToast } from 'vant';
 import {
@@ -28,10 +20,17 @@ import {
   watch,
 } from 'vue';
 import { useRoute } from 'vue-router';
+import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppVideoDetail from '@/layouts/app/video/VideoDetail.vue';
 import DesktopVideoDetail from '@/layouts/desktop/video/VideoDetail.vue';
-import { storeToRefs } from 'pinia';
-import * as commands from 'tauri-plugin-commands-api';
+import {
+  useBackStore,
+  useDisplayStore,
+  useStore,
+  useVideoShelfStore,
+} from '@/store';
+import { retryOnFalse } from '@/utils';
+import { createCancellableFunction } from '@/utils/cancelableFunction';
 
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
@@ -46,6 +45,7 @@ const backStore = useBackStore();
 const displayStore = useDisplayStore();
 const shelfStore = useVideoShelfStore();
 const { videoShelf } = storeToRefs(shelfStore);
+const { showVideoComponent } = storeToRefs(displayStore);
 
 const videoPlayer = ref<VideoJsPlayer>();
 
@@ -246,7 +246,7 @@ async function playPrev(args: any) {
   }
   updateVideoPlayInfo(0);
   const index = playingResource.value.episodes.findIndex(
-    (item) => item.id == playingEpisode.value!.id,
+    (item) => item.id === playingEpisode.value!.id,
   );
 
   if (index === undefined || index === -1) return;
@@ -353,6 +353,7 @@ onDeactivated(() => {
     <template #app>
       <AppVideoDetail
         v-model:player="videoPlayer"
+        v-model:show-video-component="showVideoComponent"
         :video-sources="videoSources"
         :video-source="videoSource"
         :video-item="videoItem"
@@ -374,6 +375,7 @@ onDeactivated(() => {
     <template #desktop>
       <DesktopVideoDetail
         v-model:player="videoPlayer"
+        v-model:show-video-component="showVideoComponent"
         :video-sources="videoSources"
         :video-source="videoSource"
         :video-item="videoItem"
@@ -393,10 +395,10 @@ onDeactivated(() => {
       />
     </template>
     <van-action-sheet
-      title="添加到收藏"
       v-model:show="showAddShelfSheet"
+      title="添加到收藏"
       :actions="addShelfActions"
-    ></van-action-sheet>
+    />
   </PlatformSwitch>
 </template>
 

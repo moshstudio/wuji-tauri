@@ -1,8 +1,8 @@
+import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
 import { fetch } from '@wuji-tauri/fetch';
-import { lyric as neteaseLyric, search as neteaseSearch } from './neteaseMusic';
 import kuwoMusic from './kuwoMusic';
 import miguMusic from './miguMusic';
-import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
+import { lyric as neteaseLyric, search as neteaseSearch } from './neteaseMusic';
 
 const cache = new Map<string, Lyric>();
 

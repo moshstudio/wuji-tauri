@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { BookItem } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
+import { storeToRefs } from 'pinia';
+import { ref, triggerRef } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+import AppBookList from '@/layouts/app/book/BookList.vue';
+import DesktopBookList from '@/layouts/desktop/book/BookList.vue';
 import { router } from '@/router';
 import { useDisplayStore, useStore } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
-import { storeToRefs } from 'pinia';
-import { ref, triggerRef } from 'vue';
-import AppBookList from '@/layouts/app/book/BookList.vue';
-import DesktopBookList from '@/layouts/desktop/book/BookList.vue';
 
 const store = useStore();
 const displayStore = useDisplayStore();

@@ -1,12 +1,12 @@
 <script setup lang="ts">
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { fetchHotApi } from '@wuji-tauri/hot-api';
-import { useDisplayStore, useStore } from '@/store';
-import { sleep } from '@/utils';
-import { open } from '@tauri-apps/plugin-shell';
 import { storeToRefs } from 'pinia';
 import { showFailToast } from 'vant';
 import { onMounted, ref } from 'vue';
 import WTaichiAnimate from '@/components/animate/WTaichiAnimate.vue';
+import { useDisplayStore, useStore } from '@/store';
+import { sleep } from '@/utils';
 
 const store = useStore();
 const { hotItems } = storeToRefs(store);
@@ -14,7 +14,7 @@ const { hotItems } = storeToRefs(store);
 const active = ref(0);
 async function openInBrowser(url: string) {
   try {
-    await open(url);
+    await openUrl(url);
   } catch (error) {
     console.error('Failed to open link:', error);
     showFailToast('打开失败,请尝试重置默认浏览器');

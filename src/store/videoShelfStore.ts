@@ -6,7 +6,7 @@ import type {
   VideoShelf,
 } from '@wuji-tauri/source-extension';
 
-import { useStorageAsync } from '@vueuse/core';
+import { debounceFilter, useStorageAsync } from '@vueuse/core';
 
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
@@ -15,9 +15,11 @@ import { defineStore } from 'pinia';
 
 import { showToast } from 'vant';
 import { createKVStore } from './utils';
+import { estimateJsonSize } from '@/utils';
 
 export const useVideoShelfStore = defineStore('videoShelfStore', () => {
   const kvStorage = createKVStore('videoShelfStore');
+  const storage = kvStorage.storage;
 
   // 影视收藏⬇️
   const videoShelf = useStorageAsync<VideoShelf[]>(
@@ -30,7 +32,10 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
         createTime: Date.now(),
       },
     ],
-    kvStorage.storage,
+    storage,
+    {
+      eventFilter: debounceFilter(500),
+    },
   );
 
   const createVideoShelf = (name: string) => {
@@ -176,7 +181,19 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
     if (!shelf) return;
     _.remove(shelf.videos, (item) => item.video.id === videoItem.id);
   };
-  const clear = () => {
+  const syncData = () => {
+    const clone = _.cloneDeep(videoShelf.value);
+    clone.forEach((shelf) => {
+      shelf.videos.forEach((video) => {
+        video.video.resources = undefined;
+      });
+    });
+    return clone;
+  };
+  const loadSyncData = async (data: VideoShelf[]) => {
+    videoShelf.value = data;
+  };
+  const clear = async () => {
     videoShelf.value = [
       {
         id: nanoid(),
@@ -185,9 +202,11 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
         createTime: Date.now(),
       },
     ];
+    await storage.clear();
   };
 
   return {
+    storage,
     videoShelf,
     createVideoShelf,
     removeVideoShelf,
@@ -197,6 +216,8 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
     getVideoFromShelf,
     updateVideoPlayInfo,
     deleteVideoFromShelf,
+    syncData,
+    loadSyncData,
     clear,
   };
 });

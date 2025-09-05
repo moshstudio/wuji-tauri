@@ -39,10 +39,10 @@ pub fn run() {
             Ok(())
         })
         .plugin(tauri_plugin_commands::init())
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_mediasession::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_keep_screen_on::init());
 
     // 仅在桌面端添加

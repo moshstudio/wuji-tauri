@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { useStore, useSubscribeSourceStore } from '@/store';
+import type { SubscribeSource } from '@wuji-tauri/source-extension';
+import { computed } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppManageSourceContentEdit from '@/layouts/app/source/ManageSourceContentEdit.vue';
 import DesktopManageSourceContentEdit from '@/layouts/desktop/source/ManageSourceContentEdit.vue';
-import { computed } from 'vue';
-import { SubscribeSource } from '@wuji-tauri/source-extension';
-import _ from 'lodash';
+import { useStore, useSubscribeSourceStore } from '@/store';
 
 const props = defineProps<{
   sourceId?: string;
@@ -26,14 +25,14 @@ const sourceContent = computed(() => {
   );
 });
 
-const save = async (
+async function save(
   source: SubscribeSource,
   sourceContent: {
     id: string;
     name?: string;
     code?: string;
   },
-) => {
+) {
   const item = await subscribeStore.updateSubscribeSourceContent(
     source,
     sourceContent,
@@ -44,7 +43,7 @@ const save = async (
       found.item = item;
     }
   }
-};
+}
 </script>
 
 <template>
@@ -54,14 +53,14 @@ const save = async (
         :source="subscribeSource"
         :source-content="sourceContent"
         :save="save"
-      ></AppManageSourceContentEdit>
+      />
     </template>
     <template #desktop>
       <DesktopManageSourceContentEdit
         :source="subscribeSource"
         :source-content="sourceContent"
         :save="save"
-      ></DesktopManageSourceContentEdit>
+      />
     </template>
   </PlatformSwitch>
 </template>

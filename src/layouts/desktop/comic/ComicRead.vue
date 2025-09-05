@@ -5,14 +5,14 @@ import type {
   ComicItem,
 } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
-import { LoadImage } from '@wuji-tauri/components/src';
-import { useDisplayStore } from '@/store';
 import { Icon } from '@iconify/vue';
-import { nextTick, onActivated, onDeactivated, ref, watch } from 'vue';
-import { useBackStore } from '@/store/backStore';
+import { LoadImage } from '@wuji-tauri/components/src';
 import { storeToRefs } from 'pinia';
-import { router } from '@/router';
+import { nextTick, onActivated, onDeactivated, ref, watch } from 'vue';
 import AddShelfButton from '@/components/button/AddShelfButton.vue';
+import { router } from '@/router';
+import { useDisplayStore } from '@/store';
+import { useBackStore } from '@/store/backStore';
 
 defineProps<{
   comic?: ComicItem;
@@ -47,14 +47,14 @@ const bubbleOffset = ref({
 // });
 
 const isShowChapterList = ref(false);
-const showChapterList = async () => {
+async function showChapterList() {
   isShowChapterList.value = true;
   await nextTick();
   document.querySelector('.reading-chapter')?.scrollIntoView({
     block: 'center',
     behavior: 'instant',
   });
-};
+}
 
 const showMenu = ref(false);
 watch(

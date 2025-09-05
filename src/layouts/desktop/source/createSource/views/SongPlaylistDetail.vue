@@ -1,27 +1,13 @@
 <script setup lang="ts">
-import {
-  PlaylistInfo,
-  SongExtension,
-  PlaylistList,
-} from '@wuji-tauri/source-extension';
-import { showDialog, showFailToast, showNotify } from 'vant';
-import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
-import { ref } from 'vue';
-import MPagination from '@/components/pagination/MPagination.vue';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import LoadImage from '@wuji-tauri/components/src/components/LoadImage.vue';
+import type { PlaylistInfo, PlaylistList } from '@wuji-tauri/source-extension';
 import { WSongCard } from '@wuji-tauri/components/src';
-
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
-const errorMessage = ref('运行失败');
-const result = ref<PlaylistInfo>();
+import LoadImage from '@wuji-tauri/components/src/components/LoadImage.vue';
+import { SongExtension } from '@wuji-tauri/source-extension';
+import { showDialog, showFailToast } from 'vant';
+import { ref } from 'vue';
+import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
 
 const props = defineProps<{
   content: {
@@ -47,6 +33,17 @@ const props = defineProps<{
   close: () => void;
   log: (...args: any[]) => void;
 }>();
+
+enum RunStatus {
+  not_running = 'not_running',
+  running = 'running',
+  success = 'success',
+  error = 'error',
+}
+
+const runStatus = ref<RunStatus>(RunStatus.not_running);
+const errorMessage = ref('运行失败');
+const result = ref<PlaylistInfo>();
 
 async function initLoad() {
   result.value = undefined;
@@ -124,9 +121,9 @@ async function load(pageNo: number) {
   }
 }
 
-const findPage = (name: string) => {
+function findPage(name: string) {
   return props.content.pages.find((page) => page.type === name);
-};
+}
 
 defineExpose({
   initLoad,
@@ -203,7 +200,7 @@ defineExpose({
               :remove-from-like-shelf="() => {}"
               :add-to-shelf="() => {}"
               :show-more-options="() => {}"
-            ></WSongCard>
+            />
           </template>
         </ResponsiveGrid2>
       </div>

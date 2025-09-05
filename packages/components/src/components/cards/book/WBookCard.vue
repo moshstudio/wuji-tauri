@@ -9,7 +9,7 @@ defineProps<{
 </script>
 
 <template>
-  <MBookCard v-bind="$attrs" :book="book" :click="click"></MBookCard>
+  <MBookCard v-bind="$attrs" :book="book" :click="click" />
 </template>
 
 <!-- <script setup lang="ts">

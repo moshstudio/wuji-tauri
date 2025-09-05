@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { useDisplayStore, useStore } from '@/store';
+import { storeToRefs } from 'pinia';
 import { ref } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppSetting from '@/layouts/app/setting/index.vue';
 import DesktopSetting from '@/layouts/desktop/setting/index.vue';
-import { storeToRefs } from 'pinia';
+import { useDisplayStore, useStore } from '@/store';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -24,14 +24,14 @@ function clearData() {
         v-model:is-dark="isDark"
         :clear-cache="store.clearCache"
         :clear-data="clearData"
-      ></AppSetting>
+      />
     </template>
     <template #desktop>
       <DesktopSetting
         v-model:is-dark="isDark"
         :clear-cache="store.clearCache"
         :clear-data="clearData"
-      ></DesktopSetting>
+      />
     </template>
     <van-action-sheet
       v-model:show="showConfirmClearData"

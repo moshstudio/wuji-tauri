@@ -1,3 +1,18 @@
+<script setup lang="ts">
+const props = defineProps<{
+  likeAction: (like: boolean) => void;
+}>();
+const count = defineModel<number>('count', { default: 0 });
+const isLiked = defineModel<boolean>('isLiked', { default: false });
+function likeAction() {
+  if (!isLiked.value) {
+    isLiked.value = true;
+    count.value++;
+    props.likeAction(true);
+  }
+}
+</script>
+
 <template>
   <van-button
     :icon="isLiked ? 'like' : 'like-o'"
@@ -11,21 +26,5 @@
     {{ count }}
   </van-button>
 </template>
-
-<script setup lang="ts">
-const count = defineModel<number>('count', { default: 0 });
-const isLiked = defineModel<boolean>('isLiked', { default: false });
-const props = defineProps<{
-  likeAction: (like: boolean) => void;
-}>();
-
-const likeAction = () => {
-  if (!isLiked.value) {
-    isLiked.value = true;
-    count.value++;
-    props.likeAction(true);
-  }
-};
-</script>
 
 <style scoped lang="less"></style>

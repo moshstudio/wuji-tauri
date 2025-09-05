@@ -52,7 +52,7 @@ abstract getBookDetail(item: BookItem): Promise<BookItem | null>;
 ```javascript
 async function getBookDetail(item) {
   const chapters = [];
-  let url = item.url;
+  const url = item.url;
   const document = await this.fetchDom(url);
   let elements = Array.from(document.querySelectorAll('.chapterList div:nth-child(4) a').values());
   if (!elements.length) {

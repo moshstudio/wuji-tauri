@@ -37,7 +37,7 @@ abstract getRecommendList(pageNo?: number): Promise<PhotoList | null>;
 ```javascript
 async function getRecommendList(pageNo) {
   pageNo ||= 1;
-  let url = `${this.baseUrl}page/${pageNo}/`;
+  const url = `${this.baseUrl}page/${pageNo}/`;
   const document = await this.fetchDom(url);
   const list = await this.queryPhotoElements(document, {
     element: '.image-container .excerpt',

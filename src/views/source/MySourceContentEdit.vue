@@ -1,16 +1,15 @@
 <script setup lang="ts">
-import { useBackStore, useServerStore } from '@/store';
-import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
-import AppMySourceContentEdit from '@/layouts/app/source/MySourceContentEdit.vue';
-import DesktopMySourceContentEdit from '@/layouts/desktop/source/MySourceContentEdit.vue';
-import { computed, onActivated, onMounted, ref, watch } from 'vue';
-import { storeToRefs } from 'pinia';
-import {
+import type {
   MarketSource,
   MarketSourceContent,
 } from '@wuji-tauri/source-extension';
-import _ from 'lodash';
+import { storeToRefs } from 'pinia';
 import { showToast } from 'vant';
+import { computed, onActivated, onMounted, watch } from 'vue';
+import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+import AppMySourceContentEdit from '@/layouts/app/source/MySourceContentEdit.vue';
+import DesktopMySourceContentEdit from '@/layouts/desktop/source/MySourceContentEdit.vue';
+import { useBackStore, useServerStore } from '@/store';
 
 const props = defineProps<{
   sourceId?: string;
@@ -31,19 +30,15 @@ const sourceContent = computed(() => {
   );
 });
 
-const save = async (
-  source: MarketSource,
-  sourceContent: MarketSourceContent,
-) => {
+async function save(source: MarketSource, sourceContent: MarketSourceContent) {
   await serverStore.updateMarketSourceContent(source, sourceContent);
-};
+}
 
 onMounted(() => {
   if (!serverStore.userInfo) {
     backStore.back().then(() => {
       showToast('请先登录');
     });
-    return;
   }
 });
 onActivated(() => {
@@ -51,9 +46,19 @@ onActivated(() => {
     backStore.back().then(() => {
       showToast('请先登录');
     });
-    return;
   }
 });
+watch(
+  sourceContent,
+  (sourceContent) => {
+    console.log(sourceContent);
+
+    if (!sourceContent) {
+      backStore.back();
+    }
+  },
+  { once: true },
+);
 </script>
 
 <template>
@@ -63,14 +68,14 @@ onActivated(() => {
         :source="source"
         :source-content="sourceContent"
         :save="save"
-      ></AppMySourceContentEdit>
+      />
     </template>
     <template #desktop>
       <DesktopMySourceContentEdit
         :source="source"
         :source-content="sourceContent"
         :save="save"
-      ></DesktopMySourceContentEdit>
+      />
     </template>
   </PlatformSwitch>
 </template>

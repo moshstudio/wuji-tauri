@@ -1,6 +1,6 @@
 import type { Directive, DirectiveBinding } from 'vue';
-import { useDisplayStore } from '@/store';
 import { onUnmounted } from 'vue';
+import { useDisplayStore } from '@/store';
 
 export default <Directive<HTMLElement, string>>{
   mounted(el: HTMLElement, binding: DirectiveBinding) {

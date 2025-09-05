@@ -1,30 +1,22 @@
 import type { HotItem } from '@wuji-tauri/hot-api';
 import type {
-  Extension,
-  MarketSource,
-  MarketSourceContent,
-} from '@wuji-tauri/source-extension';
-
-import type {
   BookChapter,
   BookExtension,
   BookItem,
   BooksList,
-} from '@wuji-tauri/source-extension';
-import type {
   ComicChapter,
   ComicContent,
   ComicExtension,
   ComicItem,
   ComicsList,
-} from '@wuji-tauri/source-extension';
-import type { PhotoExtension, PhotoItem } from '@wuji-tauri/source-extension';
-import type {
+  Extension,
+  MarketSource,
+  MarketSourceContent,
+  PhotoExtension,
+  PhotoItem,
   PlaylistInfo,
   SongExtension,
   SongInfo,
-} from '@wuji-tauri/source-extension';
-import type {
   VideoEpisode,
   VideoExtension,
   VideoItem,
@@ -32,6 +24,7 @@ import type {
   VideosList,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
+
 import type {
   BookSource,
   ComicSource,
@@ -43,24 +36,19 @@ import type {
   SubscribeSource,
   VideoSource,
 } from '@/types';
-import { loadBookExtensionString } from '@wuji-tauri/source-extension';
-import TestBookExtension from '@/test/book/test';
-import { loadComicExtensionString } from '@wuji-tauri/source-extension';
-import TestComicExtension from '@/test/comic/test';
-import { loadPhotoExtensionString } from '@wuji-tauri/source-extension';
-import TestPhotoExtension from '@/test/photo/test';
-import { loadSongExtensionString } from '@wuji-tauri/source-extension';
-import TestSongExtension from '@/test/song/test';
-import { loadVideoExtensionString } from '@wuji-tauri/source-extension';
-import TestVideoExtension from '@/test/video/test';
-import { SourceType } from '@/types';
-import { DEFAULT_SOURCE_URL, sleep, tryCatchProxy } from '@/utils';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
-import { fetch } from '@wuji-tauri/fetch';
-import { useStorageAsync } from '@vueuse/core';
-import _ from 'lodash';
-import { defineStore } from 'pinia';
 import * as fs from '@tauri-apps/plugin-fs';
+import { debounceFilter, useStorageAsync } from '@vueuse/core';
+import { fetch } from '@wuji-tauri/fetch';
+import {
+  loadBookExtensionString,
+  loadComicExtensionString,
+  loadPhotoExtensionString,
+  loadSongExtensionString,
+  loadVideoExtensionString,
+  MarketSourcePermission,
+} from '@wuji-tauri/source-extension';
+import _ from 'lodash';
+import { defineStore, storeToRefs } from 'pinia';
 import {
   showConfirmDialog,
   showFailToast,
@@ -68,24 +56,34 @@ import {
   showSuccessToast,
   showToast,
 } from 'vant';
-import { onBeforeMount, ref, triggerRef } from 'vue';
+import { onBeforeMount, ref, triggerRef, watch } from 'vue';
+import { router } from '@/router';
+import TestBookExtension from '@/test/book/test';
+import TestComicExtension from '@/test/comic/test';
+import TestPhotoExtension from '@/test/photo/test';
+import TestSongExtension from '@/test/song/test';
+import TestVideoExtension from '@/test/video/test';
+import { SourceType } from '@/types';
+import { sleep, tryCatchProxy } from '@/utils';
+import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { useBookChapterStore } from './bookChaptersStore';
 import { useBookShelfStore } from './bookShelfStore';
 import { useBookStore } from './bookStore';
-import { useComicShelfStore } from './comicShelfStore';
 
+import { useComicShelfStore } from './comicShelfStore';
 import { useDisplayStore } from './displayStore';
 import { usePhotoShelfStore } from './photoShelfStore';
+import { useServerStore } from './serverStore';
 import { useSongCacheStore } from './songCacheStore';
 import { useSongShelfStore } from './songShelfStore';
+
 import { useSongStore } from './songStore';
 import { useSubscribeSourceStore } from './subscribeSourceStore';
-
+import { useTTSStore } from './ttsStore';
 import { createKVStore } from './utils';
 import { useVideoShelfStore } from './videoShelfStore';
-import { useServerStore } from './serverStore';
-import { useTTSStore } from './ttsStore';
-import { router } from '@/router';
+import { useSourceCreateStore } from './sourceCreateStore';
+import { isMembershipOrderValid } from '@/types/user';
 
 export const useStore = defineStore('store', () => {
   const hotItems = ref<HotItem[]>([]); // 热搜榜
@@ -157,6 +155,7 @@ export const useStore = defineStore('store', () => {
         }
       } catch (error) {
         console.log('加载扩展失败:', item);
+        showFailToast(`加载扩展失败: ${item.name}`);
         sourceClasses.set(idKey, null);
         return null;
       }
@@ -194,7 +193,7 @@ export const useStore = defineStore('store', () => {
         break;
     }
     if (!extensionClass) {
-      showToast(`添加 ${item.name} 订阅失败`);
+      showFailToast(`添加 ${item.name} 订阅失败`);
       sourceClasses.delete(idKey);
       return null;
     }
@@ -216,29 +215,44 @@ export const useStore = defineStore('store', () => {
     'photoSources',
     [],
     kvStorage.storage,
+    {
+      eventFilter: debounceFilter(1000),
+    },
   );
 
   const songSources = useStorageAsync<SongSource[]>(
     'songSources',
     [],
     kvStorage.storage,
+    {
+      eventFilter: debounceFilter(1000),
+    },
   );
 
   const bookSources = useStorageAsync<BookSource[]>(
     'bookSources',
     [],
     kvStorage.storage,
+    {
+      eventFilter: debounceFilter(1000),
+    },
   );
 
   const comicSources = useStorageAsync<ComicSource[]>(
     'comicSources',
     [],
     kvStorage.storage,
+    {
+      eventFilter: debounceFilter(1000),
+    },
   );
   const videoSources = useStorageAsync<VideoSource[]>(
     'videoSources',
     [],
     kvStorage.storage,
+    {
+      eventFilter: debounceFilter(1000),
+    },
   );
   const keepTest = ref(false);
 
@@ -940,6 +954,34 @@ export const useStore = defineStore('store', () => {
   };
   // 添加市场中的订阅源
   const addMarketSource = async (marketSource: MarketSource) => {
+    let needPermission = true;
+    if (marketSource.permissions?.includes(MarketSourcePermission.NoLogin)) {
+      needPermission = false;
+    } else {
+      const { userInfo } = storeToRefs(serverStore);
+      if (
+        marketSource.permissions?.includes(MarketSourcePermission.Login) &&
+        userInfo.value
+      ) {
+        needPermission = false;
+      }
+      if (
+        marketSource.permissions?.includes(MarketSourcePermission.Vip) &&
+        isMembershipOrderValid(userInfo.value?.vipMembershipPlan)
+      ) {
+        needPermission = false;
+      }
+      if (
+        marketSource.permissions?.includes(MarketSourcePermission.SuperVip) &&
+        isMembershipOrderValid(userInfo.value?.superVipMembershipPlan)
+      ) {
+        needPermission = false;
+      }
+    }
+    if (needPermission) {
+      showToast('权限不足');
+      return;
+    }
     const t = showLoadingToast('导入中');
     try {
       // 2. 检查是否已存在，然后同步disable状态
@@ -961,6 +1003,7 @@ export const useStore = defineStore('store', () => {
         try {
           const sc = await sourceClass(sourceContent);
           if (!sc) {
+            // 此源内容无法获取，结束
             return;
           }
           const item = {
@@ -1096,6 +1139,8 @@ export const useStore = defineStore('store', () => {
 
     const update = async (source: SubscribeSource) => {
       const url = source.url;
+      console.log(url, source);
+
       try {
         if (source.detail.id === localSourceId) {
           await addLocalSubscribeSource(url);
@@ -1148,7 +1193,6 @@ export const useStore = defineStore('store', () => {
       });
     }
     displayStore.closeToast(t);
-    await subscribeSourceStore.saveSubscribeSources();
   };
   /**
    * 将当前source添加到对应的列表中
@@ -1414,24 +1458,34 @@ export const useStore = defineStore('store', () => {
     loadSubscribeSources(true);
 
     const photoShelfStore = usePhotoShelfStore();
-    photoShelfStore.clear(); // 清空图片收藏
+    await photoShelfStore.clear(); // 清空图片收藏
     const songShelfStore = useSongShelfStore();
-    songShelfStore.clear(); // 清空音乐收藏
+    await songShelfStore.clear(); // 清空音乐收藏
     const bookShelfStore = useBookShelfStore();
-    bookShelfStore.clear(); // 清空书架
+    await bookShelfStore.clear(); // 清空书架
     const comicShelfStore = useComicShelfStore();
-    comicShelfStore.clear(); // 清空漫画收藏
+    await comicShelfStore.clear(); // 清空漫画收藏
     const videoShelfStore = useVideoShelfStore();
-    videoShelfStore.clear(); // 清空视频收藏
+    await videoShelfStore.clear(); // 清空视频收藏
+
+    // 清空serverStore
+    await serverStore.clear();
+
+    // 清空create source
+    const createSourceStore = useSourceCreateStore();
+    await createSourceStore.clear();
 
     // 清空章节缓存
-    bookChapterStore.clear();
+    await bookChapterStore.clear();
     // 清空音乐缓存
     const songCacheStore = useSongCacheStore();
-    songCacheStore.clear();
+    await songCacheStore.clear();
+    // 清空localstorage
     localStorage.clear();
-    kvStorage.storage.clear();
+    // 清空页面显示内容
+    await kvStorage.storage.clear();
     loading.close();
+    showSuccessToast('数据已清空');
   };
   const clearCache = async () => {
     const toast = showLoadingToast({
@@ -1456,58 +1510,44 @@ export const useStore = defineStore('store', () => {
     showToast('缓存已清空');
   };
 
-  const latestUpdateSource = useStorageAsync('latestUpdateSource', 0);
-
-  onBeforeMount(async () => {
-    await subscribeSourceStore.init();
-    if (!subscribeSourceStore.isEmpty) {
-      // 更新订阅源
-      // if (Date.now() - latestUpdateSource.value > 1000 * 60 * 60 * 24 * 3) {
-      //   await updateSubscribeSources();
-      //   latestUpdateSource.value = Date.now();
-      // }
-      // try {
-      //   const dialog = await showConfirmDialog({
-      //     title: "订阅更新",
-      //     message: "是否立即更新所有订阅源？",
-      //   });
-      //   if (dialog === "confirm") {
-      //     await updateSubscribeSources();
-      //   }
-      // } catch (error) {}
-    } else {
-      showConfirmDialog({
-        message: '需要添加订阅源才能使用, \n是否立即导入默认订阅源?',
-      }).then(async (action) => {
-        if (action === 'confirm') {
-          const source = await serverStore.getDefaultMarketSource();
-          if (source) {
-            await addMarketSource(source);
-            showSuccessToast('默认源已导入');
-          } else {
-            await sleep(2000);
-          }
-          showConfirmDialog({
-            title: '提示',
-            message: '您可以在 订阅源市场 添加更多订阅源',
-            confirmButtonText: '去添加',
-          }).then((action) => {
-            if (action === 'confirm') {
-              router.push({ name: 'SourceMarket' });
+  const { subscribeSources } = storeToRefs(subscribeSourceStore);
+  watch(
+    subscribeSources,
+    (subscribeSources) => {
+      if (subscribeSources.length === 0) {
+        showConfirmDialog({
+          message: '需要添加订阅源才能使用, \n是否立即导入默认订阅源?',
+        }).then(async (action) => {
+          if (action === 'confirm') {
+            const source = await serverStore.getDefaultMarketSource();
+            if (source) {
+              await addMarketSource(source);
+              showSuccessToast('默认源已导入');
+            } else {
+              await sleep(2000);
             }
-          });
-        }
-      });
-    }
-    // keepTest.value = true;
-    // addTestSource(new TestSongExtension(), SourceType.Song);
-    // addTestSource(new TestBookExtension(), SourceType.Book);
-    // addTestSource(new TestPhotoExtension(), SourceType.Photo);
-    // addTestSource(new TestComicExtension(), SourceType.Comic);
-    // addTestSource(new TestVideoExtension(), SourceType.Video);
-
-    loadSubscribeSources(true);
-  });
+            showConfirmDialog({
+              title: '提示',
+              message: '您可以在 订阅源市场 添加更多订阅源',
+              confirmButtonText: '去添加',
+            }).then((action) => {
+              if (action === 'confirm') {
+                router.push({ name: 'SourceMarket' });
+              }
+            });
+          }
+        });
+      }
+      // keepTest.value = true;
+      // addTestSource(new TestSongExtension(), SourceType.Song);
+      // addTestSource(new TestBookExtension(), SourceType.Book);
+      // addTestSource(new TestPhotoExtension(), SourceType.Photo);
+      // addTestSource(new TestComicExtension(), SourceType.Comic);
+      // addTestSource(new TestVideoExtension(), SourceType.Video);
+      loadSubscribeSources(true);
+    },
+    { once: true },
+  );
 
   return {
     sourceClasses,

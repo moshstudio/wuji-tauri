@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { useElementResize } from '@/utils';
 import { computed, ref } from 'vue';
+import { useElementResize } from '@/utils';
 
-const currentPage = defineModel<number>({ required: true });
 const props = withDefaults(
   defineProps<{
     pageCount: number | string;
@@ -14,7 +13,7 @@ const props = withDefaults(
     maxPageSize: 30,
   },
 );
-
+const currentPage = defineModel<number>({ required: true });
 const container = ref<HTMLElement>();
 const width = ref(0);
 

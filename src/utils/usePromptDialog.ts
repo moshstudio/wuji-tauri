@@ -1,6 +1,7 @@
-import { h, ref, type Ref } from 'vue';
-import { closeDialog, showDialog, showToast } from 'vant';
 import type { DialogOptions, FieldType } from 'vant';
+import type { Ref } from 'vue';
+import { closeDialog, showDialog, showToast } from 'vant';
+import { h, ref } from 'vue';
 import PromptDialog from '@/components/dialog/PromptDialog.vue';
 
 interface PromptDialogOptions {
@@ -18,7 +19,7 @@ export function showPromptDialog(
   options: PromptDialogOptions = {},
 ): Promise<string | null> {
   options.formatter ||= (value: string) => {
-    return value.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_\-]/g, '');
+    return value.replace(/[^\w\u4E00-\u9FA5\-]/g, '');
   };
   return new Promise((resolve) => {
     const inputRef: Ref<string> = ref(options.defaultValue || '');

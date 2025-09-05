@@ -78,7 +78,7 @@ async function getComicDetail(item) {
     timestamp: `${Date.now()}`,
     comic_py: `${item.extra.comicPy}`,
   });
-  const response = await this.fetch(url + '?' + params.toString());
+  const response = await this.fetch(`${url}?${params.toString()}`);
   const json = await response.json();
 
   item.intro = json.data.comicInfo.description;

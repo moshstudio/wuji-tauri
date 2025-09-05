@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { MarketSource, PagedMarketSource } from '@wuji-tauri/source-extension';
+import type {
+  MarketSource,
+  PagedMarketSource,
+} from '@wuji-tauri/source-extension';
 
-import _ from 'lodash';
 import AppSourceMarket from '@/layouts/app/source/SourceMarket.vue';
-
-const searchValue = defineModel<string>('searchValue', { default: '' });
-const isFreshing = defineModel<boolean>('isFreshing', { default: false });
 
 defineProps<{
   source?: PagedMarketSource;
@@ -17,6 +16,8 @@ defineProps<{
   onImport: (source: MarketSource) => void;
   onLike: (source: MarketSource) => void;
 }>();
+const searchValue = defineModel<string>('searchValue', { default: '' });
+const isFreshing = defineModel<boolean>('isFreshing', { default: false });
 </script>
 
 <template>
@@ -31,7 +32,7 @@ defineProps<{
     :is-imported="isImported"
     :on-import="onImport"
     :on-like="onLike"
-  ></AppSourceMarket>
+  />
 </template>
 
 <style scoped lang="less"></style>

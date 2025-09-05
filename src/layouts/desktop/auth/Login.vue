@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
-import { showDialog, showFailToast, showToast } from 'vant';
 import validator from 'validator';
-import { useDisplayStore, useServerStore } from '@/store';
-import { storeToRefs } from 'pinia';
-import { router } from '@/router';
+import { showDialog, showFailToast } from 'vant';
+import { reactive, ref } from 'vue';
 import MNavBar from '@/components/header/MNavBar.vue';
+import { useDisplayStore, useServerStore } from '@/store';
 
 const props = defineProps<{
   register: (params: {
@@ -24,10 +22,10 @@ const serverStore = useServerStore();
 // 登录/注册模式切换
 const isLoginMode = ref(true);
 const isShowPassword = ref(false);
-const toggleMode = () => {
+function toggleMode() {
   isLoginMode.value = !isLoginMode.value;
   // resetForm();
-};
+}
 
 // 表单验证规则
 const emailRules = [
@@ -65,7 +63,7 @@ const form = reactive({
 
 // 提交表单
 const isSubmitting = ref(false);
-const handleSubmit = async () => {
+async function handleSubmit() {
   isSubmitting.value = true;
 
   try {
@@ -88,28 +86,26 @@ const handleSubmit = async () => {
   } finally {
     isSubmitting.value = false;
   }
-};
+}
 
 // 忘记密码处理
-const handleForgotPassword = () => {
+function handleForgotPassword() {
   if (!form.email) {
     showDialog({
       title: '提示',
       message: '请填写邮箱地址, 我们将为您发送一条重置密码邮件',
       showCancelButton: false,
     });
-    return;
   } else if (!validator.isEmail(form.email)) {
     showDialog({
       title: '提示',
       message: '请输入有效的邮箱地址',
       showCancelButton: false,
     });
-    return;
   } else {
     showDialog({
       title: '提示',
-      message: '确认向 ' + form.email + ' 发送重置密码邮件吗?',
+      message: `确认向 ${form.email} 发送重置密码邮件吗?`,
       showCancelButton: true,
     })
       .then(() => {
@@ -119,27 +115,25 @@ const handleForgotPassword = () => {
       })
       .catch(() => {});
   }
-};
+}
 
-const resendVerifyEmail = () => {
+function resendVerifyEmail() {
   if (!form.email) {
     showDialog({
       title: '提示',
       message: '请填写邮箱地址, 我们将重新为您发送一条验证邮件',
       showCancelButton: false,
     });
-    return;
   } else if (!validator.isEmail(form.email)) {
     showDialog({
       title: '提示',
       message: '请输入有效的邮箱地址',
       showCancelButton: false,
     });
-    return;
   } else {
     showDialog({
       title: '提示',
-      message: '确认向 ' + form.email + ' 重新发送验证邮件吗?\n(密码不会重置)',
+      message: `确认向 ${form.email} 重新发送验证邮件吗?\n(密码不会重置)`,
       showCancelButton: true,
     })
       .then(() => {
@@ -149,32 +143,34 @@ const resendVerifyEmail = () => {
       })
       .catch(() => {});
   }
-};
+}
 </script>
+
 <template>
   <div
     class="relative flex h-full w-full flex-col overflow-hidden bg-[var(--van-background)]"
   >
-    <MNavBar :title="isLoginMode ? '登录' : '注册'"></MNavBar>
+    <MNavBar :title="isLoginMode ? '登录' : '注册'" />
     <div
       class="flex h-full w-full flex-grow flex-col items-center overflow-auto p-4"
     >
       <div class="flex w-full max-w-[500px] flex-col">
-        <van-form @submit="handleSubmit" key="form" class="relative w-full">
+        <van-form key="form" class="relative w-full" @submit="handleSubmit">
           <TransitionGroup name="list" tag="div">
             <!-- 邮箱输入 -->
             <van-field
+              key="email"
               v-model="form.email"
               label="邮箱"
               placeholder="请输入邮箱"
               maxlength="30"
               :rules="emailRules"
               class="mb-4"
-              key="email"
             />
 
             <!-- 密码输入 -->
             <van-field
+              key="password"
               v-model="form.password"
               :type="isShowPassword ? 'text' : 'password'"
               label="密码"
@@ -182,14 +178,14 @@ const resendVerifyEmail = () => {
               maxlength="20"
               :rules="passwordRules"
               :right-icon="isShowPassword ? 'eye' : 'closed-eye'"
-              @click-right-icon="isShowPassword = !isShowPassword"
               class="mb-4"
-              key="password"
+              @click-right-icon="isShowPassword = !isShowPassword"
             />
 
             <!-- 注册时才显示的确认密码 -->
             <van-field
               v-if="!isLoginMode"
+              key="confirmPassword"
               v-model="form.confirmPassword"
               maxlength="20"
               :type="isShowPassword ? 'text' : 'password'"
@@ -197,18 +193,17 @@ const resendVerifyEmail = () => {
               placeholder="请再次输入密码"
               :rules="confirmPasswordRules"
               class="mb-4"
-              key="confirmPassword"
             />
 
             <!-- 提交按钮 -->
             <van-button
+              key="submit"
               round
               block
               type="primary"
               native-type="submit"
               class="mt-6"
               :loading="isSubmitting"
-              key="submit"
             >
               <span class="text-white">
                 {{ isLoginMode ? '登录' : '注册' }}
@@ -219,8 +214,8 @@ const resendVerifyEmail = () => {
 
         <div class="mt-4 flex w-full shrink-0 items-center justify-between">
           <button
-            @click="toggleMode"
             class="text-sm text-blue-500 hover:text-blue-700"
+            @click="toggleMode"
           >
             {{ isLoginMode ? '没有账号？去注册' : '已有账号？去登录' }}
           </button>

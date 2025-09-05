@@ -3,9 +3,9 @@ import { Icon } from '@iconify/vue';
 import { storeToRefs } from 'pinia';
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { useDisplayStore, useServerStore, useStore } from '@/store';
-import { router } from '@/router';
 import WLoginButton from '@/components/button/WLoginButton.vue';
+import { router } from '@/router';
+import { useDisplayStore, useServerStore, useStore } from '@/store';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -88,12 +88,14 @@ const settingActions = [
 const sourceActions = [
   {
     text: '管理订阅源',
+    color: '#1989fa',
     onClick: () => {
       router.push({ name: 'SourceManage' });
     },
   },
   {
     text: '订阅源市场',
+    color: '#07c160',
     onClick: () => {
       router.push({ name: 'SourceMarket' });
     },
@@ -171,7 +173,7 @@ watch(
     >
       <div
         v-show="showTabBar"
-        class="sidebar flex w-[50px] flex-col bg-[var(--van-background)]"
+        class="sidebar z-[1002] flex w-[50px] flex-col bg-[var(--van-background)]"
       >
         <van-sidebar v-model="activeKey" class="grow">
           <van-sidebar-item
@@ -189,7 +191,7 @@ watch(
           </van-sidebar-item>
         </van-sidebar>
         <div class="flex flex-col items-center justify-center gap-4 pb-2">
-          <WLoginButton :user-info="serverStore.userInfo"></WLoginButton>
+          <WLoginButton :user-info="serverStore.userInfo" />
           <van-popover
             v-model:show="showSettingPopover"
             placement="right-end"
@@ -224,8 +226,8 @@ watch(
       </div>
     </transition>
 
-    <div class="content h-full w-full grow overflow-hidden">
-      <slot></slot>
+    <div class="content relative h-full w-full grow overflow-hidden">
+      <slot />
     </div>
 
     <div class="absolute top-0 z-[999999999] w-screen">

@@ -54,7 +54,7 @@ abstract getRecommendBooks(pageNo?: number, type?: string): Promise<BooksList | 
 
 ```javascript
 async function getRecommendBooks(pageNo, type) {
-  let items = [
+  const items = [
     {
       name: '玄幻',
       tag: `list-4-{pageNo}/`,
@@ -76,7 +76,7 @@ async function getRecommendBooks(pageNo, type) {
   const item = items.find((item) => item.name === type);
   if (!item) return null;
   pageNo = pageNo || 1;
-  let url = `${this.baseUrl}${item.tag.replace('{pageNo}', pageNo)}`;
+  const url = `${this.baseUrl}${item.tag.replace('{pageNo}', pageNo)}`;
   const document = await this.fetchDom(url);
   const list = await this.queryBookElements(document, {
     element: '.mainCate li',

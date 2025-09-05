@@ -1,29 +1,26 @@
 <script setup lang="ts">
-import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
-import {
-  PlaylistInfo,
-  SongInfo,
-  SongPlayMode,
-  SongShelf,
-} from '@wuji-tauri/source-extension';
-import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
-import { transTime } from '@/utils';
+import type { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
 import { Icon } from '@iconify/vue';
-import { storeToRefs } from 'pinia';
-import { WSongCard } from '@wuji-tauri/components/src';
-import { LoadImage } from '@wuji-tauri/components/src';
-import VolumeControl from './VolumeControl.vue';
 import {
+  LoadImage,
   MoreOptionsSheet,
   SongSelectShelfSheet,
+  WSongCard,
 } from '@wuji-tauri/components/src';
-import { router } from '@/router';
+import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
+import { SongPlayMode } from '@wuji-tauri/source-extension';
+import { storeToRefs } from 'pinia';
 import { ref } from 'vue';
+import { router } from '@/router';
+import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
+import { transTime } from '@/utils';
+import VolumeControl from './VolumeControl.vue';
 
 const songStore = useSongStore();
+const displayStore = useDisplayStore();
 const shelfStore = useSongShelfStore();
 const { playingSong, audioVolume } = storeToRefs(songStore);
-const showPlayingSongList = ref(false);
+const { showSongPlayingList } = storeToRefs(displayStore);
 
 const moreOptions = ref(false);
 const moreOptionsSong = ref<SongInfo>();
@@ -185,11 +182,11 @@ function songAddToShelf(song: SongInfo, shelf: SongShelf) {
         width="22px"
         height="22px"
         class="van-haptics-feedback cursor-pointer text-gray-400 hover:text-[--van-text-color]"
-        @click="() => (showPlayingSongList = !showPlayingSongList)"
+        @click="() => (showSongPlayingList = !showSongPlayingList)"
       />
     </div>
     <van-popup
-      v-model:show="showPlayingSongList"
+      v-model:show="showSongPlayingList"
       position="right"
       :style="{ width: '200px', height: '100%' }"
     >

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { SourceType, type SubscribeItem, type SubscribeSource } from '@/types';
-import { SubscribeSourceCard } from '@wuji-tauri/components/src';
-import MNavBar from '@/components/header/MNavBar.vue';
+import type { SubscribeItem, SubscribeSource } from '@/types';
 import { Icon } from '@iconify/vue';
-import { ref, computed } from 'vue';
+import { SubscribeSourceCard } from '@wuji-tauri/components/src';
+import { ref } from 'vue';
+import MNavBar from '@/components/header/MNavBar.vue';
+import { router } from '@/router';
 
 withDefaults(
   defineProps<{
@@ -27,11 +28,11 @@ withDefaults(
 
 const expandedGroups = ref<Record<string, boolean>>({});
 
-const toggleGroup = (id: string) => {
+function toggleGroup(id: string) {
   expandedGroups.value[id] = !expandedGroups.value[id];
-};
+}
 
-const getSourceStats = (source: SubscribeSource) => {
+function getSourceStats(source: SubscribeSource) {
   const total = source.detail.urls.length;
   const disabled = source.detail.urls.filter((item) => item.disable).length;
   return {
@@ -39,20 +40,37 @@ const getSourceStats = (source: SubscribeSource) => {
     disabled,
     enabled: total - disabled,
   };
-};
+}
 </script>
 
 <template>
   <div class="relative flex h-full w-full flex-col">
-    <MNavBar title="管理订阅源"></MNavBar>
+    <MNavBar title="管理订阅源" />
     <div
       class="flex w-full flex-grow flex-col overflow-y-auto bg-[--van-background] p-2"
     >
       <div class="flex items-center gap-2 p-2">
-        <van-button size="small" type="primary" plain @click="updateSources">
+        <van-button
+          size="small"
+          type="primary"
+          plain
+          @click="() => updateSources()"
+        >
           更新订阅源
         </van-button>
-        <van-button size="small" type="success" plain @click="importSource">
+        <van-button
+          size="small"
+          type="success"
+          plain
+          @click="
+            () => {
+              router.push({ name: 'SourceMarket' });
+            }
+          "
+        >
+          订阅源市场
+        </van-button>
+        <van-button size="small" type="default" plain @click="importSource">
           导入订阅源
         </van-button>
       </div>
@@ -68,7 +86,9 @@ const getSourceStats = (source: SubscribeSource) => {
             @click="toggleGroup(source.detail.id)"
           >
             <div class="flex flex-col">
-              <div class="flex-grow">{{ source.detail.name }}</div>
+              <div class="flex-grow">
+                {{ source.detail.name }}
+              </div>
               <div class="text-xs text-gray-500">
                 {{ getSourceStats(source).enabled }}启用 /
                 {{ getSourceStats(source).disabled }}禁用
@@ -79,7 +99,7 @@ const getSourceStats = (source: SubscribeSource) => {
                 class="van-haptics-feedback rounded bg-blue-500 p-1 text-white"
                 @click.stop="() => updateSources(source)"
               >
-                <Icon :icon="'dashicons:update-alt'" width="16" height="16" />
+                <Icon icon="dashicons:update-alt" width="16" height="16" />
               </div>
               <div
                 class="van-haptics-feedback rounded p-1 text-white"
@@ -137,7 +157,7 @@ const getSourceStats = (source: SubscribeSource) => {
                     class="van-haptics-feedback rounded bg-blue-500 p-1 text-white"
                     @click.stop="() => updateItem(source, item)"
                   >
-                    <Icon :icon="'uil:edit'" width="16" height="16" />
+                    <Icon icon="uil:edit" width="16" height="16" />
                   </div>
                   <div
                     class="van-haptics-feedback rounded p-1 text-white"

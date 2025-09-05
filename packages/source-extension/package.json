@@ -1,8 +1,8 @@
 {
   "name": "@wuji-tauri/source-extension",
-  "private": true,
-  "version": "1.0.0",
   "type": "module",
+  "version": "1.0.0",
+  "private": true,
   "main": "./dist/source-extension.umd.cjs",
   "module": "./dist/source-extension.js",
   "types": "./dist/index.d.ts",

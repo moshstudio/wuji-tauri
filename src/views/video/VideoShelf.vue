@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { VideoItem, VideoShelf } from '@wuji-tauri/source-extension';
-import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
-import { useDisplayStore, useVideoShelfStore } from '@/store';
 import { storeToRefs } from 'pinia';
 import { computed, ref, triggerRef } from 'vue';
+import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppVideoShelf from '@/layouts/app/video/VideoShelf.vue';
 import DesktopVideoShelf from '@/layouts/desktop/video/VideoShelf.vue';
+import { useVideoShelfStore } from '@/store';
 
 const shelfStore = useVideoShelfStore();
 const { videoShelf } = storeToRefs(shelfStore);
@@ -63,7 +63,7 @@ function removeVideoFromShelf(
         v-model:active-index="activeIndex"
         v-model:selecte-mode="selecteMode"
         :create-shelf="createShelf"
-        :deleteShelf="deleteShelf"
+        :delete-shelf="deleteShelf"
         :delete-selected="deleteSelected"
       />
     </template>
@@ -72,7 +72,7 @@ function removeVideoFromShelf(
         v-model:active-index="activeIndex"
         v-model:selecte-mode="selecteMode"
         :create-shelf="createShelf"
-        :deleteShelf="deleteShelf"
+        :delete-shelf="deleteShelf"
         :delete-selected="deleteSelected"
       />
     </template>
@@ -81,7 +81,7 @@ function removeVideoFromShelf(
       title="删除视频收藏夹"
       :actions="deleteSheetActions"
       teleport="body"
-    ></van-action-sheet>
+    />
   </PlatformSwitch>
 </template>
 

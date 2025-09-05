@@ -44,7 +44,26 @@ async function processSrc(
   src: string,
   headers?: Record<string, string>,
 ): Promise<string> {
-  // if (!headers) return src;
+  if (src.startsWith('blob:')) {
+    return src;
+  }
+  if (src.startsWith('data:image') && src.includes('base64')) {
+    // 转为blob
+    async function dataURLToBlobURL(dataURL: string) {
+      try {
+        const response = await fetch(dataURL);
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+      } catch (error) {
+        console.error('image 转换失败:', error);
+        throw error;
+      }
+    }
+    return await dataURLToBlobURL(src);
+  }
+  if (!headers && !props.compress) {
+    return src;
+  }
   let response: Response;
   try {
     response = await cachedFetch(
@@ -107,13 +126,13 @@ watch(
     v-on="listeners"
     @load="onLoadFinished"
   >
-    <slot></slot>
+    <slot />
 
-    <template #loading v-if="Object.keys($slots).includes('loading')">
-      <slot name="loading"></slot>
+    <template v-if="Object.keys($slots).includes('loading')" #loading>
+      <slot name="loading" />
     </template>
-    <template #error v-if="Object.keys($slots).includes('error')">
-      <slot name="error"></slot>
+    <template v-if="Object.keys($slots).includes('error')" #error>
+      <slot name="error" />
     </template>
     <!-- <template v-for="[name, slot] of Object.entries($slots)" :key="name">
       <slot :name="name" v-if="typeof slot === 'function'"></slot>

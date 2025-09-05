@@ -1,24 +1,17 @@
 <script setup lang="ts">
-import {
-  useBackStore,
-  useServerStore,
-  useStore,
-  useSubscribeSourceStore,
-} from '@/store';
-import { MoreOptionsSheet } from '@wuji-tauri/components/src';
+import type {
+  MarketSource,
+  MarketSourceContent,
+} from '@wuji-tauri/source-extension';
+import { storeToRefs } from 'pinia';
+import { showConfirmDialog, showToast } from 'vant';
+import { computed, onActivated, onMounted, ref, watch } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppMySourceEdit from '@/layouts/app/source/MySourceEdit.vue';
 import DesktopMySourceEdit from '@/layouts/desktop/source/MySourceEdit.vue';
-import { computed, onActivated, onMounted, ref } from 'vue';
-import { storeToRefs } from 'pinia';
-import {
-  MarketSource,
-  MarketSourceContent,
-  MarketSourcePermission,
-} from '@wuji-tauri/source-extension';
-import _ from 'lodash';
 import { router } from '@/router';
-import { showConfirmDialog, showToast } from 'vant';
+import { useBackStore, useServerStore } from '@/store';
+import { onMountedOrActivated } from '@vant/use';
 
 const props = defineProps<{
   sourceId?: string;
@@ -29,23 +22,21 @@ const serverStore = useServerStore();
 
 const { myMarketSources } = storeToRefs(serverStore);
 
-const source = computed(() => {
-  return myMarketSources.value.find((item) => item._id === props.sourceId);
-});
+const source = ref<MarketSource>();
 
-const clickSourceContent = (
+function clickSourceContent(
   source: MarketSource,
   sourceContent: MarketSourceContent,
-) => {
+) {
   router.push({
     name: 'SourceContentEdit',
     params: { sourceId: source._id, sourceContentId: sourceContent._id },
   });
-};
-const deleteSourceContent = (
+}
+function deleteSourceContent(
   source: MarketSource,
   sourceContent: MarketSourceContent,
-) => {
+) {
   showConfirmDialog({
     title: '删除',
     message: `确定要删除 ${sourceContent.name} 吗？`,
@@ -56,26 +47,26 @@ const deleteSourceContent = (
       await serverStore.deleteMarketSourceContent(source, sourceContent);
     }
   });
-};
+}
 
-const save = async (source: MarketSource) => {
+async function save(source: MarketSource) {
   await serverStore.updateMarketSource(source);
-};
+}
 
-onMounted(() => {
+onMountedOrActivated(async () => {
   if (!serverStore.userInfo) {
     backStore.back().then(() => {
       showToast('请先登录');
     });
-    return;
-  }
-});
-onActivated(() => {
-  if (!serverStore.userInfo) {
-    backStore.back().then(() => {
-      showToast('请先登录');
-    });
-    return;
+  } else {
+    source.value = myMarketSources.value.find(
+      (item) => item._id === props.sourceId,
+    );
+    if (!source.value) {
+      backStore.back().then(() => {
+        showToast('未找到该资源');
+      });
+    }
   }
 });
 </script>
@@ -88,7 +79,7 @@ onActivated(() => {
         :save="save"
         :click-source-content="clickSourceContent"
         :delete-source-content="deleteSourceContent"
-      ></AppMySourceEdit>
+      />
     </template>
     <template #desktop>
       <DesktopMySourceEdit
@@ -96,7 +87,7 @@ onActivated(() => {
         :save="save"
         :click-source-content="clickSourceContent"
         :delete-source-content="deleteSourceContent"
-      ></DesktopMySourceEdit>
+      />
     </template>
   </PlatformSwitch>
 </template>

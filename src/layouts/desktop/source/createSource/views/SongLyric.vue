@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SongList } from '@wuji-tauri/source-extension';
+import type { SongList } from '@wuji-tauri/source-extension';
 
 const props = defineProps<{
   content: {

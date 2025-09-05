@@ -1,20 +1,17 @@
 <script setup lang="ts">
+import type { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
 import {
   MoreOptionsSheet,
   SongSelectShelfSheet,
 } from '@wuji-tauri/components/src';
+import { SongShelfType } from '@wuji-tauri/source-extension';
+import { showLoadingToast, showToast } from 'vant';
+import { ref, watch } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppSongShelfDetail from '@/layouts/app/song/SongShelfDetail.vue';
 import DesktopSongShelfDetail from '@/layouts/desktop/song/SongShelfDetail.vue';
 import { useSongShelfStore, useSongStore, useStore } from '@/store';
-import {
-  PlaylistInfo,
-  SongInfo,
-  SongShelf,
-  SongShelfType,
-} from '@wuji-tauri/source-extension';
-import { showLoadingToast, showToast } from 'vant';
-import { ref, watch } from 'vue';
+
 const props = defineProps({
   shelfId: String,
 });

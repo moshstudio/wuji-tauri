@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import type { UserInfo } from '@/store';
 import { router } from '@/router';
-import { UserInfo } from '@/store';
 
 withDefaults(
   defineProps<{
@@ -39,7 +39,7 @@ withDefaults(
           plain
           size="small"
           :icon="userInfo?.photo || 'user-o'"
-        ></van-button>
+        />
       </div>
       <div v-else>登录</div>
     </div>

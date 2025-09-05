@@ -6,6 +6,7 @@ CryptoJS 是一个流行的加密库，提供多种加密算法。
 
 ```javascript
 import CryptoJS from 'crypto-js';
+
 this.cryptoJs = CryptoJS;
 ```
 
@@ -44,6 +45,7 @@ const response = await this.fetch(url, {
 
 ```javascript
 import * as iconv from 'iconv-lite';
+
 this.iconv = iconv;
 ```
 
@@ -197,6 +199,7 @@ interface BookItem {
  * @param tags - CSS选择器配置对象，用于定位各个书籍信息元素
  *        @property element - 书籍项容器元素选择器（默认：'.bookbox'）
  *        @property cover - 封面图片元素选择器（默认：'img'）
+ *        @property coverHeaders - 封面图片请求头元素选择器（用于需要特殊认证的封面图，默认：undefined）
  *        @property title - 标题元素选择器（默认：'h3 a'）
  *        @property intro - 简介元素选择器（默认：'.intro'）
  *        @property author - 作者元素选择器（默认：'.author a'）
@@ -221,6 +224,7 @@ this.queryBookElements = async (
   {
     element: '.bookbox',
     cover: 'img',
+    coverHeaders: undefined,
     title: 'h3 a',
     intro: '.intro',
     author: '.author a',
@@ -322,6 +326,7 @@ interface VideoItem {
  * @param config - 解析配置对象
  *        @property [element=.bookbox] - 视频项容器选择器
  *        @property [cover=img] - 封面图元素选择器
+ *        @property [coverHeaders] - 封面图请求头选择器（用于特殊鉴权）
  *        @property [title=h3 a] - 标题元素选择器
  *        @property [intro=.intro] - 简介元素选择器
  *        @property [releaseDate=.year] - 发布日期元素选择器
@@ -353,6 +358,7 @@ this.queryVideoElements = async (
   {
     element = '.bookbox',
     cover = 'img',
+    coverHeaders = undefined,
     title = 'h3 a',
     intro = '.intro',
     releaseDate = '.year',
@@ -425,6 +431,7 @@ interface PhotoItem {
  * @param options - 配置对象，包含CSS选择器配置
  * @param options.element - 图片项容器元素选择器（默认：'.update_area_content'）
  * @param options.cover - 封面图片元素选择器（默认：'img'）
+ * @param options.coverHeaders - 封面图片请求头选择器（用于特殊鉴权，默认：undefined）
  * @param options.title - 标题元素选择器（默认：'.title'）
  * @param options.desc - 描述元素选择器（默认：'.desc'）
  * @param options.author - 作者元素选择器（默认：'.author'）
@@ -448,6 +455,7 @@ this.queryPhotoElements = async (
   {
     element = '.update_area_content',
     cover = 'img',
+    coverHeaders = undefined,
     title = '.title',
     desc = '.desc',
     author = '.author',
@@ -667,6 +675,7 @@ interface PlaylistInfo {
  * @param options - CSS选择器配置
  *        @property [element='.update_area_content'] - 歌单项容器
  *        @property [picUrl='img'] - 封面图片选择器
+ *        @property [picHeaders=undefined] - 封面图片请求头
  *        @property [name='a[href]'] - 名称选择器
  *        @property [desc='.desc'] - 描述选择器
  *        @property [creator='.author'] - 创建者选择器
@@ -688,6 +697,7 @@ async function queryPlaylistElements(
   {
     element = '.update_area_content',
     picUrl = 'img',
+    picHeaders = undefined,
     name = 'a[href]',
     desc = '.desc',
     creator = '.author',
@@ -698,6 +708,7 @@ async function queryPlaylistElements(
   }: {
     element?: string;
     picUrl?: string;
+    picHeaders?: Record<string, string>;
     name?: string;
     desc?: string;
     creator?: string;
@@ -721,6 +732,7 @@ async function queryPlaylistElements(
  * @param options - CSS选择器配置对象
  *        @property [element='.update_area_content'] - 歌曲项的容器选择器
  *        @property [picUrl='img'] - 歌曲封面图片选择器
+ *        @property [picHeaders=undefined] - 歌曲封面图片请求头
  *        @property [name='a[title]'] - 歌曲名称选择器（优先title属性）
  *        @property [artists='.artist'] - 艺人信息选择器
  *        @property [duration='.duration'] - 歌曲时长选择器
@@ -747,6 +759,7 @@ async function querySongElements(
   {
     element = '.update_area_content',
     picUrl = 'img',
+    picHeaders = undefined,
     name = 'a[title]',
     artists = '.artist',
     duration = '.duration',
@@ -757,6 +770,7 @@ async function querySongElements(
   }: {
     element?: string;
     picUrl?: string;
+    picHeaders?: Record<string, string>;
     name?: string;
     artists?: string;
     duration?: string;

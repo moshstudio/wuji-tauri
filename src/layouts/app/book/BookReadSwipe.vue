@@ -1,28 +1,25 @@
 <script lang="ts" setup>
 import type { BookChapter, BookItem } from '@wuji-tauri/source-extension';
+import type { Swiper as SwiperType } from 'swiper/types';
 import type { BookSource } from '@/types';
 import type { LineData, ReaderResult } from '@/utils/reader/types';
+import { Icon } from '@iconify/vue';
+import { storeToRefs } from 'pinia';
 import { Swiper, SwiperSlide } from 'swiper/vue';
+import { showToast } from 'vant';
+import { computed, nextTick, onActivated, ref, watch } from 'vue';
 import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import MBookTTSButton from '@/components/button/MBookTTSButton.vue';
+import { router } from '@/router';
 import {
   useBookChapterStore,
   useBookStore,
   useDisplayStore,
   useTTSStore,
 } from '@/store';
-import { Icon } from '@iconify/vue';
-import { showToast } from 'vant';
-import { computed, nextTick, onActivated, ref, watch } from 'vue';
-import { router } from '@/router';
 import { useBackStore } from '@/store/backStore';
-import { Swiper as SwiperType } from 'swiper/types';
 import 'swiper/css';
-import { storeToRefs } from 'pinia';
 
-const readingPageIndex = defineModel<number>('readingPageIndex', {
-  required: true,
-});
 const props = withDefaults(
   defineProps<{
     book?: BookItem;
@@ -46,7 +43,9 @@ const props = withDefaults(
   }>(),
   {},
 );
-
+const readingPageIndex = defineModel<number>('readingPageIndex', {
+  required: true,
+});
 const backStore = useBackStore();
 const displayStore = useDisplayStore();
 const bookStore = useBookStore();
@@ -381,14 +380,14 @@ function handlePageChange(swiper: SwiperType) {
 }
 
 const isShowChapterList = ref(false);
-const showChapterList = async () => {
+async function showChapterList() {
   isShowChapterList.value = true;
   await nextTick();
   document.querySelector('.reading-chapter')?.scrollIntoView({
     block: 'center',
     behavior: 'instant',
   });
-};
+}
 
 watch(
   showMenu,
@@ -404,8 +403,8 @@ onActivated(() => {
 
 <template>
   <div
-    ref="element"
     id="read-content"
+    ref="element"
     class="fixed box-border flex h-screen w-screen min-w-0 flex-shrink-0 select-none flex-col overflow-hidden"
     :class="[showMenu ? '' : 'hide_menu']"
   >
@@ -474,11 +473,11 @@ onActivated(() => {
     <!-- 阅读内容页 -->
     <Swiper
       class="h-full w-full flex-grow"
+      :grab-cursor="true"
+      :centered-slides="true"
+      slides-per-view="auto"
+      :initial-slide="1"
       @swiper="(swiper) => (swiperElement = swiper)"
-      :grabCursor="true"
-      :centeredSlides="true"
-      :slidesPerView="'auto'"
-      :initialSlide="1"
       @slide-change-transition-end="handlePageChange"
       @click="onClickPage"
     >
@@ -507,7 +506,7 @@ onActivated(() => {
           <div
             class="status_bar w-full"
             :style="{ height: `${bookStore.paddingTop}px` }"
-          ></div>
+          />
           <!-- 小说段落 -->
           <div
             class="flex min-h-0 w-full flex-grow flex-col items-center"
@@ -519,6 +518,9 @@ onActivated(() => {
               class="w-full overflow-hidden"
               :style="{
                 'font-size': `${bookStore.fontSize * (line.isTitle ? 1.3 : 1)}px`,
+                'font-weight': line.isTitle
+                  ? Math.min(bookStore.fontWeight + 200, 900)
+                  : bookStore.fontWeight,
                 'font-family': `'${bookStore.fontFamily}'`,
                 'line-height': line.isTitle
                   ? bookStore.lineHeight * 1.3
@@ -625,8 +627,8 @@ onActivated(() => {
           </div>
           <MBookTTSButton
             :reading-paged-content="readingContent || [[]]"
-            :onPlay="playTts"
-          ></MBookTTSButton>
+            :on-play="playTts"
+          />
           <div
             class="van-haptics-feedback flex flex-col items-center gap-1 p-2"
             @click="showViewSetting"

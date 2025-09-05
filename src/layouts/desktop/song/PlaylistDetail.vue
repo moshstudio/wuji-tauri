@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import type { PlaylistInfo, SongInfo } from '@wuji-tauri/source-extension';
-import { WSongCard } from '@wuji-tauri/components/src';
-import { LoadImage } from '@wuji-tauri/components/src';
-import MNavBar from '@/components/header/MNavBar.vue';
-import WSongBar from '@/components/songbar/WSongBar.vue';
-import MPagination from '@/components/pagination/MPagination.vue';
+import { LoadImage, WSongCard } from '@wuji-tauri/components/src';
 import AddShelfButton from '@/components/button/AddShelfButton.vue';
-import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import MNavBar from '@/components/header/MNavBar.vue';
+import MPagination from '@/components/pagination/MPagination.vue';
+import WSongBar from '@/components/songbar/WSongBar.vue';
 import { router } from '@/router';
+import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
 
 withDefaults(
   defineProps<{
@@ -30,7 +29,7 @@ const shelfStore = useSongShelfStore();
 
 <template>
   <div class="flex h-full w-full flex-col overflow-hidden">
-    <MNavBar :title="playlist?.name || '歌单详情'"></MNavBar>
+    <MNavBar :title="playlist?.name || '歌单详情'" />
     <div class="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
       <div class="flex items-center justify-center gap-2 rounded p-2 shadow">
         <div class="h-[120px] w-[120px]">
