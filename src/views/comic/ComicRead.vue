@@ -149,7 +149,7 @@ async function loadChapter(chapter?: ComicChapter) {
     }
     const ret = await store.comicDetail(comicSource.value, comic.value);
     if (ret) {
-      comic.value = ret;
+      Object.assign(comic.value, ret);
     }
   }
   if (!chapter) {

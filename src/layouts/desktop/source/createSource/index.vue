@@ -333,6 +333,7 @@ function updatePreviewResult(
   if (f) {
     f.passed = passed;
     f.result = result;
+    f.ts = Date.now();
   }
 }
 
@@ -701,7 +702,7 @@ async function handleSaveMarket(data: { id: string; name: string }) {
       </div>
       <Guide v-model:show="showGuide" :content="guideContent" />
       <div
-        v-show="showPreview"
+        v-if="showPreview"
         class="flex h-full w-[25%] flex-shrink-0 flex-col overflow-hidden border-l border-gray-500/50 text-[--van-text-color]"
       >
         <div

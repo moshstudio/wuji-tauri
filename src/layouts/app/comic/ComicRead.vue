@@ -143,6 +143,7 @@ onDeactivated(() => {
           <LoadImage
             :src="item"
             :headers="chapterContent?.photosHeaders"
+            :compress="false"
             fit="contain"
           />
         </div>

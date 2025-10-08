@@ -8,22 +8,10 @@ import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
 import SearchField from '@/components/search/SearchField.vue';
+import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
-  content: {
-    type: string;
-    chineseName: string;
-    id: string;
-    name: string;
-    version: string;
-    pages: {
-      type: string;
-      chineseName: string;
-      code: string;
-      passed: boolean;
-      result: PhotoList | undefined;
-    }[];
-  };
+  content: FormItem<PhotoList>;
   updateResult: (
     type: 'photo',
     page: 'searchList',

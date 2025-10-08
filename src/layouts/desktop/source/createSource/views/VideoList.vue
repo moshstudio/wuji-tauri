@@ -8,22 +8,10 @@ import { showFailToast } from 'vant';
 import { ref } from 'vue';
 import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 import MPagination from '@/components/pagination/MPagination.vue';
+import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
-  content: {
-    type: string;
-    chineseName: string;
-    id: string;
-    name: string;
-    version: string;
-    pages: {
-      type: string;
-      chineseName: string;
-      code: string;
-      passed: boolean;
-      result: VideosList | undefined;
-    }[];
-  };
+  content: FormItem<VideosList>;
   updateResult: (
     type: 'video',
     page: 'list',
@@ -77,7 +65,7 @@ async function load(pageNo?: number, type?: string) {
       throw new Error('初始化中的baseUrl未定义!');
     }
     cls.log = props.log;
-    const res = await cls?.getRecommendVideos(pageNo, type);
+    const res = await cls?.execGetRecommendVideos(pageNo, type);
     if (!res) {
       throw new Error('获取推荐列表失败! 返回结果为空');
     }

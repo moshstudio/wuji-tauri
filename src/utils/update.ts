@@ -35,7 +35,12 @@ export async function checkAndUpdate() {
         title: `发现新版本 ${update.version}`,
         message: `
       <div style="text-align: left; display: flex; flex-direction: column;">
-        <h4 style="margin: 5px 0; color: #1989fa;">更新内容</h4>
+        <h4 style="margin: 5px 0 8px; color: #1989fa; display: flex; align-items: center;">
+          <svg style="margin-right: 6px; width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v2h-2zm2-4h-2V7h2z"/>
+          </svg>
+          <span>更新内容</span>
+        </h4>
         <div style="max-height: 200px; overflow-y: auto; padding: 5px; background: #f7f8fa; border-radius: 4px;">
           ${update.body}
         </div>

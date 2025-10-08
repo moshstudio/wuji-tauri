@@ -26,4 +26,6 @@ dist-ssr
 *lock.yaml
 upload-keystore.jks
 .tauri
-test.*
+.history*
+test*
+test.js

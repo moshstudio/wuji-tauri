@@ -1,4 +1,3 @@
-use crate::proxy_plugin::ad_remove::AdRemover;
 use m3u8_rs::AlternativeMediaType::Audio;
 use m3u8_rs::{MediaPlaylist, Playlist};
 use once_cell::sync::Lazy;
@@ -14,7 +13,9 @@ use std::sync::atomic::{AtomicU16, Ordering};
 use std::time::Duration;
 use unicase::Ascii;
 use urlencoding::{decode, encode};
-use warp::http::header::{HeaderMap as WarpHeaderMap, HeaderName};
+use warp::http::header::{
+    HeaderMap as WarpHeaderMap, HeaderName as WarpHeaderName, HeaderValue as WarpHeaderValue,
+};
 use warp::http::Method as WarpMethod;
 use warp::http::{HeaderMap, HeaderValue};
 use warp::reply::Reply;
@@ -40,9 +41,49 @@ fn convert_headers(
     Ok(new_headers)
 }
 
-async fn get_m3u8_content_async(url: String) -> Result<impl warp::Reply, Infallible> {
-    let client = get_default_http_client();
+async fn get_m3u8_content_async(
+    headers_part: String,
+    url: String,
+    headers: warp::http::HeaderMap,
+) -> Result<impl warp::Reply, Infallible> {
+    // 解码headers
+    let decoded_headers = urlencoding::decode(&headers_part).unwrap_or_default();
+    let mut header_map = reqwest::header::HeaderMap::new();
+    if !decoded_headers.is_empty() {
+        for header_pair in decoded_headers.split(',') {
+            if let Some((name_part, value_part)) = header_pair.split_once(':') {
+                if let Ok(header_name) = name_part.parse::<http::header::HeaderName>() {
+                    if let Ok(header_value) = http::HeaderValue::from_str(value_part) {
+                        header_map.insert(header_name, header_value);
+                    }
+                }
+            }
+        }
+    }
+    // let reqwest_headers = convert_to_reqwest_headers(&headers);
+    // let excluded_headers: [reqwest::header::HeaderName; 3] = [
+    //     reqwest::header::HeaderName::from_static("host"),
+    //     reqwest::header::HeaderName::from_static("referer"),
+    //     reqwest::header::HeaderName::from_static("origin"),
+    // ];
+    // // 遍历源 headers
+    // for (name, value) in reqwest_headers.iter() {
+    //     // 检查头部是否不在排除列表中且不在目标 header_map 中
+    //     if !excluded_headers.contains(&name) && !header_map.contains_key(name) {
+    //         // 由于 HeaderValue 是不可变的，我们可以直接克隆它
+    //         header_map.insert(name.clone(), value.clone());
+    //     }
+    // }
 
+    // 创建HTTP客户端
+    let client = get_m3u8_http_client(Some(url.clone()), Some(header_map.clone()), None);
+
+    let dbg_info = format!(
+        "get_m3u8_content_async send request: url={}, headers={:?}",
+        &url.clone(),
+        header_map.clone(),
+    );
+    dbg!(dbg_info);
     // First try with redirects disabled to check for 302
     let result = client.get(&url).send().await;
     if result.is_err() {
@@ -52,103 +93,171 @@ async fn get_m3u8_content_async(url: String) -> Result<impl warp::Reply, Infalli
             .unwrap());
     }
     let response = result.unwrap(); // 提前解包并存储
-    if response.status().is_redirection() {
+    let status = response.status();
+    if status.is_redirection() {
         if let Some(location) = response.headers().get("Location") {
             if let Ok(redirect_url) = location.to_str() {
-                return Box::pin(get_m3u8_content_async(redirect_url.to_string())).await;
+                return Box::pin(get_m3u8_content_async(
+                    headers_part.to_string(),
+                    redirect_url.to_string(),
+                    headers.clone(),
+                ))
+                .await;
             }
         }
     }
+    // Process normal response (non-redirect)
+    // 提前获取 headers 和 status，避免 response 被提前 move
+    let headers = response.headers().clone();
+    let status = response.status();
 
     // Process normal response (non-redirect)
     let content = response.text().await;
-    let m3u8 = match content {
-        Ok(content) => process_m3u8(&url, content),
+    let m3u8 = match &content {
+        Ok(c) => process_m3u8(&url, c.clone(), headers_part),
         Err(_) => "".to_string(),
     };
+    let dbg_info = format!(
+        "get_m3u8_content_async response: status={}, headers={:?}, content(or length)={}",
+        status.as_u16(),
+        headers.clone(),
+        if m3u8.len() > 300 {
+            m3u8.len().to_string()
+        } else {
+            m3u8.clone()
+        }
+    );
+    dbg!(dbg_info);
+
+    let content_type = headers
+        .get("Content-Type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/vnd.apple.mpegurl");
 
     let res = warp::http::Response::builder()
         .status(200)
-        .header("Content-Type", "application/vnd.apple.mpegurl")
+        .header("Content-Type", content_type)
         .body(m3u8)
         .unwrap();
     Ok(res)
 }
+fn smart_parse_m3u8(content: &str) -> Result<Playlist, Box<dyn std::error::Error>> {
+    let cleaned_content = content.trim_start_matches('+').trim();
+    let content_bytes = cleaned_content.as_bytes();
 
+    // 首先尝试通用解析
+    match m3u8_rs::parse_playlist_res(content_bytes) {
+        Ok(playlist) => {
+            // 如果通用解析成功，直接返回
+            return Ok(playlist);
+        }
+        Err(_) => {
+            // 通用解析失败，继续尝试特定解析
+        }
+    }
+
+    // 尝试作为Master Playlist解析
+    if let Ok(master_pl) = m3u8_rs::parse_master_playlist_res(content_bytes) {
+        return Ok(Playlist::MasterPlaylist(master_pl));
+    }
+
+    // 尝试作为Media Playlist解析（包括直播流）
+    if let Ok(media_pl) = m3u8_rs::parse_media_playlist_res(content_bytes) {
+        return Ok(Playlist::MediaPlaylist(media_pl));
+    }
+
+    // 所有尝试都失败，根据内容长度输出不同的错误信息
+    if content.len() > 500 {
+        Err(format!(
+            "无法解析M3U8内容：既不是有效的Master Playlist也不是Media Playlist。内容长度：{}字符",
+            content.len()
+        )
+        .into())
+    } else {
+        Err(format!(
+            "无法解析M3U8内容：既不是有效的Master Playlist也不是Media Playlist。内容：'{}'",
+            content
+        )
+        .into())
+    }
+}
 /// process m3u8
-fn process_m3u8(m3u8_path: &String, mut content: String) -> String {
+fn process_m3u8(m3u8_path: &String, mut content: String, headers_part: String) -> String {
     if content.is_empty() {
         return "".to_string();
     }
-    if let Ok(Playlist::MediaPlaylist(mut pl)) = m3u8_rs::parse_playlist_res(content.as_bytes()) {
-        pl.segments.iter_mut().for_each(|segment| {
-            // http://39.135.138.58:18890/PLTV/88888888/224/3221225918/index.m3u8
-            // http%3A%2F%2F113.207.84.197%3A8090%2F__cl%2Fcg%3Alive%2F__c%2Fcctv17HD%2F__op%2Fdefault%2F__f%2Findex.m3u8
-            // No process with BANDWIDTH
-            let port = ACTUAL_PORT.load(Ordering::SeqCst);
 
-            let path_prefix = format!("{}:{}/ts/", HOST, port);
+    match smart_parse_m3u8(&content) {
+        Ok(Playlist::MediaPlaylist(mut pl)) => {
+            dbg!("process_m3u8 media type");
+            pl.segments.iter_mut().for_each(|segment| {
+                let port = ACTUAL_PORT.load(Ordering::SeqCst);
+                let path_prefix = format!("{}:{}/ts/", HOST, port);
 
-            if segment.uri.starts_with("http") {
-                segment.uri = format!("{}{}", path_prefix, encode(&segment.uri));
-            } else {
-                if let Some(position) = m3u8_path.rfind("/") {
-                    let url = &m3u8_path[..position + 1];
-                    let real_url = format!("{}{}", url, &segment.uri);
-                    segment.uri = format!("{}{}", path_prefix, encode(&real_url));
-                }
-            }
-        });
-        // dbg!(&pl);
-        let mut v: Vec<u8> = Vec::new();
-        if let Ok(_) = pl.write_to(&mut v) {
-            content = String::from_utf8(v).unwrap();
-        }
-    } else if let Ok(Playlist::MasterPlaylist(mut pl)) =
-        m3u8_rs::parse_playlist_res(content.as_bytes())
-    {
-        // println!("{:?}", pl.alternatives);
-        let port = ACTUAL_PORT.load(Ordering::SeqCst);
-
-        let path_prefix = format!("{}:{}/m3u8/", HOST, port);
-
-        // process audio
-        pl.alternatives.iter_mut().for_each(|mut media| {
-            if media.media_type == Audio && media.uri.is_some() {
-                if media.uri.as_ref().unwrap().starts_with("http") {
-                    media.uri = Some(format!(
-                        "{}{}",
-                        path_prefix,
-                        encode(media.uri.as_ref().unwrap())
-                    ));
+                if segment.uri.starts_with("http") {
+                    segment.uri = format!("{}{}", path_prefix, encode(&segment.uri));
                 } else {
                     if let Some(position) = m3u8_path.rfind("/") {
                         let url = &m3u8_path[..position + 1];
-                        let real_url = format!("{}{}", url, media.uri.as_ref().unwrap());
-                        media.uri = Some(format!("{}{}", &path_prefix, encode(&real_url)));
+                        let real_url = format!("{}{}", url, &segment.uri);
+                        segment.uri = format!("{}{}", path_prefix, encode(&real_url));
                     }
                 }
+            });
+            let mut v: Vec<u8> = Vec::new();
+            if let Ok(_) = pl.write_to(&mut v) {
+                content = String::from_utf8(v).unwrap();
             }
-        });
+        }
+        Ok(Playlist::MasterPlaylist(mut pl)) => {
+            dbg!("process_m3u8 master type");
+            // println!("{:?}", pl.alternatives);
+            let port = ACTUAL_PORT.load(Ordering::SeqCst);
 
-        // process m3u8 list
-        pl.variants.iter_mut().for_each(|mut variant| {
-            // let path_prefix = format!("{}:{}/m3u8/", HOST, PORT);
-            if variant.uri.starts_with("http") {
-                variant.uri = format!("{}{}", path_prefix, encode(&variant.uri));
-            } else {
-                if let Some(position) = m3u8_path.rfind("/") {
-                    let url = &m3u8_path[..position + 1];
-                    let real_url = format!("{}{}", url, &variant.uri);
-                    variant.uri = format!("{}{}", &path_prefix, encode(&real_url));
+            let path_prefix = format!("{}:{}/m3u8/{}/", HOST, port, headers_part);
+
+            // process audio
+            pl.alternatives.iter_mut().for_each(|mut media| {
+                if media.media_type == Audio && media.uri.is_some() {
+                    if media.uri.as_ref().unwrap().starts_with("http") {
+                        media.uri = Some(format!(
+                            "{}{}",
+                            path_prefix,
+                            encode(media.uri.as_ref().unwrap())
+                        ));
+                    } else {
+                        if let Some(position) = m3u8_path.rfind("/") {
+                            let url = &m3u8_path[..position + 1];
+                            let real_url = format!("{}{}", url, media.uri.as_ref().unwrap());
+                            media.uri = Some(format!("{}{}", &path_prefix, encode(&real_url)));
+                        }
+                    }
                 }
+            });
+
+            // process m3u8 list
+            pl.variants.iter_mut().for_each(|mut variant| {
+                // let path_prefix = format!("{}:{}/m3u8/", HOST, PORT);
+                if variant.uri.starts_with("http") {
+                    variant.uri = format!("{}{}", path_prefix, encode(&variant.uri));
+                } else {
+                    if let Some(position) = m3u8_path.rfind("/") {
+                        let url = &m3u8_path[..position + 1];
+                        let real_url = format!("{}{}", url, &variant.uri);
+                        variant.uri = format!("{}{}", &path_prefix, encode(&real_url));
+                    }
+                }
+            });
+            let mut v: Vec<u8> = Vec::new();
+            if let Ok(_) = pl.write_to(&mut v) {
+                content = String::from_utf8(v).unwrap();
             }
-        });
-        let mut v: Vec<u8> = Vec::new();
-        if let Ok(_) = pl.write_to(&mut v) {
-            content = String::from_utf8(v).unwrap();
+        }
+        Err(e) => {
+            dbg!("process_m3u8 unknown type", &e);
         }
     }
+
     return content;
     // return AdRemover::new().run(content);
 }
@@ -249,9 +358,9 @@ async fn get_ts_content_async(ts: String) -> Result<impl warp::Reply, Infallible
     // let url = "https://live.v1.mk/api/bestv.php?id=cctv1hd8m/8000000";
     // let url = "http://39.135.138.58:18890/PLTV/88888888/224/3221225918/index.m3u8";
     // let url = "http://test.8ne5i.10.vs.rxip.sc96655.com/live/8ne5i_sccn,CCTV-6H265_hls_pull_4000K/280/085/429.ts";
-    let client = get_default_http_client();
+
+    let client = get_m3u8_http_client(None, None, None);
     let result = client.get(&ts).send().await;
-    // dbg!(&result);
     if result.is_err() {
         return Ok(warp::http::Response::builder()
             .status(500)
@@ -311,7 +420,7 @@ fn convert_to_reqwest_headers(warp_headers: &WarpHeaderMap) -> ReqwestHeaderMap 
 fn convert_to_wrap_headers(reqwest_headers: ReqwestHeaderMap) -> WarpHeaderMap {
     let mut warp_headers = WarpHeaderMap::new();
     for (name, value) in reqwest_headers.iter() {
-        let name = HeaderName::from_bytes(name.as_str().as_bytes()).unwrap();
+        let name = WarpHeaderName::from_bytes(name.as_str().as_bytes()).unwrap();
         let value = HeaderValue::from_bytes(value.as_bytes()).unwrap();
         warp_headers.insert(name, value);
     }
@@ -329,6 +438,7 @@ fn is_hop_header(header_name: &str) -> bool {
             Ascii::new("Trailers"),
             Ascii::new("Transfer-Encoding"),
             Ascii::new("Upgrade"),
+            Ascii::new("Content-Length"),
         ]
     });
 
@@ -356,8 +466,10 @@ async fn handle_proxy_request(
     headers: warp::http::HeaderMap,
     body: warp::hyper::body::Bytes,
 ) -> Result<impl warp::Reply, warp::Rejection> {
+    let params_clone = params.clone();
+    let method_clone = method.clone();
     // 解码URL
-    let url = match urlencoding::decode(encoded_url) {
+    let url_cow = match urlencoding::decode(encoded_url) {
         Ok(decoded) => decoded,
         Err(_) => {
             let reply = warp::reply::with_status(
@@ -367,8 +479,7 @@ async fn handle_proxy_request(
             return Ok(reply.into_response());
         }
     };
-    // 解析目标URI
-    let uri: warp::http::Uri = match url.parse() {
+    let uri: warp::http::Uri = match url_cow.parse() {
         Ok(u) => u,
         Err(_) => {
             let reply = warp::reply::with_status(
@@ -378,7 +489,8 @@ async fn handle_proxy_request(
             return Ok(reply.into_response());
         }
     };
-    let uri = if let Some(params) = params {
+
+    let url = if let Some(params) = params {
         format!("{}?{}", uri.to_string(), params)
     } else {
         uri.to_string()
@@ -397,36 +509,21 @@ async fn handle_proxy_request(
             }
         }
     }
-    let reqwest_headers = convert_to_reqwest_headers(&headers);
-    let excluded_headers: [reqwest::header::HeaderName; 3] = [
-        reqwest::header::HeaderName::from_static("host"),
-        reqwest::header::HeaderName::from_static("referer"),
-        reqwest::header::HeaderName::from_static("origin"),
-    ];
-    // 遍历源 headers
-    for (name, value) in reqwest_headers.iter() {
-        // 检查头部是否不在排除列表中且不在目标 header_map 中
-        if !excluded_headers.contains(&name) && !header_map.contains_key(name) {
-            // 由于 HeaderValue 是不可变的，我们可以直接克隆它
-            header_map.insert(name.clone(), value.clone());
-        }
-    }
+    dbg!(
+        "handle_proxy_request send request:",
+        uri.clone(),
+        header_map.clone(),
+        body.clone(),
+    );
 
     // 创建HTTP客户端
-    let client = get_default_http_client();
-    dbg!(
-        "send request",
-        uri.clone(),
-        convert_to_reqwest_method(method.clone()),
-        header_map.clone(),
-        body.clone()
-    );
+    let client = get_proxy_http_client(Some(url.clone()), Some(header_map.clone()), None);
 
     // 构建请求
     let reqwest_request = match client
-        .request(convert_to_reqwest_method(method), uri)
-        .headers(header_map)
-        .body(body)
+        .request(convert_to_reqwest_method(method), url.clone())
+        // .headers(header_map)
+        .body(body.clone())
         .build()
     {
         Ok(req) => req,
@@ -450,44 +547,118 @@ async fn handle_proxy_request(
         }
     };
     // 转换响应状态码
-    let status = warp::http::StatusCode::from_u16(response.status().as_u16())
+    let response_headers = response.headers().clone();
+    let response_status = warp::http::StatusCode::from_u16(response.status().as_u16())
         .unwrap_or(warp::http::StatusCode::INTERNAL_SERVER_ERROR);
-
-    // 转换响应头（过滤掉非法头）
-    let mut headers = warp::http::HeaderMap::new();
-    for (key, value) in response.headers() {
-        if let Ok(name) = warp::http::HeaderName::from_bytes(key.as_ref()) {
-            if let Ok(val) = warp::http::HeaderValue::from_bytes(value.as_bytes()) {
-                headers.insert(name, val);
+    let response_bytes = match response.bytes().await {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            let reply = warp::reply::with_status(
+                format!("Failed to read response: {}", e),
+                warp::http::StatusCode::INTERNAL_SERVER_ERROR,
+            );
+            return Ok(reply.into_response());
+        }
+    };
+    if response_status.is_redirection() {
+        if let Some(location) = response_headers.get(reqwest::header::LOCATION) {
+            if let Ok(redirect_url) = location.to_str() {
+                return Box::pin(handle_proxy_request(
+                    &headers_part,
+                    &redirect_url,
+                    params_clone,
+                    method_clone,
+                    headers.clone(),
+                    body.clone(),
+                ))
+                .await;
             }
         }
     }
+    dbg!(
+        "handle_proxy_request response:",
+        response_status,
+        response_headers.clone(),
+        response_bytes.len()
+    );
 
-    // 移除可能冲突的头部
-    headers.remove(warp::http::header::CONNECTION);
-
-    // 转换响应体为流
-    let stream = response.bytes_stream();
-
-    // 构建响应
-    let mut reply = warp::http::Response::new(warp::hyper::Body::wrap_stream(stream));
-    *reply.status_mut() = status;
-    *reply.headers_mut() = headers;
-
+    // 构造原始响应返回
+    let mut reply = warp::http::Response::new(warp::hyper::Body::from(response_bytes));
+    *reply.status_mut() = response_status;
+    *reply.headers_mut() = convert_to_wrap_headers(response_headers.clone());
     Ok(reply)
 }
 
-fn get_default_http_client() -> reqwest::Client {
-    let mut headers = reqwest::header::HeaderMap::new();
+fn get_m3u8_http_client(
+    url: Option<String>,
+    headers: Option<reqwest::header::HeaderMap>,
+    redirect: Option<reqwest::redirect::Policy>,
+) -> reqwest::Client {
+    let mut headers = headers.unwrap_or_else(|| reqwest::header::HeaderMap::new());
+    if !headers.contains_key(reqwest::header::USER_AGENT) {
+        let ua = if let Some(url_str) = url {
+            "(Windows NT 10.0; WOW64) PotPlayer/25.06.25"
+        } else {
+            "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko"
+        };
+        headers.insert(
+            reqwest::header::USER_AGENT,
+            reqwest::header::HeaderValue::from_static(ua),
+        );
+    }
+    if !headers.contains_key(reqwest::header::ACCEPT) {
+        headers.insert(
+            reqwest::header::ACCEPT,
+            reqwest::header::HeaderValue::from_static("*/*"),
+        );
+    }
+
+    return reqwest::Client::builder()
+        .default_headers(headers)
+        .redirect(redirect.unwrap_or(reqwest::redirect::Policy::none()))
+        .connect_timeout(Duration::from_secs(15))
+        .http1_title_case_headers()
+        .build()
+        .unwrap();
+}
+
+fn get_proxy_http_client(
+    url: Option<String>,
+    headers: Option<reqwest::header::HeaderMap>,
+    redirect: Option<reqwest::redirect::Policy>,
+) -> reqwest::Client {
+    let mut headers = headers.unwrap_or_else(|| reqwest::header::HeaderMap::new());
+    if !headers.contains_key(reqwest::header::USER_AGENT) {
+        headers.insert(
+            reqwest::header::USER_AGENT,
+            reqwest::header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"),
+        );
+    }
+    if !headers.contains_key(reqwest::header::ACCEPT) {
+        headers.insert(
+            reqwest::header::ACCEPT,
+            reqwest::header::HeaderValue::from_static("*/*"),
+        );
+    }
+    if !headers.contains_key(reqwest::header::ACCEPT_ENCODING) {
+        headers.insert(
+            reqwest::header::ACCEPT_ENCODING,
+            reqwest::header::HeaderValue::from_static("gzip, deflate, br, zstd"),
+        );
+    }
+    if !headers.contains_key(reqwest::header::ACCEPT_LANGUAGE) {
+        headers.insert(
+            reqwest::header::ACCEPT_LANGUAGE,
+            reqwest::header::HeaderValue::from_static("zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"),
+        );
+    }
     headers.insert(
-        reqwest::header::HeaderName::from_static("user-agent"),
-        reqwest::header::HeaderValue::from_static(
-            "(Windows NT 10.0; Win64; x64) PotPlayer/25.02.26",
-        ),
+        reqwest::header::UPGRADE_INSECURE_REQUESTS,
+        reqwest::header::HeaderValue::from_static("1"),
     );
     return reqwest::Client::builder()
         .default_headers(headers)
-        .redirect(reqwest::redirect::Policy::none())
+        .redirect(redirect.unwrap_or(reqwest::redirect::Policy::none()))
         .connect_timeout(Duration::from_secs(15))
         .build()
         .unwrap();
@@ -500,27 +671,53 @@ pub(crate) async fn get_m3u8_url(
 ) -> Result<String, String> {
     let port = ACTUAL_PORT.load(Ordering::SeqCst);
 
-    // Return proxy URL with the original URL as path
+    let encoded_url = encode(original_url.as_str());
+    dbg!("get_m3u8_url", &original_url, &encoded_url);
+
+    let mut headers_part = if !headers.is_empty() {
+        let mut headers_str = String::new();
+        for (name, value) in headers.iter() {
+            headers_str.push_str(&format!("{}:{},", name.as_str(), value));
+        }
+        // 移除最后的逗号
+        if !headers_str.is_empty() {
+            headers_str.pop();
+        }
+        encode(&headers_str).into_owned()
+    } else {
+        encode("").into_owned()
+    };
+    if headers_part.is_empty() {
+        headers_part = encode("_").into_owned();
+    }
+
     Ok(format!(
-        "{}:{}/m3u8/{}",
-        HOST,
-        port,
-        encode(original_url.as_str())
+        "{}:{}/m3u8/{}/{}",
+        HOST, port, headers_part, encoded_url
     ))
+
+    // Return proxy URL with the original URL as path
+    // Ok(format!(
+    //     "{}:{}/m3u8/{}",
+    //     HOST,
+    //     port,
+    //     encode(original_url.as_str())
+    // ))
 }
 
 #[tauri::command]
 pub(crate) fn get_proxy_url(
-    url: &str,
-    headers: Option<Vec<(String, String)>>,
+    original_url: String,
+    headers: HashMap<String, String>,
 ) -> Result<String, String> {
     let port = ACTUAL_PORT.load(Ordering::SeqCst);
 
-    let encoded_url = encode(url);
+    let encoded_url = encode(original_url.as_str());
+    dbg!("get_proxy_url", &original_url, &encoded_url);
 
-    let mut headers_part = if let Some(h) = headers {
+    let mut headers_part = if !headers.is_empty() {
         let mut headers_str = String::new();
-        for (name, value) in h.iter() {
+        for (name, value) in headers.iter() {
             headers_str.push_str(&format!("{}:{},", name.as_str(), value));
         }
         // 移除最后的逗号
@@ -556,15 +753,17 @@ pub(crate) fn start_proxy_server() -> std::io::Result<()> {
         .allow_any_origin()
         .allow_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
         .allow_headers(vec!["Content-Type"]);
-    let m3u8_proxy_router = warp::path!("m3u8" / String).and_then(move |url: String| {
-        let decoded = decode(url.as_str()).expect("UTF-8");
-        // dbg!(&decoded);
-        get_m3u8_content_async(decoded.to_string())
-    });
+    let m3u8_proxy_router = warp::path!("m3u8" / String / String)
+        .and(warp::header::headers_cloned())
+        .and_then(
+            |headers_part: String, url: String, headers: warp::http::HeaderMap| async move {
+                let decoded = decode(url.as_str()).expect("UTF-8");
+                get_m3u8_content_async(headers_part.to_string(), decoded.to_string(), headers).await
+            },
+        );
     // proxy ts
     let ts_proxy_router = warp::path!("ts" / String).and_then(move |url: String| {
         let decoded = decode(url.as_str()).expect("UTF-8");
-        // dbg!(&decoded);
         get_ts_content_async(decoded.to_string())
     });
 

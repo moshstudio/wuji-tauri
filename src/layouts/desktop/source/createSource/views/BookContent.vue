@@ -4,22 +4,10 @@ import { BookExtension } from '@wuji-tauri/source-extension';
 import { showDialog } from 'vant';
 import { ref } from 'vue';
 import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
+import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
-  content: {
-    type: string;
-    chineseName: string;
-    id: string;
-    name: string;
-    version: string;
-    pages: {
-      type: string;
-      chineseName: string;
-      code: string;
-      passed: boolean;
-      result: BookItem | undefined;
-    }[];
-  };
+  content: FormItem<BookItem>;
   updateResult: (
     type: 'book',
     page: 'content',

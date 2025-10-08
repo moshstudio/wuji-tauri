@@ -140,7 +140,7 @@ function randomize() {
     part.color = allColors[Math.floor(Math.random() * allColors.length)];
     part.width = partSize;
     part.height = partSize;
-    part.borderRadius = Math.floor(Math.random() * (size / 2));
+    part.borderRadius = Math.floor(Math.random() * (size * 2));
     part.rotate = Math.floor(Math.random() * 90);
     part.deg = Math.floor(Math.random() * 360) - 180;
   });

@@ -8,22 +8,10 @@ import { ref } from 'vue';
 import BOOK_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 import MPagination from '@/components/pagination/MPagination.vue';
 import SearchField from '@/components/search/SearchField.vue';
+import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
-  content: {
-    type: string;
-    chineseName: string;
-    id: string;
-    name: string;
-    version: string;
-    pages: {
-      type: string;
-      chineseName: string;
-      code: string;
-      passed: boolean;
-      result: VideosList | undefined;
-    }[];
-  };
+  content: FormItem<VideosList>;
   updateResult: (
     type: 'video',
     page: 'searchList',

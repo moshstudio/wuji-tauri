@@ -66,6 +66,6 @@ export const guideExamplesMD = {
     list: videoListMD,
     searchList: videoSearchListMD,
     detail: videoDetailMD,
-    content: videoPlayUrlMD,
+    playUrl: videoPlayUrlMD,
   },
 };

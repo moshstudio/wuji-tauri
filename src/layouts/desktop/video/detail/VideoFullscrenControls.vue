@@ -222,13 +222,15 @@ function dragHandler(dragState: AnyGestureEventTypes['drag'], event: any) {
           width="60"
           height="60"
           color="rgba(220, 220, 220, 0.8)"
+          @click.stop="playOrPause"
         />
         <Icon
           v-else
           icon="solar:pause-bold"
           width="60"
           height="60"
-          color="rgba(220, 220, 220, 0.5)"
+          color="rgba(220, 220, 220, 0.8)"
+          @click.stop="playOrPause"
         />
       </div>
       <div
@@ -266,13 +268,13 @@ function dragHandler(dragState: AnyGestureEventTypes['drag'], event: any) {
             slideOptions.isSliding &&
             slideOptions.targetPosition != slideOptions.startPosition
           "
-          class="pointer-events-none flex w-full items-center justify-center"
+          class="pointer-events-none flex w-full items-center justify-center pb-2"
         >
-          <span class="text-base text-gray-100">
+          <span class="text-2xl text-gray-100">
             {{ formatTime(slideOptions.targetPosition) }}
           </span>
-          <span class="text-base text-gray-400">/</span>
-          <span class="text-base text-gray-400">
+          <span class="text-2xl text-gray-400">/</span>
+          <span class="text-2xl text-gray-400">
             {{ formatTime(videoDuration) }}
           </span>
         </div>
@@ -284,8 +286,12 @@ function dragHandler(dragState: AnyGestureEventTypes['drag'], event: any) {
         >
           <div
             class="absolute left-0 h-[10px] rounded-lg bg-gray-100/60"
-            :style="{ width: `${(videoPosition / videoDuration) * 100}%` }"
-          />
+            :style="{
+              width: slideOptions.isSliding
+                ? `${(slideOptions.targetPosition / videoDuration) * 100}%`
+                : `${(videoPosition / videoDuration) * 100}%`,
+            }"
+          ></div>
         </div>
         <div
           class="pointer-events-none flex w-full items-center justify-between gap-4 px-4"

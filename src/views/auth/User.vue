@@ -10,10 +10,14 @@ import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppUser from '@/layouts/app/auth/User.vue';
 import DesktopUser from '@/layouts/desktop/auth/User.vue';
 import { useBackStore, useServerStore } from '@/store';
+import { ref } from 'vue';
+import { onMountedOrActivated } from '@vant/use';
 
 const backStore = useBackStore();
 const serverStore = useServerStore();
 const { userInfo } = storeToRefs(serverStore);
+
+const showTaichiTrailNotice = ref(false);
 
 async function updateUserInfo(info: {
   name?: string;
@@ -59,6 +63,18 @@ function clickEmail() {
     showToast('已复制到剪贴板');
   }
 }
+
+onMountedOrActivated(async () => {
+  console.log('user page onMountedOrActivated');
+
+  // 获取用户信息
+  const status = await serverStore.checkTaichiFreeTrail();
+  if (status === true) {
+    showTaichiTrailNotice.value = true;
+  } else {
+    showTaichiTrailNotice.value = false;
+  }
+});
 </script>
 
 <template>
@@ -66,6 +82,7 @@ function clickEmail() {
     <template #app>
       <AppUser
         :user-info="userInfo"
+        :show-taichi-trail-notice="showTaichiTrailNotice"
         :get-user-info="serverStore.fetchUserInfo"
         :update-user-info="updateUserInfo"
         :reset-password="resetPassword"
@@ -76,6 +93,7 @@ function clickEmail() {
     <template #desktop>
       <DesktopUser
         :user-info="userInfo"
+        :show-taichi-trail-notice="showTaichiTrailNotice"
         :get-user-info="serverStore.fetchUserInfo"
         :update-user-info="updateUserInfo"
         :reset-password="resetPassword"

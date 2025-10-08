@@ -176,6 +176,7 @@ function dragHandler(dragState: AnyGestureEventTypes['drag'], event: any) {
       height="60"
       color="rgba(220, 220, 220, 0.5)"
       class="van-haptics-feedback absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform"
+      @click.stop="playOrPause"
     />
   </transition>
   <transition
@@ -266,13 +267,13 @@ function dragHandler(dragState: AnyGestureEventTypes['drag'], event: any) {
     v-if="!componentIsShowing && videoDuration && !videoSrc?.isLive"
     :ref="(el) => (slideOptions.slideElement = el as HTMLElement)"
     v-drag="dragHandler"
-    class="pointer-events-auto absolute bottom-0 left-0 right-0 h-[12px] w-full"
+    class="pointer-events-auto absolute bottom-0 left-0 right-0 h-[24px] w-full"
     @click.stop
   />
   <!-- sidebar -->
   <transition
     enter-active-class="transition-all duration-300 delay-300"
-    enter-from-class="opacity-0"
+    enter-from-class="opacity-0 translate-x-[200px]"
     enter-to-class="opacity-100"
   >
     <div
@@ -320,7 +321,7 @@ function dragHandler(dragState: AnyGestureEventTypes['drag'], event: any) {
         size="24"
         color="white"
         class="van-haptics-feedback flex-shrink-0 p-2"
-        @click.stop="backStore.back"
+        @click.stop="() => backStore.back(true)"
       />
       <span v-if="playerState?.paused" class="flex-1 truncate text-gray-400">
         {{ playingEpisode?.title }}

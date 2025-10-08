@@ -10,22 +10,10 @@ import { showDialog } from 'vant';
 import { ref } from 'vue';
 import BOOK_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
-  content: {
-    type: string;
-    chineseName: string;
-    id: string;
-    name: string;
-    version: string;
-    pages: {
-      type: string;
-      chineseName: string;
-      code: string;
-      passed: boolean;
-      result: VideosList | undefined;
-    }[];
-  };
+  content: FormItem<VideosList>;
   updateResult: (
     type: 'video',
     page: 'detail',
@@ -101,25 +89,26 @@ async function load() {
       throw new Error('初始化中的baseUrl未定义!');
     }
     cls.log = props.log;
-    let item: VideoItem | undefined;
-    const page = findPage('list');
-    if (page?.result) {
-      if (_.isArray(page.result)) {
-        item = page.result[0]?.list?.[0];
-      } else {
-        item = page.result.list?.[0];
-      }
-    }
-    if (!item) {
-      const page = findPage('searchList');
-      if (page?.result) {
-        if (_.isArray(page.result)) {
-          item = page.result[0]?.list?.[0];
+    function getItem(p?: FormItem<VideosList>['pages'][0]) {
+      let item: VideoItem | undefined;
+      if (p?.result) {
+        if (_.isArray(p.result)) {
+          item = _.findLast(p.result, (item) => !!item.list?.length)?.list?.[0];
         } else {
-          item = page.result.list?.[0];
+          item = p.result.list?.[0];
         }
       }
+      return item;
     }
+    const listPage = findPage('list');
+    const listItem = getItem(listPage);
+    const searchPage = findPage('searchList');
+    const searchItem = getItem(searchPage);
+    const item =
+      (searchPage?.ts || 0) > (listPage?.ts || 0) && searchItem
+        ? searchItem
+        : listItem;
+
     if (!item) {
       throw new Error('请先保证《推荐影视》或《搜索影视》执行不为空');
     }

@@ -5,8 +5,8 @@ export async function getProxyUrl(
   headers?: Record<string, string>,
 ): Promise<string | null> {
   return await invoke('plugin:proxy-plugin|get_proxy_url', {
-    url,
-    headers: Array.from(Object.entries(headers || {})),
+    originalUrl: url,
+    headers: headers || {},
   });
 }
 

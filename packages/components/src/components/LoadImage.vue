@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { type as osType } from '@tauri-apps/plugin-os';
 import { cachedFetch } from '@wuji-tauri/fetch';
+import { getProxyUrl } from '../utils/proxy';
 import { Image as VanImage } from 'vant';
 import { ref, useAttrs, watch } from 'vue';
 
@@ -63,40 +65,44 @@ async function processSrc(
   }
   if (!headers && !props.compress) {
     return src;
-  }
-  let response: Response;
-  try {
-    response = await cachedFetch(
-      props.src,
-      {
-        headers,
-        verify: false,
-        maxRedirections: 0,
-      },
-      props.compress,
-    );
-    if (!response.ok) {
-      throw new Error('maxRedirections == 0 failed');
+  } else if (osType() === 'android') {
+    const proxyUrl = await getProxyUrl(src, headers);
+    return proxyUrl || src;
+  } else {
+    let response: Response;
+    try {
+      response = await cachedFetch(
+        props.src,
+        {
+          headers,
+          verify: false,
+          maxRedirections: 0,
+        },
+        props.compress,
+      );
+      if (!response.ok) {
+        throw new Error('maxRedirections == 0 failed');
+      }
+    } catch (error) {
+      response = await cachedFetch(
+        props.src,
+        {
+          headers,
+          verify: true,
+        },
+        props.compress,
+      );
     }
-  } catch (error) {
-    response = await cachedFetch(
-      props.src,
-      {
-        headers,
-        verify: true,
-      },
-      props.compress,
+
+    const blob = await response.blob();
+    if (blob.size === 0) {
+      return src;
+    }
+    loadFinished.value = true;
+    return URL.createObjectURL(
+      new Blob([blob], { type: blob.type || 'image/png' }),
     );
   }
-
-  const blob = await response.blob();
-  if (blob.size === 0) {
-    return src;
-  }
-  loadFinished.value = true;
-  return URL.createObjectURL(
-    new Blob([blob], { type: blob.type || 'image/png' }),
-  );
 }
 
 // 监听 src 的变化

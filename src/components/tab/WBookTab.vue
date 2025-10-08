@@ -69,7 +69,7 @@ watch(
   >
     <van-tab
       v-for="(item, index) in source.list"
-      :key="index"
+      :key="index.toString() + item.type"
       :title="item.type"
     >
       <div class="pl-2 pt-1">

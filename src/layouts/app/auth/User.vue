@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import type { UserInfo } from '@/types/user';
 import { onMountedOrActivated } from '@vant/use';
-import { showToast } from 'vant';
 import { onDeactivated, onUnmounted, reactive, ref, watch } from 'vue';
 import SVipButton from '@/components/button/SVipButton.vue';
 import VipButton from '@/components/button/VipButton.vue';
@@ -12,6 +11,7 @@ import { showPromptDialog } from '@/utils/usePromptDialog';
 
 const props = defineProps<{
   userInfo?: UserInfo;
+  showTaichiTrailNotice: boolean;
   getUserInfo: () => Promise<void>;
   updateUserInfo: (
     userInfo: Partial<Omit<UserInfo, 'uuid' | 'email' | 'isVerified'>>,
@@ -87,6 +87,17 @@ function updateName() {
         </van-button>
       </template>
       <template v-else>
+        <van-notice-bar
+          v-if="showTaichiTrailNotice"
+          mode="link"
+          @click="
+            () => {
+              router.push({ name: 'TaiChiFreeTrail' });
+            }
+          "
+        >
+          太极用户免费领会员!
+        </van-notice-bar>
         <van-pull-refresh
           v-model="isRefreshing"
           v-remember-scroll
@@ -95,7 +106,7 @@ function updateName() {
           @refresh="onRefresh"
         >
           <van-cell-group inset class="user-info-section">
-            <van-cell center>
+            <van-cell center class="avatar">
               <template #title>
                 <div class="flex items-center gap-2">
                   <div class="h-[42px] w-[42px]">
@@ -106,35 +117,13 @@ function updateName() {
                       :src="tmpUserInfo.photo || ''"
                     />
                   </div>
-                  <div class="flex-grow">
-                    <p class="text-sm" @click="updateName">
-                      {{ userInfo.name }}
-                    </p>
-                  </div>
-
-                  <VipButton
-                    :is-vip="
-                      isMembershipOrderValid(userInfo.vipMembershipPlan, now)
-                    "
-                    :on-click="
-                      () => {
-                        router.push({ name: 'VipDetail' });
-                      }
-                    "
-                  />
-                  <SVipButton
-                    :is-svip="
-                      isMembershipOrderValid(
-                        userInfo.superVipMembershipPlan,
-                        now,
-                      )
-                    "
-                    :on-click="
-                      () => {
-                        router.push({ name: 'VipDetail' });
-                      }
-                    "
-                  />
+                </div>
+              </template>
+              <template #value>
+                <div class="flex-grow">
+                  <p class="text-sm" @click="updateName">
+                    {{ userInfo.name || '设置昵称' }}
+                  </p>
                 </div>
               </template>
               <template v-if="!tmpUserInfo.isVerified" #label>
@@ -145,8 +134,38 @@ function updateName() {
               title="邮箱"
               :value="tmpUserInfo.email"
               clickable
+              class="email"
               @click="clickEmail"
             />
+            <van-cell
+              is-link
+              clickable
+              @click="
+                () => {
+                  router.push({ name: 'VipDetail' });
+                }
+              "
+            >
+              <template #title>
+                <div class="flex items-center gap-2">
+                  <VipButton
+                    :is-vip="
+                      isMembershipOrderValid(userInfo.vipMembershipPlan, now)
+                    "
+                    :on-click="() => {}"
+                  />
+                  <SVipButton
+                    :is-svip="
+                      isMembershipOrderValid(
+                        userInfo.superVipMembershipPlan,
+                        now,
+                      )
+                    "
+                    :on-click="() => {}"
+                  />
+                </div>
+              </template>
+            </van-cell>
           </van-cell-group>
 
           <van-cell-group inset class="mt-4">
@@ -181,4 +200,11 @@ function updateName() {
   </div>
 </template>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+:deep(.email .van-cell__value) {
+  flex: 2;
+}
+:deep(.avatar .van-cell__value) {
+  flex: 2;
+}
+</style>

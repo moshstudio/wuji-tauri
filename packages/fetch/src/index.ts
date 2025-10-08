@@ -1,6 +1,12 @@
 import type { BaseDirectory } from '@tauri-apps/plugin-fs';
 import { Channel, invoke } from '@tauri-apps/api/core';
 import imageCompression from 'browser-image-compression';
+import imageCompressionCode from './assets/browser-image-compression.js?raw';
+
+const blob = new Blob([imageCompressionCode], {
+  type: 'application/javascript',
+});
+const imageCompressionUrl = URL.createObjectURL(blob);
 
 export interface Proxy {
   /**
@@ -290,19 +296,20 @@ export async function cachedFetch(
 
     if (response.ok) {
       if (imageAndCompress) {
-        const blob = await response.blob();
+        const blob: Blob | null = await response.blob();
         if (blob.size === 0) {
           return response;
         }
-        const file = new File([blob], 'image.png', {
+        const file: File | null = new File([blob], 'image.png', {
           type: blob.type || 'image/png',
         });
         try {
           const compressedFile = await imageCompression(file, {
-            maxSizeMB: 1, // 最大文件大小（MB）
-            maxWidthOrHeight: 1024, // 最大宽/高
+            maxSizeMB: 0.5, // 最大文件大小（MB）
+            maxWidthOrHeight: 800, // 最大宽/高
             useWebWorker: true, // 多线程加速
             fileType: 'image/webp', // 可选转 WebP
+            libURL: imageCompressionUrl,
           });
           response = new Response(compressedFile);
           cache.put(cacheKey, response.clone());

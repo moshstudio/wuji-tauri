@@ -811,7 +811,7 @@ export const useStore = defineStore('store', () => {
   const getVideoItem = (
     source: VideoSource,
     videoId: string,
-  ): ComicItem | undefined => {
+  ): VideoItem | undefined => {
     const checkFromShelf = () => {
       for (const shelf of shelfStore.videoShelf) {
         for (const video of shelf.videos) {

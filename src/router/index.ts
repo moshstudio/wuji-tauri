@@ -257,6 +257,16 @@ export const routes: RouteRecordRaw[] = [
         name: 'SyncFromServer',
         component: () => import('@/views/sync/FromServer.vue'),
       },
+      {
+        path: 'taichi',
+        children: [
+          {
+            path: 'free-trail',
+            name: 'TaiChiFreeTrail',
+            component: () => import('@/views/promotion/taichi/FreeTrail.vue'),
+          },
+        ],
+      },
     ],
   },
 ];

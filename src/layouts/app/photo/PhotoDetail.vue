@@ -75,6 +75,7 @@ watch(
             :src="item"
             :headers="photoDetail?.photosHeaders"
             fit="contain"
+            :compress="false"
             @click="
               () => {
                 clickedItem = item;

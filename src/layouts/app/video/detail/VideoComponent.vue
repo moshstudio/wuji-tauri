@@ -32,6 +32,7 @@ const props = withDefaults(
     playNext: (resource?: VideoResource, episode?: VideoEpisode) => void;
     playOrPause: () => void;
     addToShelf: (video: VideoItem) => void;
+    showSearch: () => void;
     toggleFullScreen: (fullscreen: boolean) => void;
     onCanPlay: (args: any) => void;
     onPlayFinished: (args: any) => void;
@@ -103,9 +104,16 @@ watch(
       class="z-2 up-shadow video-list flex h-full w-full flex-shrink-0 cursor-auto flex-col overflow-hidden rounded-t-lg bg-[var(--van-background-2)] text-[var(--van-text-color)]"
       @wheel.stop
     >
-      <div class="flex flex-shrink-0 items-center justify-end">
+      <div class="flex flex-shrink-0 items-center justify-end gap-2">
+        <van-icon
+          name="search"
+          size="22"
+          class="van-haptics-feedback p-2"
+          @click="showSearch"
+        />
         <van-icon
           name="cross"
+          size="22"
           class="van-haptics-feedback p-2"
           @click="() => (isShowing = false)"
         />

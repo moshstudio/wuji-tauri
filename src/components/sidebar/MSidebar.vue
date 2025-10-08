@@ -46,8 +46,9 @@ const options = [
     />
     <van-popup
       v-model:show="displayStore.showLeftPopup"
-      z-index="1002"
+      z-index="1004"
       position="left"
+      teleport="body"
       destroy-on-close
       :style="{ width: '150px', height: '100%' }"
     >

@@ -114,7 +114,6 @@ const shelfStore = useSongShelfStore();
           v-for="item in playlist?.list?.list"
           :key="item.id"
           :song="item"
-          :shelfs="shelfStore.songCreateShelf"
           :is-playing="songStore.isPlaying"
           :is-playing-song="item.id === songStore.playingSong?.id"
           :play="() => songStore.setPlayingList(playlist!.list!.list, item)"

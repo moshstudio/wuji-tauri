@@ -14,6 +14,7 @@ export interface VideoEpisode {
   id: string;
   title: string;
   url?: string;
+  cover?: string;
   extra?: any;
   lastWatchPosition?: number;
 }

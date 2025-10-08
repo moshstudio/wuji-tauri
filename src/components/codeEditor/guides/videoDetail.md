@@ -50,11 +50,48 @@ abstract getVideoDetail(item: VideoItem): Promise<VideoItem | null>;
 ```javascript
 async function getVideoDetail(item) {
   pageNo ||= 1;
-  const body = await this.fetchDom(item.url);
-  const chapters = await this.queryChapters(body, {
-    element: '.ar_list_col a',
+  const document = await this.fetchDom(item.url);
+  item.intro = document.querySelector('.detail-desc p')?.textContent.trim();
+  const rows = Array.from(document.querySelectorAll('.detail-info-row').values());
+  item.director = rows[0].querySelector('.detail-info-row-main')?.textContent;
+  item.cast = rows[1].querySelector('.detail-info-row-main')?.textContent;
+
+  const tagElements = Array.from(document.querySelectorAll('.detail-tags a').values());
+  item.releaseDate = tagElements[0]?.textContent;
+  item.country = tagElements[1]?.textContent;
+  if (tagElements.length > 2) {
+    item.tags = tagElements
+      .slice(2)
+      .map((a) => a.textContent)
+      .join('');
+  }
+  const resources = [];
+  const sourceNames = Array.from(
+    document.querySelectorAll('.episode-box .swiper-slide .source-item span').values(),
+  ).map((a) => a.textContent);
+  const episodeElements = Array.from(
+    document.querySelectorAll('.episode-box-main .episode-list').values(),
+  );
+  sourceNames.forEach((sourceName, index) => {
+    const episodeElement = episodeElements[index];
+    if (!episodeElement) return;
+    if (sourceName.includes('超清') || sourceName.includes('4K')) return;
+    const episodes = [];
+    episodeElement.querySelectorAll('a[href]').forEach((a) => {
+      const url = this.urlJoin(this.baseUrl, a.getAttribute('href'));
+      episodes.push({
+        id: url,
+        title: a.textContent,
+        url: url,
+      });
+    });
+    resources.push({
+      id: sourceName,
+      title: sourceName,
+      episodes: episodes,
+    });
   });
-  item.chapters = chapters.reverse();
+  item.resources = resources;
   return item;
 }
 ```

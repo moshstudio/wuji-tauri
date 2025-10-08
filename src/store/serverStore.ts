@@ -28,8 +28,13 @@ import { createKVStore, useDisplayStore } from '.';
 import { router } from '@/router';
 import { SyncTypes } from '@/types/sync';
 
-const API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
-// const API_BASE_URL = 'http://127.0.0.1:3000/v1/api/';
+let API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
+// let API_BASE_URL = 'http://127.0.0.1:3000/v1/api/';
+
+if (process.env.NODE_ENV !== 'development') {
+  // 防止忘了改
+  API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
+}
 
 export const useServerStore = defineStore('serverStore', () => {
   const kvStorage = createKVStore('serverStore');
@@ -471,7 +476,6 @@ export const useServerStore = defineStore('serverStore', () => {
         handleError(response);
       }
     } catch (error) {
-
       showFailToast('删除源失败');
     }
   };
@@ -684,6 +688,49 @@ export const useServerStore = defineStore('serverStore', () => {
     }
   };
 
+  const checkTaichiFreeTrail = async () => {
+    try {
+      const response = await request('promotion/taichi-trail-status');
+      if (response.ok) {
+        const ret = await response.json();
+        return ret.status;
+      } else {
+        console.warn(await response.text());
+        return false;
+      }
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const taichiFreeTrail = async (username: string, password: string) => {
+    const toast = showLoadingToast({
+      message: '会员领取中...',
+    });
+    try {
+      const response = await request('promotion/taichi-trail', {
+        method: 'POST',
+        body: JSON.stringify({
+          username,
+          password,
+        }),
+      });
+      if (response.ok) {
+        const ret = await response.text();
+        showSuccessToast(ret);
+        fetchUserInfo();
+        return ret;
+      } else {
+        handleError(response);
+        return false;
+      }
+    } catch (error) {
+      showFailToast('领取失败');
+    } finally {
+      toast.close();
+    }
+  };
+
   // 登出
   const logout = (): void => {
     accessToken.value = undefined;
@@ -740,6 +787,8 @@ export const useServerStore = defineStore('serverStore', () => {
     getAliPayUrl,
     syncToServer,
     syncFromServer,
+    checkTaichiFreeTrail,
+    taichiFreeTrail,
     clear,
   };
 });

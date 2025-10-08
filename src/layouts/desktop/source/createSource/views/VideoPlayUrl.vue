@@ -13,22 +13,10 @@ import { computed, ref, watch } from 'vue';
 import BOOK_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MVideoPlayer from '@/components/media/MVideoPlayer.vue';
+import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
-  content: {
-    type: string;
-    chineseName: string;
-    id: string;
-    name: string;
-    version: string;
-    pages: {
-      type: string;
-      chineseName: string;
-      code: string;
-      passed: boolean;
-      result: VideoItem | undefined;
-    }[];
-  };
+  content: FormItem<VideoItem>;
   updateResult: (
     type: 'video',
     page: 'playUrl',
@@ -249,7 +237,12 @@ defineExpose({
           :episode="selectedEpisode"
           :on-can-play="(args) => {}"
           :on-play-finished="(args) => {}"
-          class="pointer-events-none h-[200px] w-full"
+          class="h-[200px] w-full"
+          @click="
+            () => {
+              videoPlayer?.paused ? videoPlayer?.play() : videoPlayer?.pause();
+            }
+          "
         />
         <div
           class="flex w-full flex-shrink-0 items-center justify-start gap-2 overflow-hidden"

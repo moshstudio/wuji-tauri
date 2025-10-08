@@ -8,22 +8,10 @@ import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?ra
 import HorizonList from '@/components/list/HorizonList.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
 import SearchField from '@/components/search/SearchField.vue';
+import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
-  content: {
-    type: string;
-    chineseName: string;
-    id: string;
-    name: string;
-    version: string;
-    pages: {
-      type: string;
-      chineseName: string;
-      code: string;
-      passed: boolean;
-      result: PlaylistList | undefined;
-    }[];
-  };
+  content: FormItem<PlaylistList>;
   updateResult: (
     type: 'song',
     page: 'searchPlaylist',

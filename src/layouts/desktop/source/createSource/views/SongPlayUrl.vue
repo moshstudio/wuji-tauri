@@ -11,23 +11,10 @@ import { SongExtension } from '@wuji-tauri/source-extension';
 import { showDialog, showFailToast } from 'vant';
 import { nextTick, ref } from 'vue';
 import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
+import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
-  content: {
-    type: string;
-    chineseName: string;
-    id: string;
-    name: string;
-    version: string;
-    pages: {
-      type: string;
-      chineseName: string;
-      code: string;
-      passed: boolean;
-      result: SongList | undefined;
-    }[];
-  };
-
+  content: FormItem<SongList>;
   updateResult: (
     type: 'song',
     page: 'playUrl',

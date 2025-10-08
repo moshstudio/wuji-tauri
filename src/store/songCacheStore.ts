@@ -126,17 +126,21 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
       if (Array.isArray(song.artists)) {
         if (typeof song.artists[0] === 'string') {
           // 处理 string[] 类型
-          a = `-${song.artists.join(',')}`;
+          a = `${song.artists.join(',')}`;
         } else {
           // 处理 ArtistInfo[] 类型
-          a = `-${song.artists
+          a = `${song.artists
             .map((artist) => (artist as ArtistInfo).name)
             .join(',')}`;
         }
       }
     }
     return `${
-      sanitizePathName(song.name || '') + a + sanitizePathName(song.sourceId)
+      sanitizePathName(song.name || '') +
+      '-' +
+      a +
+      '-' +
+      sanitizePathName(song.sourceId)
     }.mp3`;
   };
   const songIdToCoverId = (songId: string) => {
@@ -269,24 +273,25 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
 
     const cache_song_id = genCacheSongId(song);
     const good_cache_song_id = genCacheSongId(goodSong);
-    await fsApi.copyFile(
-      `${dirName}/${good_cache_song_id}`,
-      `${dirName}/${cache_song_id}`,
-      {
-        fromPathBaseDir: baseDir,
-        toPathBaseDir: baseDir,
-      },
-    );
+    // await fsApi.copyFile(
+    //   `${dirName}/${good_cache_song_id}`,
+    //   `${dirName}/${cache_song_id}`,
+    //   {
+    //     fromPathBaseDir: baseDir,
+    //     toPathBaseDir: baseDir,
+    //   },
+    // );
     if (!find) {
       songs.value.unshift({
         song_id: song.id,
         song_name: song.name || '',
         source_id: song.sourceId,
         update_time: Date.now(),
-        cache_song_id,
+        cache_song_id: good_cache_song_id,
       });
     } else {
       find.update_time = Date.now();
+      find.cache_song_id = good_cache_song_id;
     }
   };
 

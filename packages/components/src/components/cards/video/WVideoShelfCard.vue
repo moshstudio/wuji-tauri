@@ -70,6 +70,7 @@ const lastWatchEpisode = computed((): VideoEpisode | undefined => {
       {{ video.video.title }}
     </p>
     <p
+      v-if="lastWatchEpisode?.title"
       class="absolute bottom-[22px] max-w-full truncate bg-slate-600/80 p-1 text-xs text-gray-200"
     >
       {{ lastWatchEpisode?.title || '未观看' }}

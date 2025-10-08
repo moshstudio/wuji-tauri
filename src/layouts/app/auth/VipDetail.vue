@@ -136,7 +136,13 @@ watch(
       </span>
     </div>
 
-    <van-tabs v-model:active="active" shrink animated class="flex-grow">
+    <van-tabs
+      v-model:active="active"
+      shrink
+      animated
+      swipeable
+      class="flex-grow"
+    >
       <van-tab title="VIP会员">
         <div class="p-4">
           <HorizonList class="mb-6 gap-3">
@@ -203,6 +209,22 @@ watch(
               <span class="pr-1">¥{{ selectedVipPlan?.price }}</span>
               <span>立即开通</span>
             </van-button>
+          </div>
+          <!-- 会员特权说明 -->
+          <div class="pb-6 pt-2">
+            <van-cell-group
+              inset
+              :title="active === 0 ? 'VIP专属特权' : 'SVIP专属特权'"
+            >
+              <van-cell title="专属订阅源" />
+              <van-cell title="服务器数据同步" />
+              <van-cell title="更多功能实现中..." />
+            </van-cell-group>
+            <div
+              class="mt-4 text-center text-xs text-gray-500 dark:text-gray-400"
+            >
+              客服支持qq: 3976424284
+            </div>
           </div>
         </div>
       </van-tab>
@@ -274,22 +296,25 @@ watch(
               <span>立即开通</span>
             </van-button>
           </div>
+          <!-- 会员特权说明 -->
+          <div class="pb-6 pt-2">
+            <van-cell-group
+              inset
+              :title="active === 0 ? 'VIP专属特权' : 'SVIP专属特权'"
+            >
+              <van-cell title="专属订阅源" />
+              <van-cell title="服务器数据同步" />
+              <van-cell title="更多功能实现中..." />
+            </van-cell-group>
+            <div
+              class="mt-4 text-center text-xs text-gray-500 dark:text-gray-400"
+            >
+              客服支持qq: 3976424284
+            </div>
+          </div>
         </div>
       </van-tab>
     </van-tabs>
-
-    <!-- 会员特权说明 -->
-    <div class="px-4 pb-6">
-      <van-cell-group inset>
-        <van-cell :title="active === 0 ? 'VIP专属特权' : 'SVIP专属特权'" />
-        <van-cell title="专属订阅源" />
-        <van-cell title="服务器数据同步" />
-        <van-cell title="更多功能实现中..." />
-      </van-cell-group>
-      <div class="mt-4 text-center text-xs text-gray-500 dark:text-gray-400">
-        客服支持qq: 3976424284
-      </div>
-    </div>
   </div>
 </template>
 

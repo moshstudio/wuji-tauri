@@ -5,7 +5,7 @@ import type {
   VideoResource,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
-import type videojs from 'video.js';
+import videojs from 'video.js';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { VideoPlayer } from '@videojs-player/vue';
 import {
@@ -19,6 +19,7 @@ import { useRoute } from 'vue-router';
 import { getErrorDisplayHTML } from '@/components/media/error';
 import { useDisplayStore } from '@/store';
 import 'video.js/dist/video-js.css';
+import Mpegts from './flv-video-tech';
 
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
@@ -79,6 +80,8 @@ const controlBarOptions = {
 function handleMounted(payload: any) {
   state.value = payload.state;
   player.value = payload.player;
+
+  videojs.registerTech('Mpegts', Mpegts);
 }
 function onFullScreenChange() {
   // 快捷键时会触发
@@ -103,7 +106,7 @@ async function requestFullScreen() {
 }
 
 function onLoadstart(args: any) {
-  if (route.path.includes('/video-detail')) {
+  if (route.name === 'VideoDetail') {
     // 判断是否还在当前页面
     player.value?.play();
   }
@@ -129,6 +132,8 @@ function onLoadedMetadata(args: any) {
 // }
 
 function onError(e: any) {
+  console.log('media player on error', e);
+
   const error = player.value?.error();
   if (error) {
     player.value!.errorDisplay.contentEl().innerHTML = getErrorDisplayHTML(
@@ -211,13 +216,24 @@ onActivated(() => {
 <template>
   <VideoPlayer
     :options="{
-      autoplay: false,
+      autoplay: videoSrc?.isLive ? true : false,
       controls: false,
       fluid: false,
     }"
+    :poster="episode?.cover || ''"
     :sources="videoSources"
     playsinline
     :loop="false"
+    :techOrder="['html5', 'mpegts']"
+    :html5="{
+      vhs: {
+        // https://github.com/videojs/http-streaming#options
+        overrideNative: true,
+        maxPlaylistRetries: 4,
+      },
+      nativeAudioTracks: false,
+      nativeVideoTracks: false,
+    }"
     crossorigin="anonymous"
     :control-bar="controlBarOptions"
     :playback-rates="[0.5, 0.75, 1.0, 1.25, 1.5, 2.0]"

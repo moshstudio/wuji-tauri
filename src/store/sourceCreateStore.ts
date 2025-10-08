@@ -33,7 +33,7 @@ import {
 } from '@/components/codeEditor/templates';
 import { createKVStore } from './utils';
 
-interface FormItem {
+export interface FormItem<T = any> {
   type: string;
   chineseName: string;
   id: string;
@@ -45,7 +45,8 @@ interface FormItem {
     code: string;
     defaultCode: string;
     passed: boolean;
-    result: undefined;
+    result?: T;
+    ts?: number;
   }[];
 }
 
@@ -71,6 +72,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: PHOTO_CONSTRUCTOR,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'list',
@@ -79,6 +81,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: PHOTO_LIST,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'searchList',
@@ -87,6 +90,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: PHOTO_SEARCH,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'detail',
@@ -95,6 +99,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: PHOTO_DETAIL,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
       ],
     },
@@ -112,6 +117,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: SONG_CONSTRUCTOR,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'songList',
@@ -120,6 +126,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: SONG_LIST,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'searchSongList',
@@ -128,6 +135,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: SONG_SEARCH_LIST,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'playlist',
@@ -136,6 +144,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: '',
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'searchPlaylist',
@@ -144,6 +153,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: SONG_SEARCH_PLAYLIST,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'playlistDetail',
@@ -152,6 +162,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: SONG_PLAYLIST_DETAIL,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'playUrl',
@@ -160,6 +171,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: SONG_PLAY_URL,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'lyric',
@@ -168,6 +180,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: SONG_LYRIC,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
       ],
     },
@@ -185,6 +198,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: BOOK_CONSTRUCTOR,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'list',
@@ -193,6 +207,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: BOOK_LIST,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'searchList',
@@ -201,6 +216,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: BOOK_SEARCH,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'detail',
@@ -209,6 +225,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: BOOK_DETAIL,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'content',
@@ -217,6 +234,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: BOOK_CONTENT,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
       ],
     },
@@ -234,6 +252,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: COMIC_CONSTRUCTOR,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'list',
@@ -242,6 +261,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: COMIC_LIST,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'searchList',
@@ -250,6 +270,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: COMIC_SEARCH,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'detail',
@@ -258,6 +279,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: COMIC_DETAIL,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'content',
@@ -266,6 +288,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: COMIC_CONTENT,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
       ],
     },
@@ -283,6 +306,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: VIDEO_CONSTRUCTOR,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'list',
@@ -291,6 +315,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: VIDEO_LIST,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'searchList',
@@ -299,6 +324,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: VIDEO_SEARCH,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'detail',
@@ -307,6 +333,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: VIDEO_DETAIL,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
         {
           type: 'playUrl',
@@ -315,6 +342,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           defaultCode: VIDEO_PLAY_URL,
           passed: false,
           result: undefined,
+          ts: undefined,
         },
       ],
     },

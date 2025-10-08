@@ -33,6 +33,7 @@ const props = defineProps<{
   playOrPause: () => void;
   play: (resource: VideoResource, episode: VideoEpisode) => Promise<void>;
   addToShelf: (video: VideoItem) => void;
+  showSearch: () => void;
   playPrev: (resource?: VideoResource, episode?: VideoEpisode) => void;
   playNext: (resource?: VideoResource, episode?: VideoEpisode) => void;
   seek: (offset: number) => void;
@@ -78,7 +79,7 @@ const nextEpisode = computed(() => {
 });
 
 const swipeable = computed(() => {
-  return !componentRef.value?.isShowing && !controlRef.value?.isShowing;
+  return !componentRef.value?.isShowing; // && !controlRef.value?.isShowing;
 });
 
 const videoDirection = ref<'vertical' | 'horizontal'>('vertical');
@@ -264,6 +265,7 @@ function formatTime(seconds: number) {
       :play-or-pause="playOrPause"
       :toggle-full-screen="toggleFullScreen"
       :add-to-shelf="addToShelf"
+      :show-search="showSearch"
       :on-can-play="onCanPlay"
       :on-play-finished="onPlayFinished"
       :format-time="formatTime"
@@ -290,6 +292,7 @@ function formatTime(seconds: number) {
       :play-or-pause="playOrPause"
       :toggle-full-screen="toggleFullScreen"
       :add-to-shelf="addToShelf"
+      :show-search="showSearch"
       :on-can-play="onCanPlay"
       :on-play-finished="onPlayFinished"
       :format-time="formatTime"

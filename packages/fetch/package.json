@@ -13,8 +13,5 @@
     "dev": "vite build --watch",
     "build": "vite build && tsc",
     "prepublishOnly": "pnpm build"
-  },
-  "peerDependencies": {
-    "@tauri-apps/api": "^2.7.0"
   }
 }

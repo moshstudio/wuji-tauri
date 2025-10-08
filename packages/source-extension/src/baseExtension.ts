@@ -28,7 +28,12 @@ export function transformResult<T>(func: (result: T) => T) {
         const result: T = await originalMethod.apply(this, args);
         return func(result);
       } catch (error) {
-        console.warn(`function ${key} failed`, error);
+        if (typeof (this as any).log === 'function') {
+          (this as any).log(`function ${key} failed: ${String(error)}`);
+        } else {
+          // 回退到 console.warn
+          console.warn(`[transformResult] function ${key} failed`, error);
+        }
         return null;
       }
     };
@@ -244,6 +249,7 @@ abstract class Extension {
         const img = element.querySelector(cover);
         let coverE =
           img?.getAttribute('data-original') ||
+          img?.getAttribute('data-img') ||
           img?.getAttribute('data-src') ||
           img?.getAttribute('src') ||
           img?.getAttribute('data-setbg') ||
@@ -336,6 +342,7 @@ abstract class Extension {
         const img = element.querySelector(cover);
         let coverE =
           img?.getAttribute('data-original') ||
+          img?.getAttribute('data-img') ||
           img?.getAttribute('data-src') ||
           img?.getAttribute('src') ||
           img?.getAttribute('data-setbg') ||
@@ -431,6 +438,7 @@ abstract class Extension {
         const img = element.querySelector(cover);
         let coverE =
           img?.getAttribute('data-original') ||
+          img?.getAttribute('data-img') ||
           img?.getAttribute('data-src') ||
           img?.getAttribute('src') ||
           img?.getAttribute('data-setbg') ||
@@ -512,6 +520,7 @@ abstract class Extension {
         const img = element.querySelector(picUrl);
         let coverE =
           img?.getAttribute('data-original') ||
+          img?.getAttribute('data-img') ||
           img?.getAttribute('data-src') ||
           img?.getAttribute('src') ||
           img?.getAttribute('data-setbg') ||
@@ -591,6 +600,7 @@ abstract class Extension {
         const img = element.querySelector(picUrl);
         let coverE =
           img?.getAttribute('data-original') ||
+          img?.getAttribute('data-img') ||
           img?.getAttribute('data-src') ||
           img?.getAttribute('src') ||
           img?.getAttribute('data-setbg') ||

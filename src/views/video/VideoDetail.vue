@@ -23,6 +23,7 @@ import { useRoute } from 'vue-router';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppVideoDetail from '@/layouts/app/video/VideoDetail.vue';
 import DesktopVideoDetail from '@/layouts/desktop/video/VideoDetail.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import {
   useBackStore,
   useDisplayStore,
@@ -61,7 +62,7 @@ watch(
   videoSrc,
   (_) => {
     if (videoSrc.value) {
-      function getStreamType(): string {
+      function getStreamType(): string | undefined {
         if (videoSrc.value?.type) {
           switch (videoSrc.value?.type) {
             case 'm3u8':
@@ -76,22 +77,32 @@ watch(
               return 'rtmp/flv';
           }
         }
-        const url = videoSrc.value?.url || '';
+        let url = videoSrc.value?.url || '';
         if (typeof url === 'string') {
+          const u = new URL(url);
+          if (
+            u?.host?.includes('127.0.0.1') ||
+            u?.host?.includes('localhost')
+          ) {
+            // 使用了代理
+            url = decodeURIComponent(url.split('/').pop() || '');
+            console.log(url);
+          }
           if (url.includes('.m3u8')) {
             return 'application/x-mpegURL'; // HLS
           } else if (url.includes('.mpd')) {
             return 'application/dash+xml'; // DASH
           } else if (url.includes('rtmp://')) {
             return 'rtmp/flv'; // RTMP
-          } else if (videoSrc.value?.isLive) {
-            return 'application/x-mpegURL'; // HLS
+          } else if (url.includes('.flv')) {
+            return 'video/x-flv'; // RTMP
+            // } else if (videoSrc.value?.isLive) {
+            //   return 'application/x-mpegURL'; // HLS
           } else if (url.includes('mp4')) {
             return 'video/mp4';
           }
         }
-
-        return 'application/x-mpegURL'; // 默认
+        return 'application/x-mpegURL';
       }
       videoSources.value = [
         {
@@ -100,7 +111,8 @@ watch(
         },
       ];
     } else {
-      videoSources.value = [];
+      videoPlayer.value?.reset();
+      // videoSources.value = [];
     }
   },
   { immediate: true },
@@ -128,6 +140,51 @@ const addShelfActions = computed(() => {
   }));
 });
 
+const showSearchDialog = ref(false);
+const searchText = ref('');
+
+const flatVideoItems = computed(() => {
+  return videoItem.value?.resources
+    ?.map((r) => {
+      if (!r.episodes) return undefined;
+      return r.episodes.map((e) => {
+        return {
+          resourceTitle: r.title,
+          resourceId: r.id,
+          episodeTitle: e.title,
+          episodeId: e.id,
+        };
+      });
+    })
+    .flat()
+    .filter((i) => !!i);
+});
+
+const filterVideoItems = computed(() => {
+  if (!searchText.value) return flatVideoItems.value;
+  return flatVideoItems.value?.filter((i) => {
+    return (
+      i.resourceTitle.includes(searchText.value) ||
+      i.episodeTitle.includes(searchText.value)
+    );
+  });
+});
+
+const playSearchedVideo = (resourceId: string, episodeId: string) => {
+  const resource = videoItem.value?.resources?.find((i) => i.id === resourceId);
+  if (!resource) {
+    showFailToast('没有找到该资源');
+    return;
+  }
+  const episode = resource.episodes?.find((i) => i.id === episodeId);
+  if (!episode) {
+    showFailToast('没有找到该集');
+    return;
+  }
+  play(resource, episode);
+  showSearchDialog.value = false;
+};
+
 const loadData = retryOnFalse({
   onFailed: backStore.back,
 })(
@@ -147,18 +204,18 @@ const loadData = retryOnFalse({
       return false;
     }
     videoSource.value = source;
-    const item = store.getVideoItem(source, videoId!);
-    if (!item) {
+    videoItem.value = store.getVideoItem(source, videoId!);
+    if (!videoItem.value) {
       return false;
     }
-    videoItem.value = item;
     const t = displayStore.showToast();
-    const detail = (await store.videoDetail(source!, item)) || undefined;
+    const detail =
+      (await store.videoDetail(source!, videoItem.value)) || undefined;
     displayStore.closeToast(t);
     if (detail?.id != videoItem.value?.id) {
       return false;
     }
-    videoItem.value = detail;
+    Object.assign(videoItem.value, detail);
     if (!videoItem.value || signal.aborted) {
       return false;
     }
@@ -320,9 +377,12 @@ const updateVideoPlayInfo = _.throttle(
   { leading: true, trailing: false },
 );
 
+let savedVideoSrc: VideoUrlMap | undefined;
+
 watch(
   [() => videoId, () => sourceId],
   async () => {
+    savedVideoSrc = undefined;
     loadData();
   },
   { immediate: true },
@@ -333,9 +393,14 @@ onMounted(() => {
     keepScreenOn(true);
   }
 });
+
 onActivated(() => {
   if (displayStore.isAndroid) {
     keepScreenOn(true);
+  }
+  if (savedVideoSrc && savedVideoSrc.isLive) {
+    videoSrc.value = savedVideoSrc;
+    savedVideoSrc = undefined;
   }
 });
 onDeactivated(() => {
@@ -344,7 +409,14 @@ onDeactivated(() => {
   }
   try {
     videoPlayer.value?.pause();
-  } catch (error) {}
+  } catch (error) {
+    console.warn('video player pause error', error);
+  }
+  if (videoSrc.value?.isLive) {
+    savedVideoSrc = videoSrc.value;
+    videoPlayer.value?.reset();
+    videoSrc.value = undefined;
+  }
 });
 </script>
 
@@ -364,6 +436,7 @@ onDeactivated(() => {
         :play="play"
         :in-shelf="inShelf"
         :add-to-shelf="() => (showAddShelfSheet = true)"
+        :show-search="() => (showSearchDialog = true)"
         :play-prev="playPrev"
         :play-next="playNext"
         :seek="seek"
@@ -386,6 +459,7 @@ onDeactivated(() => {
         :play="play"
         :in-shelf="inShelf"
         :add-to-shelf="() => (showAddShelfSheet = true)"
+        :show-search="() => (showSearchDialog = true)"
         :play-prev="playPrev"
         :play-next="playNext"
         :seek="seek"
@@ -399,7 +473,62 @@ onDeactivated(() => {
       title="添加到收藏"
       :actions="addShelfActions"
     />
+    <van-dialog
+      v-model:show="showSearchDialog"
+      title="搜索"
+      width="85%"
+      :show-confirm-button="false"
+      :show-cancel-button="true"
+      close-on-click-overlay
+      teleport="body"
+    >
+      <div class="flex w-full px-2">
+        <van-field
+          v-model="searchText"
+          placeholder="请输入关键词搜索"
+          autofocus
+          clearable
+          autocomplete="off"
+          class="w-full"
+        />
+      </div>
+      <div
+        class="flex h-[60vh] w-full flex-col items-center overflow-y-auto p-4"
+      >
+        <!-- 搜索输入框 -->
+        <ResponsiveGrid2 min-width="100" max-width="120">
+          <van-button
+            v-for="item in filterVideoItems"
+            :key="item.resourceId + item.episodeId"
+            type="default"
+            size="small"
+            block
+            style="margin: 4px 0"
+            @click="
+              () => {
+                playSearchedVideo(item.resourceId, item.episodeId);
+              }
+            "
+          >
+            <p class="truncate">{{ item.resourceTitle }}</p>
+            <p class="truncate">{{ item.episodeTitle }}</p>
+          </van-button>
+
+          <!-- 无结果提示 -->
+          <div
+            v-if="!filterVideoItems?.length"
+            class="flex items-center justify-center text-xs text-[var(--van-text-color-2)]"
+          >
+            无匹配结果
+          </div>
+        </ResponsiveGrid2>
+      </div>
+    </van-dialog>
   </PlatformSwitch>
 </template>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+:deep(.van-button__content) {
+  overflow: hidden;
+}
+</style>

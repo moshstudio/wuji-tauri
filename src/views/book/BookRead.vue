@@ -214,7 +214,7 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
     }
     const ret = await store.bookDetail(bookSource.value, book.value);
     if (ret) {
-      book.value = ret;
+      Object.assign(book.value, ret);
     }
   }
   if (!chapter) {

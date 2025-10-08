@@ -7,22 +7,10 @@ import { showFailToast } from 'vant';
 import { ref } from 'vue';
 import COMIC_TEMPLATE from '@/components/codeEditor/templates/comicTemplate.txt?raw';
 import MPagination from '@/components/pagination/MPagination.vue';
+import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
-  content: {
-    type: string;
-    chineseName: string;
-    id: string;
-    name: string;
-    version: string;
-    pages: {
-      type: string;
-      chineseName: string;
-      code: string;
-      passed: boolean;
-      result: ComicsList | undefined;
-    }[];
-  };
+  content: FormItem<ComicsList>;
   updateResult: (
     type: 'comic',
     page: 'list',
@@ -75,7 +63,7 @@ async function load(pageNo?: number, type?: string) {
       throw new Error('初始化中的baseUrl未定义!');
     }
     cls.log = props.log;
-    const res = await cls?.getRecommendComics(pageNo, type);
+    const res = await cls?.execGetRecommendComics(pageNo, type);
     if (!res) {
       throw new Error('获取推荐列表失败! 返回结果为空');
     }

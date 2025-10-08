@@ -14,6 +14,7 @@ const props = defineProps<{
       code: string;
       passed: boolean;
       result: SongList | undefined;
+      ts?: number;
     }[];
   };
   updateResult: (

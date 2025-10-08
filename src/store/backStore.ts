@@ -71,18 +71,51 @@ export const useBackStore = defineStore('back', () => {
     }
     return undefined;
   };
-  const back = async () => {
-    if (displayStore.fullScreenMode) {
-      displayStore.fullScreenMode = false;
-      return;
+  const back = async (buttonClick = false) => {
+
+    if (route.name === 'VideoDetail') {
+      if (!buttonClick && displayStore.showVideoComponent) {
+        displayStore.showVideoComponent = false;
+        return;
+      } else {
+        if (displayStore.fullScreenMode) {
+          displayStore.fullScreenMode = false;
+          return;
+        }
+      }
     }
-    if (
-      route.name?.toString().startsWith('Video') &&
-      displayStore.showVideoComponent
-    ) {
-      displayStore.showVideoComponent = false;
-      return;
-    }
+
+    // if (displayStore.fullScreenMode) {
+    //   displayStore.fullScreenMode = false;
+    //   return;
+    // }
+    // if (route.name === 'VideoDetail') {
+    //   if (buttonClick) {
+    //     displayStore.fullScreenMode = false;
+    //   }
+    // }
+    // if (!path) {
+    //   if (displayStore.fullScreenMode) {
+    //     displayStore.fullScreenMode = false;
+    //     return;
+    //   }
+    //   if (
+    //     route.name?.toString().startsWith('Video') &&
+    //     displayStore.showVideoComponent
+    //   ) {
+    //     displayStore.showVideoComponent = false;
+    //     displayStore.fullScreenMode = false;
+    //     return;
+    //   }
+    //   if (
+    //     route.name?.toString().startsWith('Song') &&
+    //     displayStore.showSongPlayingList
+    //   ) {
+    //     displayStore.showSongPlayingList = false;
+    //     return;
+    //   }
+    // }
+
     if (
       route.name?.toString().startsWith('Song') &&
       displayStore.showSongPlayingList
@@ -90,6 +123,7 @@ export const useBackStore = defineStore('back', () => {
       displayStore.showSongPlayingList = false;
       return;
     }
+
     const prevPath = getPrevPath();
     console.log('get prev path:', prevPath);
 

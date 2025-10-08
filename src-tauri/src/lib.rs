@@ -1,5 +1,4 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use tauri::AppHandle;
 use tauri::Manager;
 mod fetch_plugin;
 mod proxy_plugin;

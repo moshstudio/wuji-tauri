@@ -194,7 +194,6 @@ function songAddToShelf(song: SongInfo, shelf: SongShelf) {
         <template v-for="p in songStore.playingPlaylist" :key="p.id">
           <WSongCard
             :song="p"
-            :shelfs="shelfStore.songCreateShelf"
             :is-playing="songStore.isPlaying"
             :is-playing-song="p.id === songStore.playingSong?.id"
             :play="() => songStore.setPlayingList(songStore.playlist, p)"
