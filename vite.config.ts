@@ -56,10 +56,15 @@ export default defineConfig(async () => ({
         '**/src-tauri/**',
         '**/tauri-plugin-commands/**',
         '**/tauri-plugin-mediasession/**',
+        '**/tauri-plugin-webview/**',
       ],
     },
   },
   optimizeDeps: {
-    exclude: ['tauri-plugin-commands-api', 'tauri-plugin-mediasession-api'],
+    exclude: [
+      'tauri-plugin-commands-api',
+      'tauri-plugin-mediasession-api',
+      'tauri-plugin-mywebview-api',
+    ],
   },
 }));

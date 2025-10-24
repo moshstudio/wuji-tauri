@@ -31,7 +31,8 @@ export interface HotItem {
 }
 
 export async function fetchHotApi(): Promise<HotItem[]> {
-  const baseUrl = 'https://api-hot.imsyy.top/';
+  const baseUrl = 'http://47.103.115.255:6688/';
+
   const types = [
     'zhihu',
     'juejin',

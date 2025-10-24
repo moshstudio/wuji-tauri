@@ -98,6 +98,7 @@ abstract class VideoExtension extends Extension {
     const ret = await this.getRecommendVideos(pageNo, type);
     if (ret) {
       _.castArray(ret).forEach((videoList) => {
+        videoList.list ||= [];
         videoList.list?.forEach((videoItem) => {
           videoItem.sourceId = String(this.id);
         });
@@ -134,7 +135,8 @@ abstract class VideoExtension extends Extension {
     const ret = await this.search(keyword, pageNo);
     if (ret) {
       _.castArray(ret).forEach((videoList) => {
-        videoList.list?.forEach((videoItem) => {
+        videoList.list ||= [];
+        videoList.list.forEach((videoItem) => {
           videoItem.sourceId = String(this.id);
         });
       });
@@ -153,7 +155,8 @@ abstract class VideoExtension extends Extension {
     if (ret) {
       ret.id = String(ret.id);
       let index = 1;
-      ret.resources?.forEach((resource) => {
+      ret.resources ||= [];
+      ret.resources.forEach((resource) => {
         if (!resource.title) {
           resource.title = `播放地址${index}`;
           index += 1;
@@ -161,7 +164,8 @@ abstract class VideoExtension extends Extension {
         resource.id = String(
           resource.id || resource.url || resource.title || nanoid(),
         );
-        resource.episodes?.forEach((episode) => {
+        resource.episodes ||= [];
+        resource.episodes.forEach((episode) => {
           episode.id = String(
             episode.id || episode.url || episode.title || nanoid(),
           );
@@ -171,7 +175,7 @@ abstract class VideoExtension extends Extension {
       ret.sourceId = String(this.id);
       ret.lastWatchResourceId = item.lastWatchResourceId;
       ret.lastWatchEpisodeId = item.lastWatchEpisodeId;
-      ret.resources?.forEach((resource) => {
+      ret.resources.forEach((resource) => {
         const oldResource = item.resources?.find((r) => r.id === resource.id);
         if (oldResource) {
           resource.episodes?.forEach((episode) => {
@@ -205,7 +209,7 @@ abstract class VideoExtension extends Extension {
           return r;
         }
         if (r.headers) {
-          if (r.url.endsWith('.m3u8')) {
+          if (r.url.includes('m3u8')) {
             r.url = (await this.getM3u8ProxyUrl(r.url, r.headers)) || r.url;
           } else {
             r.url = (await this.getProxyUrl(r.url, r.headers)) || r.url;

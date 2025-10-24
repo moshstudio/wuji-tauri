@@ -314,7 +314,12 @@ export async function cachedFetch(
           response = new Response(compressedFile);
           cache.put(cacheKey, response.clone());
         } catch (error) {
-          console.error('LoadImage压缩错误:', cacheKey, error);
+          console.warn(
+            'LoadImage压缩错误, url: ',
+            input.toString(),
+            'error: ',
+            error,
+          );
           return new Response(blob);
         }
       } else {

@@ -87,6 +87,7 @@ abstract class ComicExtension extends Extension {
     const ret = await this.getRecommendComics(pageNo, type);
     if (ret) {
       _.castArray(ret).forEach((comicList) => {
+        comicList.list ||= [];
         comicList.list.forEach((comicItem) => {
           comicItem.sourceId = String(this.id);
         });
@@ -123,6 +124,7 @@ abstract class ComicExtension extends Extension {
     const ret = await this.search(keyword, pageNo);
     if (ret) {
       _.castArray(ret).forEach((comicList) => {
+        comicList.list ||= [];
         comicList.list.forEach((comicItem) => {
           comicItem.sourceId = String(this.id);
         });
@@ -136,7 +138,8 @@ abstract class ComicExtension extends Extension {
   @transformResult<ComicItem | null>((r) => {
     if (r) {
       r.id = String(r.id);
-      r.chapters?.forEach((chapter) => {
+      r.chapters ||= [];
+      r.chapters.forEach((chapter) => {
         chapter.id = String(chapter.id || chapter.url || nanoid());
       });
     }

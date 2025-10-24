@@ -1,8 +1,11 @@
-import type * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
+import { MonacoEditor } from '@guolao/vue-monaco-editor';
+import domTypes from '@/components/codeEditor/monaco-types/monaco-dom/index.d.ts.txt?raw';
 import cryptoJsTypes from '@/components/codeEditor/monaco-types/monaco-crypto/index.d.ts.txt?raw';
 import fetchDomTypes from '@/components/codeEditor/monaco-types/monaco-fetch-dom/index.d.ts.txt?raw';
+import fetchWebviewTypes from '@/components/codeEditor/monaco-types/monaco-fetch-webview/index.d.ts.txt?raw';
 import fetchTypes from '@/components/codeEditor/monaco-types/monaco-fetch/index.d.ts.txt?raw';
 import iconvTypes from '@/components/codeEditor/monaco-types/monaco-iconv/index.d.ts.txt?raw';
+import plimitTypes from '@/components/codeEditor/monaco-types/monaco-plimit/index.d.ts.txt?raw';
 import lodashCommonArrayTypes from '@/components/codeEditor/monaco-types/monaco-lodash/common/array.d.ts.txt?raw';
 import lodashCommonCollectionTypes from '@/components/codeEditor/monaco-types/monaco-lodash/common/collection.d.ts.txt?raw';
 import lodashCommonCommonTypes from '@/components/codeEditor/monaco-types/monaco-lodash/common/common.d.ts.txt?raw';
@@ -25,7 +28,11 @@ import queryPhotoElementsTypes from '@/components/codeEditor/monaco-types/monaco
 import querySongElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-song/index.d.ts.txt?raw';
 import queryVideoElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-video/index.d.ts.txt?raw';
 
-export function addCompletions(monaco: typeof monacoEditor) {
+export function addCompletions(monaco: MonacoEditor) {
+  monaco.languages.typescript.javascriptDefaults.addExtraLib(
+    domTypes,
+    'ts:dom.d.ts',
+  );
   monaco.languages.typescript.javascriptDefaults.addExtraLib(
     lodashTypes,
     'node_modules/@types/lodash/index.d.ts',
@@ -92,6 +99,10 @@ export function addCompletions(monaco: typeof monacoEditor) {
     'node_modules/@types/iconv/index.d.ts',
   );
   monaco.languages.typescript.javascriptDefaults.addExtraLib(
+    plimitTypes,
+    'node_modules/@types/p-limit/index.d.ts',
+  );
+  monaco.languages.typescript.javascriptDefaults.addExtraLib(
     m3u8ParserTypes,
     'node_modules/@types/m3u8-parser/index.d.ts',
   );
@@ -106,6 +117,10 @@ export function addCompletions(monaco: typeof monacoEditor) {
   monaco.languages.typescript.javascriptDefaults.addExtraLib(
     fetchDomTypes,
     'node_modules/@types/fetch-dom/index.d.ts',
+  );
+  monaco.languages.typescript.javascriptDefaults.addExtraLib(
+    fetchWebviewTypes,
+    'node_modules/@types/fetch-webview/index.d.ts',
   );
   monaco.languages.typescript.javascriptDefaults.addExtraLib(
     `export function nanoid<Type extends string>(size?: number): Type`,
@@ -179,10 +194,12 @@ export function addCompletions(monaco: typeof monacoEditor) {
      import * as cryptoJs from 'crypto-js';
      import * as forge from 'forge';
      import * as iconv from 'iconv';
+     import * as plimit from 'p-limit';
      import * as m3u8Parser from 'm3u8-parser';
      import * as getProxyUrl from 'proxy';
      import * as fetch from 'my-fetch';
      import * as fetchDom from 'fetch-dom';
+     import * as fetchWebview from 'fetch-webview';
      import * as nanoid from 'nanoid';
      import * as urlJoin from 'url-join';
      import * as maxPageNoFromElements from 'max-page-no';
@@ -202,9 +219,11 @@ export function addCompletions(monaco: typeof monacoEditor) {
       var cryptoJs: typeof import('crypto-js');
       var forge: typeof import('forge');
       var iconv: typeof import('iconv').iconv;
+      var pLimit: typeof import('p-limit').pLimit;
       var m3u8Parser: typeof import('m3u8-parser');
       var fetch: typeof import('my-fetch').fetch;
       var fetchDom: typeof import('fetch-dom').fetchDom;
+      var fetchWebview: typeof import('fetch-webview').fetchWebview;
       var nanoid: typeof import('nanoid').nanoid;
       var urlJoin: typeof import('url-join').urlJoin;
       var maxPageNoFromElements: typeof import('max-page-no').maxPageNoFromElements;
@@ -219,6 +238,10 @@ export function addCompletions(monaco: typeof monacoEditor) {
       var log: typeof import('log').log;
       var baseUrl: typeof import('my-consts').baseUrl;
       var getM3u8ProxyUrl: typeof import('m3u8-proxy').getM3u8ProxyUrl;
+
+      interface GlobalThis {
+        pLimit: typeof import('p-limit').pLimit;
+      }
      }
      export {};
     `,

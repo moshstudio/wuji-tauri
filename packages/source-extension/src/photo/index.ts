@@ -60,6 +60,9 @@ abstract class PhotoExtension extends Extension {
   async execGetRecommendList(pageNo?: number) {
     pageNo = pageNo || 1;
     const ret = await this.getRecommendList(pageNo);
+    if (ret) {
+      ret.list ||= [];
+    }
     ret?.list.forEach((item) => {
       item.sourceId = String(this.id);
     });
@@ -82,6 +85,9 @@ abstract class PhotoExtension extends Extension {
     }
     pageNo = pageNo || 1;
     const ret = await this.search(keyword, pageNo);
+    if (ret) {
+      ret.list ||= [];
+    }
     ret?.list.forEach((item) => {
       item.sourceId = String(this.id);
     });

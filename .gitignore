@@ -29,3 +29,5 @@ upload-keystore.jks
 .history*
 test*
 test.js
+examples/
+.venv

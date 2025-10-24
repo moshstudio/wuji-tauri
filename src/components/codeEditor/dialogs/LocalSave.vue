@@ -60,7 +60,7 @@ async function beforeClose(action: string): Promise<boolean> {
 <template>
   <van-dialog
     v-model:show="show"
-    title="保存到本地"
+    title="保存"
     show-cancel-button
     :before-close="beforeClose"
   >

@@ -28,7 +28,11 @@ defineProps<{
             {{ option.name }}
           </template>
           <template #value>
-            <van-switch size="18" v-model="option.sync"></van-switch>
+            <van-switch
+              size="18"
+              v-model="option.sync"
+              @click.stop
+            ></van-switch>
           </template>
         </van-cell>
       </van-cell-group>

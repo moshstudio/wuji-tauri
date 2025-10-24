@@ -490,11 +490,14 @@ async fn handle_proxy_request(
         }
     };
 
-    let url = if let Some(params) = params {
+    let mut url = if let Some(params) = params {
         format!("{}?{}", uri.to_string(), params)
     } else {
         uri.to_string()
     };
+    if url.starts_with(r"//") {
+        url = format!("http:{}", url);
+    }
     // 解码headers
     let decoded_headers = urlencoding::decode(headers_part).unwrap_or_default();
     let mut header_map = reqwest::header::HeaderMap::new();
@@ -511,7 +514,7 @@ async fn handle_proxy_request(
     }
     dbg!(
         "handle_proxy_request send request:",
-        uri.clone(),
+        url.clone(),
         header_map.clone(),
         body.clone(),
     );

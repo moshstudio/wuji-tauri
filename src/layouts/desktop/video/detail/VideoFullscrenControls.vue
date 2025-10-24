@@ -11,7 +11,7 @@ import type {
 import type videojs from 'video.js';
 import { Icon } from '@iconify/vue';
 import * as commands from 'tauri-plugin-commands-api';
-import { reactive, ref } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import { router } from '@/router';
 import { useBackStore } from '@/store';
 import { updateReactive } from '@/utils';
@@ -77,6 +77,12 @@ defineExpose({
   dblClick,
 });
 
+watch(isShowing, () => {
+  if (!isShowing.value) {
+    slideOptions.isHovering = false;
+  }
+});
+
 const longPressOptions = reactive({
   isPressing: false,
   timer: undefined as NodeJS.Timeout | undefined,
@@ -115,10 +121,27 @@ function longPressHandler(dragState: AnyGestureEventTypes['drag']) {
 
 const slideOptions = reactive({
   isSliding: false,
+  isHovering: false,
+  hoverPercent: 0,
   startPosition: 0,
   targetPosition: 0,
   slideElement: undefined as HTMLElement | undefined,
 });
+
+function hoverMoving(event: MouseEvent) {
+  slideOptions.isHovering = true;
+  refreshTimer();
+  const element = event.currentTarget as HTMLElement;
+  const rect = element.getBoundingClientRect();
+  const relativeX = event.clientX - rect.left;
+  const percentageX = (relativeX / rect.width) * 100;
+  const clampedPercentage = Math.max(0, Math.min(100, percentageX));
+  slideOptions.hoverPercent = clampedPercentage;
+}
+
+function hoverOut(event: MouseEvent) {
+  slideOptions.isHovering = false;
+}
 
 function dragHandler(dragState: AnyGestureEventTypes['drag'], event: any) {
   if (dragState.first && dragState.axis != 'y') {
@@ -279,10 +302,29 @@ function dragHandler(dragState: AnyGestureEventTypes['drag'], event: any) {
           </span>
         </div>
         <div
+          v-if="slideOptions.isHovering"
+          class="pointer-events-none flex items-center"
+        >
+          <p
+            class="absolute -translate-x-[50%] -translate-y-[50%] text-sm text-gray-100"
+            :style="{ left: `${slideOptions.hoverPercent}%` }"
+          >
+            {{
+              formatTime(
+                Math.floor(
+                  (slideOptions.hoverPercent * props.videoDuration) / 100,
+                ),
+              )
+            }}
+          </p>
+        </div>
+        <div
           :ref="(el) => (slideOptions.slideElement = el as HTMLElement)"
           v-drag="dragHandler"
           class="relative h-[10px] w-full cursor-pointer rounded-lg bg-gray-600/60"
           @click.stop
+          @mousemove="hoverMoving"
+          @mouseleave="hoverOut"
         >
           <div
             class="absolute left-0 h-[10px] rounded-lg bg-gray-100/60"

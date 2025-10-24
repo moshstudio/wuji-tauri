@@ -8,7 +8,7 @@ import { useDisplayStore, useStore } from '@/store';
 
 const store = useStore();
 const displayStore = useDisplayStore();
-const { isDark } = storeToRefs(displayStore);
+const { isDark, songAutoSwitchSource } = storeToRefs(displayStore);
 
 const showConfirmClearData = ref(false);
 
@@ -22,6 +22,7 @@ function clearData() {
     <template #app>
       <AppSetting
         v-model:is-dark="isDark"
+        v-model:song-auto-switch-source="songAutoSwitchSource"
         :clear-cache="store.clearCache"
         :clear-data="clearData"
       />
@@ -29,6 +30,7 @@ function clearData() {
     <template #desktop>
       <DesktopSetting
         v-model:is-dark="isDark"
+        v-model:song-auto-switch-source="songAutoSwitchSource"
         :clear-cache="store.clearCache"
         :clear-data="clearData"
       />

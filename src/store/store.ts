@@ -1561,7 +1561,6 @@ export const useStore = defineStore('store', () => {
     photoDetail,
     getPhotoSource,
     getPhotoItem,
-    getSongSource,
 
     songSources,
     songRecommendPlayist,
@@ -1571,6 +1570,7 @@ export const useStore = defineStore('store', () => {
     songSearchPlaylist,
     getPlaylistInfo,
     songPlaylistPlayAll,
+    getSongSource,
 
     bookSources,
     bookRecommendList,

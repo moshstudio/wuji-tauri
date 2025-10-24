@@ -74,4 +74,15 @@ const shouldExclude = () => {
   transform: translateX(-100%);
   opacity: 0;
 }
+
+.none-enter-active,
+.none-leave-active {
+  transition: none;
+}
+
+.none-enter-from,
+.none-leave-to {
+  opacity: 1;
+  transform: none;
+}
 </style>

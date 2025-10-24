@@ -92,8 +92,11 @@ export const useSongStore = defineStore('song', () => {
 
   const getSongPlayUrl = async (
     song: SongInfo,
-    switchSource: boolean = true,
+    switchSource?: boolean,
   ): Promise<string | undefined> => {
+    if (switchSource === undefined) {
+      switchSource = displayStore.songAutoSwitchSource;
+    }
     const cached_url = await songCacheStore.getSong(song);
     if (cached_url) {
       console.log(`${song.name}返回缓存的播放地址${cached_url}`);

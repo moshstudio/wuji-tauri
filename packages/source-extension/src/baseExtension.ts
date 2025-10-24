@@ -11,11 +11,13 @@ import _ from 'lodash';
 import * as m3u8Parser from 'm3u8-parser';
 import { nanoid } from 'nanoid';
 import forge from 'node-forge';
+import pLimit from 'p-limit';
 import {
   maxPageNoFromElements,
   urlJoin as myUrlJoin,
 } from './utils/element.ts';
 import { getM3u8ProxyUrl, getProxyUrl } from './utils/proxy.ts';
+import { fetchWebview } from './utils/webview.ts';
 
 // 定义一个装饰器工厂函数，允许传入目标类型
 export function transformResult<T>(func: (result: T) => T) {
@@ -45,7 +47,9 @@ export function transformResult<T>(func: (result: T) => T) {
 abstract class Extension {
   cryptoJs: typeof CryptoJS;
   forge: typeof forge;
+  pLimit: typeof pLimit;
   fetch: typeof fetch;
+  fetchWebview: typeof fetchWebview;
   iconv: typeof iconv;
   m3u8Parser: typeof m3u8Parser;
   getProxyUrl: typeof getProxyUrl;
@@ -189,10 +193,12 @@ abstract class Extension {
     this.forge = forge;
     this.iconv = iconv;
     this.m3u8Parser = m3u8Parser;
+    this.pLimit = pLimit;
     this.getProxyUrl = getProxyUrl;
     this.getM3u8ProxyUrl = getM3u8ProxyUrl;
     this._ = _;
     this.fetch = fetch;
+    this.fetchWebview = fetchWebview;
     this.fetchDom = async (
       input: URL | Request | string,
       init?: RequestInit & ClientOptions,
@@ -688,6 +694,14 @@ abstract class Extension {
       if (!element) return '';
       let text = '';
       for (const child of element.childNodes) {
+        // 跳过 script 元素
+        if (
+          child.nodeType === Node.ELEMENT_NODE &&
+          (child as HTMLElement).tagName?.toLowerCase() === 'script'
+        ) {
+          continue;
+        }
+
         if (child.nodeType === Node.TEXT_NODE) {
           text += `${child.textContent}\n`;
         } else if (child.nodeType === Node.ELEMENT_NODE) {

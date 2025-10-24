@@ -1,6 +1,6 @@
 # 通用函数
 
-## 1. `cryptoJs`
+## `cryptoJs`
 
 CryptoJS 是一个流行的加密库，提供多种加密算法。
 
@@ -16,7 +16,7 @@ this.cryptoJs = CryptoJS;
 const hash = this.cryptoJs.MD5('message').toString();
 ```
 
-## 2. `fetch`
+## `fetch`
 
 `fetch` 用于发送 HTTP 请求, 它在浏览器 `fetch` 的基础上增加了 `verify` `noProxy` `maxRedirections`参数。
 
@@ -37,7 +37,18 @@ const response = await this.fetch(url, {
 });
 ```
 
-## 3. `iconv`
+## `fetchWebview`
+
+通过网页访问的方式，获取网页内容Document，若获取失败，会返回空网页。
+
+> 使用方法
+
+```javascript
+const url = 'https://www.example.com';
+const document = await this.fetchWebview(url);
+```
+
+## `iconv`
 
 `iconv`(`iconv-lite`) 是一个 Node.js 的字符编码转换库，用于将字符串从一个字符编码转换为另一个字符编码。
 
@@ -58,7 +69,27 @@ const nodeBuffer = Buffer.from(buffer);
 const html = iconv.decode(nodeBuffer, 'gbk');
 ```
 
-## 4. `getProxyUrl`
+## `plimit`
+
+`pLimit`用来限制并发数，防止请求过快导致被封禁。
+当时用`fetchWebview`获取的网页内容时，会因为请求过快被封禁，此时可以使用plimit限制并发数。
+
+> 使用方法
+
+```javascript
+const limit = this.pLimit(1);
+
+const input = [
+	limit(() => fetchSomething('foo')),
+	limit(() => fetchSomething('bar')),
+	limit(() => doSomething())
+];
+
+// Only one promise is run at once
+const result = await Promise.all(input);
+```
+
+## `getProxyUrl`
 
 无极内置代理服务器, 用于解决跨域问题, 使用 `this.getProxyUrl` 获取代理地址
 
@@ -93,7 +124,7 @@ const proxyyUrl = await this.getProxyUrl('https://www.example.com', {
 });
 ```
 
-## 5. `_`
+## `_`
 
 `_` 是一个 lodash 库的默认导出，用于处理数据。
 
@@ -107,7 +138,7 @@ import _ from 'lodash';
 const itemCloned = this._.cloneDeep(item);
 ```
 
-## 6. `fetchDom`
+## `fetchDom`
 
 `fetchDom` 会先使用 `this.fetch` 获取数据，然后将数据解析为 DOM。
 
@@ -140,7 +171,7 @@ this.fetchDom = async (
 ): Promise<Document> =>{};
 ```
 
-## 7. `queryBookElements`
+## `queryBookElements`
 
 `queryBookElements` 用于快速获取 `DOM` 中的元素，并返回一个包含所有匹配 `BookItem` 元素的数组。
 
@@ -238,11 +269,11 @@ this.queryBookElements = async (
 ): Promise<BookItem[]> =>{};
 ```
 
-## 8. `queryComicElements`
+## `queryComicElements`
 
 参考 `queryBookElements`即可, 参数相同
 
-## 9. `queryVideoElements`
+## `queryVideoElements`
 
 获取影视的元素列表
 
@@ -376,7 +407,7 @@ this.queryVideoElements = async (
 ): Promise<VideoItem[]> => {};
 ```
 
-## 10. `queryPhotoElements`
+## `queryPhotoElements`
 
 获取图片元素列表。
 
@@ -468,7 +499,7 @@ this.queryPhotoElements = async (
 ): Promise<PhotoItem[]> => {};
 ```
 
-## 11. `queryPlaylistElements`
+## `queryPlaylistElements`
 
 获取歌单元素列表
 
@@ -720,7 +751,7 @@ async function queryPlaylistElements(
 ) {}
 ```
 
-## 12. `querySongElements`
+## `querySongElements`
 
 获取歌曲元素列表
 
@@ -782,7 +813,7 @@ async function querySongElements(
 ) {}
 ```
 
-## 13. `queryChapters`
+## `queryChapters`
 
 获取书籍/漫画的章节列表
 
@@ -828,7 +859,7 @@ this.queryChapters = async (
 ): Promise<Chapter[]> => {};
 ```
 
-# 14. `getContentText`
+## `getContentText`
 
 获取小说阅读页面的文本内容
 
@@ -857,7 +888,7 @@ this.queryChapters = async (
 this.getContentText = (element?: HTMLElement) => {};
 ```
 
-## 15. `nanoid`
+## `nanoid`
 
 `nanoid` 是一个用于生成随机字符串的工具库。
 
@@ -867,7 +898,7 @@ this.getContentText = (element?: HTMLElement) => {};
 const id = this.nanoid();
 ```
 
-## 16. `urlJoin`
+## `urlJoin`
 
 `urlJoin` 是一个用于拼接 URL 的工具函数。
 
@@ -875,7 +906,7 @@ const id = this.nanoid();
 this.urlJoin = (...parts: (string | null | undefined)[]): string => {};
 ```
 
-## 17. `maxPageNoFromElements`
+## `maxPageNoFromElements`
 
 从页面元素列表中获取最大页码数
 
@@ -886,7 +917,7 @@ function maxPageNoFromElements(
 ): number | null {}
 ```
 
-## 18. `getM3u8ProxyUrl`
+## `getM3u8ProxyUrl`
 
 `getM3u8ProxyUrl` 是一个用于获取 M3U8 代理 URL 的工具函数。
 
@@ -894,7 +925,7 @@ function maxPageNoFromElements(
 const proxyUrl = await this.getM3u8ProxyUrl(url, { referer: url });
 ```
 
-## 19. `m3u8Parser`
+## `m3u8Parser`
 
 `m3u8Parser` 是一个 m3u8Parser 库的默认导出,用于处理 M3U8 内容。
 
@@ -908,7 +939,7 @@ for (const segment of parser.manifest.segments) {
 }
 ```
 
-## 20. `log`
+## `log`
 
 使用 `log` 进行日志打印。
 

@@ -312,27 +312,25 @@ function nextChapter() {
   if (index < chapterList.value.length - 1) {
     ttsStore.resetReadingPage();
     chapterList.value[index + 1].readingPage = undefined;
+    const newBookReadParams = {
+      chapterId: chapterList.value[index + 1].id,
+      bookId: book.value?.id,
+      sourceId: book.value?.sourceId,
+      isPrev: 'false',
+    };
     if (route.name === 'BookRead') {
       router.replace({
-        // name: 'BookRead',
-        params: {
-          chapterId: chapterList.value[index + 1].id,
-          bookId: book.value?.id,
-          sourceId: book.value?.sourceId,
-          isPrev: 'false',
-        },
+        params: newBookReadParams,
       });
     } else {
-      const currPath = route.path;
+      const currPath = {
+        name: route.name,
+        params: route.params,
+      };
       router
         .replace({
           name: 'BookRead',
-          params: {
-            chapterId: chapterList.value[index + 1].id,
-            bookId: book.value?.id,
-            sourceId: book.value?.sourceId,
-            isPrev: 'false',
-          },
+          params: newBookReadParams,
         })
         .then(() => {
           router.replace(currPath);

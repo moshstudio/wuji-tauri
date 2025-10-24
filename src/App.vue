@@ -17,20 +17,18 @@ const displayStore = useDisplayStore();
 const { isAppView, isDark } = storeToRefs(displayStore);
 const route = useRoute();
 
-onMounted(() => {
+onMounted(async () => {
   // 初始化路径
-  nextTick(async () => {
-    router.replace(displayStore.routerCurrPath);
-  });
+  await nextTick();
+  await router.replace(displayStore.routerCurrPath);
 });
 
 onMounted(async () => {
-  if (displayStore.isWindows) {
-    try {
-      await checkAndUpdate();
-    } catch (error) {
-      console.warn('checkAndUpdate error', error);
-    }
+  await nextTick();
+  try {
+    await checkAndUpdate();
+  } catch (error) {
+    console.warn('checkAndUpdate error', error);
   }
 });
 watch(

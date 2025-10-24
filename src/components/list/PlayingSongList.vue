@@ -34,7 +34,6 @@ watch(
   <van-action-sheet
     v-model:show="show"
     title="播放列表"
-    teleport="body"
     class="h-[70vh]"
     close
     round

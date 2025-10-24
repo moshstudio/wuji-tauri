@@ -196,6 +196,8 @@ export const useDisplayStore = defineStore('display', () => {
     await commands.return_to_home();
   };
 
+  const songAutoSwitchSource = useStorageAsync('songAutoSwitchSource', true);
+
   return {
     fullScreenMode,
     isAppView,
@@ -237,5 +239,7 @@ export const useDisplayStore = defineStore('display', () => {
     tabBarPages,
 
     exitApp,
+
+    songAutoSwitchSource,
   };
 });

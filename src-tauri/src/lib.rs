@@ -37,6 +37,7 @@ pub fn run() {
             handle.plugin(tauri_plugin_updater::Builder::new().build())?;
             Ok(())
         })
+        .plugin(tauri_plugin_mywebview::init())
         .plugin(tauri_plugin_commands::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_mediasession::init())

@@ -6,3 +6,4 @@ public/
 .vscode/
 tauri-plugin-commands/
 tauri-plugin-mediasession/
+tauri-plugin-mywebview/

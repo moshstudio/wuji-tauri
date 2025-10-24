@@ -268,6 +268,14 @@ function pageNext() {
   swiperElement.value?.slideTo(2, 200);
 }
 
+defineExpose({
+  pagePrev,
+  pageNext,
+  toggleMenu: () => {
+    showMenu.value = !showMenu.value;
+  },
+});
+
 function toChapterPage(page: number) {
   readingPageIndex.value = page;
   if (ttsStore.isReading) {

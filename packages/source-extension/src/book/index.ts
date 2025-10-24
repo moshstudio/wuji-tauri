@@ -79,6 +79,7 @@ abstract class BookExtension extends Extension {
     const ret = await this.getRecommendBooks(pageNo, type);
     if (ret) {
       _.castArray(ret).forEach((bookList) => {
+        bookList.list ||= [];
         bookList.list.forEach((bookItem) => {
           bookItem.sourceId = String(this.id);
         });
@@ -116,6 +117,7 @@ abstract class BookExtension extends Extension {
     const ret = await this.search(keyword, pageNo);
     if (ret) {
       _.castArray(ret).forEach((bookList) => {
+        bookList.list ||= [];
         bookList.list.forEach((bookItem) => {
           bookItem.sourceId = String(this.id);
         });
@@ -144,7 +146,8 @@ abstract class BookExtension extends Extension {
       ret.sourceId = String(this.id);
       if (origin.chapters) {
         // 同步 readingPage
-        ret.chapters?.forEach((c) => {
+        ret.chapters ||= [];
+        ret.chapters.forEach((c) => {
           const originC = origin.chapters?.find((c2) => c2.id === c.id);
           if (originC && originC.readingPage) {
             c.readingPage = originC.readingPage;

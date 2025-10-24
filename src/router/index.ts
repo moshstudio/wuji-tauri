@@ -276,7 +276,11 @@ export const router = createRouter({
   routes,
 });
 router.beforeEach((to, from, next) => {
-  if (to.params.transition) {
+  console.log(to);
+
+  if (to.query.transition) {
+    to.meta.transition = to.query.transition;
+  } else if (to.params.transition) {
     to.meta.transition = to.params.transition;
   } else if (isSameType(to, from)) {
     const toDepth = getDepth(to);

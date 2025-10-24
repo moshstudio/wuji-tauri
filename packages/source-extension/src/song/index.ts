@@ -134,6 +134,9 @@ abstract class SongExtension extends Extension {
   async execGetRecommendPlaylists(pageNo?: number) {
     pageNo = pageNo || 1;
     const ret = await this.getRecommendPlaylists(pageNo);
+    if (ret) {
+      ret.list ||= [];
+    }
     ret?.list.forEach((item) => {
       item.sourceId = String(this.id);
     });
@@ -153,6 +156,9 @@ abstract class SongExtension extends Extension {
   async execGetRecommendSongs(pageNo?: number) {
     pageNo = pageNo || 1;
     const ret = await this.getRecommendSongs(pageNo);
+    if (ret) {
+      ret.list ||= [];
+    }
     ret?.list.forEach((item) => {
       item.sourceId = String(this.id);
     });
@@ -178,6 +184,9 @@ abstract class SongExtension extends Extension {
     }
     pageNo = pageNo || 1;
     const ret = await this.searchPlaylists(keyword, pageNo);
+    if (ret) {
+      ret.list ||= [];
+    }
     ret?.list.forEach((item) => {
       item.sourceId = String(this.id);
     });
@@ -203,6 +212,9 @@ abstract class SongExtension extends Extension {
     }
     pageNo = pageNo || 1;
     const ret = await this.searchSongs(keyword, pageNo);
+    if (ret) {
+      ret.list ||= [];
+    }
     ret?.list.forEach((item) => {
       item.sourceId = String(this.id);
     });

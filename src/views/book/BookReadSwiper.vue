@@ -12,7 +12,16 @@ import { storeToRefs } from 'pinia';
 import { get_system_font_scale } from 'tauri-plugin-commands-api';
 
 import { showToast } from 'vant';
-import { computed, nextTick, onActivated, onMounted, ref, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onActivated,
+  onDeactivated,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+} from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 
 import AppBookReadSwipe from '@/layouts/app/book/BookReadSwipe.vue';
@@ -53,6 +62,11 @@ const displayStore = useDisplayStore();
 const bookStore = useBookStore();
 const ttsStore = useTTSStore();
 const { showTabBar } = storeToRefs(displayStore);
+
+const instance = ref<
+  | InstanceType<typeof AppBookReadSwipe>
+  | InstanceType<typeof DesktopBookReadSwipe>
+>();
 const checkIsPrev = ref(false);
 const checkTTS = ref(false);
 const isNewOpen = ref(true);
@@ -76,6 +90,9 @@ const chapterPagedContent = computed<ReaderResult>(() => {
 
 // 新增 watch 来处理副作用逻辑
 watch(chapterPagedContent, (newContent) => {
+  // console.log('chapterPagedContent change', checkIsPrev.value, checkTTS.value);
+  // console.log(ttsStore.isReading);
+
   if (checkIsPrev.value) {
     checkIsPrev.value = false;
     nextTick(() => {
@@ -292,9 +309,11 @@ function playTTS() {
 
 watch(
   () => props.chapter,
-  () => {
-    checkIsPrev.value = true;
-    checkTTS.value = true;
+  (c) => {
+    if (c) {
+      checkIsPrev.value = true;
+      checkTTS.value = true;
+    }
   },
 );
 watch(chapterPagedIndex, (page) => {
@@ -313,12 +332,53 @@ onMountedOrActivated(async () => {
   fontScale.value = (await get_system_font_scale()) as number;
 });
 
+function handleKeyDown(e: KeyboardEvent) {
+  switch (e.key) {
+    case 'ArrowLeft':
+      instance.value?.pagePrev();
+      break;
+    case 'ArrowRight':
+      instance.value?.pageNext();
+      break;
+    case ' ':
+    case 'Spacebar':
+      // 空格
+      instance.value?.toggleMenu();
+      break;
+    case 'Enter':
+      // Enter 键逻辑
+      break;
+  }
+}
+
+// 添加监听
+function addListeners() {
+  document.addEventListener('keydown', handleKeyDown);
+}
+
+// 移除监听
+function removeListeners() {
+  document.removeEventListener('keydown', handleKeyDown);
+}
+
+onMountedOrActivated(() => {
+  addListeners();
+});
+
+onUnmounted(() => {
+  removeListeners();
+});
+
+onDeactivated(() => {
+  removeListeners();
+});
 </script>
 
 <template>
   <PlatformSwitch>
     <template #app>
       <AppBookReadSwipe
+        ref="instance"
         v-model:reading-page-index="chapterPagedIndex"
         :book="book"
         :book-source="bookSource"
@@ -343,6 +403,7 @@ onMountedOrActivated(async () => {
     </template>
     <template #desktop>
       <DesktopBookReadSwipe
+        ref="instance"
         v-model:reading-page-index="chapterPagedIndex"
         :book="book"
         :book-source="bookSource"

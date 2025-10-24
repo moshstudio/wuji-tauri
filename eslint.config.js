@@ -24,6 +24,7 @@ export default antfu({
     '**/src-tauri/**',
     '**/tauri-plugin-commands/**',
     '**/tauri-plugin-mediasession/**',
+    '**/tauri-plugin-mywebview/**',
     '**/*.md',
   ],
   eslintPluginPrettierRecommended,

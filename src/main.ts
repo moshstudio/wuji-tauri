@@ -33,7 +33,8 @@ import 'animate.css';
 loader.config({
   paths: {
     // vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs',
-    vs: 'https://cdn.bootcdn.net/ajax/libs/monaco-editor/0.52.2/min/vs',
+    // vs: 'https://cdn.bootcdn.net/ajax/libs/monaco-editor/0.52.2/min/vs',
+    vs: '/vs',
   },
 });
 
