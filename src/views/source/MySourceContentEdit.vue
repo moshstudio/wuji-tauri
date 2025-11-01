@@ -51,8 +51,6 @@ onActivated(() => {
 watch(
   sourceContent,
   (sourceContent) => {
-    console.log(sourceContent);
-
     if (!sourceContent) {
       backStore.back();
     }

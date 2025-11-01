@@ -1,300 +1,187 @@
 <script setup lang="ts">
-import type { VideoPlayerState } from '@videojs-player/vue';
-import type {
-  VideoEpisode,
+import _ from 'lodash';
+import {
+  VideoSource,
   VideoItem,
   VideoResource,
+  VideoEpisode,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
-import type { Swiper as SwiperType } from 'swiper/types';
-
-import type videojs from 'video.js';
-import type { VideoSource } from '@/types';
-import { Swiper, SwiperSlide } from 'swiper/vue';
-import { computed, ref } from 'vue';
-import MVideoPlayer from '@/components/media/MVideoPlayer.vue';
+import { ref, computed, watch } from 'vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import Player from 'xgplayer';
 import { useDisplayStore } from '@/store';
-import VideoComponent from './detail/VideoComponent.vue';
-import VideoControls from './detail/VideoControls.vue';
-import VideoFullscreenComponent from './detail/VideoFullscreenComponent.vue';
-import VideoFullscrenControls from './detail/VideoFullscrenControls.vue';
-import 'swiper/css';
 
-type VideoJsPlayer = ReturnType<typeof videojs>;
-
+const showPlaylist = defineModel<boolean>('showPlaylist', {
+  default: false,
+});
 const props = defineProps<{
-  videoSources: import('video.js').default.Tech.SourceObject[];
-  videoSource?: VideoSource;
+  player?: Player;
   videoItem?: VideoItem;
+  videoSource?: VideoSource;
   playingResource?: VideoResource;
   playingEpisode?: VideoEpisode;
   videoSrc?: VideoUrlMap;
   inShelf?: boolean;
-  playOrPause: () => void;
   play: (resource: VideoResource, episode: VideoEpisode) => Promise<void>;
   addToShelf: (video: VideoItem) => void;
   showSearch: () => void;
-  playPrev: (resource?: VideoResource, episode?: VideoEpisode) => void;
-  playNext: (resource?: VideoResource, episode?: VideoEpisode) => void;
-  seek: (offset: number) => void;
-  toggleFullScreen: (fullscreen: boolean) => void;
-  onCanPlay: (args: any) => void;
-  onPlayFinished: (args: any) => void;
 }>();
-const player = defineModel<VideoJsPlayer>('player');
-const playerState = defineModel<VideoPlayerState>('playerState');
-const showVideoComponent = defineModel<boolean>('showVideoComponent', {
-  default: false,
-});
 
 const displayStore = useDisplayStore();
-
-const controlRef =
-  ref<InstanceType<typeof VideoControls | typeof VideoFullscrenControls>>();
-const componentRef =
-  ref<InstanceType<typeof VideoComponent | typeof VideoFullscreenComponent>>();
-
-const prevEpisode = computed(() => {
-  if (props.playingResource?.episodes?.length) {
-    const index = props.playingResource.episodes.findIndex(
-      (item) => item.id === props.playingEpisode?.id,
-    );
-    if (index > 0) {
-      return props.playingResource.episodes[index - 1];
+const _selectedResource = ref<VideoResource>();
+const selectedResource = computed({
+  get() {
+    if (_selectedResource.value) {
+      return _selectedResource.value;
+    } else {
+      return props.playingResource;
     }
-  }
-  return undefined;
+  },
+  set(resource: VideoResource | undefined) {
+    _selectedResource.value = resource;
+  },
 });
+watch(
+  () => props.videoItem,
+  () => {
+    selectedResource.value = undefined;
+  },
+);
 
-const nextEpisode = computed(() => {
-  if (props.playingResource?.episodes?.length) {
-    const index = props.playingResource.episodes.findIndex(
-      (item) => item.id === props.playingEpisode?.id,
-    );
-    if (index < props.playingResource.episodes.length - 1) {
-      return props.playingResource.episodes[index + 1];
-    }
-  }
-  return undefined;
-});
-
-const swipeable = computed(() => {
-  return !componentRef.value?.isShowing; // && !controlRef.value?.isShowing;
-});
-
-const videoDirection = ref<'vertical' | 'horizontal'>('vertical');
-const videoPosition = ref(0);
-const videoDuration = ref(0);
-
-function handlePageChange(swiper: SwiperType) {
-  if (swiper.activeIndex == 0) {
-    if (!prevEpisode.value) {
-      swiper.slideTo(1, 200, false);
-    }
-  } else if (swiper.activeIndex == 2) {
-    if (!nextEpisode.value) {
-      swiper.slideTo(1, 200, false);
-    }
-  }
-}
-function handlePageChanged(swiper: SwiperType) {
-  if (swiper.activeIndex == 0) {
-    if (prevEpisode.value) {
-      // 播放上一个视频
-      props.playPrev(props.playingResource, props.playingEpisode);
-      swiper.slideTo(1, 0, false);
-    }
-  } else if (swiper.activeIndex == 2) {
-    if (nextEpisode.value) {
-      // 播放下一个视频
-      props.playNext(props.playingResource, props.playingEpisode);
-      swiper.slideTo(1, 0, false);
-    }
-  }
-}
-
-function formatTime(seconds: number) {
-  if (seconds === Infinity) return '';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-}
+const activeTabName = ref('');
 </script>
 
 <template>
   <div
-    id="video-box"
-    class="grid h-full w-full overflow-hidden bg-black transition-all duration-300"
-    :class="
-      displayStore.fullScreenMode
-        ? componentRef?.isShowing
-          ? 'grid-cols-[0.65fr_0.35fr]'
-          : 'grid-cols-[1fr_0fr]'
-        : componentRef?.isShowing
-          ? 'grid-rows-[0.35fr_0.65fr]'
-          : 'grid-rows-[1fr_0fr]'
-    "
+    class="xgplayer-container grid h-full w-full overflow-hidden bg-black transition-all duration-300"
+    :class="showPlaylist ? 'grid-cols-[0.65fr_0.35fr]' : 'grid-cols-[1fr_0fr]'"
   >
-    <Swiper
-      class="h-full w-full"
-      direction="vertical"
-      :allow-slide-next="swipeable"
-      :allow-slide-prev="swipeable"
-      :grab-cursor="true"
-      :centered-slides="true"
-      slides-per-view="auto"
-      :initial-slide="1"
-      @slide-change="handlePageChange"
-      @slide-change-transition-end="handlePageChanged"
+    <slot></slot>
+
+    <div
+      class="video-list flex h-full w-full cursor-auto flex-col overflow-hidden rounded-l-lg bg-[var(--van-background-2)] text-[var(--van-text-color)]"
     >
-      <SwiperSlide>
-        <div class="flex h-full w-full flex-col items-center justify-end">
-          <div class="mb-[40px] flex flex-col items-center">
-            <p>{{ prevEpisode ? '播放上个视频' : '没有上个视频了' }}</p>
-            <p>{{ prevEpisode?.title || '' }}</p>
-          </div>
-        </div>
-      </SwiperSlide>
-      <SwiperSlide>
+      <div class="flex flex-shrink-0 items-center justify-end gap-2">
+        <van-icon
+          name="search"
+          size="22"
+          class="van-haptics-feedback p-2"
+          @click="showSearch"
+        />
+        <van-icon
+          name="cross"
+          size="22"
+          class="van-haptics-feedback p-2"
+          @click="() => (showPlaylist = false)"
+        />
+      </div>
+      <div
+        class="flex h-full w-full flex-grow flex-col justify-start gap-1 overflow-y-auto px-3"
+      >
         <div
-          class="relative flex h-full w-full cursor-auto items-center justify-center"
-          @click="controlRef?.click"
-          @dblclick="controlRef?.dblClick"
+          class="flex w-full flex-shrink-0 items-center justify-start gap-2 overflow-hidden"
         >
-          <MVideoPlayer
-            v-model:player="player"
-            v-model:state="playerState"
-            v-model:direction="videoDirection"
-            v-model:position="videoPosition"
-            v-model:duration="videoDuration"
-            :video-src="videoSrc"
-            :video-sources="videoSources"
-            :resource="playingResource"
-            :episode="playingEpisode"
-            :on-can-play="(args) => onCanPlay(args)"
-            :on-play-finished="(args) => onPlayFinished(args)"
-            class="pointer-events-none h-full w-full"
-          />
-          <VideoControls
-            v-if="!displayStore.fullScreenMode"
-            ref="controlRef"
-            :player="player"
-            :player-state="playerState"
-            :video-sources="videoSources"
-            :video-source="videoSource"
-            :video-item="videoItem"
-            :playing-resource="playingResource"
-            :playing-episode="playingEpisode"
-            :video-src="videoSrc"
-            :video-direction="videoDirection"
-            :video-duration="videoDuration"
-            :video-position="videoPosition"
-            :in-shelf="inShelf"
-            :component-is-showing="componentRef?.isShowing"
-            :show-component="componentRef?.showComponent"
-            :play="play"
-            :play-prev="playPrev"
-            :play-next="playNext"
-            :play-or-pause="playOrPause"
-            :toggle-full-screen="toggleFullScreen"
-            :add-to-shelf="addToShelf"
-            :on-can-play="onCanPlay"
-            :on-play-finished="onPlayFinished"
-            :format-time="formatTime"
-          />
-          <VideoFullscrenControls
-            v-else
-            ref="controlRef"
-            :player="player"
-            :player-state="playerState"
-            :video-sources="videoSources"
-            :video-source="videoSource"
-            :video-item="videoItem"
-            :playing-resource="playingResource"
-            :playing-episode="playingEpisode"
-            :video-src="videoSrc"
-            :video-direction="videoDirection"
-            :video-duration="videoDuration"
-            :video-position="videoPosition"
-            :in-shelf="inShelf"
-            :component-is-showing="componentRef?.isShowing"
-            :show-component="componentRef?.showComponent"
-            :play="play"
-            :play-prev="playPrev"
-            :play-next="playNext"
-            :seek="seek"
-            :play-or-pause="playOrPause"
-            :toggle-full-screen="toggleFullScreen"
-            :add-to-shelf="addToShelf"
-            :on-can-play="onCanPlay"
-            :on-play-finished="onPlayFinished"
-            :format-time="formatTime"
-          />
-        </div>
-      </SwiperSlide>
-      <SwiperSlide>
-        <div class="flex h-full w-full flex-col items-center justify-start">
-          <div class="mt-[40px] flex flex-col items-center">
-            <p>{{ nextEpisode ? '下个视频' : '没有下个视频了' }}</p>
-            <p>{{ nextEpisode?.title || '' }}</p>
+          <div class="flex min-w-[100px] flex-col gap-1">
+            <h2 class="font-bold">
+              {{ videoItem?.title }}
+            </h2>
+            <div class="flex gap-1 overflow-x-auto">
+              <van-tag
+                v-for="tag in _.castArray(videoItem?.tags)"
+                plain
+                color="rgba(100,100,100,0.3)"
+                text-color="var(--van-text-color-2)"
+                class="flex-shrink-0"
+              >
+                {{ tag }}
+              </van-tag>
+            </div>
+            <div class="flex gap-1 overflow-x-auto">
+              <van-tag
+                v-if="videoItem?.releaseDate"
+                color="rgba(100,100,100,0.3)"
+                text-color="var(--van-text-color-2)"
+              >
+                {{ videoItem?.releaseDate }}
+              </van-tag>
+              <van-tag
+                v-if="videoItem?.country"
+                color="rgba(100,100,100,0.3)"
+                text-color="var(--van-text-color-2)"
+              >
+                {{ videoItem?.country }}
+              </van-tag>
+              <van-tag
+                v-if="videoItem?.duration"
+                color="rgba(100,100,100,0.3)"
+                text-color="var(--van-text-color-2)"
+              >
+                {{ videoItem?.duration }}
+              </van-tag>
+            </div>
+            <div
+              v-if="videoItem?.director"
+              class="min-w-0 truncate text-xs text-[var(--van-text-color-2)]"
+            >
+              导演: {{ videoItem?.director }}
+            </div>
           </div>
         </div>
-      </SwiperSlide>
-    </Swiper>
-    <VideoComponent
-      v-if="!displayStore.fullScreenMode"
-      ref="componentRef"
-      v-model:show="showVideoComponent"
-      :player="player"
-      :player-state="playerState"
-      :video-sources="videoSources"
-      :video-source="videoSource"
-      :video-item="videoItem"
-      :playing-resource="playingResource"
-      :playing-episode="playingEpisode"
-      :video-src="videoSrc"
-      :video-direction="videoDirection"
-      :video-duration="videoDuration"
-      :video-position="videoPosition"
-      :in-shelf="inShelf"
-      :play="play"
-      :play-prev="playPrev"
-      :play-next="playNext"
-      :play-or-pause="playOrPause"
-      :toggle-full-screen="toggleFullScreen"
-      :add-to-shelf="addToShelf"
-      :show-search="showSearch"
-      :on-can-play="onCanPlay"
-      :on-play-finished="onPlayFinished"
-      :format-time="formatTime"
-    />
-    <VideoFullscreenComponent
-      v-else
-      ref="componentRef"
-      v-model:show="showVideoComponent"
-      :player="player"
-      :player-state="playerState"
-      :video-sources="videoSources"
-      :video-source="videoSource"
-      :video-item="videoItem"
-      :playing-resource="playingResource"
-      :playing-episode="playingEpisode"
-      :video-src="videoSrc"
-      :video-direction="videoDirection"
-      :video-duration="videoDuration"
-      :video-position="videoPosition"
-      :in-shelf="inShelf"
-      :play="play"
-      :play-prev="playPrev"
-      :play-next="playNext"
-      :play-or-pause="playOrPause"
-      :toggle-full-screen="toggleFullScreen"
-      :add-to-shelf="addToShelf"
-      :show-search="showSearch"
-      :on-can-play="onCanPlay"
-      :on-play-finished="onPlayFinished"
-      :format-time="formatTime"
-    />
+        <div
+          v-if="videoItem?.intro"
+          class="line-clamp-3 flex-shrink-0 text-xs text-[var(--van-text-color-2)]"
+        >
+          介绍: {{ videoItem?.intro }}
+        </div>
+        <van-tabs
+          v-model:active="activeTabName"
+          swipe-threshold="3"
+          sticky
+          offset-top="24px"
+        >
+          <van-tab
+            v-for="(resource, index) in videoItem?.resources"
+            :key="resource.id + index"
+          >
+            <template #title>
+              <div
+                class="p-2"
+                :class="resource.id === playingResource?.id ? 'text-blue' : ''"
+              >
+                {{ resource.title }}
+              </div>
+            </template>
+            <ResponsiveGrid2
+              min-width="40"
+              class="episode-show-list flex w-full flex-col overflow-y-auto overflow-x-hidden"
+            >
+              <van-button
+                v-for="(episode, index) in resource?.episodes"
+                :key="`${resource.id}${episode.id}${index}`"
+                class="flex-shrink-0"
+                size="small"
+                :type="
+                  episode.id === playingEpisode?.id ? 'success' : 'default'
+                "
+                :class="
+                  episode.id === playingEpisode?.id
+                    ? 'video-playing-episode'
+                    : ''
+                "
+                @click="
+                  () => {
+                    play(resource, episode);
+                  }
+                "
+              >
+                {{ episode.title }}
+              </van-button>
+            </ResponsiveGrid2>
+          </van-tab>
+        </van-tabs>
+      </div>
+    </div>
   </div>
 </template>
 

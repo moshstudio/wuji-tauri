@@ -238,6 +238,7 @@ export function addCompletions(monaco: MonacoEditor) {
       var log: typeof import('log').log;
       var baseUrl: typeof import('my-consts').baseUrl;
       var getM3u8ProxyUrl: typeof import('m3u8-proxy').getM3u8ProxyUrl;
+      var getProxyUrl: typeof import('proxy').getProxyUrl;
 
       interface GlobalThis {
         pLimit: typeof import('p-limit').pLimit;

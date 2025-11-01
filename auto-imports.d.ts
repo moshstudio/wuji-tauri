@@ -8,8 +8,8 @@ export {}
 declare global {
   const allowMultipleToast: (typeof import('vant/es'))['allowMultipleToast']
   const showConfirmDialog: (typeof import('vant/es'))['showConfirmDialog']
-  const showFailToast: typeof import('vant/es')['showFailToast']
+  const showFailToast: (typeof import('vant/es'))['showFailToast']
   const showNotify: (typeof import('vant/es'))['showNotify']
   const showSuccessToast: (typeof import('vant/es'))['showSuccessToast']
-  const showToast: (typeof import('vant/es'))['showToast']
+  const showToast: typeof import('vant/es')['showToast']
 }

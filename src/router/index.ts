@@ -276,8 +276,6 @@ export const router = createRouter({
   routes,
 });
 router.beforeEach((to, from, next) => {
-  console.log(to);
-
   if (to.query.transition) {
     to.meta.transition = to.query.transition;
   } else if (to.params.transition) {

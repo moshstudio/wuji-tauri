@@ -1,15 +1,8 @@
-import type { HlsVideoElement } from 'hls-video-element';
-import type { MediaThemeElement } from 'media-chrome/media-theme-element';
-
 export {};
 declare global {
   interface Window {
     androidBackCallback?: () => void;
     sendGreeting?: () => void;
-  }
-  interface HTMLElementTagNameMap {
-    'hls-video': HlsVideoElement;
-    'media-chrome': MediaThemeElement;
   }
 }
 

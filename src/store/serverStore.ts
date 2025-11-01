@@ -7,7 +7,7 @@ import type {
 } from '@wuji-tauri/source-extension';
 import type { MembershipPlan } from '@/types/user';
 import * as os from '@tauri-apps/plugin-os';
-import { useStorageAsync } from '@vueuse/core';
+import { useNow, useStorageAsync } from '@vueuse/core';
 import { fetch } from '@wuji-tauri/fetch';
 import { plainToClass } from 'class-transformer';
 import { defineStore } from 'pinia';
@@ -21,12 +21,13 @@ import {
   showNotify,
   showSuccessToast,
 } from 'vant';
-import { ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { isMembershipOrderValid, UserInfo } from '@/types/user';
 import { getDeviceId } from '@/utils/device';
 import { createKVStore, useDisplayStore } from '.';
 import { router } from '@/router';
 import { SyncTypes } from '@/types/sync';
+import { sleep } from '@/utils';
 
 let API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
 // let API_BASE_URL = 'http://127.0.0.1:3000/v1/api/';
@@ -39,6 +40,19 @@ if (process.env.NODE_ENV !== 'development') {
 export const useServerStore = defineStore('serverStore', () => {
   const kvStorage = createKVStore('serverStore');
   const storage = kvStorage.storage;
+
+  const now = ref(Date.now());
+
+  // 每秒更新时间戳
+  onMounted(() => {
+    const timer = setInterval(() => {
+      now.value = Date.now();
+      // 每5分钟执行一次
+      if (now.value % 300 === 0) {
+        fetchUserInfo();
+      }
+    }, 1000);
+  });
 
   const accessToken = useStorageAsync<string | undefined>(
     'accessToken',
@@ -64,9 +78,21 @@ export const useServerStore = defineStore('serverStore', () => {
   const marketSource = ref<PagedMarketSource>();
   const myMarketSources = ref<MarketSource[]>([]);
   const membershipPlans = ref<MembershipPlan[]>();
+  const isVip = computed(() => {
+    return isMembershipOrderValid(userInfo.value?.vipMembershipPlan, now.value);
+  });
+  const isSuperVip = computed(() => {
+    return isMembershipOrderValid(
+      userInfo.value?.superVipMembershipPlan,
+      now.value,
+    );
+  });
+  const isVipOrSuperVip = computed(() => {
+    return isVip.value || isSuperVip.value;
+  });
 
-  // 通用请求方法
-  const request = async (
+  // 请求方法
+  const _request = async (
     endpoint: string,
     options: RequestInit & ClientOptions = {},
   ) => {
@@ -100,6 +126,43 @@ export const useServerStore = defineStore('serverStore', () => {
     }
   };
 
+  // 函数重载签名
+  async function sendRequest<T>(
+    endpoint: string,
+    options: RequestInit & ClientOptions,
+    successHandler: (response: Response) => Promise<T>,
+  ): Promise<T | undefined>;
+
+  async function sendRequest<T>(
+    endpoint: string,
+    options: RequestInit & ClientOptions,
+    successHandler: (response: Response) => Promise<T>,
+    errorHandler: (response?: Response, error?: Error) => Promise<T>,
+  ): Promise<T>;
+
+  // 函数实现
+  async function sendRequest<T>(
+    endpoint: string,
+    options: RequestInit & ClientOptions = {},
+    successHandler: (response: Response) => Promise<T>,
+    errorHandler?: (
+      response?: Response,
+      error?: Error,
+    ) => Promise<T | undefined>,
+  ): Promise<T | undefined> {
+    const response = await _request(endpoint, options);
+    if (response.ok) {
+      return await successHandler(response);
+    } else {
+      handleError(response);
+      if (errorHandler) {
+        return await errorHandler(response);
+      } else {
+        return undefined;
+      }
+    }
+  }
+
   // 处理错误消息
   const handleError = (response: Response) => {
     if (response.status === 500) {
@@ -110,6 +173,8 @@ export const useServerStore = defineStore('serverStore', () => {
       });
     } else {
       response.text().then(async (data) => {
+        console.warn('server handle error', data);
+
         if (data.trim() === '') {
           showNotify({
             message: '连接服务器失败，请稍后再试。',
@@ -187,21 +252,25 @@ export const useServerStore = defineStore('serverStore', () => {
       showFailToast('两次输入的密码不一致');
       return false;
     }
-    const response = await request('auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ email, password, passwordConfirm }),
-    });
-    if (!response.ok) {
-      handleError(response);
-      return false;
-    }
-    const json = await response.json();
-    showDialog({
-      title: '注册成功',
-      message: json.message,
-      showCancelButton: false,
-    });
-    return true;
+    return await sendRequest<boolean>(
+      'auth/register',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email, password, passwordConfirm }),
+      },
+      async (response) => {
+        const json = await response.json();
+        showDialog({
+          title: '注册成功',
+          message: json.message,
+          showCancelButton: false,
+        });
+        return true;
+      },
+      async () => {
+        return false;
+      },
+    );
   };
 
   // 登录
@@ -220,24 +289,22 @@ export const useServerStore = defineStore('serverStore', () => {
 
     const deviceInfo = await getDeviceInfo();
 
-    try {
-      const response = await request('auth/login', {
+    return await sendRequest<boolean>(
+      'auth/login',
+      {
         method: 'POST',
         body: JSON.stringify({ email, password, ...deviceInfo }),
-      });
-
-      if (!response.ok) {
-        handleError(response);
+      },
+      async (response) => {
+        const json = await response.json();
+        accessToken.value = json.access_token;
+        await fetchUserInfo();
+        return true;
+      },
+      async () => {
         return false;
-      }
-      const json = await response.json();
-      accessToken.value = json.access_token;
-      await fetchUserInfo();
-      return true;
-    } catch (error) {
-      showFailToast('网络错误');
-      return false;
-    }
+      },
+    );
   };
   const forgetPasswordEmail = async (email: string): Promise<boolean> => {
     if (!validator.isEmail(email)) {
@@ -247,22 +314,27 @@ export const useServerStore = defineStore('serverStore', () => {
     const toast = showLoadingToast({
       message: '正在发送邮件...',
     });
-    const response = await request('auth/forget-password', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    });
-    toast.close();
-    if (!response.ok) {
-      handleError(response);
-      return false;
-    }
-    const json = await response.json();
-    showDialog({
-      title: '重置密码',
-      message: json.message,
-      showCancelButton: false,
-    });
-    return true;
+    return await sendRequest<boolean>(
+      'auth/forget-password',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      },
+      async (response) => {
+        toast.close();
+        const json = await response.json();
+        showDialog({
+          title: '重置密码',
+          message: json.message,
+          showCancelButton: false,
+        });
+        return true;
+      },
+      async () => {
+        toast.close();
+        return false;
+      },
+    );
   };
 
   const resendVerifyEmail = async (email: string): Promise<boolean> => {
@@ -270,40 +342,42 @@ export const useServerStore = defineStore('serverStore', () => {
       showFailToast('邮箱格式错误');
       return false;
     }
-    const response = await request('auth/resend-verification', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    });
-    if (!response.ok) {
-      handleError(response);
-      return false;
-    }
-    const json = await response.json();
-    showDialog({
-      title: '验证邮件',
-      message: json.message,
-      showCancelButton: false,
-    });
-    return true;
+    return await sendRequest<boolean>(
+      'auth/resend-verification',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      },
+      async (response) => {
+        const json = await response.json();
+        showDialog({
+          title: '验证邮件',
+          message: json.message,
+          showCancelButton: false,
+        });
+        return true;
+      },
+      async () => {
+        return false;
+      },
+    );
   };
 
   // 获取用户信息
   const fetchUserInfo = async (): Promise<void> => {
     if (!accessToken.value) return;
-
-    try {
-      const response = await request('user/info');
-
-      if (response.ok) {
-        const data = await response.json();
-        userInfo.value = plainToClass(UserInfo, data);
+    return await sendRequest<void>(
+      'user/info',
+      {},
+      async (response) => {
+        const json = await response.json();
+        userInfo.value = plainToClass(UserInfo, json);
         console.log('用户信息:', userInfo.value);
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      showFailToast('获取用户信息失败');
-    }
+      },
+      async () => {
+        showFailToast('获取用户信息失败');
+      },
+    );
   };
 
   // 更新
@@ -313,96 +387,95 @@ export const useServerStore = defineStore('serverStore', () => {
     phone?: string;
   }): Promise<void> => {
     if (!accessToken.value) return;
-    try {
-      const response = await request('user/update', {
+    return await sendRequest<void>(
+      'user/update',
+      {
         method: 'POST',
         body: JSON.stringify(info),
-      });
-
-      if (response.ok) {
-        userInfo.value = await response.json();
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      showFailToast('更新用户信息失败');
-    }
+      },
+      async (response) => {
+        await sleep(200);
+        fetchUserInfo();
+        // const json = await response.json();
+        // userInfo.value = plainToClass(UserInfo, json);
+        // console.log('用户信息:', userInfo.value);
+      },
+      async () => {
+        showFailToast('更新用户信息失败');
+      },
+    );
   };
 
   const getMarketSource = async (
     pageNo: number,
     sort: string,
   ): Promise<PagedMarketSource | undefined> => {
-    try {
-      const query = new URLSearchParams();
-      query.set('page', pageNo.toString());
-      query.set('sortBy', sort);
-
-      const response = await request(`source/list` + `?${query.toString()}`);
-
-      if (response.ok) {
-        const data = await response.json();
-        marketSource.value = data;
-        return data;
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      showFailToast('获取源失败');
-    }
+    const query = new URLSearchParams();
+    query.set('page', pageNo.toString());
+    query.set('sortBy', sort);
+    return await sendRequest<PagedMarketSource | undefined>(
+      `source/list` + `?${query.toString()}`,
+      {},
+      async (response) => {
+        const json = await response.json();
+        marketSource.value = json;
+        return json;
+      },
+      async () => {
+        showFailToast('获取源失败');
+        return undefined;
+      },
+    );
   };
 
   const getMarketSourceById = async (
     id: string,
   ): Promise<MarketSource | undefined> => {
-    try {
-      const response = await request(`source/${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        return data;
-      } else {
-        handleError(response);
-      }
-    } catch (error) {}
+    return await sendRequest<MarketSource>(
+      `source/${id}`,
+      {},
+      async (response) => {
+        const json = await response.json();
+        return json;
+      },
+    );
   };
 
   const getDefaultMarketSource = async (): Promise<
     MarketSource | undefined
   > => {
     const t = showLoadingToast('获取中');
-    try {
-      const response = await request('source/default');
-      if (response.ok) {
-        const data = await response.json();
-        return data;
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      showFailToast('获取默认源失败');
-      return;
-    } finally {
-      t.close();
-    }
+    return await sendRequest<MarketSource | undefined>(
+      'source/default',
+      {},
+      async (response) => {
+        t.close();
+        const json = await response.json();
+        return json;
+      },
+      async () => {
+        showFailToast('获取默认源失败');
+        return undefined;
+      },
+    );
   };
 
   const getMyMarketSources = async (): Promise<MarketSource[] | undefined> => {
     const t = showLoadingToast('获取中');
-    try {
-      const response = await request('source/my');
-      if (response.ok) {
-        const data = await response.json();
-        myMarketSources.value = data;
-        return data;
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      showFailToast('获取我的源失败');
-      return;
-    } finally {
-      t.close();
-    }
+    return await sendRequest<MarketSource[] | undefined>(
+      'source/my',
+      {},
+      async (response) => {
+        t.close();
+        const json = await response.json();
+        myMarketSources.value = json;
+        return json;
+      },
+      async () => {
+        t.close();
+        return undefined;
+      },
+    );
   };
 
   const createMarketSource = async (data: {
@@ -410,170 +483,138 @@ export const useServerStore = defineStore('serverStore', () => {
     permissions: MarketSourcePermission[];
     isPublic: boolean;
   }): Promise<void> => {
-    try {
-      const response = await request('source', {
+    return await sendRequest<void>(
+      'source',
+      {
         method: 'POST',
         body: JSON.stringify(data),
-      });
-      if (response.ok) {
-        const data = await response.json();
+      },
+      async (response) => {
+        const json = await response.json();
         await getMyMarketSources();
-        return data;
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      showFailToast('获取我的源失败');
-    }
+        return json;
+      },
+    );
   };
 
   const likeMarketSource = async (source: MarketSource): Promise<void> => {
-    try {
-      const response = await request(`source/like/${source._id}`, {
+    return await sendRequest<void>(
+      `source/like/${source._id}`,
+      {
         method: 'POST',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return data;
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      console.error('likeMarketSource failed');
-    }
+      },
+      async (response) => {
+        const json = await response.json();
+        return json;
+      },
+    );
   };
 
   const updateMarketSource = async (data: MarketSource): Promise<void> => {
-    try {
-      const response = await request(`source` + `/${data._id}`, {
+    return await sendRequest<void>(
+      `source` + `/${data._id}`,
+      {
         method: 'PATCH',
         body: JSON.stringify(data),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        await getMyMarketSources();
+      },
+      async () => {
         showSuccessToast('更新成功');
-        return data;
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      showFailToast('更新源失败');
-    }
+        await sleep(200);
+        await getMyMarketSources();
+      },
+    );
   };
 
   const deleteMarketSource = async (data: MarketSource) => {
-    try {
-      const response = await request(`source` + `/${data._id}`, {
+    return await sendRequest<void>(
+      `source` + `/${data._id}`,
+      {
         method: 'DELETE',
         body: JSON.stringify(data),
-      });
-      if (response.ok) {
-        const data = await response.text();
-        await getMyMarketSources();
+      },
+      async () => {
         showSuccessToast('删除成功');
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      showFailToast('删除源失败');
-    }
+        await sleep(200);
+        await getMyMarketSources();
+      },
+    );
   };
 
   const addMarketSourceContent = async (content: MarketSourceContent) => {
-    try {
-      const response = await request('source-content', {
+    return await sendRequest<void>(
+      'source-content',
+      {
         method: 'POST',
         body: JSON.stringify(content),
-      });
-      if (response.ok) {
-        const data = await response.json();
+      },
+      async () => {
+        showSuccessToast('添加成功');
+        await sleep(200);
         await getMyMarketSources();
-        showSuccessToast('更新成功');
-        return data;
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      showFailToast('获取我的源失败');
-    }
+      },
+    );
   };
 
   const getMarketSourceContent = async (
     sourceContent: MarketSourceContent,
   ): Promise<MarketSourceContent | undefined> => {
-    try {
-      const response = await request(
-        `source-content` + `/${sourceContent._id}`,
-      );
-      if (response.ok) {
-        const data = await response.json();
-        return data;
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      showFailToast('获取源内容失败');
-    }
+    return await sendRequest<MarketSourceContent>(
+      `source-content` + `/${sourceContent._id}`,
+      {},
+      async (response) => {
+        const json = await response.json();
+        return json;
+      },
+    );
   };
 
   const updateMarketSourceContent = async (
     source: MarketSource,
     content: MarketSourceContent,
-  ): Promise<MarketSourceContent | null | undefined> => {
-    try {
-      const response = await request(`source-content` + `/${content._id}`, {
+  ): Promise<MarketSourceContent | undefined> => {
+    return await sendRequest<MarketSourceContent>(
+      `source-content` + `/${content._id}`,
+      {
         method: 'PATCH',
         body: JSON.stringify({
           name: content.name,
           code: content.code,
         }),
-      });
-      if (response.ok) {
-        const data = await response.json();
+      },
+      async (response) => {
+        const json = await response.json();
         getMyMarketSources();
-        return data;
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      showFailToast('修改源内容失败');
-    }
+        return json;
+      },
+    );
   };
   const deleteMarketSourceContent = async (
     source: MarketSource,
     content: MarketSourceContent,
   ) => {
-    try {
-      const response = await request(`source-content` + `/${content._id}`, {
+    return await sendRequest(
+      `source-content` + `/${content._id}`,
+      {
         method: 'DELETE',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        await getMyMarketSources();
+      },
+      async () => {
         showSuccessToast('删除成功');
-        return data;
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      showFailToast('获取源内容失败');
-    }
+        await sleep(200);
+        await getMyMarketSources();
+      },
+    );
   };
 
   const getMembershipPlans = async () => {
-    try {
-      const response = await request('membership');
-      if (response.ok) {
-        const data = await response.json();
-        membershipPlans.value = data;
-        return data;
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      showFailToast('获取源内容失败');
-    }
+    return await sendRequest<MembershipPlan[]>(
+      'membership',
+      {},
+      async (response) => {
+        const json = await response.json();
+        membershipPlans.value = json;
+        return json;
+      },
+    );
   };
 
   const getAliPayUrl = async (plan: MembershipPlan) => {
@@ -582,8 +623,9 @@ export const useServerStore = defineStore('serverStore', () => {
       return;
     }
     const displayStore = useDisplayStore();
-    try {
-      const response = await request('pay/alipay', {
+    return await sendRequest<string>(
+      'pay/alipay',
+      {
         method: 'POST',
         body: JSON.stringify({
           level: plan.level,
@@ -592,17 +634,12 @@ export const useServerStore = defineStore('serverStore', () => {
           email: userInfo.value.email,
           isMobile: displayStore.isAndroid,
         }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return data.paymentUrl;
-      } else {
-        handleError(response);
-      }
-    } catch (error) {
-      showFailToast('获取源内容失败');
-    }
+      },
+      async (response) => {
+        const json = await response.json();
+        return json.paymentUrl;
+      },
+    );
   };
 
   const syncToServer = async (data: { type: string; data: any }[]) => {
@@ -628,25 +665,23 @@ export const useServerStore = defineStore('serverStore', () => {
       showCancelButton: false,
       showConfirmButton: false,
     });
-    try {
-      const response = await request('sync/upload', {
+    return await sendRequest<boolean>(
+      'sync/upload',
+      {
         method: 'POST',
         body: JSON.stringify(data),
-      });
-
-      if (response.ok) {
+      },
+      async () => {
+        closeDialog();
         showSuccessToast('同步成功');
         return true;
-      } else {
-        handleError(response);
+      },
+      async () => {
+        closeDialog();
         showFailToast('同步失败');
         return false;
-      }
-    } catch (error) {
-      showFailToast('同步内容失败');
-    } finally {
-      closeDialog();
-    }
+      },
+    );
   };
   const syncFromServer = async (data: SyncTypes[]) => {
     if (!userInfo.value?.email) {
@@ -671,64 +706,61 @@ export const useServerStore = defineStore('serverStore', () => {
       showCancelButton: false,
       showConfirmButton: false,
     });
-    try {
-      const response = await request('sync/download?types=' + data.join(','));
-      if (response.ok) {
-        const records = await response.json();
-        return records;
-      } else {
-        handleError(response);
+    return await sendRequest(
+      'sync/download?types=' + data.join(','),
+      {},
+      async (response) => {
+        closeDialog();
+        const json = await response.json();
+        return json;
+      },
+      async () => {
+        closeDialog();
         showFailToast('下载同步失败');
         return false;
-      }
-    } catch (error) {
-      showFailToast('下载同步内容失败');
-    } finally {
-      closeDialog();
-    }
+      },
+    );
   };
 
   const checkTaichiFreeTrail = async () => {
-    try {
-      const response = await request('promotion/taichi-trail-status');
-      if (response.ok) {
-        const ret = await response.json();
-        return ret.status;
-      } else {
-        console.warn(await response.text());
+    return await sendRequest<boolean>(
+      'promotion/taichi-trail-status',
+      {},
+      async (response) => {
+        const json = await response.json();
+        return json.status;
+      },
+      async () => {
         return false;
-      }
-    } catch (error) {
-      return false;
-    }
+      },
+    );
   };
 
   const taichiFreeTrail = async (username: string, password: string) => {
     const toast = showLoadingToast({
       message: '会员领取中...',
     });
-    try {
-      const response = await request('promotion/taichi-trail', {
+    return await sendRequest<string>(
+      'promotion/taichi-trail',
+      {
         method: 'POST',
         body: JSON.stringify({
           username,
           password,
         }),
-      });
-      if (response.ok) {
+      },
+      async (response) => {
+        toast.close();
         const ret = await response.text();
         showSuccessToast(ret);
         fetchUserInfo();
         return ret;
-      } else {
-        handleError(response);
-        return false;
-      }
-    } catch (error) {
-      showFailToast('领取失败');
-    } finally {
-      toast.close();
-    }
+      },
+      async () => {
+        toast.close();
+        return '领取失败';
+      },
+    );
   };
 
   // 登出
@@ -762,7 +794,11 @@ export const useServerStore = defineStore('serverStore', () => {
     marketSource,
     myMarketSources,
     membershipPlans,
-    request,
+    isVip,
+    isSuperVip,
+    isVipOrSuperVip,
+
+    sendRequest,
     getDeviceInfo,
     updateUserInfo,
     registerEmail,

@@ -20,6 +20,7 @@ import {
   showLoadingToast,
   showToast,
 } from 'vant';
+import { Icon } from '@iconify/vue';
 import { computed, nextTick, ref, watch } from 'vue';
 import LocalSaveDialog from '@/components/codeEditor/dialogs/LocalSave.vue';
 import Guide from '@/components/codeEditor/Guide.vue';
@@ -56,6 +57,7 @@ import VideoDetail from './views/VideoDetail.vue';
 import VideoList from './views/VideoList.vue';
 import VideoPlayUrl from './views/VideoPlayUrl.vue';
 import VideoSearchList from './views/VideoSearchList.vue';
+import { copyText } from '@/utils';
 
 type Type = 'photo' | 'song' | 'book';
 
@@ -752,9 +754,19 @@ async function handleSaveMarket(data: { id: string; name: string }) {
             :key="log.id"
             class="log-item border-1 border"
           >
-            <div class="text-[var(--van-text-color-2)]">
-              {{ format(log.time, 'HH:mm:ss') }}
+            <div class="flex items-center gap-2">
+              <div class="text-[var(--van-text-color-2)]">
+                {{ format(log.time, 'HH:mm:ss') }}
+              </div>
+              <Icon
+                icon="solar:copy-line-duotone"
+                width="10"
+                height="10"
+                class="van-haptics-feedback"
+                @click="() => copyText(log.message)"
+              />
             </div>
+
             <div class="h-full w-full break-all p-1 pl-2">
               {{ log.message }}
             </div>

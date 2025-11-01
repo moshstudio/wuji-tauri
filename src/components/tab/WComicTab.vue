@@ -69,7 +69,7 @@ watch(
   >
     <van-tab
       v-for="(item, index) in source.list"
-      :key="index.toString() + item.type"
+      :key="source.item.id + index.toString() + item.type"
       :title="item.type"
     >
       <van-row
@@ -85,8 +85,8 @@ watch(
       <ResponsiveGrid2>
         <van-loading v-if="item.list.length === 0" class="p-2" />
         <WComicCard
-          v-for="comic in item.list"
-          :key="comic.id"
+          v-for="(comic, index) in item.list"
+          :key="source.item.id + index.toString() + comic.id"
           :comic="comic"
           :click="toDetail"
         />
@@ -108,7 +108,10 @@ watch(
     </van-row>
     <van-loading v-if="!source.list.list.length" class="p-2" />
     <ResponsiveGrid2>
-      <template v-for="comic in source.list.list" :key="comic.id">
+      <template
+        v-for="(comic, index) in source.list.list"
+        :key="source.item.id + index.toString() + comic.id"
+      >
         <WComicCard :comic="comic" :click="toDetail" />
       </template>
     </ResponsiveGrid2>

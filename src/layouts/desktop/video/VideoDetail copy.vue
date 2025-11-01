@@ -1,74 +1,33 @@
 <script setup lang="ts">
-import type { VideoPlayerState } from '@videojs-player/vue';
-import type {
-  VideoEpisode,
+import _ from 'lodash';
+import {
+  VideoSource,
   VideoItem,
   VideoResource,
-  VideoSource,
+  VideoEpisode,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
-import type videojs from 'video.js';
-import _ from 'lodash';
-import { computed, nextTick, ref, watch } from 'vue';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import { ref, reactive, computed, watch } from 'vue';
+import Player from 'xgplayer';
+import { useDisplayStore } from '@/store';
 
-const props = withDefaults(
-  defineProps<{
-    player?: ReturnType<typeof videojs>;
-    playerState?: VideoPlayerState;
-    videoSources: import('video.js').default.Tech.SourceObject[];
-    videoSource?: VideoSource;
-    videoItem?: VideoItem;
-    playingResource?: VideoResource;
-    playingEpisode?: VideoEpisode;
-    videoSrc?: VideoUrlMap;
-    videoDirection?: 'vertical' | 'horizontal';
-    videoDuration?: number;
-    videoPosition?: number;
-    inShelf?: boolean;
-    controlsIsShowing?: boolean;
-    play: (resource: VideoResource, episode: VideoEpisode) => Promise<void>;
-    playPrev: (resource?: VideoResource, episode?: VideoEpisode) => void;
-    playNext: (resource?: VideoResource, episode?: VideoEpisode) => void;
-    playOrPause: () => void;
-    addToShelf: (video: VideoItem) => void;
-    showSearch: () => void;
-    toggleFullScreen: (fullscreen: boolean) => void;
-    onCanPlay: (args: any) => void;
-    onPlayFinished: (args: any) => void;
-    formatTime: (time: number) => string;
-  }>(),
-  {
-    videoDuration: 0,
-    videoPosition: 0,
-    inShelf: false,
-    controlsIsShowing: false,
-  },
-);
-const isShowing = defineModel<boolean>('show');
-async function showComponent(show: boolean) {
-  isShowing.value = show;
-  await nextTick();
-  const resource = document.querySelector(
-    '.video-playing-resource',
-  ) as HTMLElement;
-  if (resource) {
-    (resource.parentNode as HTMLDivElement).scrollLeft =
-      resource.offsetLeft - 40;
-  }
-  const episode = document.querySelector(
-    '.video-playing-episode',
-  ) as HTMLElement;
-  const list = document.querySelector('.episode-show-list') as HTMLElement;
-  if (episode && list) {
-    list.scrollTop = episode.offsetTop - list.offsetTop - 100;
-  }
-}
-defineExpose({
-  isShowing,
-  showComponent,
+const showPlaylist = defineModel<boolean>('showPlaylist', {
+  default: false,
 });
+const props = defineProps<{
+  player?: Player;
+  videoItem?: VideoItem;
+  videoSource?: VideoSource;
+  playingResource?: VideoResource;
+  playingEpisode?: VideoEpisode;
+  videoSrc?: VideoUrlMap;
+  inShelf?: boolean;
+  play: (resource: VideoResource, episode: VideoEpisode) => Promise<void>;
+  addToShelf: (video: VideoItem) => void;
+  showSearch: () => void;
+}>();
 
+const displayStore = useDisplayStore();
 const _selectedResource = ref<VideoResource>();
 const selectedResource = computed({
   get() {
@@ -91,17 +50,14 @@ watch(
 </script>
 
 <template>
-  <transition
-    enter-active-class="transition-transform duration-300 ease-in-out"
-    enter-from-class="translate-x-full"
-    enter-to-class="translate-x-0"
-    leave-active-class="transition-transform duration-300 ease-in-out"
-    leave-from-class="translate-x-0"
-    leave-to-class="translate-x-full"
+  <div
+    class="xgplayer-container grid h-full w-full overflow-hidden bg-black transition-all duration-300"
+    :class="showPlaylist ? 'grid-cols-[0.65fr_0.35fr]' : 'grid-cols-[1fr_0fr]'"
   >
+    <slot></slot>
+
     <div
-      v-if="isShowing"
-      class="z-2 up-shadow video-list flex h-full w-full flex-shrink-0 cursor-auto flex-col overflow-hidden rounded-t-lg bg-[var(--van-background-2)] text-[var(--van-text-color)]"
+      class="video-list !z-[10000] flex h-full w-full cursor-auto flex-col overflow-hidden rounded-l-lg bg-[var(--van-background-2)] text-[var(--van-text-color)]"
     >
       <div class="flex flex-shrink-0 items-center justify-end gap-2">
         <van-icon
@@ -114,7 +70,7 @@ watch(
           name="cross"
           size="22"
           class="van-haptics-feedback p-2"
-          @click="() => (isShowing = false)"
+          @click="() => (showPlaylist = false)"
         />
       </div>
       <div
@@ -123,15 +79,6 @@ watch(
         <div
           class="flex w-full flex-shrink-0 items-center justify-start gap-2 overflow-hidden"
         >
-          <!-- <div v-if="videoItem?.cover" class="h-[100px] w-[80px]">
-            <LoadImage
-              :width="80"
-              :height="100"
-              radius="4"
-              :src="videoItem?.cover"
-              :headers="videoItem?.coverHeaders"
-            />
-          </div> -->
           <div class="flex min-w-[100px] flex-col gap-1">
             <h2 class="font-bold">
               {{ videoItem?.title }}
@@ -248,7 +195,7 @@ watch(
         </ResponsiveGrid2>
       </div>
     </div>
-  </transition>
+  </div>
 </template>
 
 <style scoped lang="less"></style>

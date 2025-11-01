@@ -31,3 +31,4 @@ test*
 test.js
 examples/
 .venv
+.env

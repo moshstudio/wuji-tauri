@@ -63,24 +63,21 @@ export async function fetchWebview(url: string): Promise<Document | null> {
 
   try {
     const ret = await _fetchWebview(url);
+
     if (!ret) {
       console.warn('fetchWebview获取失败', url);
       return null;
     }
-    const retInfo = JSON.parse(decodeURIComponent(atob(ret)));
-    const document = new DOMParser().parseFromString(
-      retInfo.content,
-      'text/html',
-    );
+    const content = decodeURIComponent(atob(ret.content));
+
+    const document = new DOMParser().parseFromString(content, 'text/html');
     if (!document) {
-      console.warn(retInfo.content);
+      console.warn('解析content失败', content);
       return null;
     }
 
     // 创建自定义 cookie 存储
-    (document as any)._customCookies = retInfo.cookie;
-    (document as any)._title = retInfo.title;
-    (document as any)._userAgent = retInfo.userAgent;
+    (document as any)._customCookies = ret.cookie;
 
     Object.defineProperty(document, 'cookie', {
       get: function () {
@@ -88,26 +85,6 @@ export async function fetchWebview(url: string): Promise<Document | null> {
       },
       set: function (value) {
         this._customCookies = value;
-      },
-      configurable: true,
-    });
-
-    Object.defineProperty(document, 'title', {
-      get: function () {
-        return this._title || '';
-      },
-      set: function (value) {
-        this._title = value;
-      },
-      configurable: true,
-    });
-
-    Object.defineProperty(document, 'userAgent', {
-      get: function () {
-        return this._userAgent || '';
-      },
-      set: function (value) {
-        this._userAgent = value;
       },
       configurable: true,
     });

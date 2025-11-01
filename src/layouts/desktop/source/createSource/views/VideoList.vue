@@ -137,7 +137,7 @@ defineExpose({
       >
         <van-tab
           v-for="(item, index) in result"
-          :key="index"
+          :key="String(item.id) + index"
           :title="item.type"
         >
           <van-row

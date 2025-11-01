@@ -43,12 +43,16 @@ class WebviewPlugin(private val activity: Activity) : Plugin(activity) {
             backstageWebView.getStrResponse(
                 onResult = { response ->
                     val ret = JSObject()
-                    ret.put("value", response.content ?: "")
+                    ret.put("content", response.content ?: "")
+                    ret.put("cookie", response.cookie ?: "")
+                    ret.put("url", response.url ?: "")
                     invoke.resolve(ret)
                 },
                 onError = { error ->
                     val ret = JSObject()
-                    ret.put("value", "")
+                    ret.put("content", "")
+                    ret.put("cookie", "")
+                    ret.put("url", "")
                     invoke.resolve(ret)
                 }
             )

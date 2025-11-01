@@ -70,7 +70,7 @@ watch(
   >
     <van-tab
       v-for="(item, index) in source.list"
-      :key="index.toString() + item.type"
+      :key="source.item.id + index.toString() + item.type"
       :title="item.type"
     >
       <van-row
@@ -85,7 +85,10 @@ watch(
       </van-row>
       <van-loading v-if="!item.list?.length" class="p-2" />
       <ResponsiveGrid2 min-width="80" max-width="100">
-        <template v-for="video in item.list" :key="video.id">
+        <template
+          v-for="(video, index) in item.list"
+          :key="source.item.id + index.toString() + video.id"
+        >
           <MVideoCard :video="video" :click="toDetail" />
         </template>
       </ResponsiveGrid2>
@@ -106,7 +109,10 @@ watch(
     </van-row>
     <van-loading v-if="!source.list.list?.length" class="p-2" />
     <ResponsiveGrid2 min-width="80" max-width="100">
-      <template v-for="video in source.list.list" :key="video.id">
+      <template
+        v-for="(video, index) in source.list.list"
+        :key="source.item.id + index.toString() + video.id"
+      >
         <MVideoCard :video="video" :click="toDetail" />
       </template>
     </ResponsiveGrid2>

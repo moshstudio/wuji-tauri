@@ -28,9 +28,9 @@ import kotlin.coroutines.resumeWithException
 
 data class StrResponse(
     val success: Boolean,
-    val content: String? = null,
-    val title: String? = null,
     val error: String? = null,
+    val content: String? = null,
+    val cookie: String? = null,
     val url: String? = null,
 )
 
@@ -54,35 +54,6 @@ class BackstageWebView(
     private var callback: Callback? = null
     private var mWebView: WebView? = null
 
-
-    //    suspend fun getStrResponse(): StrResponse = withTimeout(60000L) {
-//        suspendCancellableCoroutine { block ->
-//            block.invokeOnCancellation {
-//                runOnUI {
-//                    destroy()
-//                }
-//            }
-//            callback = object : Callback() {
-//                override fun onResult(response: StrResponse) {
-//                    if (!block.isCompleted) {
-//                        block.resume(response)
-//                    }
-//                }
-//
-//                override fun onError(error: Throwable) {
-//                    if (!block.isCompleted)
-//                        block.resumeWithException(error)
-//                }
-//            }
-//            runOnUI {
-//                try {
-//                    load()
-//                } catch (error: Throwable) {
-//                    block.resumeWithException(error)
-//                }
-//            }
-//        }
-//    }
     fun getStrResponse(
         onResult: (StrResponse) -> Unit,
         onError: (Throwable) -> Unit
@@ -170,6 +141,9 @@ class BackstageWebView(
         settings.blockNetworkImage = true
         settings.userAgentString = AppConst.UA
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
+        setInitialCookie(webView)
+
         if (sourceRegex.isNullOrBlank() && overrideUrlRegex.isNullOrBlank()) {
             Log.e("createWebView", "HtmlWebViewClient")
             webView.webViewClient = HtmlWebViewClient()
@@ -178,6 +152,12 @@ class BackstageWebView(
             webView.webViewClient = SnifferWebClient()
         }
         return webView
+    }
+
+    private fun setInitialCookie(webView: WebView) {
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.setAcceptCookie(true)
+        url?.let { cookieManager.setCookie(it, CookieStore.getCookieByUrl(context, it)) }
     }
 
     private fun destroy() {
@@ -195,12 +175,7 @@ class BackstageWebView(
     }
 
     private fun setCookie(url: String) {
-        tag?.let {
-            Coroutine.async(executeContext = IO) {
-                val cookie = CookieManager.getInstance().getCookie(url)
-//                CookieStore.setCookie(it, cookie)
-            }
-        }
+        CookieStore.saveCookie(context, url)
     }
 
     private inner class HtmlWebViewClient : WebViewClient() {
@@ -278,11 +253,18 @@ class BackstageWebView(
             }
 
             private fun buildStrResponse(content: String): StrResponse {
-                if (!isRedirect) {
-                    return StrResponse(success = true, url = url, content = content)
+                val url = if (!isRedirect) {
+                    url
+                } else {
+                    this@BackstageWebView.url ?: url
                 }
-                val originUrl = this@BackstageWebView.url ?: url
-                return StrResponse(success = true, url = originUrl, content = content)
+                val cookie = CookieManager.getInstance().getCookie(url)
+                return StrResponse(
+                    success = true,
+                    url = url,
+                    content = content,
+                    cookie = cookie,
+                )
             }
         }
 
@@ -372,15 +354,7 @@ class BackstageWebView(
     }
 
     companion object {
-        const val JS = "" +
-                "btoa(encodeURIComponent(JSON.stringify({\n" +
-                "        content: document.documentElement.innerHTML,\n" +
-                "        title: document.title,\n" +
-                "        url: window.location.href,\n" +
-                "        cookie: document.cookie,\n" +
-                "        userAgent: navigator.userAgent\n" +
-                "})))"
-
+        const val JS = "btoa(encodeURIComponent(document.documentElement.innerHTML))"
         private val quoteRegex = "^\"|\"$".toRegex()
     }
 

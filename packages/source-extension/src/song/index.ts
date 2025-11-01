@@ -21,6 +21,7 @@ export interface SongInfo {
   album?: AlbumInfo;
   mvId?: string;
   mvCid?: string;
+  url?: string;
   playUrl?: string | SongUrlMap;
   picUrl?: string;
   bigPicUrl?: string;

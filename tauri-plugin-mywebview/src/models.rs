@@ -22,5 +22,7 @@ pub struct FetchRequest {
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FetchResponse {
-    pub value: Option<String>,
+    pub content: String,
+    pub cookie: String,
+    pub url: String,
 }

@@ -80,9 +80,9 @@ const html = iconv.decode(nodeBuffer, 'gbk');
 const limit = this.pLimit(1);
 
 const input = [
-	limit(() => fetchSomething('foo')),
-	limit(() => fetchSomething('bar')),
-	limit(() => doSomething())
+  limit(() => fetchSomething('foo')),
+  limit(() => fetchSomething('bar')),
+  limit(() => doSomething()),
 ];
 
 // Only one promise is run at once
@@ -547,6 +547,9 @@ interface SongInfo {
 
   /** MV内容ID */
   mvCid?: string;
+
+  /** 详情页URL */
+  url?: string;
 
   /** 播放URL（单个URL或映射） */
   playUrl?: string | SongUrlMap;

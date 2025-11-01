@@ -6,7 +6,7 @@
 
 use tauri::{
     plugin::{Builder, TauriPlugin},
-    Manager, Runtime,
+    Runtime,
 };
 mod ad_remove;
 mod commands;

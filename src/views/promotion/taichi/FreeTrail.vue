@@ -13,7 +13,7 @@ const form = reactive({
 });
 
 const get = async () => {
-  console.log('获取免费试看');
+  console.log('获取免费试用');
 
   await serverStore.taichiFreeTrail(form.username, form.password);
 };

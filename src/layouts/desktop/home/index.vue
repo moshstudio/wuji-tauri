@@ -4,12 +4,15 @@ import { fetchHotApi } from '@wuji-tauri/hot-api';
 import { storeToRefs } from 'pinia';
 import { showFailToast } from 'vant';
 import { onMounted, ref } from 'vue';
-import WTaichiAnimate from '@/components/animate/WTaichiAnimate.vue';
+import { Icon } from '@iconify/vue';
+import DialogAnimate from '@/components/animate/DialogAnimate.vue';
 import { useDisplayStore, useStore } from '@/store';
 import { sleep } from '@/utils';
 
 const store = useStore();
+const displayStore = useDisplayStore();
 const { hotItems } = storeToRefs(store);
+const { showNews } = storeToRefs(displayStore);
 
 const active = ref(0);
 async function openInBrowser(url: string) {
@@ -19,6 +22,9 @@ async function openInBrowser(url: string) {
     console.error('Failed to open link:', error);
     showFailToast('打开失败,请尝试重置默认浏览器');
   }
+}
+function toggleNewsTab() {
+  showNews.value = !showNews.value;
 }
 onMounted(async () => {
   if (!hotItems.value.length) {
@@ -33,11 +39,16 @@ onMounted(async () => {
 
 <template>
   <div class="relative h-full w-full">
-    <WTaichiAnimate />
+    <DialogAnimate v-if="!showNews" />
     <div class="absolute left-1/2 h-full max-w-full -translate-x-1/2">
       <van-tabs
+        v-if="showNews"
         v-model:active="active"
-        class="h-full max-w-full select-none overflow-y-auto overflow-x-hidden lg:max-w-[800px]"
+        class="h-full max-w-full transform select-none overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out lg:max-w-[800px]"
+        :class="{
+          'scale-95 opacity-0': !showNews,
+          'scale-100 opacity-100': showNews,
+        }"
         sticky
         animated
       >
@@ -66,6 +77,19 @@ onMounted(async () => {
         </van-tab>
       </van-tabs>
     </div>
+    <van-button
+      plain
+      round
+      size="small"
+      @click="toggleNewsTab"
+      class="absolute right-1 top-1 z-[13]"
+    >
+      <Icon
+        :icon="showNews ? 'tabler:news-off' : 'tabler:news'"
+        width="20px"
+        height="20px"
+      />
+    </van-button>
   </div>
 </template>
 

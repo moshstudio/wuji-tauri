@@ -75,7 +75,7 @@ function updateName() {
       class="flex w-full grow select-none flex-col gap-2 overflow-y-auto bg-[--van-background] p-2"
     >
       <template v-if="!userInfo">
-        <h2>请先登录</h2>
+        <h2 class="flex items-center justify-center p-2">请先登录</h2>
         <van-button
           @click="
             () => {

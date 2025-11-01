@@ -53,6 +53,7 @@ import {
   showConfirmDialog,
   showFailToast,
   showLoadingToast,
+  showNotify,
   showSuccessToast,
   showToast,
 } from 'vant';
@@ -140,21 +141,39 @@ export const useStore = defineStore('store', () => {
         if (item.url.startsWith('http')) {
           item.code = await (await fetch(item.url)).text();
         } else {
-          const response = await serverStore.request(item.url);
-          if (!response.ok) {
-            const error = await response.json();
-            console.log(error);
-            showFailToast({
-              message: error.message,
-            });
-            return null;
-          }
-          const json = await response.json();
+          await serverStore.sendRequest(
+            item.url,
+            {},
+            async (response) => {
+              const json = await response.json();
+              item.code = json.code;
+            },
+            async (response) => {
+              if (response) {
+                const error = await response.json();
+                console.log(error);
+                showFailToast({
+                  message: error.message,
+                });
+              }
+              return null;
+            },
+          );
+          // const response = await serverStore.request(item.url);
+          // if (!response.ok) {
+          //   const error = await response.json();
+          //   console.log(error);
+          //   showFailToast({
+          //     message: error.message,
+          //   });
+          //   return null;
+          // }
+          // const json = await response.json();
 
-          item.code = json.code;
+          // item.code = json.code;
         }
       } catch (error) {
-        console.log('加载扩展失败:', item);
+        console.log('加载扩展失败:', item, error);
         showFailToast(`加载扩展失败: ${item.name}`);
         sourceClasses.set(idKey, null);
         return null;
@@ -891,7 +910,10 @@ export const useStore = defineStore('store', () => {
   /**
    * 添加订阅源
    */
-  const addSubscribeSource = async (url: string, raise: boolean = false) => {
+  const addSubscribeSource = async (
+    url: string,
+    raise: boolean = false,
+  ): Promise<boolean> => {
     const displayStore = useDisplayStore();
     const t = displayStore.showToast();
     try {
@@ -943,17 +965,21 @@ export const useStore = defineStore('store', () => {
           false;
       });
       subscribeSourceStore.addSubscribeSource(source); // 保存
+      return true;
     } catch (error) {
       showToast('添加订阅源失败');
       if (raise) {
         throw error;
       }
+      return false;
     } finally {
       displayStore.closeToast(t);
     }
   };
   // 添加市场中的订阅源
-  const addMarketSource = async (marketSource: MarketSource) => {
+  const addMarketSource = async (
+    marketSource: MarketSource,
+  ): Promise<boolean> => {
     let needPermission = true;
     if (marketSource.permissions?.includes(MarketSourcePermission.NoLogin)) {
       needPermission = false;
@@ -980,7 +1006,7 @@ export const useStore = defineStore('store', () => {
     }
     if (needPermission) {
       showToast('权限不足');
-      return;
+      return false;
     }
     const t = showLoadingToast('导入中');
     try {
@@ -1004,7 +1030,7 @@ export const useStore = defineStore('store', () => {
           const sc = await sourceClass(sourceContent);
           if (!sc) {
             // 此源内容无法获取，结束
-            return;
+            return false;
           }
           const item = {
             id: sc.id,
@@ -1035,8 +1061,10 @@ export const useStore = defineStore('store', () => {
           false;
       });
       subscribeSourceStore.addSubscribeSource(source); // 保存
+      return true;
     } catch (error) {
       showToast('添加订阅源失败');
+      return false;
     } finally {
       t.close();
     }
@@ -1044,16 +1072,16 @@ export const useStore = defineStore('store', () => {
 
   const localSourceId = 'localSource-wuji';
 
-  const addLocalSubscribeSource = async (path: string) => {
+  const addLocalSubscribeSource = async (path: string): Promise<boolean> => {
     if (!path) {
-      return;
+      return false;
     }
     let content: string;
     try {
       content = await fs.readTextFile(path);
     } catch (error) {
       showFailToast(`读取文件失败:${String(error)}`);
-      return;
+      return false;
     }
     const oldSource = subscribeSourceStore.getSubscribeSource(localSourceId);
     const source: SubscribeSource = {
@@ -1091,7 +1119,7 @@ export const useStore = defineStore('store', () => {
       }
       if (!sourceType || !extensionClass) {
         showFailToast('导入失败，不支持的订阅源');
-        return;
+        return false;
       }
       const item = {
         id: extensionClass.id,
@@ -1103,12 +1131,12 @@ export const useStore = defineStore('store', () => {
       const sc = await sourceClass(item);
       if (!sc) {
         showToast(`添加 ${item.name} 源失败`);
-        return;
+        return false;
       }
       for (const existSource of subscribeSourceStore.subscribeSources) {
         if (existSource.detail.urls.find((item) => item.id === sc.id)) {
           showFailToast(`${sc.name} 在 ${existSource.detail.name} 已存在`);
-          return;
+          return false;
         }
       }
       addToSource(
@@ -1119,8 +1147,10 @@ export const useStore = defineStore('store', () => {
       );
       source.detail.urls.push(item);
       subscribeSourceStore.addSubscribeSource(source); // 保存
+      return true;
     } catch (error) {
       showToast('添加订阅源失败');
+      return false;
     }
   };
   const updateSubscribeSources = async (source?: SubscribeSource) => {
@@ -1143,7 +1173,10 @@ export const useStore = defineStore('store', () => {
 
       try {
         if (source.detail.id === localSourceId) {
-          await addLocalSubscribeSource(url);
+          const success = await addLocalSubscribeSource(url);
+          if (!success) {
+            failed.push(url);
+          }
         } else {
           if (url === 'marketSource') {
             const marketSource = await serverStore.getMarketSourceById(
@@ -1151,10 +1184,16 @@ export const useStore = defineStore('store', () => {
             );
 
             if (marketSource) {
-              await addMarketSource(marketSource);
+              const success = await addMarketSource(marketSource);
+              if (!success) {
+                failed.push(marketSource.name);
+              }
             }
           } else {
-            await addSubscribeSource(url, true);
+            const success = await addSubscribeSource(url, true);
+            if (!success) {
+              failed.push(url);
+            }
           }
         }
       } catch (error) {
@@ -1184,9 +1223,13 @@ export const useStore = defineStore('store', () => {
     // }
 
     if (failed.length > 0) {
-      showFailToast(`${failed.join(',')} 订阅源更新失败`);
+      showNotify({
+        type: 'warning',
+        message: `${failed.length} 个订阅源更新失败`,
+        duration: 2000,
+      });
     } else {
-      showFailToast({
+      showNotify({
         type: 'success',
         message: '更新订阅源成功',
         duration: 2000,
@@ -1521,8 +1564,13 @@ export const useStore = defineStore('store', () => {
           if (action === 'confirm') {
             const source = await serverStore.getDefaultMarketSource();
             if (source) {
-              await addMarketSource(source);
-              showSuccessToast('默认源已导入');
+              const success = await addMarketSource(source);
+              if (!success) {
+                showToast('请手动在 订阅源市场 导入');
+                return;
+              } else {
+                showSuccessToast('默认源已导入');
+              }
             } else {
               await sleep(2000);
             }

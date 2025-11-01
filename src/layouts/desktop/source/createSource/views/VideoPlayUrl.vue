@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import type { VideoPlayerState } from '@videojs-player/vue';
 import type {
   VideoEpisode,
   VideoItem,
   VideoResource,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
-import type { VideoJsPlayer } from 'video.js';
+import Player, { Events } from 'xgplayer';
+import 'xgplayer/dist/index.min.css';
 import { VideoExtension } from '@wuji-tauri/source-extension';
 import { showDialog } from 'vant';
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import BOOK_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import MVideoPlayer from '@/components/media/MVideoPlayer.vue';
 import { FormItem } from '@/store/sourceCreateStore';
+import VideoJsPlugin from '@/components/media/plugins/videoJs';
 
 const props = defineProps<{
   content: FormItem<VideoItem>;
@@ -151,54 +151,42 @@ function findPage(name: string) {
   return props.content.pages.find((page) => page.type === name);
 }
 const sourceItem = computed(() => findPage('detail')?.result);
-const videoPlayer = ref<VideoJsPlayer>();
-const playerState = ref<VideoPlayerState>();
+const videoElement = ref<HTMLElement>();
+const videoPlayer = ref<Player>();
 const videoSrc = ref<VideoUrlMap>();
-const videoSources = ref<import('video.js').default.Tech.SourceObject[]>([]);
 watch(
   videoSrc,
-  (_) => {
+  async (video) => {
     if (videoSrc.value) {
-      function getStreamType(): string {
-        if (videoSrc.value?.type) {
-          switch (videoSrc.value?.type) {
-            case 'm3u8':
-              return 'application/x-mpegURL';
-            case 'mp4':
-              return 'video/mp4';
-            case 'hls':
-              return 'application/x-mpegURL';
-            case 'dash':
-              return 'application/dash+xml';
-            case 'rtmp':
-              return 'rtmp/flv';
-          }
-        }
-        const url = videoSrc.value?.url || '';
-        if (typeof url === 'string') {
-          if (url.includes('.m3u8')) {
-            return 'application/x-mpegURL'; // HLS
-          } else if (url.includes('.mpd')) {
-            return 'application/dash+xml'; // DASH
-          } else if (url.includes('rtmp://')) {
-            return 'rtmp/flv'; // RTMP
-          } else if (videoSrc.value?.isLive) {
-            return 'application/x-mpegURL'; // HLS
-          } else if (url.includes('mp4')) {
-            return 'video/mp4';
-          }
-        }
-
-        return 'application/x-mpegURL'; // 默认
-      }
-      videoSources.value = [
-        {
-          src: videoSrc.value.url,
-          type: getStreamType(), // 根据你的直播流类型设置
+      videoPlayer.value?.destroy();
+      await nextTick();
+      videoPlayer.value = new Player({
+        el: videoElement.value,
+        url: video?.url,
+        autoplay: true,
+        loop: false,
+        playsinline: true,
+        cssFullscreen: false,
+        volume: 1,
+        isLive: videoSrc.value?.isLive || false,
+        height: '100%',
+        width: '100%',
+        plugins: [VideoJsPlugin],
+        ignores: ['fullscreen'],
+        videoAttributes: {
+          crossOrigin: 'anonymous',
         },
-      ];
+      });
+
+      videoPlayer.value.on(Events.ERROR, (error) => {
+        console.warn(`播放失败: ${JSON.stringify(error)}`);
+      });
+
+      videoPlayer.value.getPlugin('error').useHooks('showError', () => {
+        videoPlayer.value?.controls?.show();
+      });
     } else {
-      videoSources.value = [];
+      videoPlayer.value?.reset();
     }
   },
   { immediate: true },
@@ -228,22 +216,7 @@ defineExpose({
     </div>
     <div v-else>
       <div class="flex grow select-none flex-col overflow-y-auto">
-        <MVideoPlayer
-          v-model:player="videoPlayer"
-          v-model:state="playerState"
-          :video-src="videoSrc"
-          :video-sources="videoSources"
-          :resource="selectedResource"
-          :episode="selectedEpisode"
-          :on-can-play="(args) => {}"
-          :on-play-finished="(args) => {}"
-          class="h-[200px] w-full"
-          @click="
-            () => {
-              videoPlayer?.paused ? videoPlayer?.play() : videoPlayer?.pause();
-            }
-          "
-        />
+        <div ref="videoElement" class="!relative !h-[200px] !w-full"></div>
         <div
           class="flex w-full flex-shrink-0 items-center justify-start gap-2 overflow-hidden"
         >

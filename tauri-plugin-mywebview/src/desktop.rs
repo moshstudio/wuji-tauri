@@ -1,15 +1,12 @@
-use base64::prelude::BASE64_STANDARD;
-use base64::Engine;
 // https://github.com/sopaco/saga-reader/blob/main/crates/scrap/src/simulator.rs
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tauri::plugin::PluginApi;
-use tauri::webview::PageLoadEvent;
+use tauri::webview::{Cookie, PageLoadEvent};
 use tauri::{
-    async_runtime, AppHandle, Listener, Manager, Runtime, Url, WebviewUrl, WebviewWindow,
-    WebviewWindowBuilder,
+    AppHandle, Listener, Manager, Runtime, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 use tauri_plugin_store::{Store, StoreExt};
 use tokio::{
@@ -49,15 +46,19 @@ impl<R: Runtime> Mywebview<R> {
 
     pub async fn fetch(&self, payload: FetchRequest) -> crate::Result<FetchResponse> {
         let app_handle = self.0.clone();
-        let value = match scrap_text_by_url(app_handle, payload.url, payload.use_saved_cookie).await
-        {
-            Ok(content) => Some(content),
-            Err(e) => {
-                eprintln!("Scraping failed: {}", e);
-                None
-            }
-        };
-        Ok(FetchResponse { value })
+        let response =
+            match scrap_text_by_url(app_handle, payload.url, payload.use_saved_cookie).await {
+                Ok(content) => content,
+                Err(e) => {
+                    eprintln!("Scraping failed: {}", e);
+                    FetchResponse {
+                        content: String::new(),
+                        url: String::new(),
+                        cookie: String::new(),
+                    }
+                }
+            };
+        Ok(response)
     }
 }
 
@@ -76,21 +77,11 @@ async fn get_available_window_id() -> Option<String> {
     None
 }
 
-fn get_cookie(content: &str) -> Option<String> {
-    serde_json::from_str::<serde_json::Value>(
-        &urlencoding::decode(&String::from_utf8(BASE64_STANDARD.decode(content).ok()?).ok()?)
-            .ok()?,
-    )
-    .ok()?["cookie"]
-        .as_str()
-        .map(|s| s.to_string())
-}
-
 async fn scrap_text_by_url<R: Runtime>(
     app_handle: AppHandle<R>,
     url: String,
     use_saved_cookie: bool,
-) -> Result<String, String> {
+) -> Result<FetchResponse, String> {
     // 1. 获取信号量许可（带超时）
     let semaphore = CONCURRENT_SEMAPHORE.clone();
     let permit = acquire_semaphore_with_timeout(&semaphore).await?;
@@ -140,22 +131,27 @@ async fn scrap_text_by_url<R: Runtime>(
     });
 
     // 6. 等待结果（带超时）
+    let window_clone = window_ref.clone();
     let result = tokio::select! {
         // 正常结果
         res = rx => {
             match res {
                 Ok(content) => {
-                    // 保存cookie
-                    if use_saved_cookie {
-                        if let Some(domain) = domain_str {
-                            if let Some(cookie_str) = get_cookie(&content) {
-                                let _ = store.set(domain, serde_json::Value::String(cookie_str));
-                                let _ = store.save();
-                            }
+                    let cookie_string = window_clone.cookies().unwrap()
+                        .iter()
+                        .map(|cookie| format!("{}={}", cookie.name(), cookie.value()))
+                        .collect::<Vec<_>>()
+                        .join("; ");
+
+                    let url_string = window_clone.url().unwrap().to_string();
+
+                    if use_saved_cookie && domain_str.is_some() {
+                        if let Some(domain)  = domain_str {
+                            let _ = store.set(domain, serde_json::Value::String(cookie_string.clone()));
+                            let _ = store.save();
                         }
                     }
-
-                    Ok(content)
+                    Ok(FetchResponse { content:content, url: url_string, cookie: cookie_string })
                 },
                 Err(_) => Err("Channel receive error".to_string())
             }
@@ -193,7 +189,7 @@ async fn create_scraping_window<R: Runtime>(
     let redirect_times = Arc::new(AtomicUsize::new(0));
     let load_finish_times = Arc::new(AtomicUsize::new(0));
 
-    let mut builder = WebviewWindowBuilder::new(app_handle, window_name, WebviewUrl::External(url))
+    let builder = WebviewWindowBuilder::new(app_handle, window_name, WebviewUrl::External(url))
         .on_navigation({
             println!("on_navigation");
             let counter = redirect_times.clone();
@@ -224,14 +220,15 @@ async fn create_scraping_window<R: Runtime>(
         .disable_drag_drop_handler()
         .title(window_name)
         .inner_size(1920.0, 1080.0)
-        .visible(true);
-    if let Some(cookie_str) = &cookie {
-        builder = builder.initialization_script(&get_saved_cookie_script(cookie_str));
-    }
+        .visible(false);
 
     let window = builder
         .build()
         .map_err(|e| format!("Failed to create window: {}", e))?;
+    if let Some(cookie_str) = &cookie {
+        let cookie = Cookie::parse(cookie_str).unwrap();
+        let _ = window.set_cookie(cookie);
+    }
 
     Ok(window)
 }
@@ -309,10 +306,6 @@ async fn send_empty_result(window_name: &str) {
     }
 }
 
-fn get_saved_cookie_script(cookie: &str) -> String {
-    format!(r#"document.cookie = "{}";"#, cookie.replace(';', "\\;"))
-}
-
 // 常量定义
 // document.querySelector('#root').shadowRoot.querySelector('.chakra-portal')
 const SCRAPING_SCRIPT: &str = r#"
@@ -336,20 +329,8 @@ function waitForLoad() {
     });
 }
 
-function scrapePage() {
-    const scrapData = {
-        content: document.documentElement.innerHTML,
-        title: document.title,
-        url: window.location.href,
-        cookie: document.cookie,
-        userAgent: navigator.userAgent
-    };
-    
-    return btoa(encodeURIComponent(JSON.stringify(scrapData)));
-}
-
 waitForLoad().then(() => {
-    const scrapedData = scrapePage();
+    const scrapedData = btoa(encodeURIComponent(document.documentElement.innerHTML));
     window.__TAURI__.event.emit("wuji_event_scrap_{{window_id}}", scrapedData);
 });
 "#;
@@ -397,14 +378,4 @@ pub async fn cleanup_all_scrap_sessions<R: Runtime>(
     }
 
     Ok(())
-}
-
-/// 获取当前活跃的窗口数量（用于监控）
-async fn get_active_scrap_window_count() -> usize {
-    WINDOW_MANAGER.lock().await.len()
-}
-
-/// 获取可用窗口槽位数量（用于监控）
-async fn get_available_window_slots() -> usize {
-    CONCURRENT_SEMAPHORE.available_permits()
 }

@@ -7,11 +7,11 @@ import type {
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { storeToRefs } from 'pinia';
 import { showDialog } from 'vant';
-import { onActivated, onMounted } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppVipDetail from '@/layouts/app/auth/VipDetail.vue';
 import DesktopVipDetail from '@/layouts/desktop/auth/VipDetail.vue';
 import { useServerStore } from '@/store';
+import { onMountedOrActivated } from '@vant/use';
 
 const serverStore = useServerStore();
 const { membershipPlans, userInfo } = storeToRefs(serverStore);
@@ -44,7 +44,7 @@ async function genPayUrl(plan: MembershipPlan) {
   }
 }
 
-onMounted(() => {
+onMountedOrActivated(() => {
   serverStore.getMembershipPlans();
 });
 </script>

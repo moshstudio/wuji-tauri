@@ -34,7 +34,7 @@ export async function searchSongs(keyword: string, pageNo = 1) {
   const response = await getData(url);
 
   const songs: SongInfo[] = [];
-  response.musics.forEach((ele: any) => {
+  response.musics?.forEach((ele: any) => {
     songs.push({
       name: ele.songName,
       artists: [ele.singerName],

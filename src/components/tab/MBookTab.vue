@@ -68,7 +68,7 @@ watch(
   >
     <van-tab
       v-for="(item, index) in source.list"
-      :key="index.toString() + item.type"
+      :key="source.item.id + index.toString() + item.type"
       :title="item.type"
     >
       <van-row
@@ -84,8 +84,8 @@ watch(
       <van-loading v-if="!item.list.length" class="p-2" />
       <div class="flex flex-col">
         <MBookCard
-          v-for="book in item.list"
-          :key="`${source.item.id}_${book.id}`"
+          v-for="(book, index) in item.list"
+          :key="source.item.id + index.toString() + book.id"
           :book="book"
           :click="toDetail"
         />
@@ -108,8 +108,8 @@ watch(
     <van-loading v-if="!source.list.list.length" class="p-2" />
     <div class="flex flex-col">
       <template
-        v-for="book in source.list.list"
-        :key="`${source.item.id}_${book.id}`"
+        v-for="(book, index) in source.list.list"
+        :key="source.item.id + index.toString() + book.id"
       >
         <MBookCard :book="book" :click="toDetail" />
       </template>

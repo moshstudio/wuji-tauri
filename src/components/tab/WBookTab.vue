@@ -69,7 +69,7 @@ watch(
   >
     <van-tab
       v-for="(item, index) in source.list"
-      :key="index.toString() + item.type"
+      :key="source.item.id + index.toString() + item.type"
       :title="item.type"
     >
       <div class="pl-2 pt-1">
@@ -84,8 +84,8 @@ watch(
       <ResponsiveGrid2>
         <van-loading v-if="item.list.length === 0" class="p-2" />
         <template
-          v-for="book in item.list"
-          :key="`${source.item.id}_${book.id}`"
+          v-for="(book, index) in item.list"
+          :key="source.item.id + index.toString() + book.id"
         >
           <WBookCard :book="book" :click="toDetail" />
         </template>
@@ -106,8 +106,8 @@ watch(
     </div>
     <ResponsiveGrid2>
       <template
-        v-for="book in source.list.list"
-        :key="`${source.item.id}_${book.id}`"
+        v-for="(book, index) in source.list.list"
+        :key="source.item.id + index.toString() + book.id"
       >
         <WBookCard :book="book" :click="toDetail" />
       </template>

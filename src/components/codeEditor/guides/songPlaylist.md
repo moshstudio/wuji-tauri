@@ -11,6 +11,7 @@ export interface SongInfo {
   album?: AlbumInfo; // 专辑信息（可选）
   mvId?: string; // MV ID（可选）
   mvCid?: string; // MV CID（可选）
+  url?: string; // 详情URL（可选）
   playUrl?: string | SongUrlMap; // 播放URL，可以是字符串或SongUrlMap类型（可选）
   picUrl?: string; // 封面图片URL（可选）
   bigPicUrl?: string; // 大尺寸封面图片URL（可选）

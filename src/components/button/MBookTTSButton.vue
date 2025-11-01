@@ -2,7 +2,9 @@
 import type { ReaderResult } from '@/utils/reader/types';
 import { Icon } from '@iconify/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { useTTSStore } from '@/store';
+import { useServerStore, useTTSStore } from '@/store';
+import { showDialog as vantShowDialog } from 'vant';
+import { router } from '@/router';
 
 const props = defineProps<{
   readingPagedContent: ReaderResult;
@@ -10,9 +12,20 @@ const props = defineProps<{
 }>();
 
 const ttsStore = useTTSStore();
+const serverStore = useServerStore();
 const showDialog = ref(false);
 
 function onPlay() {
+  if (ttsStore.selectedVoice.needVip) {
+    if (!serverStore.isVipOrSuperVip) {
+      vantShowDialog({
+        message: '您选择的语音为会员专属哦\n是否立即开通会员?',
+      }).then(() => {
+        router.push({ name: 'VipDetail' });
+      });
+      return;
+    }
+  }
   if (ttsStore.autoStopOptions.enable) {
     ttsStore.startAutoStopTimer();
   }
@@ -27,7 +40,9 @@ const voiceSelectSheetActions = computed(() => {
   return ttsStore.voices.map((voice) => {
     return {
       name: voice.ChineseName,
-      subname: voice.Gender === 'Female' ? '女声' : '男声',
+      subname:
+        (voice.needVip ? '💎' : '') +
+        (voice.Gender === 'Female' ? '女声' : '男声'),
       color:
         voice.ChineseName === ttsStore.selectedVoice.ChineseName
           ? 'var(--van-primary-color)'
@@ -184,4 +199,8 @@ const remainingTime = computed(() => {
   />
 </template>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+:deep(.van-action-sheet__name) {
+  width: 200px;
+}
+</style>

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { onMounted, ref } from 'vue';
+import { onActivated, onMounted, ref } from 'vue';
 import wujipng from '@/assets/wuji.png';
 import WNavbar from '@/components/header/WNavbar.vue';
+import { onMountedOrActivated } from '@vant/use';
+import { useServerStore } from '@/store';
 
 const version = ref('');
 
@@ -12,6 +14,10 @@ function openGithub() {
 }
 onMounted(async () => {
   version.value = await getVersion();
+});
+onMountedOrActivated(() => {
+  const serverStore = useServerStore();
+  console.log(serverStore.isVip);
 });
 </script>
 

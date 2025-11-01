@@ -1,39 +1,46 @@
 <script setup lang="ts">
-import type {
-  VideoEpisode,
-  VideoItem,
-  VideoResource,
-  VideoUrlMap,
-} from '@wuji-tauri/source-extension';
-import type videojs from 'video.js';
-import type { VideoSource } from '@/types';
-import _ from 'lodash';
-import { storeToRefs } from 'pinia';
-import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
-import { showFailToast, showToast } from 'vant';
 import {
-  computed,
-  onActivated,
-  onDeactivated,
-  onMounted,
   ref,
   watch,
+  onDeactivated,
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
 } from 'vue';
-import { useRoute } from 'vue-router';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppVideoDetail from '@/layouts/app/video/VideoDetail.vue';
 import DesktopVideoDetail from '@/layouts/desktop/video/VideoDetail.vue';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import {
+  useStore,
   useBackStore,
   useDisplayStore,
-  useStore,
   useVideoShelfStore,
 } from '@/store';
-import { retryOnFalse } from '@/utils';
+import { storeToRefs } from 'pinia';
+import { useRoute } from 'vue-router';
+import { retryOnFalse, sleep } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
-
-type VideoJsPlayer = ReturnType<typeof videojs>;
+import _ from 'lodash';
+import { showFailToast, showNotify, showToast } from 'vant';
+import {
+  VideoSource,
+  VideoItem,
+  VideoResource,
+  VideoEpisode,
+  VideoUrlMap,
+} from '@wuji-tauri/source-extension';
+import Player, { Events } from 'xgplayer';
+import MobilePreset from 'xgplayer/es/presets/mobile';
+import DefaultPreset from 'xgplayer/es/presets/default';
+import LivePreset from 'xgplayer/es/presets/live';
+import 'xgplayer/dist/index.min.css';
+import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
+import { onMountedOrActivated } from '@vant/use';
+import BackButtonPlugin from '@/components/media/plugins/backButton';
+import PlaylistButtonPlugin from '@/components/media/plugins/playlistButton';
+import Fullscreen from 'xgplayer/es/plugins/fullscreen';
+import VideoJsPlugin from '@/components/media/plugins/videoJs';
 
 const { videoId, sourceId } = defineProps<{
   videoId: string;
@@ -45,10 +52,11 @@ const store = useStore();
 const backStore = useBackStore();
 const displayStore = useDisplayStore();
 const shelfStore = useVideoShelfStore();
+const { showVideoPlaylist: showPlaylist, videoPlayer } =
+  storeToRefs(displayStore);
 const { videoShelf } = storeToRefs(shelfStore);
-const { showVideoComponent } = storeToRefs(displayStore);
 
-const videoPlayer = ref<VideoJsPlayer>();
+const videoElement = ref<HTMLElement>();
 
 const videoSource = ref<VideoSource>();
 const videoItem = ref<VideoItem>();
@@ -56,67 +64,100 @@ const videoItem = ref<VideoItem>();
 const playingResource = ref<VideoResource>();
 const playingEpisode = ref<VideoEpisode>();
 const videoSrc = ref<VideoUrlMap>();
-const videoSources = ref<import('video.js').default.Tech.SourceObject[]>([]);
 
-watch(
-  videoSrc,
-  (_) => {
-    if (videoSrc.value) {
-      function getStreamType(): string | undefined {
-        if (videoSrc.value?.type) {
-          switch (videoSrc.value?.type) {
-            case 'm3u8':
-              return 'application/x-mpegURL';
-            case 'mp4':
-              return 'video/mp4';
-            case 'hls':
-              return 'application/x-mpegURL';
-            case 'dash':
-              return 'application/dash+xml';
-            case 'rtmp':
-              return 'rtmp/flv';
-          }
-        }
-        let url = videoSrc.value?.url || '';
-        if (typeof url === 'string') {
-          const u = new URL(url);
-          if (
-            u?.host?.includes('127.0.0.1') ||
-            u?.host?.includes('localhost')
-          ) {
-            // 使用了代理
-            url = decodeURIComponent(url.split('/').pop() || '');
-            console.log(url);
-          }
-          if (url.includes('.m3u8')) {
-            return 'application/x-mpegURL'; // HLS
-          } else if (url.includes('.mpd')) {
-            return 'application/dash+xml'; // DASH
-          } else if (url.includes('rtmp://')) {
-            return 'rtmp/flv'; // RTMP
-          } else if (url.includes('.flv')) {
-            return 'video/x-flv'; // RTMP
-            // } else if (videoSrc.value?.isLive) {
-            //   return 'application/x-mpegURL'; // HLS
-          } else if (url.includes('mp4')) {
-            return 'video/mp4';
-          }
-        }
-        return 'application/x-mpegURL';
-      }
-      videoSources.value = [
-        {
-          src: videoSrc.value.url,
-          type: getStreamType(), // 根据你的直播流类型设置
-        },
-      ];
-    } else {
-      videoPlayer.value?.reset();
-      // videoSources.value = [];
+const loadData = retryOnFalse({
+  onFailed: backStore.back,
+})(
+  createCancellableFunction(async (signal: AbortSignal, pageNo?: number) => {
+    if (videoPlayer.value) {
+      createPlayer();
     }
-  },
-  { immediate: true },
+
+    videoSource.value = undefined;
+    videoItem.value = undefined;
+    videoSrc.value = undefined;
+    playingResource.value = undefined;
+    playingEpisode.value = undefined;
+
+    if (!videoId || !sourceId) {
+      return false;
+    }
+    const source = store.getVideoSource(sourceId);
+    if (!source) {
+      showToast('源不存在或未启用');
+      return false;
+    }
+    videoSource.value = source;
+    videoItem.value = store.getVideoItem(source, videoId!);
+    if (!videoItem.value) {
+      return false;
+    }
+    const t = displayStore.showToast();
+    const detail =
+      (await store.videoDetail(source!, videoItem.value)) || undefined;
+    displayStore.closeToast(t);
+    if (detail?.id != videoItem.value?.id) {
+      return false;
+    }
+    Object.assign(videoItem.value, detail);
+    if (!videoItem.value || signal.aborted) {
+      return false;
+    }
+
+    playingResource.value ||=
+      _.find(
+        videoItem.value.resources,
+        (resource) => resource.id == videoItem.value?.lastWatchResourceId,
+      ) || videoItem.value.resources?.[0];
+    playingEpisode.value ||=
+      _.find(
+        playingResource.value?.episodes,
+        (episode) => episode.id == videoItem.value?.lastWatchEpisodeId,
+      ) || playingResource.value?.episodes?.[0];
+    if (signal.aborted) return false;
+    if (playingResource.value && playingEpisode.value) {
+      await getPlayUrl();
+    }
+    return true;
+  }),
 );
+
+const getPlayUrl = createCancellableFunction(async (signal: AbortSignal) => {
+  if (!playingResource.value || !playingEpisode.value || !videoItem.value) {
+    return;
+  }
+  let url;
+  const t = displayStore.showToast();
+  try {
+    url = await store.videoPlay(
+      videoSource.value!,
+      videoItem.value,
+      playingResource.value,
+      playingEpisode.value,
+    );
+  } catch (error) {
+    console.error('get video play url error', error);
+  }
+  displayStore.closeToast(t);
+
+  if (signal.aborted) return;
+  if (url) {
+    videoSrc.value = url;
+  } else {
+    showFailToast('播放地址获取失败');
+  }
+});
+
+async function play(resource: VideoResource, episode: VideoEpisode) {
+  videoSrc.value = undefined;
+  playingResource.value = resource;
+  playingEpisode.value = episode;
+  shelfStore.updateVideoPlayInfo(videoItem.value!, {
+    resource,
+    episode,
+  });
+  await getPlayUrl();
+}
 
 const inShelf = computed(() => {
   for (const shelf of videoShelf.value) {
@@ -126,6 +167,7 @@ const inShelf = computed(() => {
   }
   return false;
 });
+
 const showAddShelfSheet = ref(false);
 const addShelfActions = computed(() => {
   return videoShelf.value.map((shelf) => ({
@@ -185,180 +227,6 @@ const playSearchedVideo = (resourceId: string, episodeId: string) => {
   showSearchDialog.value = false;
 };
 
-const loadData = retryOnFalse({
-  onFailed: backStore.back,
-})(
-  createCancellableFunction(async (signal: AbortSignal, pageNo?: number) => {
-    videoSource.value = undefined;
-    videoItem.value = undefined;
-    videoSrc.value = undefined;
-    playingResource.value = undefined;
-    playingEpisode.value = undefined;
-
-    if (!videoId || !sourceId) {
-      return false;
-    }
-    const source = store.getVideoSource(sourceId);
-    if (!source) {
-      showToast('源不存在或未启用');
-      return false;
-    }
-    videoSource.value = source;
-    videoItem.value = store.getVideoItem(source, videoId!);
-    if (!videoItem.value) {
-      return false;
-    }
-    const t = displayStore.showToast();
-    const detail =
-      (await store.videoDetail(source!, videoItem.value)) || undefined;
-    displayStore.closeToast(t);
-    if (detail?.id != videoItem.value?.id) {
-      return false;
-    }
-    Object.assign(videoItem.value, detail);
-    if (!videoItem.value || signal.aborted) {
-      return false;
-    }
-
-    playingResource.value ||=
-      _.find(
-        videoItem.value.resources,
-        (resource) => resource.id == videoItem.value?.lastWatchResourceId,
-      ) || videoItem.value.resources?.[0];
-    playingEpisode.value ||=
-      _.find(
-        playingResource.value?.episodes,
-        (episode) => episode.id == videoItem.value?.lastWatchEpisodeId,
-      ) || playingResource.value?.episodes?.[0];
-    if (signal.aborted) return false;
-    if (playingResource.value && playingEpisode.value) {
-      await getPlayUrl();
-    }
-    return true;
-  }),
-);
-
-function playOrPause() {
-  videoPlayer.value?.paused()
-    ? videoPlayer.value.play()
-    : videoPlayer.value?.pause();
-}
-
-async function play(resource: VideoResource, episode: VideoEpisode) {
-  videoSrc.value = undefined;
-  videoPlayer.value?.reset();
-  playingResource.value = resource;
-  playingEpisode.value = episode;
-  shelfStore.updateVideoPlayInfo(videoItem.value!, {
-    resource,
-    episode,
-  });
-  await getPlayUrl();
-}
-const getPlayUrl = createCancellableFunction(async (signal: AbortSignal) => {
-  if (!playingResource.value || !playingEpisode.value || !videoItem.value) {
-    return;
-  }
-  let url;
-  const t = displayStore.showToast();
-  try {
-    url = await store.videoPlay(
-      videoSource.value!,
-      videoItem.value,
-      playingResource.value,
-      playingEpisode.value,
-    );
-  } catch (error) {
-    console.error('get video play url error', error);
-  }
-  displayStore.closeToast(t);
-
-  if (signal.aborted) return;
-  if (url) {
-    videoSrc.value = url;
-  } else {
-    showFailToast('播放地址获取失败');
-  }
-});
-
-async function onCanPlay(args: any) {
-  if (playingEpisode.value?.lastWatchPosition) {
-    videoPlayer.value?.currentTime(playingEpisode.value.lastWatchPosition);
-  }
-  if (route.name === 'VideoDetail') {
-    // 判断是否还在当前页面
-    await videoPlayer.value?.play();
-  } else {
-    videoPlayer.value?.pause();
-  }
-}
-
-async function playPrev(args: any) {
-  if (
-    !playingResource.value?.episodes ||
-    !playingEpisode.value ||
-    !videoItem.value
-  ) {
-    return;
-  }
-  updateVideoPlayInfo(0);
-  const index = playingResource.value.episodes.findIndex(
-    (item) => item.id === playingEpisode.value!.id,
-  );
-
-  if (index === undefined || index === -1) return;
-  if (index === 0) {
-    showToast('已经是第一集了');
-    return;
-  }
-  await play(playingResource.value, playingResource.value.episodes[index - 1]);
-}
-
-async function playNext(args: any) {
-  await onPlayFinished(args);
-}
-
-async function seek(offset: number) {
-  if (!videoPlayer.value) return;
-  videoPlayer.value?.currentTime(
-    Math.max(
-      Math.min(
-        videoPlayer.value.duration(),
-        videoPlayer.value.currentTime() + offset,
-      ),
-      0,
-    ),
-  );
-}
-
-async function toggleFullScreen(fullscreen: boolean) {
-  displayStore.fullScreenMode = fullscreen;
-}
-
-async function onPlayFinished(args: any) {
-  if (
-    !playingResource.value?.episodes ||
-    !playingEpisode.value ||
-    !videoItem.value
-  ) {
-    return;
-  }
-  updateVideoPlayInfo(0);
-  const index = playingResource.value.episodes.findIndex(
-    (item) => item.id == playingEpisode.value!.id,
-  );
-
-  if (index === undefined || index === -1) return;
-  if (index === playingResource.value.episodes.length - 1) {
-    showToast('没有下一集了');
-    return;
-  }
-  await play(playingResource.value, playingResource.value.episodes[index + 1]);
-}
-function onTimeUpdate(args: any) {
-  updateVideoPlayInfo();
-}
-
 const updateVideoPlayInfo = _.throttle(
   (position?: number) => {
     if (position === undefined) {
@@ -377,6 +245,97 @@ const updateVideoPlayInfo = _.throttle(
   { leading: true, trailing: false },
 );
 
+const playNext = async () => {
+  if (
+    !playingResource.value?.episodes ||
+    !playingEpisode.value ||
+    !videoItem.value
+  ) {
+    return;
+  }
+  updateVideoPlayInfo(0);
+  const index = playingResource.value.episodes.findIndex(
+    (item) => item.id == playingEpisode.value!.id,
+  );
+
+  if (index === undefined || index === -1) return;
+  if (index === playingResource.value.episodes.length - 1) {
+    showToast('没有下一集了');
+    return;
+  }
+  await play(playingResource.value, playingResource.value.episodes[index + 1]);
+};
+
+const createPlayer = async (video?: VideoUrlMap) => {
+  videoPlayer.value?.destroy();
+  await nextTick();
+  const preset = video?.isLive
+    ? LivePreset
+    : displayStore.isAndroid
+      ? MobilePreset
+      : DefaultPreset;
+  videoPlayer.value = new Player({
+    el: videoElement.value,
+    fullscreenTarget: document.querySelector(
+      '.xgplayer-container',
+    ) as HTMLElement,
+    url: video?.url,
+    nullUrlStart: !video?.url,
+    autoplay: true,
+    loop: false,
+    playsinline: true,
+    cssFullscreen: false,
+    volume: 1,
+    isMobileSimulateMode: displayStore.isAndroid ? 'mobile' : 'pc',
+    isLive: videoSrc.value?.isLive || false,
+    height: '100%',
+    width: '100%',
+    plugins: [VideoJsPlugin],
+    presets: [preset],
+    videoAttributes: {
+      crossOrigin: 'anonymous',
+    },
+  });
+  videoPlayer.value.registerPlugin(BackButtonPlugin, {
+    onClick: () => {
+      backStore.back(true);
+    },
+  });
+  videoPlayer.value.registerPlugin(PlaylistButtonPlugin, {
+    onClick: () => {
+      showPlaylist.value = !showPlaylist.value;
+    },
+  });
+  videoPlayer.value.on(Events.FULLSCREEN_CHANGE, (isFullScreen) => {
+    displayStore.fullScreenMode = isFullScreen;
+  });
+  videoPlayer.value.on(Events.ENDED, () => {
+    playNext();
+  });
+  videoPlayer.value.on(Events.ERROR, (error) => {
+    console.warn(`播放失败: ${JSON.stringify(error)}`);
+  });
+  if (displayStore.isAndroid) {
+    videoPlayer.value
+      .getPlugin('fullscreen')
+      .useHooks('fullscreenChange', (plugin: Fullscreen, event: TouchEvent) => {
+        displayStore.fullScreenMode = !displayStore.fullScreenMode;
+        plugin.animate(displayStore.fullScreenMode);
+      });
+  }
+  videoPlayer.value.getPlugin('error').useHooks('showError', () => {
+    videoPlayer.value?.controls?.show();
+  });
+};
+
+watch(videoSrc, (newVideo) => {
+  if (newVideo) {
+    createPlayer(newVideo);
+  } else {
+    videoPlayer.value?.resetState();
+  }
+});
+
 let savedVideoSrc: VideoUrlMap | undefined;
 
 watch(
@@ -388,13 +347,7 @@ watch(
   { immediate: true },
 );
 
-onMounted(() => {
-  if (displayStore.isAndroid) {
-    keepScreenOn(true);
-  }
-});
-
-onActivated(() => {
+onMountedOrActivated(() => {
   if (displayStore.isAndroid) {
     keepScreenOn(true);
   }
@@ -403,6 +356,11 @@ onActivated(() => {
     savedVideoSrc = undefined;
   }
 });
+
+onMounted(() => {
+  createPlayer();
+});
+
 onDeactivated(() => {
   if (displayStore.isAndroid) {
     keepScreenOn(false);
@@ -418,55 +376,53 @@ onDeactivated(() => {
     videoSrc.value = undefined;
   }
 });
+
+onUnmounted(() => {
+  videoPlayer.value?.destroy();
+});
 </script>
 
 <template>
   <PlatformSwitch>
-    <template #app>
-      <AppVideoDetail
-        v-model:player="videoPlayer"
-        v-model:show-video-component="showVideoComponent"
-        :video-sources="videoSources"
-        :video-source="videoSource"
-        :video-item="videoItem"
-        :playing-resource="playingResource"
-        :playing-episode="playingEpisode"
-        :video-src="videoSrc"
-        :play-or-pause="playOrPause"
-        :play="play"
-        :in-shelf="inShelf"
-        :add-to-shelf="() => (showAddShelfSheet = true)"
-        :show-search="() => (showSearchDialog = true)"
-        :play-prev="playPrev"
-        :play-next="playNext"
-        :seek="seek"
-        :toggle-full-screen="toggleFullScreen"
-        :on-can-play="onCanPlay"
-        :on-play-finished="onPlayFinished"
-      />
-    </template>
     <template #desktop>
       <DesktopVideoDetail
-        v-model:player="videoPlayer"
-        v-model:show-video-component="showVideoComponent"
-        :video-sources="videoSources"
-        :video-source="videoSource"
+        v-model:show-playlist="showPlaylist"
+        :player="videoPlayer"
         :video-item="videoItem"
+        :video-source="videoSource"
         :playing-resource="playingResource"
         :playing-episode="playingEpisode"
         :video-src="videoSrc"
-        :play-or-pause="playOrPause"
         :play="play"
         :in-shelf="inShelf"
         :add-to-shelf="() => (showAddShelfSheet = true)"
         :show-search="() => (showSearchDialog = true)"
-        :play-prev="playPrev"
-        :play-next="playNext"
-        :seek="seek"
-        :toggle-full-screen="toggleFullScreen"
-        :on-can-play="onCanPlay"
-        :on-play-finished="onPlayFinished"
-      />
+      >
+        <div
+          ref="videoElement"
+          class="xg-video-player !relative !h-full !w-full flex-grow"
+        ></div>
+      </DesktopVideoDetail>
+    </template>
+    <template #app>
+      <AppVideoDetail
+        v-model:show-playlist="showPlaylist"
+        :player="videoPlayer"
+        :video-item="videoItem"
+        :video-source="videoSource"
+        :playing-resource="playingResource"
+        :playing-episode="playingEpisode"
+        :video-src="videoSrc"
+        :play="play"
+        :in-shelf="inShelf"
+        :add-to-shelf="() => (showAddShelfSheet = true)"
+        :show-search="() => (showSearchDialog = true)"
+      >
+        <div
+          ref="videoElement"
+          class="xg-video-player !relative !h-full !w-full flex-grow"
+        ></div>
+      </AppVideoDetail>
     </template>
     <van-action-sheet
       v-model:show="showAddShelfSheet"
@@ -477,6 +433,7 @@ onDeactivated(() => {
       v-model:show="showSearchDialog"
       title="搜索"
       width="85%"
+      z-index="10001"
       :show-confirm-button="false"
       :show-cancel-button="true"
       close-on-click-overlay
@@ -527,8 +484,4 @@ onDeactivated(() => {
   </PlatformSwitch>
 </template>
 
-<style scoped lang="less">
-:deep(.van-button__content) {
-  overflow: hidden;
-}
-</style>
+<style scoped lang="less"></style>

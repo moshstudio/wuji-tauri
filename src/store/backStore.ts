@@ -5,6 +5,7 @@ import { onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { router } from '@/router';
 import { useDisplayStore } from './displayStore';
+import Fullscreen from 'xgplayer/es/plugins/fullscreen';
 
 type CatelogName = 'book' | 'photo' | 'song' | 'comic' | 'video';
 interface RoutePath {
@@ -72,14 +73,25 @@ export const useBackStore = defineStore('back', () => {
     return undefined;
   };
   const back = async (buttonClick = false) => {
-
     if (route.name === 'VideoDetail') {
-      if (!buttonClick && displayStore.showVideoComponent) {
-        displayStore.showVideoComponent = false;
+      if (!buttonClick && displayStore.showVideoPlaylist) {
+        displayStore.showVideoPlaylist = false;
         return;
       } else {
         if (displayStore.fullScreenMode) {
-          displayStore.fullScreenMode = false;
+          if (displayStore.videoPlayer) {
+            if (displayStore.isAndroid) {
+              displayStore.fullScreenMode = false;
+              const plugin = displayStore.videoPlayer.getPlugin(
+                'fullscreen',
+              ) as Fullscreen;
+              plugin.animate(false);
+            } else {
+              displayStore.videoPlayer.exitFullscreen();
+            }
+          } else {
+            displayStore.fullScreenMode = false;
+          }
           return;
         }
       }

@@ -14,6 +14,7 @@ export interface Voice {
   Gender: 'Female' | 'Male';
   Locale?: string;
   type: 'edge';
+  needVip: boolean;
   [name: string]: any;
 }
 
@@ -21,12 +22,13 @@ export const useTTSStore = defineStore('ttsStore', () => {
   // 状态
   const voices = ref<Voice[]>([
     {
-      Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, YunxiNeural)',
-      ChineseName: '云希',
-      ShortName: 'zh-CN-YunxiNeural',
-      Gender: 'Male',
+      Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoyiNeural)',
+      ChineseName: '晓伊',
+      ShortName: 'zh-CN-XiaoyiNeural',
+      Gender: 'Female',
       Locale: 'zh-CN',
       type: 'edge',
+      needVip: false,
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, YunjianNeural)',
@@ -35,6 +37,16 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Male',
       Locale: 'zh-CN',
       type: 'edge',
+      needVip: true,
+    },
+    {
+      Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, YunxiNeural)',
+      ChineseName: '云希',
+      ShortName: 'zh-CN-YunxiNeural',
+      Gender: 'Male',
+      Locale: 'zh-CN',
+      type: 'edge',
+      needVip: true,
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, YunxiaNeural)',
@@ -43,6 +55,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Male',
       Locale: 'zh-CN',
       type: 'edge',
+      needVip: true,
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, YunyangNeural)',
@@ -51,6 +64,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Male',
       Locale: 'zh-CN',
       type: 'edge',
+      needVip: true,
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)',
@@ -59,14 +73,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-CN',
       type: 'edge',
-    },
-    {
-      Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoyiNeural)',
-      ChineseName: '晓伊',
-      ShortName: 'zh-CN-XiaoyiNeural',
-      Gender: 'Female',
-      Locale: 'zh-CN',
-      type: 'edge',
+      needVip: true,
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN-liaoning, XiaobeiNeural)',
@@ -75,6 +82,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-CN-liaoning',
       type: 'edge',
+      needVip: true,
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-TW, HsiaoChenNeural)',
@@ -83,6 +91,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-TW',
       type: 'edge',
+      needVip: true,
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-TW, YunJheNeural)',
@@ -91,6 +100,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Male',
       Locale: 'zh-TW',
       type: 'edge',
+      needVip: true,
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-TW, HsiaoYuNeural)',
@@ -99,6 +109,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-TW',
       type: 'edge',
+      needVip: true,
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN-shaanxi, XiaoniNeural)',
@@ -107,6 +118,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-CN-shaanxi',
       type: 'edge',
+      needVip: true,
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-HK, HiuGaaiNeural)',
@@ -114,6 +126,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-HK',
       type: 'edge',
+      needVip: true,
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-HK, HiuMaanNeural)',
@@ -122,6 +135,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-HK',
       type: 'edge',
+      needVip: true,
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-HK, WanLungNeural)',
@@ -130,6 +144,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Male',
       Locale: 'zh-HK',
       type: 'edge',
+      needVip: true,
     },
   ]);
 

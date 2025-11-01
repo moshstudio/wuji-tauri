@@ -10,8 +10,10 @@ import * as commands from 'tauri-plugin-commands-api';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import buildTray from '@/utils/tray';
 import { tauriAddPluginListener } from './utils';
+import Player from 'xgplayer';
 
 export const useDisplayStore = defineStore('display', () => {
+  const showNews = useStorage('showNews', true);
   const showTabBar = ref(true);
   const fullScreenMode = ref(false);
 
@@ -61,7 +63,6 @@ export const useDisplayStore = defineStore('display', () => {
   onMounted(() => {
     // 监听变化
     mobileMediaQuery.addEventListener('change', checkMobile);
-
     landscapeMediaQuery.addEventListener('change', checklanscape);
   });
   onUnmounted(() => {
@@ -74,7 +75,7 @@ export const useDisplayStore = defineStore('display', () => {
   const isDark = useDark();
   const toggleDark = useToggle(isDark);
 
-  const showVideoComponent = ref(false);
+  const showVideoPlaylist = ref(false);
   const showSongPlayingList = ref(false);
   const showLeftPopup = ref(false);
 
@@ -198,7 +199,10 @@ export const useDisplayStore = defineStore('display', () => {
 
   const songAutoSwitchSource = useStorageAsync('songAutoSwitchSource', true);
 
+  const videoPlayer = ref<Player>();
+
   return {
+    showNews,
     fullScreenMode,
     isAppView,
     isAndroid,
@@ -210,7 +214,7 @@ export const useDisplayStore = defineStore('display', () => {
     toggleDark,
     showTabBar,
 
-    showVideoComponent,
+    showVideoPlaylist,
     showSongPlayingList,
     showLeftPopup,
 
@@ -241,5 +245,6 @@ export const useDisplayStore = defineStore('display', () => {
     exitApp,
 
     songAutoSwitchSource,
+    videoPlayer,
   };
 });

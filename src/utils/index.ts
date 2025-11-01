@@ -7,6 +7,7 @@ import _urlJoin from 'url-join';
 import { showToast } from 'vant';
 import { onBeforeUnmount, onMounted } from 'vue';
 import { useDisplayStore } from '@/store';
+import { useClipboard } from '@vueuse/core';
 // import * as dialog from '@tauri-apps/plugin-dialog';
 export * from './extensionUtils';
 
@@ -492,4 +493,14 @@ export function updateReactive<T extends object>(
   updates: Partial<T>,
 ) {
   Object.assign(target, updates);
+}
+
+export function copyText(text: string) {
+  const clipboard = useClipboard();
+  if (clipboard.isSupported) {
+    clipboard.copy(text);
+    showToast('复制成功');
+  } else {
+    showToast('复制失败');
+  }
 }

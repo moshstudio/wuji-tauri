@@ -60,20 +60,20 @@ async fn get_m3u8_content_async(
             }
         }
     }
-    // let reqwest_headers = convert_to_reqwest_headers(&headers);
-    // let excluded_headers: [reqwest::header::HeaderName; 3] = [
-    //     reqwest::header::HeaderName::from_static("host"),
-    //     reqwest::header::HeaderName::from_static("referer"),
-    //     reqwest::header::HeaderName::from_static("origin"),
-    // ];
-    // // 遍历源 headers
-    // for (name, value) in reqwest_headers.iter() {
-    //     // 检查头部是否不在排除列表中且不在目标 header_map 中
-    //     if !excluded_headers.contains(&name) && !header_map.contains_key(name) {
-    //         // 由于 HeaderValue 是不可变的，我们可以直接克隆它
-    //         header_map.insert(name.clone(), value.clone());
-    //     }
-    // }
+    let reqwest_headers = convert_to_reqwest_headers(headers.clone());
+    let excluded_headers: [reqwest::header::HeaderName; 3] = [
+        reqwest::header::HeaderName::from_static("host"),
+        reqwest::header::HeaderName::from_static("referer"),
+        reqwest::header::HeaderName::from_static("origin"),
+    ];
+    // 遍历源 headers
+    for (name, value) in reqwest_headers.iter() {
+        // 检查头部是否不在排除列表中且不在目标 header_map 中
+        if !excluded_headers.contains(&name) && !header_map.contains_key(name) {
+            // 由于 HeaderValue 是不可变的，我们可以直接克隆它
+            header_map.insert(name.clone(), value.clone());
+        }
+    }
 
     // 创建HTTP客户端
     let client = get_m3u8_http_client(Some(url.clone()), Some(header_map.clone()), None);
@@ -392,40 +392,6 @@ async fn get_ts_content_async(ts: String) -> Result<impl warp::Reply, Infallible
     Ok(res)
 }
 
-fn convert_to_reqwest_method(warp_method: WarpMethod) -> ReqwestMethod {
-    match warp_method {
-        WarpMethod::GET => ReqwestMethod::GET,
-        WarpMethod::POST => ReqwestMethod::POST,
-        WarpMethod::PUT => ReqwestMethod::PUT,
-        WarpMethod::DELETE => ReqwestMethod::DELETE,
-        // 其他方法...
-        _ => ReqwestMethod::from_bytes(warp_method.as_str().as_bytes()).unwrap(),
-    }
-}
-fn convert_to_reqwest_headers(warp_headers: &WarpHeaderMap) -> ReqwestHeaderMap {
-    let cloned_headers = warp_headers.clone();
-    let mut reqwest_headers = ReqwestHeaderMap::new();
-    for (name, value) in cloned_headers.iter() {
-        // 使用 reqwest::HeaderValue::from_bytes 显式创建值
-        let header_value = reqwest::header::HeaderValue::from_bytes(value.as_bytes())
-            .expect("Failed to convert header value");
-        reqwest_headers.insert(
-            reqwest::header::HeaderName::from_bytes(name.as_str().as_bytes())
-                .expect("Failed to convert header name"),
-            header_value,
-        );
-    }
-    reqwest_headers
-}
-fn convert_to_wrap_headers(reqwest_headers: ReqwestHeaderMap) -> WarpHeaderMap {
-    let mut warp_headers = WarpHeaderMap::new();
-    for (name, value) in reqwest_headers.iter() {
-        let name = WarpHeaderName::from_bytes(name.as_str().as_bytes()).unwrap();
-        let value = HeaderValue::from_bytes(value.as_bytes()).unwrap();
-        warp_headers.insert(name, value);
-    }
-    warp_headers
-}
 /// Headers are checked using unicase to avoid case misfunctions
 fn is_hop_header(header_name: &str) -> bool {
     static HOP_HEADERS: Lazy<Vec<Ascii<&'static str>>> = Lazy::new(|| {
@@ -445,7 +411,9 @@ fn is_hop_header(header_name: &str) -> bool {
     HOP_HEADERS.iter().any(|h| h == &header_name)
 }
 
-fn remove_hop_headers(headers: &HeaderMap<HeaderValue>) -> HeaderMap<HeaderValue> {
+fn remove_hop_headers(
+    headers: &warp::http::HeaderMap<HeaderValue>,
+) -> warp::http::HeaderMap<HeaderValue> {
     headers
         .iter()
         .filter_map(|(k, v)| {
@@ -468,6 +436,7 @@ async fn handle_proxy_request(
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let params_clone = params.clone();
     let method_clone = method.clone();
+
     // 解码URL
     let url_cow = match urlencoding::decode(encoded_url) {
         Ok(decoded) => decoded,
@@ -479,6 +448,7 @@ async fn handle_proxy_request(
             return Ok(reply.into_response());
         }
     };
+
     let uri: warp::http::Uri = match url_cow.parse() {
         Ok(u) => u,
         Err(_) => {
@@ -495,9 +465,11 @@ async fn handle_proxy_request(
     } else {
         uri.to_string()
     };
+
     if url.starts_with(r"//") {
         url = format!("http:{}", url);
     }
+
     // 解码headers
     let decoded_headers = urlencoding::decode(headers_part).unwrap_or_default();
     let mut header_map = reqwest::header::HeaderMap::new();
@@ -512,35 +484,60 @@ async fn handle_proxy_request(
             }
         }
     }
+
+    let reqwest_headers = convert_to_reqwest_headers(headers.clone());
+    let excluded_headers: [reqwest::header::HeaderName; 3] = [
+        reqwest::header::HeaderName::from_static("host"),
+        reqwest::header::HeaderName::from_static("referer"),
+        reqwest::header::HeaderName::from_static("origin"),
+    ];
+    // 遍历源 headers
+    for (name, value) in reqwest_headers.iter() {
+        // 检查头部是否不在排除列表中且不在目标 header_map 中
+        if !excluded_headers.contains(&name) && !header_map.contains_key(name) {
+            // 由于 HeaderValue 是不可变的，我们可以直接克隆它
+            header_map.insert(name.clone(), value.clone());
+        }
+    }
+
     dbg!(
         "handle_proxy_request send request:",
         url.clone(),
         header_map.clone(),
-        body.clone(),
+        body.len(),
     );
 
-    // 创建HTTP客户端
+    // 创建HTTP客户端（配置超时）
     let client = get_proxy_http_client(Some(url.clone()), Some(header_map.clone()), None);
 
     // 构建请求
     let reqwest_request = match client
         .request(convert_to_reqwest_method(method), url.clone())
-        // .headers(header_map)
-        .body(body.clone())
+        .headers(header_map)
+        .body(body)
         .build()
     {
         Ok(req) => req,
-        Err(_) => {
+        Err(e) => {
             let reply = warp::reply::with_status(
-                "Failed to build request".to_string(),
+                format!("Failed to build request: {}", e),
                 warp::http::StatusCode::INTERNAL_SERVER_ERROR,
             );
             return Ok(reply.into_response());
         }
     };
 
-    let response = match client.execute(reqwest_request).await {
-        Ok(res) => res,
+    // 执行请求并处理可能的取消
+    let response = match execute_request_with_cancel(client, reqwest_request).await {
+        Ok(Some(res)) => res,
+        Ok(None) => {
+            // 请求被取消
+            let reply = warp::reply::with_status(
+                "Request cancelled".to_string(),
+                warp::http::StatusCode::REQUEST_TIMEOUT,
+            );
+            return Ok(reply.into_response());
+        }
         Err(e) => {
             let reply = warp::reply::with_status(
                 format!("Request failed: {}", e),
@@ -549,47 +546,101 @@ async fn handle_proxy_request(
             return Ok(reply.into_response());
         }
     };
+
     // 转换响应状态码
     let response_headers = response.headers().clone();
     let response_status = warp::http::StatusCode::from_u16(response.status().as_u16())
         .unwrap_or(warp::http::StatusCode::INTERNAL_SERVER_ERROR);
-    let response_bytes = match response.bytes().await {
-        Ok(bytes) => bytes,
-        Err(e) => {
-            let reply = warp::reply::with_status(
-                format!("Failed to read response: {}", e),
-                warp::http::StatusCode::INTERNAL_SERVER_ERROR,
-            );
-            return Ok(reply.into_response());
-        }
-    };
+
+    // 处理重定向
     if response_status.is_redirection() {
         if let Some(location) = response_headers.get(reqwest::header::LOCATION) {
             if let Ok(redirect_url) = location.to_str() {
+                // 避免无限重定向，可以添加重定向次数限制
                 return Box::pin(handle_proxy_request(
-                    &headers_part,
-                    &redirect_url,
+                    headers_part,
+                    redirect_url,
                     params_clone,
                     method_clone,
-                    headers.clone(),
-                    body.clone(),
+                    headers,
+                    warp::hyper::body::Bytes::new(), // 重定向通常不需要body
                 ))
                 .await;
             }
         }
     }
+
+    // 流式传输响应体
+    let response_body = response.bytes_stream();
+
     dbg!(
         "handle_proxy_request response:",
         response_status,
         response_headers.clone(),
-        response_bytes.len()
+        "streaming body"
     );
 
-    // 构造原始响应返回
-    let mut reply = warp::http::Response::new(warp::hyper::Body::from(response_bytes));
+    // 创建流式响应
+    let body = warp::hyper::Body::wrap_stream(response_body);
+    let mut reply = warp::http::Response::new(body);
     *reply.status_mut() = response_status;
-    *reply.headers_mut() = convert_to_wrap_headers(response_headers.clone());
+    *reply.headers_mut() = remove_hop_headers(&convert_to_wrap_headers(response_headers));
+
     Ok(reply)
+}
+
+/// 执行请求并支持取消
+async fn execute_request_with_cancel(
+    client: reqwest::Client,
+    request: reqwest::Request,
+) -> Result<Option<reqwest::Response>, reqwest::Error> {
+    tokio::select! {
+        result = client.execute(request) => {
+            match result {
+                Ok(response) => Ok(Some(response)),
+                Err(e) => Err(e),
+            }
+        }
+        _ = tokio::time::sleep(Duration::from_secs(60)) => {
+            // 超时或客户端断开连接时会触发
+            Ok(None)
+        }
+    }
+}
+
+// 辅助函数：转换headers
+fn convert_to_wrap_headers(headers: reqwest::header::HeaderMap) -> warp::http::HeaderMap {
+    let mut warp_headers = warp::http::HeaderMap::new();
+    for (name, value) in headers.iter() {
+        let name = WarpHeaderName::from_bytes(name.as_str().as_bytes()).unwrap();
+        let value = HeaderValue::from_bytes(value.as_bytes()).unwrap();
+        warp_headers.insert(name, value);
+    }
+    warp_headers
+}
+
+fn convert_to_reqwest_headers(headers: warp::http::HeaderMap) -> reqwest::header::HeaderMap {
+    let mut reqwest_headers = reqwest::header::HeaderMap::new();
+    for (name, value) in headers.iter() {
+        let name = reqwest::header::HeaderName::from_bytes(name.as_str().as_bytes()).unwrap();
+        let value = reqwest::header::HeaderValue::from_bytes(value.as_bytes()).unwrap();
+        reqwest_headers.insert(name, value);
+    }
+    reqwest_headers
+}
+
+// 辅助函数：转换HTTP方法
+fn convert_to_reqwest_method(method: warp::http::Method) -> reqwest::Method {
+    match method {
+        warp::http::Method::GET => reqwest::Method::GET,
+        warp::http::Method::POST => reqwest::Method::POST,
+        warp::http::Method::PUT => reqwest::Method::PUT,
+        warp::http::Method::DELETE => reqwest::Method::DELETE,
+        warp::http::Method::PATCH => reqwest::Method::PATCH,
+        warp::http::Method::HEAD => reqwest::Method::HEAD,
+        warp::http::Method::OPTIONS => reqwest::Method::OPTIONS,
+        _ => reqwest::Method::GET, // 默认回退
+    }
 }
 
 fn get_m3u8_http_client(

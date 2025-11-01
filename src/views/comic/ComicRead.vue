@@ -138,7 +138,7 @@ const loadData = retryOnFalse({ onFailed: backStore.back })(async () => {
 });
 async function loadChapter(chapter?: ComicChapter) {
   if (!comic.value) {
-    showToast('书籍不存在');
+    showToast('漫画不存在');
     backStore.back();
     return;
   }
