@@ -9,8 +9,13 @@ import { WBookCard } from '@wuji-tauri/components/src';
 import { debounce } from 'lodash';
 import { nanoid } from 'nanoid';
 import { ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import MPagination from '@/components/pagination/MPagination.vue';
 import ResponsiveGrid2 from '../grid/ResponsiveGrid2.vue';
+import { useDisplayStore } from '@/store';
+
+const displayStore = useDisplayStore();
+const { paginationPosition } = storeToRefs(displayStore);
 
 const props = defineProps<{
   source: BookSource;
@@ -72,9 +77,16 @@ watch(
       :key="source.item.id + index.toString() + item.type"
       :title="item.type"
     >
-      <div class="pl-2 pt-1">
+      <div
+        v-if="
+          (paginationPosition === 'top' || paginationPosition === 'both') &&
+          item.page &&
+          item.totalPage &&
+          item.totalPage > 1
+        "
+        class="pl-2 pt-1"
+      >
         <MPagination
-          v-if="item.page && item.totalPage && item.totalPage > 1"
           :page-no="item.page"
           :page-count="item.totalPage"
           :to-page="(page: number) => changePage(index, page)"
@@ -90,15 +102,36 @@ watch(
           <WBookCard :book="book" :click="toDetail" />
         </template>
       </ResponsiveGrid2>
+
+      <div
+        v-if="
+          (paginationPosition === 'bottom' || paginationPosition === 'both') &&
+          item.page &&
+          item.totalPage &&
+          item.totalPage > 1
+        "
+        class="pb-1 pl-2"
+      >
+        <MPagination
+          :page-no="item.page"
+          :page-count="item.totalPage"
+          :to-page="(page: number) => changePage(index, page)"
+        />
+      </div>
     </van-tab>
   </van-tabs>
 
   <template v-else>
-    <div class="flex pl-2 pt-1">
+    <div
+      v-if="
+        (paginationPosition === 'top' || paginationPosition === 'both') &&
+        source.list.page &&
+        source.list.totalPage &&
+        source.list.totalPage > 1
+      "
+      class="flex pl-2 pt-1"
+    >
       <MPagination
-        v-if="
-          source.list.page && source.list.totalPage && source.list.totalPage > 1
-        "
         :page-no="source.list.page"
         :page-count="source.list.totalPage"
         :to-page="(page: number) => changePage(0, page)"
@@ -112,6 +145,21 @@ watch(
         <WBookCard :book="book" :click="toDetail" />
       </template>
     </ResponsiveGrid2>
+    <div
+      v-if="
+        (paginationPosition === 'bottom' || paginationPosition === 'both') &&
+        source.list.page &&
+        source.list.totalPage &&
+        source.list.totalPage > 1
+      "
+      class="flex pb-1 pl-2"
+    >
+      <MPagination
+        :page-no="source.list.page"
+        :page-count="source.list.totalPage"
+        :to-page="(page: number) => changePage(0, page)"
+      />
+    </div>
   </template>
 </template>
 

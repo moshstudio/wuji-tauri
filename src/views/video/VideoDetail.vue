@@ -414,6 +414,7 @@ onMounted(async () => {
     isMobileSimulateMode: displayStore.isAndroid ? 'mobile' : 'pc',
     height: '100%',
     width: '100%',
+    plugins: [VideoJsPlugin],
   });
   videoPlayer.value.registerPlugin(BackButtonPlugin, {
     onClick: () => {

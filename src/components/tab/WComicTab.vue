@@ -9,8 +9,13 @@ import WComicCard from '@wuji-tauri/components/src/components/cards/comic/WComic
 import { debounce } from 'lodash';
 import { nanoid } from 'nanoid';
 import { ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import MPagination from '@/components/pagination/MPagination.vue';
 import ResponsiveGrid2 from '../grid/ResponsiveGrid2.vue';
+import { useDisplayStore } from '@/store';
+
+const displayStore = useDisplayStore();
+const { paginationPosition } = storeToRefs(displayStore);
 
 const props = defineProps<{
   source: ComicSource;
@@ -73,7 +78,12 @@ watch(
       :title="item.type"
     >
       <van-row
-        v-if="item.page && item.totalPage && item.totalPage > 1"
+        v-if="
+          (paginationPosition === 'top' || paginationPosition === 'both') &&
+          item.page &&
+          item.totalPage &&
+          item.totalPage > 1
+        "
         class="px-2 py-1"
       >
         <MPagination
@@ -91,13 +101,31 @@ watch(
           :click="toDetail"
         />
       </ResponsiveGrid2>
+      <van-row
+        v-if="
+          (paginationPosition === 'bottom' || paginationPosition === 'both') &&
+          item.page &&
+          item.totalPage &&
+          item.totalPage > 1
+        "
+        class="px-2 py-1"
+      >
+        <MPagination
+          :page-no="item.page"
+          :page-count="item.totalPage"
+          :to-page="(page: number) => changePage(index, page)"
+        />
+      </van-row>
     </van-tab>
   </van-tabs>
 
   <template v-else>
     <van-row
       v-if="
-        source.list.page && source.list.totalPage && source.list.totalPage > 1
+        (paginationPosition === 'top' || paginationPosition === 'both') &&
+        source.list.page &&
+        source.list.totalPage &&
+        source.list.totalPage > 1
       "
     >
       <MPagination
@@ -115,6 +143,20 @@ watch(
         <WComicCard :comic="comic" :click="toDetail" />
       </template>
     </ResponsiveGrid2>
+    <van-row
+      v-if="
+        (paginationPosition === 'bottom' || paginationPosition === 'both') &&
+        source.list.page &&
+        source.list.totalPage &&
+        source.list.totalPage > 1
+      "
+    >
+      <MPagination
+        :page-no="source.list.page"
+        :page-count="source.list.totalPage"
+        :to-page="(page: number) => changePage(0, page)"
+      />
+    </van-row>
   </template>
 </template>
 

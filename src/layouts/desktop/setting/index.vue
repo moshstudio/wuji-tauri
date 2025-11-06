@@ -16,6 +16,12 @@ const autoUpdateSubscribeSource = defineModel<boolean>(
     required: true,
   },
 );
+const paginationPosition = defineModel<'top' | 'bottom' | 'both'>(
+  'paginationPosition',
+  {
+    required: true,
+  },
+);
 </script>
 
 <template>
@@ -24,6 +30,7 @@ const autoUpdateSubscribeSource = defineModel<boolean>(
     v-model:show-history="showHistory"
     v-model:song-auto-switch-source="songAutoSwitchSource"
     v-model:auto-update-subscribe-source="autoUpdateSubscribeSource"
+    v-model:pagination-position="paginationPosition"
     :clear-cache="clearCache"
     :clear-data="clearData"
   ></AppSetting>

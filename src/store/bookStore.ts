@@ -58,7 +58,7 @@ export const useBookStore = defineStore('book', () => {
   const paddingBottom = useStorageAsync('readPaddingBottom', 18);
 
   const defaultThemes: ReadTheme[] = [
-    // === 经典纯色主题 ===
+    // === 浅色主题 (8个) ===
     {
       name: '默认',
       color: 'var(--van-text-color)',
@@ -80,10 +80,38 @@ export const useBookStore = defineStore('book', () => {
       bgColor: '#f6f0e5',
     },
     {
-      name: '羊皮卷',
-      color: '#5a4a42',
-      bgColor: '#f8f4e9',
+      name: '晨光微曦',
+      color: '#3a332a',
+      bgColor: '#fff9f0',
+      bgGradient: 'linear-gradient(135deg, #fff9f0 0%, #fff2e0 100%)',
     },
+    {
+      name: '书写横线',
+      color: '#333333',
+      bgColor: '#fefefe',
+      bgImage:
+        'repeating-linear-gradient(0deg, transparent, transparent 23px, #e0e0e0 23px, #e0e0e0 24px)',
+      bgRepeat: 'repeat',
+    },
+    {
+      name: '方格笔记',
+      color: '#2c2c2c',
+      bgColor: '#ffffff',
+      bgImage:
+        'linear-gradient(#e8e8e8 1px, transparent 1px), linear-gradient(90deg, #e8e8e8 1px, transparent 1px)',
+      bgSize: '20px 20px',
+      bgRepeat: 'repeat',
+    },
+    {
+      name: '古籍黄',
+      color: '#4a3c2a',
+      bgColor: '#f5eada',
+      bgImage:
+        'repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(139,115,85,0.05) 1px, rgba(139,115,85,0.05) 2px)',
+      bgRepeat: 'repeat',
+    },
+
+    // === 暗色主题 (8个) ===
     {
       name: '深空黑',
       color: '#e0e0e0',
@@ -94,14 +122,6 @@ export const useBookStore = defineStore('book', () => {
       color: '#666',
       bgColor: '#000',
     },
-
-    // === 特色阅读主题 ===
-    {
-      name: '晨光微曦',
-      color: '#3a332a',
-      bgColor: '#fff9f0',
-      bgGradient: 'linear-gradient(135deg, #fff9f0 0%, #fff2e0 100%)',
-    },
     {
       name: '暮色降临',
       color: '#e8e0d0',
@@ -109,52 +129,11 @@ export const useBookStore = defineStore('book', () => {
       bgGradient: 'linear-gradient(135deg, #2d3748 0%, #4a5568 100%)',
     },
     {
-      name: '月光银',
-      color: '#374151',
-      bgColor: '#f8fafc',
-      bgGradient: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-    },
-    {
-      name: '咖啡时光',
-      color: '#5c4b37',
-      bgColor: '#f3e9dd',
-      bgGradient: 'linear-gradient(135deg, #f3e9dd 0%, #e8dccc 100%)',
-    },
-
-    // === 条纹主题 ===
-    {
-      name: '书写横线',
-      color: '#333333',
-      bgColor: '#fefefe',
-      bgImage:
-        'repeating-linear-gradient(0deg, transparent, transparent 23px, #e0e0e0 23px, #e0e0e0 24px)',
-      bgRepeat: 'repeat',
-    },
-    {
       name: '夜读横线',
       color: '#d0d0d0',
       bgColor: '#1a1a1a',
       bgImage:
         'repeating-linear-gradient(0deg, transparent, transparent 23px, #333333 23px, #333333 24px)',
-      bgRepeat: 'repeat',
-    },
-    {
-      name: '浅灰条纹',
-      color: '#2c2c2c',
-      bgColor: '#fafafa',
-      bgImage:
-        'repeating-linear-gradient(0deg, #fafafa, #fafafa 20px, #f0f0f0 20px, #f0f0f0 40px)',
-      bgRepeat: 'repeat',
-    },
-
-    // === 网格主题 ===
-    {
-      name: '方格笔记',
-      color: '#2c2c2c',
-      bgColor: '#ffffff',
-      bgImage:
-        'linear-gradient(#e8e8e8 1px, transparent 1px), linear-gradient(90deg, #e8e8e8 1px, transparent 1px)',
-      bgSize: '20px 20px',
       bgRepeat: 'repeat',
     },
     {
@@ -166,43 +145,18 @@ export const useBookStore = defineStore('book', () => {
       bgSize: '20px 20px',
       bgRepeat: 'repeat',
     },
-    {
-      name: '点阵网格',
-      color: '#333333',
-      bgColor: '#ffffff',
-      bgImage: 'radial-gradient(circle, #cccccc 1px, transparent 1px)',
-      bgSize: '20px 20px',
-      bgRepeat: 'repeat',
-    },
 
-    // === 复古特色 ===
+    // === 特别适合低亮度阅读的暗色主题 (2个) ===
     {
-      name: '古籍黄',
-      color: '#4a3c2a',
-      bgColor: '#f5eada',
-      bgImage:
-        'repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(139,115,85,0.05) 1px, rgba(139,115,85,0.05) 2px)',
-      bgRepeat: 'repeat',
+      name: '柔光暗色',
+      color: '#b0b0b0', // 降低对比度，减少眩光
+      bgColor: '#1a1a1a', // 不是纯黑，减轻眼睛压力
     },
     {
-      name: '羊皮纸',
-      color: '#5a4a3a',
-      bgColor: '#f8f2e5',
-      bgImage: 'linear-gradient(rgba(200,180,150,0.1) 1px, transparent 1px)',
-      bgSize: '100% 24px',
-      bgRepeat: 'repeat',
-    },
-    {
-      name: '青瓷',
-      color: '#2a4a3a',
-      bgColor: '#f0f8f0',
-      bgGradient: 'linear-gradient(135deg, #f0f8f0 0%, #e8f0e8 100%)',
-    },
-    {
-      name: '淡紫梦境',
-      color: '#4a3a5a',
-      bgColor: '#f8f4ff',
-      bgGradient: 'linear-gradient(135deg, #f8f4ff 0%, #f0e8ff 100%)',
+      name: '暖色暗调',
+      color: '#d0c8b8', // 暖色调文字，更柔和
+      bgColor: '#2a2620', // 暖色背景，减少蓝光刺激
+      bgGradient: 'linear-gradient(135deg, #2a2620 0%, #1e1c18 100%)',
     },
   ];
   const customThemes = useStorageAsync<ReadTheme[]>('customReadThemes', []);

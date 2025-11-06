@@ -210,6 +210,12 @@ export const useDisplayStore = defineStore('display', () => {
     false,
   );
 
+  // 换页按钮位置设置：'top' - 列表上方, 'bottom' - 列表下方, 'both' - 列表上下方
+  const paginationPosition = useStorageAsync<'top' | 'bottom' | 'both'>(
+    'paginationPosition',
+    'top',
+  );
+
   const videoPlayer = ref<Player>();
 
   return {
@@ -263,6 +269,8 @@ export const useDisplayStore = defineStore('display', () => {
     songAutoSwitchSource,
     showViewHistory,
     autoUpdateSubscribeSource,
+
+    paginationPosition,
 
     videoPlayer,
   };

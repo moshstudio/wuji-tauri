@@ -13,6 +13,7 @@ const {
   songAutoSwitchSource,
   showViewHistory,
   autoUpdateSubscribeSource,
+  paginationPosition,
 } = storeToRefs(displayStore);
 
 const showConfirmClearData = ref(false);
@@ -30,6 +31,7 @@ function clearData() {
         v-model:show-history="showViewHistory"
         v-model:song-auto-switch-source="songAutoSwitchSource"
         v-model:auto-update-subscribe-source="autoUpdateSubscribeSource"
+        v-model:pagination-position="paginationPosition"
         :clear-cache="store.clearCache"
         :clear-data="clearData"
       />
@@ -40,6 +42,7 @@ function clearData() {
         v-model:show-history="showViewHistory"
         v-model:song-auto-switch-source="songAutoSwitchSource"
         v-model:auto-update-subscribe-source="autoUpdateSubscribeSource"
+        v-model:pagination-position="paginationPosition"
         :clear-cache="store.clearCache"
         :clear-data="clearData"
       />

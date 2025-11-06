@@ -2,6 +2,7 @@
 import type { PhotoSource } from '@/types';
 import { WPhotoCard } from '@wuji-tauri/components/src';
 import { ref } from 'vue';
+import { storeToRefs } from 'pinia';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import WHeader from '@/components/header/WHeader.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
@@ -20,6 +21,7 @@ const searchValue = defineModel<string>('searchValue', {
   required: true,
 });
 const displayStore = useDisplayStore();
+const { paginationPosition } = storeToRefs(displayStore);
 
 const isRefreshing = ref(false);
 async function onRefresh() {
@@ -56,9 +58,16 @@ async function onRefresh() {
             :name="item.item.name"
             :title="item.item.name"
           >
-            <div class="flex flex-nowrap px-2">
+            <div
+              v-if="
+                (paginationPosition === 'top' ||
+                  paginationPosition === 'both') &&
+                item.list &&
+                item.list.totalPage
+              "
+              class="flex flex-nowrap px-2"
+            >
               <MPagination
-                v-if="item.list && item.list.totalPage"
                 :page-no="item.list.page"
                 :page-count="item.list.totalPage"
                 :to-page="(page) => toPage(item, page)"
@@ -79,6 +88,21 @@ async function onRefresh() {
                 "
               />
             </ResponsiveGrid2>
+            <div
+              v-if="
+                (paginationPosition === 'bottom' ||
+                  paginationPosition === 'both') &&
+                item.list &&
+                item.list.totalPage
+              "
+              class="flex flex-nowrap px-2"
+            >
+              <MPagination
+                :page-no="item.list.page"
+                :page-count="item.list.totalPage"
+                :to-page="(page) => toPage(item, page)"
+              />
+            </div>
             <van-divider :style="{ margin: '8px 0px' }" />
           </van-collapse-item>
         </div>

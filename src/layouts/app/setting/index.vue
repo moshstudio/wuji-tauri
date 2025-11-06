@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import WNavbar from '@/components/header/WNavbar.vue';
 
 defineProps<{
@@ -16,6 +17,14 @@ const autoUpdateSubscribeSource = defineModel<boolean>(
     required: true,
   },
 );
+const paginationPosition = defineModel<'top' | 'bottom' | 'both'>(
+  'paginationPosition',
+  {
+    required: true,
+  },
+);
+
+const showPaginationSheet = ref(false);
 </script>
 
 <template>
@@ -76,9 +85,44 @@ const autoUpdateSubscribeSource = defineModel<boolean>(
             <van-switch v-model="autoUpdateSubscribeSource" @click.stop />
           </template>
         </van-cell>
+        <van-cell
+          center
+          title="换页按钮位置"
+          is-link
+          @click="showPaginationSheet = true"
+        >
+          <template #value>
+            <div class="text-[var(--van-gray-6)]">
+              {{
+                paginationPosition === 'top'
+                  ? '列表上方'
+                  : paginationPosition === 'bottom'
+                    ? '列表下方'
+                    : '列表上下方'
+              }}
+            </div>
+          </template>
+        </van-cell>
       </van-cell-group>
     </div>
   </div>
+  <van-action-sheet
+    v-model:show="showPaginationSheet"
+    :actions="[
+      { name: '列表上方' },
+      { name: '列表下方' },
+      { name: '列表上下方' },
+    ]"
+    cancel-text="取消"
+    @select="
+      (item: any) => {
+        if (item.name === '列表上方') paginationPosition = 'top';
+        else if (item.name === '列表下方') paginationPosition = 'bottom';
+        else paginationPosition = 'both';
+        showPaginationSheet = false;
+      }
+    "
+  />
 </template>
 
 <style scoped lang="less"></style>
