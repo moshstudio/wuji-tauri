@@ -6,15 +6,24 @@ defineProps<{
   clearData: () => void;
 }>();
 const isDark = defineModel<boolean>('isDark', { required: true });
+const showHistory = defineModel<boolean>('showHistory', { required: true });
 const songAutoSwitchSource = defineModel<boolean>('songAutoSwitchSource', {
   required: true,
 });
+const autoUpdateSubscribeSource = defineModel<boolean>(
+  'autoUpdateSubscribeSource',
+  {
+    required: true,
+  },
+);
 </script>
 
 <template>
   <AppSetting
     v-model:is-dark="isDark"
+    v-model:show-history="showHistory"
     v-model:song-auto-switch-source="songAutoSwitchSource"
+    v-model:auto-update-subscribe-source="autoUpdateSubscribeSource"
     :clear-cache="clearCache"
     :clear-data="clearData"
   ></AppSetting>

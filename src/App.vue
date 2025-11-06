@@ -8,19 +8,21 @@ import { useBackStore } from '@/store/backStore';
 import { checkAndUpdate } from '@/utils/update';
 import RouterView from '@/views/tabbar/RouterView.vue';
 import { router } from './router';
+import { loadReadFonts } from './utils/font';
 
 allowMultipleToast();
 
 useStore();
 useBackStore();
 const displayStore = useDisplayStore();
-const { isAppView, isDark } = storeToRefs(displayStore);
+const { isAppView, isAndroid, isDark } = storeToRefs(displayStore);
 const route = useRoute();
 
 onMounted(async () => {
   // 初始化路径
   await nextTick();
   await router.replace(displayStore.routerCurrPath);
+  loadReadFonts();
 });
 
 onMounted(async () => {
@@ -47,7 +49,7 @@ watch(
   <van-config-provider
     :theme="isDark ? 'dark' : 'light'"
     class="h-full w-full overflow-hidden bg-[--van-background]"
-    :class="isAppView ? 'hide-vertical-scrollbar' : 'not-mobile-scrollbar'"
+    :class="isAndroid ? 'hide-vertical-scrollbar' : 'not-mobile-scrollbar'"
   >
     <RouterView />
   </van-config-provider>

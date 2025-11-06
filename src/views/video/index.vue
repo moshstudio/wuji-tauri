@@ -7,11 +7,15 @@ import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppVideoList from '@/layouts/app/video/VideoList.vue';
 import DesktopVideoList from '@/layouts/desktop/video/VideoList.vue';
 import { router } from '@/router';
-import { useDisplayStore, useStore } from '@/store';
+import { useVideoShelfStore, useDisplayStore, useStore } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { VideoHistory } from '@/types/video';
+import { showConfirmDialog, showToast } from 'vant';
 
 const store = useStore();
 const displayStore = useDisplayStore();
+const videoShelfStore = useVideoShelfStore();
+const { videoHistory } = storeToRefs(videoShelfStore);
 const { videoSources } = storeToRefs(store);
 
 const searchValue = ref('');
@@ -72,6 +76,34 @@ function toDetail(source: VideoSource, item: VideoItem) {
   });
 }
 
+async function hisrotyToVideo(video: VideoHistory) {
+  const source = store.getVideoSource(video.video.sourceId);
+  if (!source) {
+    showToast('源不存在或未启用');
+    return;
+  }
+  router.push({
+    name: 'VideoDetail',
+    params: {
+      videoId: video.video.id,
+      sourceId: video.video.sourceId,
+    },
+  });
+}
+
+function clearHistory() {
+  showConfirmDialog({
+    title: '提示',
+    message: '确定要清空历史记录吗？',
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+  }).then((confirm) => {
+    if (confirm) {
+      videoShelfStore.clearVideoHistory();
+    }
+  });
+}
+
 async function openBaseUrl(source: VideoSource) {
   const sc = await store.sourceClass(source.item);
   if (sc && sc.baseUrl) {
@@ -86,10 +118,13 @@ async function openBaseUrl(source: VideoSource) {
       <AppVideoList
         v-model:search-value="searchValue"
         :video-sources="videoSources"
+        :video-history="videoHistory"
         :recommend="recommend"
         :search="search"
         :to-page="toPage"
         :to-detail="toDetail"
+        :history-to-video="hisrotyToVideo"
+        :clear-history="clearHistory"
         :open-base-url="openBaseUrl"
       />
     </template>
@@ -97,10 +132,13 @@ async function openBaseUrl(source: VideoSource) {
       <DesktopVideoList
         v-model:search-value="searchValue"
         :video-sources="videoSources"
+        :video-history="videoHistory"
         :recommend="recommend"
         :search="search"
         :to-page="toPage"
         :to-detail="toDetail"
+        :history-to-video="hisrotyToVideo"
+        :clear-history="clearHistory"
         :open-base-url="openBaseUrl"
       />
     </template>

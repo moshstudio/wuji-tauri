@@ -70,7 +70,7 @@ abstract class ComicExtension extends Extension {
   @transformResult<ComicsList | null>((r) => {
     if (r) {
       _.castArray(r).forEach((comicList) => {
-        comicList.id = String(comicList.id || nanoid());
+        comicList.id = String(comicList.id || comicList.type || nanoid());
         comicList.list.forEach((comicItem) => {
           comicItem.id = String(
             comicItem.id ||
@@ -104,7 +104,7 @@ abstract class ComicExtension extends Extension {
   @transformResult<ComicsList | null>((r) => {
     if (r) {
       _.castArray(r).forEach((comicList) => {
-        comicList.id = String(comicList.id || nanoid());
+        comicList.id = String(comicList.id || comicList.type || nanoid());
         comicList.list.forEach((comicItem) => {
           comicItem.id = String(
             comicItem.id ||
@@ -140,7 +140,9 @@ abstract class ComicExtension extends Extension {
       r.id = String(r.id);
       r.chapters ||= [];
       r.chapters.forEach((chapter) => {
-        chapter.id = String(chapter.id || chapter.url || nanoid());
+        chapter.id = String(
+          chapter.id || chapter.url || chapter.title || nanoid(),
+        );
       });
     }
     return r;

@@ -8,6 +8,7 @@ import { ref } from 'vue';
 import COMIC_TEMPLATE from '@/components/codeEditor/templates/comicTemplate.txt?raw';
 import MPagination from '@/components/pagination/MPagination.vue';
 import { FormItem } from '@/store/sourceCreateStore';
+import { nanoid } from 'nanoid';
 
 const props = defineProps<{
   content: FormItem<ComicsList>;
@@ -31,6 +32,7 @@ enum RunStatus {
 const runStatus = ref<RunStatus>(RunStatus.not_running);
 const errorMessage = ref('运行失败');
 const result = ref<ComicsList | undefined>();
+const tabKey = ref(nanoid());
 
 async function initLoad() {
   result.value = undefined;
@@ -73,9 +75,12 @@ async function load(pageNo?: number, type?: string) {
       !_.isArray(res) &&
       result.value.find((item) => item.type === res.type)
     ) {
+      console.log(res);
+
       const index = result.value.findIndex((item) => item.type === res.type);
       Object.assign(result.value[index], res);
     } else {
+      tabKey.value = nanoid();
       result.value = res;
     }
     props.updateResult('comic', 'list', result.value, true);
@@ -88,6 +93,8 @@ async function load(pageNo?: number, type?: string) {
 }
 
 function loadTab(index: number, pageNo?: number) {
+  console.log('load tab', index, pageNo);
+
   if (!result.value) return;
   let t: ComicList;
   if (Array.isArray(result.value)) {
@@ -126,10 +133,16 @@ defineExpose({
       <div v-if="!result" />
       <van-tabs
         v-else-if="Array.isArray(result)"
+        :key="tabKey"
         v-model:active="tabActive"
         shrink
         animated
-        @rendered="(index) => loadTab(index)"
+        @rendered="
+          (index) => {
+            console.log('van-tab render load tab', index);
+            loadTab(index);
+          }
+        "
       >
         <van-tab
           v-for="(item, index) in result"

@@ -88,9 +88,18 @@ async function load(pageNo: number) {
       throw new Error('初始化中的baseUrl未定义!');
     }
     cls.log = props.log;
-    item.value =
-      findPage('songList')?.result?.list?.[0] ||
-      findPage('searchSongList')?.result?.list?.[0];
+    const aPage = findPage('songList');
+    const bPage = findPage('searchSongList');
+    if (!aPage?.result?.list.length) {
+      item.value = bPage?.result?.list?.[0];
+    } else if (!bPage?.result?.list.length) {
+      item.value = aPage?.result?.list?.[0];
+    } else {
+      item.value =
+        (aPage.ts || 0) > (bPage.ts || 0)
+          ? aPage.result?.list?.[0]
+          : bPage.result?.list?.[0];
+    }
     if (!item.value) {
       throw new Error('请先保证《推荐歌单》或《搜索歌单》执行不为空');
     }

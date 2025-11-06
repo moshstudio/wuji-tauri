@@ -218,7 +218,7 @@ watch(
             >
               <van-cell title="专属订阅源" />
               <van-cell title="服务器数据同步" />
-              <van-cell title="专属听书语音..." />
+              <van-cell title="专属字体,听书语音" />
               <van-cell title="更多功能实现中..." />
             </van-cell-group>
             <div
@@ -305,7 +305,7 @@ watch(
             >
               <van-cell title="专属订阅源" />
               <van-cell title="服务器数据同步" />
-              <van-cell title="专属听书语音..." />
+              <van-cell title="专属字体,听书语音" />
               <van-cell title="更多功能实现中..." />
             </van-cell-group>
             <div

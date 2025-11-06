@@ -81,7 +81,7 @@ abstract class VideoExtension extends Extension {
   @transformResult<VideosList | null>((r) => {
     if (r) {
       _.castArray(r).forEach((videoList) => {
-        videoList.id = String(videoList.id) || nanoid();
+        videoList.id = String(videoList.id) || videoList.type || nanoid();
         videoList.list?.forEach((videoItem) => {
           videoItem.id = String(
             videoItem.id ||
@@ -115,7 +115,7 @@ abstract class VideoExtension extends Extension {
   @transformResult<VideosList | null>((r) => {
     if (r) {
       _.castArray(r).forEach((videoList) => {
-        videoList.id = String(videoList.id || nanoid());
+        videoList.id = String(videoList.id || videoList.type || nanoid());
         videoList.list?.forEach((videoItem) => {
           videoItem.id = String(
             videoItem.id ||

@@ -15,11 +15,14 @@ import { showToast } from 'vant';
 import { ref } from 'vue';
 import { useStore } from './store';
 import { createKVStore } from './utils';
-import { estimateJsonSize } from '@/utils';
+import { ComicHistory } from '@/types/comic';
 
 export const useComicShelfStore = defineStore('comicShelfStore', () => {
   const kvStorage = createKVStore('comicShelfStore');
   const storage = kvStorage.storage;
+
+  const historyKVStorage = createKVStore('comicHistoryStore');
+  const historyStorage = historyKVStorage.storage;
 
   // 漫画书架⬇️
   const comicShelf = useStorageAsync<ComicShelf[]>(
@@ -37,6 +40,17 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
       eventFilter: debounceFilter(500),
     },
   );
+
+  // 阅读历史
+  const comicHistory = useStorageAsync<Array<ComicHistory>>(
+    'comicHistory',
+    [],
+    historyStorage,
+    {
+      eventFilter: debounceFilter(1000),
+    },
+  );
+
   const comicChapterRefreshing = ref(false);
 
   const createComicShelf = (name: string) => {
@@ -83,6 +97,17 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
     }
     return false;
   };
+
+  const isComicInHistory = (comic: ComicItem | string): boolean => {
+    let id: string;
+    if (typeof comic === 'string') {
+      id = comic;
+    } else {
+      id = comic.id;
+    }
+    return !!comicHistory.value.find((item) => item.comic.id === id);
+  };
+
   const addToComicSelf = (comicItem: ComicItem, shelfId?: string): boolean => {
     if (!comicShelf.value.length) {
       showToast('书架为空，请先创建书架');
@@ -131,7 +156,44 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
         }
       }
     }
+    updateComicHistoryInfo(comicItem, chapter);
   };
+
+  const updateComicHistoryInfo = (
+    comicItem: ComicItem,
+    chapter?: ComicChapter,
+  ) => {
+    const comic = comicHistory.value.find(
+      (item) => item.comic.id === comicItem.id,
+    );
+    if (comic) {
+      comic.lastReadTime = Date.now();
+      if (!chapter) {
+        comic.lastReadChapter = undefined;
+      } else if (comic.comic.chapters?.find((item) => item.id === chapter.id)) {
+        comic.lastReadChapter = chapter;
+      }
+      comicHistory.value = [...comicHistory.value].sort(
+        (a, b) => b.lastReadTime - a.lastReadTime,
+      );
+    } else {
+      comicHistory.value = [
+        {
+          comic: comicItem,
+          lastReadChapter: chapter,
+          lastReadTime: Date.now(),
+        },
+        ...comicHistory.value,
+      ]
+        .sort((a, b) => b.lastReadTime - a.lastReadTime)
+        .slice(0, 10);
+    }
+  };
+
+  const clearComicHistory = () => {
+    comicHistory.value = [];
+  };
+
   const deleteComicFromShelf = (comicItem: ComicItem, shelfId: string) => {
     const shelf = comicShelf.value.find((item) => item.id === shelfId);
     if (!shelf) return;
@@ -167,6 +229,13 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
   };
   const loadSyncData = async (data: ComicShelf[]) => {
     comicShelf.value = data;
+    for (const shelf of comicShelf.value) {
+      for (const comic of shelf.comics) {
+        if (isComicInHistory(comic.comic)) {
+          updateComicHistoryInfo(comic.comic, comic.lastReadChapter);
+        }
+      }
+    }
   };
   const clear = async () => {
     comicShelf.value = [
@@ -177,19 +246,24 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
         createTime: Date.now(),
       },
     ];
+    clearComicHistory();
     await storage.clear();
   };
 
   return {
     storage,
     comicShelf,
+    comicHistory,
     comicChapterRefreshing,
     createComicShelf,
     removeComicShelf,
     isComicInShelf,
+    isComicInHistory,
     addToComicSelf,
     removeComicFromShelf,
     updateComicReadInfo,
+    updateComicHistoryInfo,
+    clearComicHistory,
     deleteComicFromShelf,
     comicRefreshChapters,
     syncData,

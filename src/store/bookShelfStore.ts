@@ -12,11 +12,14 @@ import { showToast } from 'vant';
 import { useBookChapterStore } from './bookChaptersStore';
 import { useStore } from './store';
 import { createKVStore } from './utils';
-import { estimateJsonSize } from '@/utils';
+import { BookHistory } from '@/types/book';
 
 export const useBookShelfStore = defineStore('bookShelfStore', () => {
   const kvStorage = createKVStore('bookShelfStore');
   const storage = kvStorage.storage;
+
+  const historyKVStorage = createKVStore('bookHistoryStore');
+  const historyStorage = historyKVStorage.storage;
 
   // 书籍书架⬇️
   const bookShelf = useStorageAsync<BookShelf[]>(
@@ -31,7 +34,17 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     ],
     storage,
     {
-      eventFilter: debounceFilter(500),
+      eventFilter: debounceFilter(1000),
+    },
+  );
+
+  // 阅读历史
+  const bookHistory = useStorageAsync<Array<BookHistory>>(
+    'bookHistory',
+    [],
+    historyStorage,
+    {
+      eventFilter: debounceFilter(1000),
     },
   );
 
@@ -88,27 +101,17 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     }
     return false;
   };
-  const addToBookSelf = (bookItem: BookItem, shelfId?: string): boolean => {
-    /**
-       const shelf = shelfId
-      ? photoShelf.value.find((item) => item.id === shelfId)
-      : photoShelf.value[0];
-    if (!shelf) {
-      showToast('收藏夹不存在');
-      return false;
-    }
 
-    if (shelf.photos.find((i) => i.id === item.id)) {
-      showToast('已存在');
-      return false;
+  const isBookInHistory = (book: BookItem | string): boolean => {
+    let id: string;
+    if (typeof book === 'string') {
+      id = book;
     } else {
-      item.extra ||= {};
-      item.extra.selected ||= false; // 用作从书架中删除
-      shelf.photos.push(_.cloneDeep(item));
-      showToast(`已添加到 ${shelf.name}`);
-      return true;
+      id = book.id;
     }
-     */
+    return !!bookHistory.value.find((item) => item.book.id === id);
+  };
+  const addToBookSelf = (bookItem: BookItem, shelfId?: string): boolean => {
     if (!bookShelf.value.length) {
       showToast('书架为空，请先创建书架');
       return false;
@@ -160,6 +163,37 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
         }
       }
     }
+    updateBookHistoryInfo(bookItem, chapter);
+  };
+
+  const updateBookHistoryInfo = (bookItem: BookItem, chapter?: BookChapter) => {
+    const book = bookHistory.value.find((item) => item.book.id === bookItem.id);
+    if (book) {
+      book.lastReadTime = Date.now();
+      if (!chapter) {
+        book.lastReadChapter = undefined;
+      } else if (book.book.chapters?.find((item) => item.id === chapter.id)) {
+        book.lastReadChapter = chapter;
+      }
+      bookHistory.value = [...bookHistory.value].sort(
+        (a, b) => b.lastReadTime - a.lastReadTime,
+      );
+    } else {
+      bookHistory.value = [
+        {
+          book: bookItem,
+          lastReadChapter: chapter,
+          lastReadTime: Date.now(),
+        },
+        ...bookHistory.value,
+      ]
+        .sort((a, b) => b.lastReadTime - a.lastReadTime)
+        .slice(0, 10);
+    }
+  };
+
+  const clearBookHistory = () => {
+    bookHistory.value = [];
   };
   const deleteBookFromShelf = (bookItem: BookItem, shelfId: string) => {
     const shelf = bookShelf.value.find((item) => item.id === shelfId);
@@ -194,6 +228,13 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
   };
   const loadSyncData = async (data: BookShelf[]) => {
     bookShelf.value = data;
+    for (const shelf of bookShelf.value) {
+      for (const book of shelf.books) {
+        if (isBookInHistory(book.book)) {
+          updateBookHistoryInfo(book.book, book.lastReadChapter);
+        }
+      }
+    }
   };
   const clear = async () => {
     bookShelf.value = [
@@ -204,18 +245,23 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
         createTime: Date.now(),
       },
     ];
+    clearBookHistory();
     await storage.clear();
   };
 
   return {
     storage,
     bookShelf,
+    bookHistory,
     createBookShelf,
     removeBookShelf,
     isBookInShelf,
+    isBookInHistory,
     addToBookSelf,
     removeBookFromShelf,
     updateBookReadInfo,
+    updateBookHistoryInfo,
+    clearBookHistory,
     deleteBookFromShelf,
     bookRefreshChapters,
     syncData,

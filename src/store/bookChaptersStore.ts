@@ -62,7 +62,7 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
       const bookId = books.value.find(
         (book) => book.cache_book_id === cacheBookId,
       )?.book_id;
-      if (bookId && !shelfStore.isBookInShelf(bookId)) {
+      if (bookId && !shelfStore.isBookInShelf(bookId) && !shelfStore.isBookInHistory(bookId)) {
         await removeBookCache2(cacheBookId);
       }
     }

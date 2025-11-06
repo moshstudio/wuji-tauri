@@ -144,6 +144,7 @@ function getPagedContent(content: string, title?: string) {
     width: size.value.width - bookStore.paddingX * 2, // 容器宽度
     height:
       size.value.height - bookStore.paddingTop - bookStore.paddingBottom - 18, // 容器高度 // 18是底部栏的高度
+    fontFamily: bookStore.fontFamily, // 字体
     fontSize: bookStore.fontSize * fontScale.value, // 段落字体大小
     lineHeight: bookStore.lineHeight, // 段落文字行高
     pGap: bookStore.readPGap, // 段落间距

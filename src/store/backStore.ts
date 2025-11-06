@@ -73,6 +73,36 @@ export const useBackStore = defineStore('back', () => {
     return undefined;
   };
   const back = async (buttonClick = false) => {
+    if (displayStore.showLeftPopup) {
+      if (
+        ['Photo', 'Song', 'Book', 'Comic', 'Video'].includes(
+          route.name as string,
+        )
+      ) {
+        displayStore.showLeftPopup = false;
+        return;
+      }
+    }
+    // 检查并关闭书籍阅读相关弹窗
+    if (route.name === 'BookRead') {
+      if (displayStore.showVoiceSelectSheet) {
+        displayStore.showVoiceSelectSheet = false;
+        return;
+      }
+      if (displayStore.showChapters) {
+        displayStore.showChapters = false;
+        return;
+      }
+      if (displayStore.showSettingDialog) {
+        displayStore.showSettingDialog = false;
+        return;
+      }
+      if (displayStore.showViewSettingDialog) {
+        displayStore.showViewSettingDialog = false;
+        return;
+      }
+    }
+
     if (route.name === 'VideoDetail') {
       if (!buttonClick && displayStore.showVideoPlaylist) {
         displayStore.showVideoPlaylist = false;

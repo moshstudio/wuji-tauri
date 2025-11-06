@@ -11,6 +11,7 @@ import {
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppVideoDetail from '@/layouts/app/video/VideoDetail.vue';
 import DesktopVideoDetail from '@/layouts/desktop/video/VideoDetail.vue';
+import SearchDialog from '@/components/media/SearchDialog.vue';
 import {
   useStore,
   useBackStore,
@@ -69,7 +70,7 @@ const loadData = retryOnFalse({
   onFailed: backStore.back,
 })(
   createCancellableFunction(async (signal: AbortSignal, pageNo?: number) => {
-    if (videoPlayer.value) {
+    if (!videoPlayer.value) {
       createPlayer();
     }
 
@@ -116,6 +117,10 @@ const loadData = retryOnFalse({
       ) || playingResource.value?.episodes?.[0];
     if (signal.aborted) return false;
     if (playingResource.value && playingEpisode.value) {
+      shelfStore.updateVideoPlayInfo(videoItem.value, {
+        resource: playingResource.value,
+        episode: playingEpisode.value,
+      });
       await getPlayUrl();
     }
     return true;
@@ -268,7 +273,15 @@ const playNext = async () => {
 
 const createPlayer = async (video?: VideoUrlMap) => {
   videoPlayer.value?.destroy();
+  videoPlayer.value?.offAll();
   await nextTick();
+  const item = videoItem.value;
+  const resource = playingResource.value;
+  const episode = playingEpisode.value;
+  if (!item || !resource || !episode) {
+    return;
+  }
+
   const preset = video?.isLive
     ? LivePreset
     : displayStore.isAndroid
@@ -288,6 +301,7 @@ const createPlayer = async (video?: VideoUrlMap) => {
     volume: 1,
     isMobileSimulateMode: displayStore.isAndroid ? 'mobile' : 'pc',
     isLive: videoSrc.value?.isLive || false,
+    startTime: playingEpisode.value?.lastWatchPosition || 0,
     height: '100%',
     width: '100%',
     plugins: [VideoJsPlugin],
@@ -308,6 +322,30 @@ const createPlayer = async (video?: VideoUrlMap) => {
   });
   videoPlayer.value.on(Events.FULLSCREEN_CHANGE, (isFullScreen) => {
     displayStore.fullScreenMode = isFullScreen;
+  });
+  videoPlayer.value.on(Events.PLAY, () => {
+    if (route.name !== 'VideoDetail') {
+      // 页面已切换
+      videoPlayer.value?.pause();
+    }
+  });
+  const updateTime = _.throttle((position: number) => {
+    episode.lastWatchPosition = position;
+    if (video) {
+      shelfStore.updateVideoPlayInfo(item, {
+        resource,
+        episode,
+        position,
+      });
+    }
+  }, 500);
+  videoPlayer.value.on(Events.TIME_UPDATE, () => {
+    if (route.name !== 'VideoDetail') {
+      // 页面已切换
+      videoPlayer.value?.pause();
+    }
+    const position = videoPlayer.value?.currentTime;
+    updateTime(position);
   });
   videoPlayer.value.on(Events.ENDED, () => {
     playNext();
@@ -330,6 +368,12 @@ const createPlayer = async (video?: VideoUrlMap) => {
 
 watch(videoSrc, (newVideo) => {
   if (newVideo) {
+    if (route.name !== 'VideoDetail') {
+      // 页面已切换
+      return;
+    }
+    console.log('load video src:', newVideo);
+
     createPlayer(newVideo);
   } else {
     videoPlayer.value?.resetState();
@@ -357,8 +401,34 @@ onMountedOrActivated(() => {
   }
 });
 
-onMounted(() => {
-  createPlayer();
+onMounted(async () => {
+  await nextTick();
+  videoPlayer.value = new Player({
+    el: videoElement.value,
+    fullscreenTarget: document.querySelector(
+      '.xgplayer-container',
+    ) as HTMLElement,
+    nullUrlStart: true,
+    cssFullscreen: false,
+    volume: 1,
+    isMobileSimulateMode: displayStore.isAndroid ? 'mobile' : 'pc',
+    height: '100%',
+    width: '100%',
+  });
+  videoPlayer.value.registerPlugin(BackButtonPlugin, {
+    onClick: () => {
+      backStore.back(true);
+    },
+  });
+  videoPlayer.value.registerPlugin(PlaylistButtonPlugin, {
+    onClick: () => {
+      showPlaylist.value = !showPlaylist.value;
+    },
+  });
+  videoPlayer.value.on(Events.FULLSCREEN_CHANGE, (isFullScreen) => {
+    displayStore.fullScreenMode = isFullScreen;
+  });
+  videoPlayer.value.controls?.show();
 });
 
 onDeactivated(() => {
@@ -402,6 +472,14 @@ onUnmounted(() => {
           ref="videoElement"
           class="xg-video-player !relative !h-full !w-full flex-grow"
         ></div>
+        <SearchDialog
+          v-model:show="showSearchDialog"
+          v-model:search-text="searchText"
+          :playing-resource-id="playingResource?.id"
+          :playing-episode-id="playingEpisode?.id"
+          :filter-video-items="filterVideoItems"
+          @play-searched-video="playSearchedVideo"
+        ></SearchDialog>
       </DesktopVideoDetail>
     </template>
     <template #app>
@@ -422,6 +500,14 @@ onUnmounted(() => {
           ref="videoElement"
           class="xg-video-player !relative !h-full !w-full flex-grow"
         ></div>
+        <SearchDialog
+          v-model:show="showSearchDialog"
+          v-model:search-text="searchText"
+          :playing-resource-id="playingResource?.id"
+          :playing-episode-id="playingEpisode?.id"
+          :filter-video-items="filterVideoItems"
+          @play-searched-video="playSearchedVideo"
+        ></SearchDialog>
       </AppVideoDetail>
     </template>
     <van-action-sheet
@@ -429,58 +515,6 @@ onUnmounted(() => {
       title="添加到收藏"
       :actions="addShelfActions"
     />
-    <van-dialog
-      v-model:show="showSearchDialog"
-      title="搜索"
-      width="85%"
-      z-index="10001"
-      :show-confirm-button="false"
-      :show-cancel-button="true"
-      close-on-click-overlay
-      teleport="body"
-    >
-      <div class="flex w-full px-2">
-        <van-field
-          v-model="searchText"
-          placeholder="请输入关键词搜索"
-          autofocus
-          clearable
-          autocomplete="off"
-          class="w-full"
-        />
-      </div>
-      <div
-        class="flex h-[60vh] w-full flex-col items-center overflow-y-auto p-4"
-      >
-        <!-- 搜索输入框 -->
-        <ResponsiveGrid2 min-width="100" max-width="120">
-          <van-button
-            v-for="item in filterVideoItems"
-            :key="item.resourceId + item.episodeId"
-            type="default"
-            size="small"
-            block
-            style="margin: 4px 0"
-            @click="
-              () => {
-                playSearchedVideo(item.resourceId, item.episodeId);
-              }
-            "
-          >
-            <p class="truncate">{{ item.resourceTitle }}</p>
-            <p class="truncate">{{ item.episodeTitle }}</p>
-          </van-button>
-
-          <!-- 无结果提示 -->
-          <div
-            v-if="!filterVideoItems?.length"
-            class="flex items-center justify-center text-xs text-[var(--van-text-color-2)]"
-          >
-            无匹配结果
-          </div>
-        </ResponsiveGrid2>
-      </div>
-    </van-dialog>
   </PlatformSwitch>
 </template>
 

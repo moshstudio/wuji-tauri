@@ -2,9 +2,10 @@
 import type { ReaderResult } from '@/utils/reader/types';
 import { Icon } from '@iconify/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { useServerStore, useTTSStore } from '@/store';
+import { useDisplayStore, useServerStore, useTTSStore } from '@/store';
 import { showDialog as vantShowDialog } from 'vant';
 import { router } from '@/router';
+import ResponsiveGrid2 from '../grid/ResponsiveGrid2.vue';
 
 const props = defineProps<{
   readingPagedContent: ReaderResult;
@@ -13,6 +14,7 @@ const props = defineProps<{
 
 const ttsStore = useTTSStore();
 const serverStore = useServerStore();
+const displayStore = useDisplayStore();
 const showDialog = ref(false);
 
 function onPlay() {
@@ -35,25 +37,10 @@ function onShowDialog() {
   showDialog.value = true;
 }
 
-const showVoiceSelectSheet = ref(false);
-const voiceSelectSheetActions = computed(() => {
-  return ttsStore.voices.map((voice) => {
-    return {
-      name: voice.ChineseName,
-      subname:
-        (voice.needVip ? '💎' : '') +
-        (voice.Gender === 'Female' ? '女声' : '男声'),
-      color:
-        voice.ChineseName === ttsStore.selectedVoice.ChineseName
-          ? 'var(--van-primary-color)'
-          : '',
-      callback: () => {
-        ttsStore.selectedVoice = voice;
-        showVoiceSelectSheet.value = false;
-      },
-    };
-  });
-});
+function selectVoice(voice: any) {
+  ttsStore.selectedVoice = voice;
+  displayStore.showVoiceSelectSheet = false;
+}
 const now = ref(Date.now());
 
 // 每秒更新时间戳
@@ -141,7 +128,7 @@ const remainingTime = computed(() => {
       title="语音"
       :value="ttsStore.selectedVoice.ChineseName"
       is-link
-      @click="showVoiceSelectSheet = true"
+      @click="displayStore.showVoiceSelectSheet = true"
     />
     <van-cell
       title="语速"
@@ -193,14 +180,41 @@ const remainingTime = computed(() => {
     </div>
   </van-dialog>
   <van-action-sheet
-    v-model:show="showVoiceSelectSheet"
+    v-model:show="displayStore.showVoiceSelectSheet"
     teleport="body"
-    :actions="voiceSelectSheetActions"
-  />
+    title="选择语音"
+  >
+    <ResponsiveGrid2
+      class="px-8 py-4"
+      :gap="4"
+      :min-width="50"
+      :max-width="100"
+    >
+      <template v-for="voice in ttsStore.voices" :key="voice.ChineseName">
+        <van-badge color="#1989fa" :offset="[0, 0]">
+          <template #content v-if="voice.needVip">
+            <van-icon name="diamond" class="badge-icon" />
+          </template>
+          <div
+            class="flex shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 text-center text-sm text-[--van-text-color]"
+            :class="[
+              voice.ChineseName === ttsStore.selectedVoice.ChineseName
+                ? 'border-[var(--van-primary-color)]'
+                : 'border-gray-300',
+            ]"
+            @click="selectVoice(voice)"
+          >
+            <div class="flex flex-col items-center gap-1 p-1">
+              <p>{{ voice.ChineseName }}</p>
+              <p class="text-xs text-gray-500">
+                {{ voice.Gender === 'Female' ? '女声' : '男声' }}
+              </p>
+            </div>
+          </div>
+        </van-badge>
+      </template>
+    </ResponsiveGrid2>
+  </van-action-sheet>
 </template>
 
-<style scoped lang="less">
-:deep(.van-action-sheet__name) {
-  width: 200px;
-}
-</style>
+<style scoped lang="less"></style>

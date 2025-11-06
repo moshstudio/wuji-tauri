@@ -5,10 +5,10 @@ import type {
   BookList,
 } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
-import _ from 'lodash';
+import _, { template } from 'lodash';
 import { storeToRefs } from 'pinia';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
-import { showFailToast, showToast } from 'vant';
+import { showFailToast, showToast, showDialog } from 'vant';
 import {
   computed,
   nextTick,
@@ -24,6 +24,7 @@ import {
   useBookShelfStore,
   useBookStore,
   useDisplayStore,
+  useServerStore,
   useStore,
   useTTSStore,
 } from '@/store';
@@ -52,6 +53,7 @@ const displayStore = useDisplayStore();
 const bookStore = useBookStore();
 const shelfStore = useBookShelfStore();
 const ttsStore = useTTSStore();
+const { webFonts } = storeToRefs(bookStore);
 const { bookShelf } = storeToRefs(shelfStore);
 const route = useRoute();
 
@@ -62,10 +64,25 @@ const readingChapter = ref<BookChapter>();
 const readingChapterContent = ref<string>();
 const prevChapterContent = ref<string>();
 const nextChapterContent = ref<string>();
-const showChapters = ref(false);
-const showSettingDialog = ref(false);
-const showViewSettingDialog = ref(false);
 const showBookShelf = ref(false);
+
+const serverStore = useServerStore();
+
+type FontOption = { label: string; family: string };
+
+function selectFont(font: FontOption) {
+  if (!serverStore.isVipOrSuperVip) {
+    showDialog({
+      title: 'VIP功能',
+      message: '此字体VIP可用, 是否去开通会员？',
+      showCancelButton: true,
+    }).then(() => {
+      router.push({ name: 'VipDetail' });
+    });
+    return;
+  }
+  bookStore.fontFamily = font.family;
+}
 
 const bookInShelf = computed(() => {
   if (!book.value) return false;
@@ -357,7 +374,7 @@ function toChapter(chapter: BookChapter) {
   });
 }
 function openChapterPopup() {
-  showChapters.value = true;
+  displayStore.showChapters = true;
   nextTick(() => {
     document
       .querySelector('.reading-chapter')
@@ -421,8 +438,8 @@ onDeactivated(() => {
     :full-screen-click-to-next="bookStore.fullScreenClickToNext"
     :in-shelf="bookInShelf"
     :add-to-shelf="addToShelf"
-    :show-view-setting="() => (showViewSettingDialog = true)"
-    :show-setting="() => (showSettingDialog = true)"
+    :show-view-setting="() => (displayStore.showViewSettingDialog = true)"
+    :show-setting="() => (displayStore.showSettingDialog = true)"
     :show-switch-source="
       () => {
         showSwitchSourceDialog = true;
@@ -448,8 +465,9 @@ onDeactivated(() => {
       title="选择书架"
       teleport="body"
     />
+
     <van-dialog
-      v-model:show="showSettingDialog"
+      v-model:show="displayStore.showSettingDialog"
       title="阅读设置"
       close-on-click-overlay
       :show-confirm-button="false"
@@ -481,50 +499,77 @@ onDeactivated(() => {
       </div>
     </van-dialog>
     <van-dialog
-      v-model:show="showViewSettingDialog"
+      v-model:show="displayStore.showViewSettingDialog"
       title="界面设置"
+      width="min(100%, 480px)"
       close-on-click-overlay
       :show-confirm-button="false"
       class="setting-dialog"
     >
       <div class="flex max-h-[80vh] flex-col overflow-y-auto p-2 text-sm">
-        <div class="pb-2 text-gray-400">文字颜色和背景</div>
+        <div class="pb-1 text-gray-400">文字颜色和背景</div>
         <div
-          class="grid grid-cols-[repeat(auto-fill,minmax(40px,1fr))] gap-2 p-2"
+          class="grid grid-cols-[repeat(auto-fill,minmax(46px,1fr))] gap-1 p-2"
         >
           <div
             v-for="theme in bookStore.themes"
             :key="JSON.stringify(theme)"
-            class="flex h-[40px] w-[40px] shrink-0 cursor-pointer items-center justify-center rounded-full border-2 text-center text-[10px]"
+            class="flex h-[46px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 text-center text-[10px]"
             :class="[
               theme.name === bookStore.currTheme.name
                 ? 'border-[var(--van-primary-color)]'
-                : 'border-white',
+                : 'border-gray-300',
             ]"
             :style="{
-              color: theme.color,
-              backgroundColor: theme.bgColor,
-              backgroundImage: theme.bgImage ? `url(${theme.bgImage})` : '',
-              backgroundRepeat: theme.bgRepeat,
-              backgroundSize: theme.bgSize,
-              textDecoration: bookStore.underline
-                ? 'underline solid 0.5px'
-                : 'none',
-              textUnderlineOffset: '6px',
+              color: theme.color || '#333',
+              backgroundColor: theme.bgColor || '#fff',
+              backgroundImage:
+                theme.bgGradient ||
+                (theme.bgImage ? `url(${theme.bgImage})` : ''),
+              backgroundRepeat: theme.bgRepeat || 'repeat',
+              backgroundSize: theme.bgSize || 'auto',
+              backgroundPosition: theme.bgPosition || 'center',
+              textShadow: theme.textShadow,
+              boxShadow: theme.boxShadow,
+              ...(theme.customStyle || {}),
             }"
             @click="bookStore.currTheme = theme"
           >
-            {{ theme.name }}
+            <span class="font-medium">{{ theme.name }}</span>
           </div>
         </div>
-        <div class="pb-2 text-gray-400">字体和样式</div>
+        <div class="pb-1 text-gray-400">字体</div>
+        <div
+          class="grid grid-cols-[repeat(auto-fill,minmax(46px,1fr))] gap-1 p-1"
+        >
+          <template v-for="font in webFonts" :key="font.family">
+            <van-badge color="#1989fa" :offset="[-8, 0]">
+              <template #content v-if="font.isVip">
+                <van-icon name="diamond" class="badge-icon" />
+              </template>
+              <div
+                class="flex h-[46px] w-[46px] shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 text-center text-sm text-[--van-text-color]"
+                :class="[
+                  font.family === bookStore.fontFamily
+                    ? 'border-[var(--van-primary-color)]'
+                    : 'border-gray-300',
+                ]"
+                :style="{ fontFamily: font.family }"
+                @click="selectFont(font)"
+              >
+                {{ font.label }}
+              </div>
+            </van-badge>
+          </template>
+        </div>
+        <div class="pb-1 pt-4 text-gray-400">字体和样式</div>
         <van-cell-group>
-          <van-cell title="字体大小">
+          <van-cell title="字体大小" center>
             <template #value>
               <van-stepper v-model="bookStore.fontSize" min="10" max="40" />
             </template>
           </van-cell>
-          <van-cell title="字体粗细">
+          <van-cell title="字体粗细" center>
             <template #value>
               <van-stepper
                 v-model="bookStore.fontWeight"
@@ -534,7 +579,7 @@ onDeactivated(() => {
               />
             </template>
           </van-cell>
-          <van-cell title="行间距">
+          <van-cell title="行间距" center>
             <template #value>
               <van-stepper
                 v-model="bookStore.lineHeight"
@@ -545,17 +590,17 @@ onDeactivated(() => {
               />
             </template>
           </van-cell>
-          <van-cell title="段间距">
+          <van-cell title="段间距" center>
             <template #value>
               <van-stepper v-model="bookStore.readPGap" min="0" max="30" />
             </template>
           </van-cell>
-          <van-cell title="左右边距">
+          <van-cell title="左右边距" center>
             <template #value>
               <van-stepper v-model="bookStore.paddingX" min="0" max="60" />
             </template>
           </van-cell>
-          <van-cell title="下划线">
+          <van-cell title="下划线" center>
             <template #value>
               <van-switch v-model="bookStore.underline" />
             </template>
@@ -566,4 +611,13 @@ onDeactivated(() => {
   </BookReadSwiper>
 </template>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+.badge-icon {
+  display: block;
+  font-size: 10px;
+  line-height: 16px;
+}
+:deep(.van-dialog__header) {
+  padding-top: 8px;
+}
+</style>

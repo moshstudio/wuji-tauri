@@ -51,6 +51,7 @@ async function onRefresh() {
       <van-collapse v-model="displayStore.photoCollapse">
         <div v-for="(item, _) in photoSources" :key="item.item.id">
           <van-collapse-item
+            v-if="!!item.list?.list.length"
             v-show="item.list"
             :name="item.item.name"
             :title="item.item.name"
@@ -64,12 +65,6 @@ async function onRefresh() {
               />
             </div>
             <ResponsiveGrid2 min-width="80" max-width="100">
-              <p
-                v-if="!item.list?.list.length"
-                class="m-2 text-xs text-gray-600"
-              >
-                内容为空
-              </p>
               <WPhotoCard
                 v-for="photo in item.list?.list"
                 :key="photo.id"

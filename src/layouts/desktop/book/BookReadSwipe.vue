@@ -58,7 +58,8 @@ const displayStore = useDisplayStore();
 const bookStore = useBookStore();
 const bookCacheStore = useBookChapterStore();
 const ttsStore = useTTSStore();
-const { showTabBar } = storeToRefs(displayStore);
+const { showTabBar, showChapters: isShowChapterList } =
+  storeToRefs(displayStore);
 
 const element = ref<HTMLElement>();
 const swiperElement = ref<SwiperType>();
@@ -393,7 +394,6 @@ function handlePageChange(swiper: SwiperType) {
   }
 }
 
-const isShowChapterList = ref(false);
 async function showChapterList() {
   isShowChapterList.value = true;
   await nextTick();
@@ -402,6 +402,33 @@ async function showChapterList() {
     behavior: 'instant',
   });
 }
+
+const computedStyle = computed(() => {
+  const baseStyle = {
+    paddingLeft: `${bookStore.paddingX}px`,
+    paddingRight: `${bookStore.paddingX}px`,
+    color: bookStore.currTheme.color || '#333',
+    backgroundColor: bookStore.currTheme.bgColor || '#fff',
+    backgroundImage:
+      bookStore.currTheme.bgGradient || bookStore.currTheme.bgImage || '',
+    backgroundRepeat: bookStore.currTheme.bgRepeat || 'repeat',
+    backgroundSize: bookStore.currTheme.bgSize || 'auto',
+    backgroundPosition: bookStore.currTheme.bgPosition || '0 0',
+    backgroundAttachment: bookStore.currTheme.bgAttachment,
+    backgroundBlendMode: bookStore.currTheme.bgBlendMode,
+    textShadow: bookStore.currTheme.textShadow,
+    boxShadow: bookStore.currTheme.boxShadow,
+    border: bookStore.currTheme.border,
+    textDecoration: bookStore.underline ? 'underline solid 0.5px' : 'none',
+  };
+
+  // 安全地合并 customStyle
+  if (bookStore.currTheme.customStyle) {
+    return { ...baseStyle, ...bookStore.currTheme.customStyle };
+  }
+
+  return baseStyle;
+});
 
 watch(
   showMenu,
@@ -504,20 +531,7 @@ onDeactivated(() => {
       >
         <div
           class="flex h-full w-full flex-col overflow-hidden underline-offset-[6px]"
-          :style="{
-            paddingLeft: `${bookStore.paddingX}px`,
-            paddingRight: `${bookStore.paddingX}px`,
-            color: bookStore.currTheme.color,
-            backgroundColor: bookStore.currTheme.bgColor,
-            backgroundImage: bookStore.currTheme.bgImage
-              ? `url(${bookStore.currTheme.bgImage})`
-              : '',
-            backgroundRepeat: bookStore.currTheme.bgRepeat,
-            backgroundSize: bookStore.currTheme.bgSize,
-            textDecoration: bookStore.underline
-              ? 'underline solid 0.5px'
-              : 'none',
-          }"
+          :style="computedStyle"
         >
           <!-- 顶部状态占位 -->
           <div
@@ -538,7 +552,7 @@ onDeactivated(() => {
                 'font-weight': line.isTitle
                   ? Math.min(bookStore.fontWeight + 200, 900)
                   : bookStore.fontWeight,
-                'font-family': `'${bookStore.fontFamily}'`,
+                'font-family': bookStore.fontFamily,
                 'line-height': line.isTitle
                   ? bookStore.lineHeight * 1.3
                   : bookStore.lineHeight,

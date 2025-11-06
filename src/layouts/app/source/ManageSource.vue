@@ -5,6 +5,7 @@ import { SubscribeSourceCard } from '@wuji-tauri/components/src';
 import { ref } from 'vue';
 import MNavBar from '@/components/header/MNavBar.vue';
 import { router } from '@/router';
+import { useServerStore } from '@/store';
 
 withDefaults(
   defineProps<{
@@ -26,6 +27,7 @@ withDefaults(
   {},
 );
 
+const serverStore = useServerStore();
 const expandedGroups = ref<Record<string, boolean>>({});
 
 function toggleGroup(id: string) {
@@ -154,6 +156,7 @@ function getSourceStats(source: SubscribeSource) {
               <template #right>
                 <div class="flex items-center gap-3">
                   <div
+                    v-if="serverStore.isVipOrSuperVip"
                     class="van-haptics-feedback rounded bg-blue-500 p-1 text-white"
                     @click.stop="() => updateItem(source, item)"
                   >

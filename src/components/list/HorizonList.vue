@@ -3,7 +3,7 @@
 <template>
   <div
     v-remember-scroll
-    class="flex w-full gap-2 overflow-x-auto overflow-y-hidden py-2"
+    class="flex w-full items-center gap-2 overflow-x-auto overflow-y-hidden py-2"
     @touchmove.stop
   >
     <slot />

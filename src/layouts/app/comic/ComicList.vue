@@ -4,22 +4,30 @@ import type { ComicSource } from '@/types';
 import { ref } from 'vue';
 import MHeader from '@/components/header/MHeader.vue';
 import MComicTab from '@/components/tab/MComicTab.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import { MComicCard } from '@wuji-tauri/components/src';
 import { router } from '@/router';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
+import { ComicHistory } from '@/types/comic';
+import { storeToRefs } from 'pinia';
 
 const props = defineProps<{
   comicSources: ComicSource[];
+  comicHistory: ComicHistory[];
   recommend: (force?: boolean) => void;
   search: (keyword: string) => void;
   toPage: (source: ComicSource, pageNo?: number, type?: string) => void;
   toDetail: (source: ComicSource, item: ComicItem) => void;
+  historyToComic: (comic: ComicHistory) => void;
+  clearHistory: () => void;
   openBaseUrl: (item: ComicSource) => void;
 }>();
 
 const searchValue = defineModel('searchValue', { type: String, default: '' });
 
 const displayStore = useDisplayStore();
+const { showViewHistory } = storeToRefs(displayStore);
 
 const isRefreshing = ref(false);
 async function onRefresh() {
@@ -49,6 +57,25 @@ async function onRefresh() {
       @refresh="onRefresh"
     >
       <van-collapse v-model="displayStore.comicCollapse">
+        <van-collapse-item
+          v-show="showViewHistory && comicHistory.length"
+          name="历史记录"
+          title="历史记录"
+        >
+          <div
+            class="van-haptics-feedback px-4 text-xs text-gray-500"
+            @click="clearHistory"
+          >
+            清空
+          </div>
+          <ResponsiveGrid2>
+            <MComicCard
+              v-for="comic in comicHistory"
+              :comic="comic.comic"
+              :click="() => historyToComic(comic)"
+            />
+          </ResponsiveGrid2>
+        </van-collapse-item>
         <div v-for="(item, index) in comicSources" :key="item.item.id">
           <van-collapse-item
             v-show="

@@ -48,6 +48,7 @@ let cacheData = {
   cWidth: 0, // 容器宽度
   cHeight: 0, // 容器高度
   cfontSize: 0, // 字号大小
+  cfontFamily: '', // 字体族
   maxText: 0, // 行最大字数
   maxLine: 0, // 段落最大行数
 };
@@ -117,12 +118,18 @@ function Reader(content, option) {
   lineH = {};
 
   // 宽高发生变化更新缓存数据
-  const { cWidth, cHeight, cfontSize } = cacheData;
-  if (cWidth !== width || cHeight !== height || cfontSize !== fontSize) {
+  const { cWidth, cHeight, cfontSize, cfontFamily } = cacheData;
+  if (
+    cWidth !== width ||
+    cHeight !== height ||
+    cfontSize !== fontSize ||
+    cfontFamily !== options.fontFamily
+  ) {
     cacheData = {
       cWidth: width,
       cHeight: height,
       cfontSize: fontSize,
+      cfontFamily: options.fontFamily || '',
       maxText: 0,
       maxLine: 0,
     };

@@ -1,10 +1,13 @@
 import type { SubscribeSource } from '@/types';
 import _ from 'lodash';
 import { defineStore } from 'pinia';
-import { computed, markRaw } from 'vue';
+import { computed, markRaw, onMounted } from 'vue';
 import { createKVStore } from './utils';
-import { debounceFilter, useStorageAsync } from '@vueuse/core';
+import { debounceFilter, useStorage, useStorageAsync } from '@vueuse/core';
 import { estimateJsonSize } from '@/utils';
+import { useServerStore } from './serverStore';
+import { useDisplayStore } from './displayStore';
+import { useStore } from './store';
 
 export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
   const kvStorage = createKVStore('subscribeSourceStore');
@@ -87,6 +90,39 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     await storage.clear();
   };
   const isEmpty = computed(() => subscribeSources.value.length === 0);
+
+  const _checkTs = useStorage('subscribeSourceUpdateCheckTs', 0);
+  const updateSubscribeSourceFromServer = async () => {
+    if (_checkTs.value + 1000 * 60 * 60 * 24 > Date.now()) {
+      // 24h内不重复检测
+      return;
+    }
+    _checkTs.value = Date.now();
+    // 检测是否isEmpty，最多2s，100ms检测一次
+    for (let i = 0; i < 20; i++) {
+      if (isEmpty.value) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } else {
+        break;
+      }
+    }
+    if (!isEmpty.value) {
+      const store = useStore();
+      for (const source of subscribeSources.value) {
+        if (source.url === 'marketSource') {
+          await store.updateSubscribeSources(source, true);
+        }
+      }
+    }
+  };
+  onMounted(() => {
+    const displayStore = useDisplayStore();
+    const serverStore = useServerStore();
+    if (displayStore.autoUpdateSubscribeSource) {
+      // if (!serverStore.isVipOrSuperVip) return;
+      updateSubscribeSourceFromServer();
+    }
+  });
 
   return {
     storage,

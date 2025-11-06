@@ -79,6 +79,12 @@ export const useDisplayStore = defineStore('display', () => {
   const showSongPlayingList = ref(false);
   const showLeftPopup = ref(false);
 
+  // 书籍阅读界面弹窗状态
+  const showChapters = ref(false);
+  const showSettingDialog = ref(false);
+  const showViewSettingDialog = ref(false);
+  const showVoiceSelectSheet = ref(false);
+
   // 仅移动端有效
   const bookKeepScreenOn = useStorageAsync('bookKeepScreenOn', false);
   const comicKeepScreenOn = useStorageAsync('comicKeepScreenOn', false);
@@ -198,6 +204,11 @@ export const useDisplayStore = defineStore('display', () => {
   };
 
   const songAutoSwitchSource = useStorageAsync('songAutoSwitchSource', true);
+  const showViewHistory = useStorageAsync('showViewHistory', true);
+  const autoUpdateSubscribeSource = useStorage(
+    'autoUpdateSubscribeSource',
+    false,
+  );
 
   const videoPlayer = ref<Player>();
 
@@ -217,6 +228,11 @@ export const useDisplayStore = defineStore('display', () => {
     showVideoPlaylist,
     showSongPlayingList,
     showLeftPopup,
+
+    showChapters,
+    showSettingDialog,
+    showViewSettingDialog,
+    showVoiceSelectSheet,
 
     bookKeepScreenOn,
     comicKeepScreenOn,
@@ -245,6 +261,9 @@ export const useDisplayStore = defineStore('display', () => {
     exitApp,
 
     songAutoSwitchSource,
+    showViewHistory,
+    autoUpdateSubscribeSource,
+
     videoPlayer,
   };
 });

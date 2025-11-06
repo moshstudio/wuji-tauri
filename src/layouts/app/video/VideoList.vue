@@ -4,22 +4,30 @@ import type { VideoSource } from '@/types';
 import { ref } from 'vue';
 import MHeader from '@/components/header/MHeader.vue';
 import MVideoTab from '@/components/tab/MVideoTab.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import { MVideoCard } from '@wuji-tauri/components/src';
 import { router } from '@/router';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
+import { storeToRefs } from 'pinia';
+import { VideoHistory } from '@/types/video';
 
 const props = defineProps<{
   videoSources: VideoSource[];
+  videoHistory: VideoHistory[];
   recommend: (force?: boolean) => void;
   search: (keyword: string) => void;
   toPage: (source: VideoSource, pageNo?: number, type?: string) => void;
   toDetail: (source: VideoSource, item: VideoItem) => void;
+  historyToVideo: (video: VideoHistory) => void;
+  clearHistory: () => void;
   openBaseUrl: (item: VideoSource) => void;
 }>();
 
 const searchValue = defineModel<string>('searchValue', { required: true });
 
 const displayStore = useDisplayStore();
+const { showViewHistory } = storeToRefs(displayStore);
 
 const isRefreshing = ref(false);
 async function onRefresh() {
@@ -49,6 +57,25 @@ async function onRefresh() {
       @refresh="onRefresh"
     >
       <van-collapse v-model="displayStore.videoCollapse">
+        <van-collapse-item
+          v-show="showViewHistory && videoHistory.length"
+          name="历史记录"
+          title="历史记录"
+        >
+          <div
+            class="van-haptics-feedback px-4 text-xs text-gray-500"
+            @click="clearHistory"
+          >
+            清空
+          </div>
+          <ResponsiveGrid2 min-width="80" max-width="100">
+            <MVideoCard
+              v-for="video in videoHistory"
+              :video="video.video"
+              :click="() => historyToVideo(video)"
+            />
+          </ResponsiveGrid2>
+        </van-collapse-item>
         <div v-for="(item, index) in videoSources" :key="item.item.id">
           <van-collapse-item
             v-show="

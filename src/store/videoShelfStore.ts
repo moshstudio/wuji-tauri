@@ -15,11 +15,14 @@ import { defineStore } from 'pinia';
 
 import { showToast } from 'vant';
 import { createKVStore } from './utils';
-import { estimateJsonSize } from '@/utils';
+import { VideoHistory } from '@/types/video';
 
 export const useVideoShelfStore = defineStore('videoShelfStore', () => {
   const kvStorage = createKVStore('videoShelfStore');
   const storage = kvStorage.storage;
+
+  const historyKVStorage = createKVStore('videoHistoryStore');
+  const historyStorage = historyKVStorage.storage;
 
   // 影视收藏⬇️
   const videoShelf = useStorageAsync<VideoShelf[]>(
@@ -34,7 +37,17 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
     ],
     storage,
     {
-      eventFilter: debounceFilter(500),
+      eventFilter: debounceFilter(1000),
+    },
+  );
+
+  // 阅读历史
+  const videoHistory = useStorageAsync<Array<VideoHistory>>(
+    'videoHistory',
+    [],
+    historyStorage,
+    {
+      eventFilter: debounceFilter(1000),
     },
   );
 
@@ -82,6 +95,17 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
     }
     return false;
   };
+
+  const isVideoInHistory = (video: VideoItem | string): boolean => {
+    let id: string;
+    if (typeof video === 'string') {
+      id = video;
+    } else {
+      id = video.id;
+    }
+    return !!videoHistory.value.find((item) => item.video.id === id);
+  };
+
   const addToViseoSelf = (videoItem: VideoItem, shelfId?: string): boolean => {
     if (!videoShelf.value.length) {
       showToast('收藏为空，请先创建收藏');
@@ -175,6 +199,65 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
         }
       }
     }
+    updateVideoHistoryInfo(videoItem, options);
+  };
+
+  const updateVideoHistoryInfo = (
+    videoItem: VideoItem,
+    options: {
+      episode: VideoEpisode;
+      resource: VideoResource;
+      position?: number;
+    },
+  ) => {
+    const video = videoHistory.value.find(
+      (item) => item.video.id === videoItem.id,
+    );
+    if (video) {
+      video.lastReadTime = Date.now();
+      video.video.lastWatchEpisodeId = options.episode.id;
+      video.video.lastWatchResourceId = options.resource.id;
+      if (options.position) {
+        const r = video.video.resources?.find(
+          (item) => item.id === video.video.lastWatchResourceId,
+        );
+        const e = r?.episodes?.find(
+          (item) => item.id === video.video.lastWatchEpisodeId,
+        );
+        if (e) {
+          e.lastWatchPosition = options.position;
+        }
+      }
+
+      videoHistory.value = [...videoHistory.value].sort(
+        (a, b) => b.lastReadTime - a.lastReadTime,
+      );
+    } else {
+      const newVideo: VideoHistory = {
+        video: videoItem,
+        lastReadTime: Date.now(),
+      };
+      newVideo.video.lastWatchEpisodeId = options.episode.id;
+      newVideo.video.lastWatchResourceId = options.resource.id;
+      if (options.position) {
+        const r = newVideo.video.resources?.find(
+          (item) => item.id === newVideo.video.lastWatchResourceId,
+        );
+        const e = r?.episodes?.find(
+          (item) => item.id === newVideo.video.lastWatchEpisodeId,
+        );
+        if (e) {
+          e.lastWatchPosition = options.position;
+        }
+      }
+      videoHistory.value = [newVideo, ...videoHistory.value]
+        .sort((a, b) => b.lastReadTime - a.lastReadTime)
+        .slice(0, 10);
+    }
+  };
+
+  const clearVideoHistory = () => {
+    videoHistory.value = [];
   };
   const deleteVideoFromShelf = (videoItem: VideoItem, shelfId: string) => {
     const shelf = videoShelf.value.find((item) => item.id === shelfId);
@@ -192,6 +275,25 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
   };
   const loadSyncData = async (data: VideoShelf[]) => {
     videoShelf.value = data;
+    for (const shelf of videoShelf.value) {
+      for (const video of shelf.videos) {
+        if (isVideoInHistory(video.video)) {
+          const resource = video.video.resources?.find(
+            (item) => item.id === video.video.lastWatchResourceId,
+          );
+          const episode = resource?.episodes?.find(
+            (item) => item.id === video.video.lastWatchEpisodeId,
+          );
+          if (resource && episode) {
+            updateVideoHistoryInfo(video.video, {
+              resource,
+              episode,
+              position: episode.lastWatchPosition,
+            });
+          }
+        }
+      }
+    }
   };
   const clear = async () => {
     videoShelf.value = [
@@ -202,19 +304,24 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
         createTime: Date.now(),
       },
     ];
+    clearVideoHistory();
     await storage.clear();
   };
 
   return {
     storage,
     videoShelf,
+    videoHistory,
     createVideoShelf,
     removeVideoShelf,
     isVideoInShelf,
+    isVideoInHistory,
     addToViseoSelf,
     removeVideoFromShelf,
     getVideoFromShelf,
     updateVideoPlayInfo,
+    updateVideoHistoryInfo,
+    clearVideoHistory,
     deleteVideoFromShelf,
     syncData,
     loadSyncData,

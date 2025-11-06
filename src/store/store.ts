@@ -627,6 +627,13 @@ export const useStore = defineStore('store', () => {
         }
       }
     };
+    const checkFromHistory = () => {
+      for (const book of shelfStore.bookHistory) {
+        if (book.book.id === bookId) {
+          return book.book;
+        }
+      }
+    };
     const fromSource = () => {
       if (source.list) {
         for (const bookList of _.castArray(source.list)) {
@@ -644,7 +651,7 @@ export const useStore = defineStore('store', () => {
     if (shelfStore.isBookInShelf(bookId)) {
       return checkFromShelf();
     } else {
-      return fromSource();
+      return checkFromHistory() || fromSource();
     }
   };
   const __split__3 = () => {};
@@ -732,6 +739,14 @@ export const useStore = defineStore('store', () => {
         }
       }
     };
+
+    const checkFromHistory = () => {
+      for (const comic of shelfStore.comicHistory) {
+        if (comic.comic.id === comicId) {
+          return comic.comic;
+        }
+      }
+    };
     const fromSource = () => {
       if (source.list) {
         for (const comicList of _.castArray(source.list)) {
@@ -749,7 +764,7 @@ export const useStore = defineStore('store', () => {
     if (shelfStore.isComicInShelf(comicId)) {
       return checkFromShelf();
     } else {
-      return fromSource();
+      return checkFromHistory() || fromSource();
     }
   };
 
@@ -840,6 +855,14 @@ export const useStore = defineStore('store', () => {
         }
       }
     };
+
+    const checkFromHistory = () => {
+      for (const video of shelfStore.videoHistory) {
+        if (video.video.id === videoId) {
+          return video.video;
+        }
+      }
+    };
     const fromSource = () => {
       if (source.list) {
         for (const videoList of _.castArray(source.list)) {
@@ -859,7 +882,7 @@ export const useStore = defineStore('store', () => {
     if (shelfStore.isVideoInShelf(videoId)) {
       return checkFromShelf();
     } else {
-      return fromSource();
+      return checkFromHistory() || fromSource();
     }
   };
 
@@ -1153,7 +1176,10 @@ export const useStore = defineStore('store', () => {
       return false;
     }
   };
-  const updateSubscribeSources = async (source?: SubscribeSource) => {
+  const updateSubscribeSources = async (
+    source?: SubscribeSource,
+    skipSameVersion = false,
+  ) => {
     if (!subscribeSourceStore.subscribeSources.length) {
       showToast('请先添加订阅源');
       return;
@@ -1182,11 +1208,25 @@ export const useStore = defineStore('store', () => {
             const marketSource = await serverStore.getMarketSourceById(
               source.detail.id,
             );
+            console.log(
+              marketSource?.version,
+              source.detail.version,
+              marketSource?.version === source.detail.version,
+            );
 
             if (marketSource) {
-              const success = await addMarketSource(marketSource);
-              if (!success) {
-                failed.push(marketSource.name);
+              if (
+                !(
+                  skipSameVersion &&
+                  marketSource.version === source.detail.version
+                )
+              ) {
+                console.log(1234);
+
+                const success = await addMarketSource(marketSource);
+                if (!success) {
+                  failed.push(marketSource.name);
+                }
               }
             }
           } else {
@@ -1207,20 +1247,6 @@ export const useStore = defineStore('store', () => {
     } else {
       await update(source);
     }
-
-    // for (const source of subscribeSourceStore.subscribeSources) {
-    //   const url = source.url;
-    //   try {
-    //     if (source.detail.id === localSourceId) {
-    //       await addLocalSubscribeSource(url);
-    //     } else {
-    //       await addSubscribeSource(url, true);
-    //     }
-    //   } catch (error) {
-    //     console.log(error);
-    //     failed.push(source.detail.name);
-    //   }
-    // }
 
     if (failed.length > 0) {
       showNotify({
@@ -1554,6 +1580,7 @@ export const useStore = defineStore('store', () => {
   };
 
   const { subscribeSources } = storeToRefs(subscribeSourceStore);
+  // 初始化操作
   watch(
     subscribeSources,
     (subscribeSources) => {

@@ -1,7 +1,7 @@
 {
-  "version": "0.1.17",
-  "notes": "修复bug,优化功能",
-  "pub_date": "2025-10-21T08:00:00+08:00",
+  "version": "0.1.18",
+  "notes": "支持更多源，影视播放优化，修复bug。",
+  "pub_date": "2025-11-01T08:00:00+08:00",
   "platforms": {
     "cloudpan": {
       "url": "https://wwtn.lanzout.com/s/WUJI"

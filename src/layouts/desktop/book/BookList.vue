@@ -4,22 +4,30 @@ import type { BookSource } from '@/types';
 import { ref } from 'vue';
 import WHeader from '@/components/header/WHeader.vue';
 import WBookTab from '@/components/tab/WBookTab.vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import { WBookCard } from '@wuji-tauri/components/src';
 import { router } from '@/router';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
+import { BookHistory } from '@/types/book';
+import { storeToRefs } from 'pinia';
 
 const props = defineProps<{
   bookSources: BookSource[];
+  bookHistory: BookHistory[];
   recommend: (force?: boolean) => void;
   search: (keyword: string) => void;
   toPage: (source: BookSource, pageNo?: number, type?: string) => void;
   toDetail: (source: BookSource, item: BookItem) => void;
+  historyToBook: (book: BookHistory) => void;
+  clearHistory: () => void;
   openBaseUrl: (item: BookSource) => void;
 }>();
 
 const searchValue = defineModel<string>('searchValue', { required: true });
 
 const displayStore = useDisplayStore();
+const { showViewHistory } = storeToRefs(displayStore);
 
 const isRefreshing = ref(false);
 async function onRefresh() {
@@ -49,6 +57,25 @@ async function onRefresh() {
       @refresh="onRefresh"
     >
       <van-collapse v-model="displayStore.bookCollapse">
+        <van-collapse-item
+          v-show="showViewHistory && bookHistory.length"
+          name="历史记录"
+          title="历史记录"
+        >
+          <div
+            class="van-haptics-feedback px-4 text-xs text-gray-500"
+            @click="clearHistory"
+          >
+            清空
+          </div>
+          <ResponsiveGrid2>
+            <WBookCard
+              v-for="book in bookHistory"
+              :book="book.book"
+              :click="() => historyToBook(book)"
+            />
+          </ResponsiveGrid2>
+        </van-collapse-item>
         <div v-for="(item, index) in bookSources" :key="item.item.id">
           <van-collapse-item
             v-show="

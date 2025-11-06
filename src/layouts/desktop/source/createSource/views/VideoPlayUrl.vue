@@ -171,8 +171,9 @@ watch(
         isLive: videoSrc.value?.isLive || false,
         height: '100%',
         width: '100%',
+        keyShortcuts: false,
         plugins: [VideoJsPlugin],
-        ignores: ['fullscreen'],
+        ignores: ['fullscreen', 'keyboard'],
         videoAttributes: {
           crossOrigin: 'anonymous',
         },

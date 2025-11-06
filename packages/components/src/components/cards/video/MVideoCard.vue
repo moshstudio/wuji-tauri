@@ -22,7 +22,10 @@ defineProps<{
       class="h-full min-h-[120px] w-full"
     />
 
-    <p v-if="video.title" class="truncate py-1 text-center text-xs">
+    <p
+      v-if="video.title"
+      class="flex-shrink-0 truncate py-1 text-center text-xs"
+    >
       {{ video.title }}
     </p>
     <p

@@ -46,8 +46,8 @@ export default class BackButtonPlugin extends Plugin {
 
   render() {
     return `
-    <div id="back-btn" class="flex items-center" title="返回">
-      <svg title="返回" xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" viewBox="0 0 512 512"><path fill="none" stroke="#d9d4d4" stroke-linecap="round" stroke-linejoin="round" stroke-width="48" d="M244 400L100 256l144-144M120 256h292"/></svg>
-    </div>`;
+    <xg-icon id="back-btn" class="flex items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" viewBox="0 0 512 512"><path fill="none" stroke="#d9d4d4" stroke-linecap="round" stroke-linejoin="round" stroke-width="48" d="M244 400L100 256l144-144M120 256h292"/></svg>
+    </xg-icon>`;
   }
 }
