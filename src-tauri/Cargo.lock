@@ -5061,25 +5061,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-websocket"
-version = "2.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "402eaba4a045e93f579637c364343d818de002c4b1abd9244f0fd6fcb9ba43dd"
-dependencies = [
- "futures-util",
- "http 1.3.1",
- "log",
- "rand 0.8.5",
- "serde",
- "serde_json",
- "tauri",
- "tauri-plugin",
- "thiserror 2.0.12",
- "tokio",
- "tokio-tungstenite 0.27.0",
-]
-
-[[package]]
 name = "tauri-runtime"
 version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6697,6 +6678,7 @@ dependencies = [
 name = "wuji-app"
 version = "0.1.19"
 dependencies = [
+ "futures-util",
  "http 1.3.1",
  "log",
  "m3u8-rs",
@@ -6722,9 +6704,9 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-store",
  "tauri-plugin-updater",
- "tauri-plugin-websocket",
  "thiserror 2.0.12",
  "tokio",
+ "tokio-tungstenite 0.27.0",
  "unicase",
  "url",
  "urlencoding",

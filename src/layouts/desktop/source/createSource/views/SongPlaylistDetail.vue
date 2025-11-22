@@ -65,19 +65,19 @@ async function load(pageNo: number) {
     return;
   }
   const code = SONG_TEMPLATE.replace(
-    'constructor() {}',
+    '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
   )
     .replace(
-      'async getRecommendPlaylists(pageNo) {}',
+      '// @METHOD_PLAYLIST',
       findPage('playlist')!.code,
     )
     .replace(
-      'async searchPlaylists(keyword, pageNo) {}',
+      '// @METHOD_SEARCH_PLAYLIST',
       findPage('searchPlaylist')!.code,
     )
     .replace(
-      'async getPlaylistDetail(item, pageNo) {}',
+      '// @METHOD_PLAYLIST_DETAIL',
       findPage('playlistDetail')!.code,
     );
   runStatus.value = RunStatus.running;

@@ -1,0 +1,466 @@
+
+import * as CryptoJS from 'crypto-js';
+import * as forge from 'forge';
+import * as iconv from 'iconv';
+import * as m3u8Parser from 'm3u8-parser';
+import { nanoid } from 'nanoid';
+import pLimit from 'p-limit';
+import { fetch } from 'my-fetch';
+import { fetchWebview } from 'fetch-webview';
+import { getProxyUrl } from 'proxy';
+import { getM3u8ProxyUrl } from 'm3u8-proxy';
+import * as _ from 'lodash';
+
+export interface ClientOptions {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: any;
+    timeout?: number;
+    proxy?: string;
+    responseType?: 'text' | 'json' | 'arraybuffer' | 'blob' | 'stream';
+}
+
+export declare function transformResult<T>(func: (result: T) => T): (_target: any, key: string, descriptor: PropertyDescriptor) => PropertyDescriptor;
+
+export abstract class Extension {
+    cryptoJs: typeof CryptoJS;
+    forge: typeof forge;
+    pLimit: typeof pLimit;
+    fetch: typeof fetch;
+    fetchWebview: typeof fetchWebview;
+    iconv: typeof iconv;
+    m3u8Parser: typeof m3u8Parser;
+    getProxyUrl: typeof getProxyUrl;
+    getM3u8ProxyUrl: typeof getM3u8ProxyUrl;
+    _: typeof _;
+    fetchDom: (input: URL | Request | string, init?: RequestInit & ClientOptions, domType?: DOMParserSupportedType, encoding?: 'utf8' | 'gbk') => Promise<Document>;
+    queryBookElements: (body: Document, tags: {
+        element?: string;
+        cover?: string;
+        coverHeaders?: Record<string, string>;
+        title?: string;
+        intro?: string;
+        author?: string;
+        tags?: string;
+        status?: string;
+        url?: string;
+        latestChapter?: string;
+        latestUpdate?: string;
+        coverDomain?: string;
+    }) => Promise<BookItem[]>;
+    queryComicElements: (body: Document, tags: {
+        element?: string;
+        cover?: string;
+        coverHeaders?: Record<string, string>;
+        title?: string;
+        intro?: string;
+        author?: string;
+        tags?: string;
+        status?: string;
+        url?: string;
+        latestChapter?: string;
+        latestUpdate?: string;
+    }) => Promise<ComicItem[]>;
+    queryVideoElements: (body: Document, tags: {
+        element?: string;
+        cover?: string;
+        coverHeaders?: Record<string, string>;
+        title?: string;
+        intro?: string;
+        releaseDate?: string;
+        country?: string;
+        duration?: string;
+        director?: string;
+        cast?: string;
+        tags?: string;
+        status?: string;
+        url?: string;
+        latestUpdate?: string;
+        coverDomain?: string;
+        baseUrl?: string;
+    }) => Promise<VideoItem[]>;
+    queryPhotoElements: (body: Document, tags: {
+        element?: string;
+        cover?: string;
+        coverHeaders?: Record<string, string>;
+        title?: string;
+        desc?: string;
+        author?: string;
+        datetime?: string;
+        hot?: string;
+        view?: string;
+        url?: string;
+        coverDomain?: string;
+    }) => Promise<PhotoItem[]>;
+    queryPlaylistElements: (body: Document, tags: {
+        element?: string;
+        picUrl?: string;
+        picHeaders?: Record<string, string>;
+        name?: string;
+        desc?: string;
+        creator?: string;
+        createTime?: string;
+        updateTime?: string;
+        url?: string;
+        coverDomain?: string;
+    }) => Promise<PlaylistInfo[]>;
+    querySongElements: (body: Document, tags: {
+        element?: string;
+        picUrl?: string;
+        picHeaders?: Record<string, string>;
+        name?: string;
+        artists?: string;
+        duration?: string;
+        url?: string;
+        playUrl?: string;
+        lyric?: string;
+        coverDomain?: string;
+    }) => Promise<SongInfo[]>;
+    queryChapters: (body: Document, tags: {
+        element?: string;
+    }) => Promise<{
+        id: string;
+        title: string;
+        url?: string;
+    }[]>;
+    getContentText: (element?: HTMLElement) => string | null;
+    nanoid: typeof nanoid;
+    urlJoin: (...parts: (string | null | undefined)[]) => string;
+    maxPageNoFromElements: (elements?: NodeListOf<Element> | null, onlyKeepNumbers?: boolean) => number | null;
+    log: (...args: any[]) => void;
+    abstract id: string;
+    abstract name: string;
+    abstract version: string;
+    abstract baseUrl: string;
+    codeString?: string;
+    protected constructor();
+    get hash(): string;
+    toJSON(): {
+        id: string;
+        name: string;
+        version: string;
+        baseUrl: string;
+        hash: string;
+    };
+}
+
+// Book
+export interface BookChapter {
+    id: string;
+    title: string;
+    url?: string;
+    readingPage?: number;
+}
+export type BookChapterList = BookChapter[];
+export interface BookItem {
+    id: string;
+    title: string;
+    intro?: string;
+    cover?: string;
+    coverHeaders?: Record<string, string>;
+    author?: string;
+    tags?: string[] | string;
+    status?: string;
+    latestChapter?: string | BookChapter;
+    latestUpdate?: string;
+    url?: string;
+    chapters?: BookChapterList;
+    extra?: any;
+    sourceId: string;
+}
+export interface BookList {
+    id?: string;
+    list: BookItem[];
+    page: number;
+    pageSize?: number | null;
+    totalPage?: number | null;
+    type?: string;
+}
+export type BooksList = BookList | BookList[];
+export abstract class BookExtension extends Extension {
+    hasDetailPage: boolean;
+    constructor();
+    execGetRecommendBooks(pageNo?: number, type?: string): Promise<BooksList | null>;
+    abstract getRecommendBooks(pageNo?: number, type?: string): Promise<BooksList | null>;
+    execSearch(keyword: string, pageNo?: number): Promise<BooksList | null>;
+    abstract search(keyword: string, pageNo?: number): Promise<BooksList | null>;
+    execGetBookDetail(item: BookItem): Promise<BookItem | null>;
+    abstract getBookDetail(item: BookItem): Promise<BookItem | null>;
+    execGetContent(item: BookItem, chapter: BookChapter): Promise<string | null>;
+    abstract getContent(item: BookItem, chapter: BookChapter): Promise<string | null>;
+}
+
+// Comic
+export interface ComicContent {
+    photos: string[];
+    photosHeaders?: Record<string, string> | null;
+    page: number;
+    pageSize?: number | null;
+    totalPage?: number | null;
+    extra?: any | null;
+}
+export interface ComicChapter {
+    id: string;
+    title: string;
+    url?: string;
+    readingPage?: number;
+}
+export type ComicChapterList = ComicChapter[];
+export interface ComicItem {
+    id: string;
+    title: string;
+    intro?: string;
+    cover?: string;
+    coverHeaders?: Record<string, string> | null;
+    author?: string;
+    tags?: string[] | string;
+    status?: string;
+    latestChapter?: string | ComicChapter;
+    latestUpdate?: string;
+    url?: string;
+    chapters?: ComicChapterList;
+    extra?: any;
+    sourceId: string;
+}
+export interface ComicList {
+    id?: string;
+    list: ComicItem[];
+    page: number;
+    pageSize?: number | null;
+    totalPage?: number | null;
+    type?: string;
+}
+export type ComicsList = ComicList | ComicList[];
+export abstract class ComicExtension extends Extension {
+    constructor();
+    execGetRecommendComics(pageNo?: number, type?: string): Promise<ComicsList | null>;
+    abstract getRecommendComics(pageNo?: number, type?: string): Promise<ComicsList | null>;
+    execSearch(keyword: string, pageNo?: number): Promise<ComicsList | null>;
+    abstract search(keyword: string, pageNo?: number): Promise<ComicsList | null>;
+    execGetComicDetail(item: ComicItem): Promise<ComicItem | null>;
+    abstract getComicDetail(item: ComicItem): Promise<ComicItem | null>;
+    execGetContent(item: ComicItem, chapter: ComicChapter): Promise<ComicContent | null>;
+    abstract getContent(item: ComicItem, chapter: ComicChapter): Promise<ComicContent | null>;
+}
+
+// Photo
+export interface PhotoItem {
+    id: string;
+    title?: string | null;
+    desc?: string | null;
+    cover: string | string[];
+    coverHeaders?: Record<string, string> | null;
+    author?: string | null;
+    datetime?: string | null;
+    hot?: string | number | null;
+    view?: number | null;
+    url?: string | null;
+    noDetail?: boolean;
+    extra?: any | null;
+    sourceId: string;
+}
+export interface PhotoList {
+    list: PhotoItem[];
+    page: number;
+    pageSize?: number | null;
+    totalPage?: number | null;
+}
+export interface PhotoDetail {
+    item: PhotoItem;
+    photos: string[];
+    photosHeaders?: Record<string, string> | null;
+    page: number;
+    pageSize?: number | null;
+    totalPage?: number | null;
+    extra?: any | null;
+    sourceId: string;
+}
+export abstract class PhotoExtension extends Extension {
+    hasDetailPage: boolean;
+    constructor();
+    execGetRecommendList(pageNo?: number): Promise<PhotoList | null>;
+    abstract getRecommendList(pageNo?: number): Promise<PhotoList | null>;
+    execSearch(keyword: string, pageNo?: number): Promise<PhotoList | null>;
+    abstract search(keyword: string, pageNo?: number): Promise<PhotoList | null>;
+    execGetPhotoDetail(item: PhotoItem, pageNo?: number): Promise<PhotoDetail | null>;
+    abstract getPhotoDetail(item: PhotoItem, pageNo?: number): Promise<PhotoDetail | null>;
+}
+
+// Video
+export interface VideoUrlMap {
+    url: string;
+    headers?: Record<string, string> | null;
+    type?: 'm3u8' | 'mp4' | 'hls' | 'dash' | 'rtmp';
+    isLive?: boolean;
+    extra?: Record<string, any>;
+}
+export interface VideoEpisode {
+    id: string;
+    title: string;
+    url?: string;
+    cover?: string;
+    extra?: any;
+    lastWatchPosition?: number;
+}
+export interface VideoResource {
+    id: string;
+    title: string;
+    url?: string;
+    episodes?: VideoEpisode[];
+    extra?: any;
+}
+export interface VideoItem {
+    id: string;
+    title: string;
+    intro?: string;
+    cover?: string;
+    coverHeaders?: Record<string, string> | null;
+    releaseDate?: string;
+    country?: string;
+    duration?: string;
+    director?: string;
+    cast?: string;
+    tags?: string[] | string;
+    status?: string;
+    latestUpdate?: string;
+    url?: string;
+    resources?: VideoResource[];
+    lastWatchResourceId?: string;
+    lastWatchEpisodeId?: string;
+    extra?: Record<string, any>;
+    sourceId: string;
+}
+export interface VideoList {
+    id?: string;
+    list?: VideoItem[];
+    page: number;
+    pageSize?: number | null;
+    totalPage?: number | null;
+    type?: string;
+}
+export type VideosList = VideoList | VideoList[];
+export abstract class VideoExtension extends Extension {
+    constructor();
+    execGetRecommendVideos(pageNo?: number, type?: string): Promise<VideosList | null>;
+    abstract getRecommendVideos(pageNo?: number, type?: string): Promise<VideosList | null>;
+    execSearch(keyword: string, pageNo?: number): Promise<VideosList | null>;
+    abstract search(keyword: string, pageNo?: number): Promise<VideosList | null>;
+    execGetVideoDetail(item: VideoItem): Promise<VideoItem | null>;
+    abstract getVideoDetail(item: VideoItem): Promise<VideoItem | null>;
+    execGetPlayUrl(item: VideoItem, resource: VideoResource, episode: VideoEpisode): Promise<VideoUrlMap | null>;
+    abstract getPlayUrl(item: VideoItem, resource: VideoResource, episode: VideoEpisode): Promise<VideoUrlMap | null>;
+}
+
+// Song
+export enum SongShelfType {
+    create = "create",
+    like = "like",
+    playlist = "playlist"
+}
+export enum SongPlayMode {
+    single = "single",
+    list = "list",
+    random = "random"
+}
+export interface SongInfo {
+    name?: string;
+    artists?: ArtistInfo[] | string[];
+    id: string;
+    cid?: string;
+    lyric?: string;
+    album?: AlbumInfo;
+    mvId?: string;
+    mvCid?: string;
+    url?: string;
+    playUrl?: string | SongUrlMap;
+    picUrl?: string;
+    bigPicUrl?: string;
+    picHeaders?: Record<string, string>;
+    flac?: string;
+    duration?: number;
+    sourceId: string;
+    extra?: Record<string, string>;
+}
+export interface SongList {
+    list: SongInfo[];
+    page: number;
+    pageSize?: number | null;
+    totalPage?: number | null;
+}
+export interface ArtistInfo {
+    name: string;
+    id: string;
+    picUrl?: string;
+    songCount?: string | number;
+    mvCount?: number;
+    albumCount?: string | number;
+}
+export interface AlbumInfo {
+    name: string;
+    id: string;
+    artists?: ArtistInfo[] | string[];
+    picUrl?: string;
+    publishTime?: string;
+    desc?: string;
+    company?: string;
+    songList?: SongList;
+    songCount?: string | number;
+    duration?: number;
+}
+export interface PlaylistInfo {
+    name: string;
+    id: string;
+    url?: string;
+    picUrl: string;
+    picHeaders?: Record<string, string>;
+    songCount?: string | number;
+    playCount?: string | number;
+    desc?: string;
+    creator?: {
+        id?: string;
+        name?: string;
+    };
+    createTime?: string;
+    updateTime?: string;
+    totalPage?: number;
+    list?: SongList;
+    sourceId: string;
+    extra?: Record<string, string>;
+}
+export interface PlaylistList {
+    list: PlaylistInfo[];
+    page: number;
+    pageSize?: number | null;
+    totalPage?: number | null;
+}
+export type SongSize = '128k' | '320k' | 'flac' | '';
+export interface SongUrlMap {
+    '128k'?: string;
+    '128'?: string;
+    '320k'?: string;
+    '320'?: string;
+    flac?: string;
+    pic?: string;
+    bgPic?: string;
+    lyric?: string;
+    lyricUrl?: string;
+    headers?: Record<string, string>;
+}
+export abstract class SongExtension extends Extension {
+    hasDetailPage: boolean;
+    constructor();
+    execGetRecommendPlaylists(pageNo?: number): Promise<PlaylistList | null>;
+    abstract getRecommendPlaylists(pageNo?: number): Promise<PlaylistList | null>;
+    execGetRecommendSongs(pageNo?: number): Promise<SongList | null>;
+    abstract getRecommendSongs(pageNo?: number): Promise<SongList | null>;
+    execSearchPlaylists(keyword: string, pageNo?: number): Promise<PlaylistList | null>;
+    abstract searchPlaylists(keyword: string, pageNo?: number): Promise<PlaylistList | null>;
+    execSearchSongs(keyword: string, pageNo?: number): Promise<SongList | null>;
+    abstract searchSongs(keyword: string, pageNo?: number): Promise<SongList | null>;
+    execGetPlaylistDetail(item: PlaylistInfo, pageNo?: number): Promise<PlaylistInfo | null>;
+    abstract getPlaylistDetail(item: PlaylistInfo, pageNo?: number): Promise<PlaylistInfo | null>;
+    execGetSongUrl(item: SongInfo, size?: SongSize): Promise<SongUrlMap | string | null>;
+    abstract getSongUrl(item: SongInfo, size?: SongSize): Promise<SongUrlMap | string | null>;
+    execGetLyric(item: SongInfo): Promise<string | null>;
+    abstract getLyric(item: SongInfo): Promise<string | null>;
+}

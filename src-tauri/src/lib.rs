@@ -2,6 +2,7 @@
 use tauri::Manager;
 mod fetch_plugin;
 mod proxy_plugin;
+mod websocket_plugin;
 use log::LevelFilter;
 use tauri_plugin_log::{Target, TargetKind};
 
@@ -14,7 +15,6 @@ fn greet(name: &str) -> String {
 pub fn run() {
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(
@@ -33,6 +33,7 @@ pub fn run() {
             let handle = app.handle();
             handle.plugin(fetch_plugin::init())?;
             handle.plugin(proxy_plugin::init())?;
+            handle.plugin(websocket_plugin::init())?;
             #[cfg(desktop)]
             handle.plugin(tauri_plugin_updater::Builder::new().build())?;
             Ok(())

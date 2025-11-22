@@ -21,24 +21,6 @@ pub(crate) struct Http {
 }
 
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
-    //  定义在同一文件夹中的叫做 inlined plugin，同导入的plugin用法不一样
-    //   1. lib.rs中
-    //   .setup(move |app| {
-    //         let handle = app.handle();
-    //         handle.plugin(fetch_plugin::init())?;
-    //         Ok(())
-    //     })
-    //   2. build.rs中
-    //   tauri_build::try_build(tauri_build::Attributes::new().plugin(
-    //     "fetch-plugin",
-    //     tauri_build::InlinedPlugin::new().commands(&[
-    //         "fetch",
-    //         "fetch_cancel",
-    //         "fetch_send",
-    //         "fetch_read_body",
-    //     ]),
-    // ))
-    // 3. 定义permissions并在capabilities中添加权限
 
     Builder::<R>::new("fetch-plugin")
         .setup(|app, _| {

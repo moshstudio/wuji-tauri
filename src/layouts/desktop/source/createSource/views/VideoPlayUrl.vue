@@ -86,17 +86,17 @@ async function load() {
     return;
   }
   const code = BOOK_TEMPLATE.replace(
-    'constructor() {}',
+    '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
   )
     .replace(
-      'async getRecommendVideos(pageNo, type) {}',
+      '// @METHOD_LIST',
       findPage('list')!.code,
     )
-    .replace('async search(keyword, pageNo) {}', findPage('searchList')!.code)
-    .replace('async getVideoDetail(item, pageNo) {}', findPage('detail')!.code)
+    .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
+    .replace('// @METHOD_DETAIL', findPage('detail')!.code)
     .replace(
-      'async getPlayUrl(item, resource, episode) {}',
+      '// @METHOD_PLAY_URL',
       findPage('playUrl')!.code,
     );
   runStatus.value = RunStatus.running;

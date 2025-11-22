@@ -2,13 +2,13 @@ class CustomPhotoExtension extends PhotoExtension {
   id = 'testPhoto';
   name = '测试';
 
-  constructor() {}
+  // @METHOD_CONSTRUCTOR
 
-  async getRecommendList(pageNo) {}
+  // @METHOD_LIST
 
-  async search(keyword, pageNo) {}
+  // @METHOD_SEARCH_LIST
 
-  async getPhotoDetail(item, pageNo) {}
+  // @METHOD_DETAIL
 
 }
 

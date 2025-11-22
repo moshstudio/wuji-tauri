@@ -66,12 +66,12 @@ async function load(pageNo: number) {
     return;
   }
   const code = PHOTO_TEMPLATE.replace(
-    'constructor() {}',
+    '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
   )
-    .replace('async getRecommendList(pageNo) {}', findPage('list')!.code)
-    .replace('async search(keyword, pageNo) {}', findPage('searchList')!.code)
-    .replace('async getPhotoDetail(item, pageNo) {}', findPage('detail')!.code);
+    .replace('// @METHOD_LIST', findPage('list')!.code)
+    .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
+    .replace('// @METHOD_DETAIL', findPage('detail')!.code);
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('PhotoExtension', code);

@@ -2,15 +2,15 @@ class CustomComicExtension extends ComicExtension {
   id = 'testComic';
   name = '测试';
 
-  constructor() {}
+  // @METHOD_CONSTRUCTOR
 
-  async getRecommendComics(pageNo, type) {}
+  // @METHOD_LIST
 
-  async search(keyword, pageNo) {}
+  // @METHOD_SEARCH_LIST
 
-  async getComicDetail(item, pageNo) {}
+  // @METHOD_DETAIL
 
-  async getContent(item, chapter) {}
+  // @METHOD_CONTENT
 
 }
 

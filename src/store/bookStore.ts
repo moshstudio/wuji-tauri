@@ -115,11 +115,11 @@ export const useBookStore = defineStore('book', () => {
     {
       name: '深空黑',
       color: '#e0e0e0',
-      bgColor: '#111',
+      bgColor: '#000',
     },
     {
       name: '石墨灰',
-      color: '#666',
+      color: '#aaa',
       bgColor: '#000',
     },
     {

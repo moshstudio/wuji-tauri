@@ -67,15 +67,15 @@ async function load() {
     return;
   }
   const code = COMIC_TEMPLATE.replace(
-    'constructor() {}',
+    '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
   )
     .replace(
-      'async getRecommendComics(pageNo, type) {}',
+      '// @METHOD_LIST',
       findPage('list')!.code,
     )
-    .replace('async search(keyword, pageNo) {}', findPage('searchList')!.code)
-    .replace('async getComicDetail(item, pageNo) {}', findPage('detail')!.code);
+    .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
+    .replace('// @METHOD_DETAIL', findPage('detail')!.code);
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('ComicExtension', code);

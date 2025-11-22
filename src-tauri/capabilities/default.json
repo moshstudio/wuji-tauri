@@ -44,6 +44,7 @@
     "store:allow-reset",
     "fetch-plugin:default",
     "proxy-plugin:default",
+    "websocket-plugin:default",
     "os:default",
     "os:allow-hostname",
     "commands:default",
@@ -78,7 +79,6 @@
     },
     "dialog:default",
     "keep-screen-on:default",
-    "websocket:default",
     "opener:default"
   ]
 }

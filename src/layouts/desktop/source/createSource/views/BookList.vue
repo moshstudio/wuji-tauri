@@ -49,9 +49,9 @@ async function load(pageNo?: number, type?: string) {
     return;
   }
   const code = BOOK_TEMPLATE.replace(
-    'constructor() {}',
+    '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
-  ).replace('async getRecommendBooks(pageNo, type) {}', findPage('list')!.code);
+  ).replace('// @METHOD_LIST', findPage('list')!.code);
   runStatus.value = RunStatus.running;
   try {
     // const blob = new Blob([`BookExtension; (${code})()`], {

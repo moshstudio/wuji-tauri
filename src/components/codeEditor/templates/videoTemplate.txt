@@ -2,15 +2,15 @@ class CustomVideoExtension extends VideoExtension {
   id = 'testVideo';
   name = '测试';
 
-  constructor() {}
+  // @METHOD_CONSTRUCTOR
 
-  async getRecommendVideos(pageNo, type) {}
+  // @METHOD_LIST
 
-  async search(keyword, pageNo) {}
+  // @METHOD_SEARCH_LIST
 
-  async getVideoDetail(item, pageNo) {}
+  // @METHOD_DETAIL
 
-  async getPlayUrl(item, resource, episode) {}
+  // @METHOD_PLAY_URL
 
 }
 

@@ -50,10 +50,10 @@ async function load(pageNo: number) {
     return;
   }
   const code = SONG_TEMPLATE.replace(
-    'constructor() {}',
+    '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
   ).replace(
-    'async searchPlaylists(keyword, pageNo) {}',
+    '// @METHOD_SEARCH_PLAYLIST',
     findPage('searchPlaylist')!.code,
   );
   runStatus.value = RunStatus.running;

@@ -3,20 +3,13 @@ import type { SourceType } from '@wuji-tauri/source-extension';
 import { save as saveToDialog } from '@tauri-apps/plugin-dialog';
 import * as fsApi from '@tauri-apps/plugin-fs';
 import { MoreOptionsSheet } from '@wuji-tauri/components/src';
-import {
-  loadBookExtensionString,
-  loadComicExtensionString,
-  loadPhotoExtensionString,
-  loadSongExtensionString,
-  loadVideoExtensionString,
-} from '@wuji-tauri/source-extension';
+
 import { format } from 'date-fns';
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
 import { storeToRefs } from 'pinia';
 import {
   showConfirmDialog,
-  showFailToast,
   showLoadingToast,
   showToast,
 } from 'vant';
@@ -26,11 +19,7 @@ import LocalSaveDialog from '@/components/codeEditor/dialogs/LocalSave.vue';
 import Guide from '@/components/codeEditor/Guide.vue';
 import { guideExamplesMD } from '@/components/codeEditor/guides';
 import IEditor from '@/components/codeEditor/IEditor.vue';
-import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
-import COMIC_TEMPLATE from '@/components/codeEditor/templates/comicTemplate.txt?raw';
-import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
-import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
-import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
+
 import WNavbar from '@/components/header/WNavbar.vue';
 import { router } from '@/router';
 import { useServerStore, useStore } from '@/store';
@@ -57,9 +46,11 @@ import VideoDetail from './views/VideoDetail.vue';
 import VideoList from './views/VideoList.vue';
 import VideoPlayUrl from './views/VideoPlayUrl.vue';
 import VideoSearchList from './views/VideoSearchList.vue';
+
+import { generateCode } from './utils';
 import { copyText } from '@/utils';
 
-type Type = 'photo' | 'song' | 'book';
+type Type = 'photo' | 'song' | 'book' | 'comic' | 'video';
 
 const store = useStore();
 const serverStore = useServerStore();
@@ -379,142 +370,7 @@ async function generateSaveCode(data: {
   id: string;
   name: string;
 }): Promise<string | undefined> {
-  const findPage = (name: string) => {
-    return form.value[showingType.value].pages.find(
-      (page) => page.type === name,
-    );
-  };
-
-  let code;
-  switch (showingType.value) {
-    case 'photo':
-      code = PHOTO_TEMPLATE.replace("id = 'testPhoto';", `id = '${data.id}';`)
-        .replace('constructor() {}', findPage('constructor')!.code)
-        .replace("name = '测试';", `name = '${data.name}';`)
-        .replace('async getRecommendList(pageNo) {}', findPage('list')!.code)
-        .replace(
-          'async search(keyword, pageNo) {}',
-          findPage('searchList')!.code,
-        )
-        .replace(
-          'async getPhotoDetail(item, pageNo) {}',
-          findPage('detail')!.code,
-        );
-
-      break;
-    case 'song':
-      code = SONG_TEMPLATE.replace("id = 'testSong';", `id = '${data.id}';`)
-        .replace('constructor() {}', findPage('constructor')!.code)
-        .replace("name = '测试';", `name = '${data.name}';`)
-        .replace(
-          'async getRecommendPlaylists(pageNo) {}',
-          findPage('playlist')!.code,
-        )
-        .replace(
-          'async getRecommendSongs(pageNo) {}',
-          findPage('songList')!.code,
-        )
-        .replace(
-          'async searchPlaylists(keyword, pageNo) {}',
-          findPage('searchPlaylist')!.code,
-        )
-        .replace(
-          'async searchSongs(keyword, pageNo) {}',
-          findPage('searchSongList')!.code,
-        )
-        .replace(
-          'async getPlaylistDetail(item, pageNo) {}',
-          findPage('playlistDetail')!.code,
-        )
-        .replace('async getSongUrl(item, size) {}', findPage('playUrl')!.code)
-        .replace('async getLyric(item) {}', findPage('lyric')!.code);
-      break;
-    case 'book':
-      code = BOOK_TEMPLATE.replace("id = 'testBook';", `id = '${data.id}';`)
-        .replace('constructor() {}', findPage('constructor')!.code)
-        .replace("name = '测试';", `name = '${data.name}';`)
-        .replace(
-          'async getRecommendBooks(pageNo, type) {}',
-          findPage('list')!.code,
-        )
-        .replace(
-          'async search(keyword, pageNo) {}',
-          findPage('searchList')!.code,
-        )
-        .replace(
-          'async getBookDetail(item, pageNo) {}',
-          findPage('detail')!.code,
-        )
-        .replace(
-          'async getContent(item, chapter) {}',
-          findPage('content')!.code,
-        );
-      break;
-    case 'comic':
-      code = COMIC_TEMPLATE.replace("id = 'testComic';", `id = '${data.id}';`)
-        .replace('constructor() {}', findPage('constructor')!.code)
-        .replace("name = '测试';", `name = '${data.name}';`)
-        .replace(
-          'async getRecommendComics(pageNo, type) {}',
-          findPage('list')!.code,
-        )
-        .replace(
-          'async search(keyword, pageNo) {}',
-          findPage('searchList')!.code,
-        )
-        .replace(
-          'async getComicDetail(item, pageNo) {}',
-          findPage('detail')!.code,
-        )
-        .replace(
-          'async getContent(item, chapter) {}',
-          findPage('content')!.code,
-        );
-      break;
-    case 'video':
-      code = VIDEO_TEMPLATE.replace("id = 'testVideo';", `id = '${data.id}';`)
-        .replace('constructor() {}', findPage('constructor')!.code)
-        .replace("name = '测试';", `name = '${data.name}';`)
-        .replace(
-          'async getRecommendVideos(pageNo, type) {}',
-          findPage('list')!.code,
-        )
-        .replace(
-          'async search(keyword, pageNo) {}',
-          findPage('searchList')!.code,
-        )
-        .replace(
-          'async getVideoDetail(item, pageNo) {}',
-          findPage('detail')!.code,
-        )
-        .replace(
-          'async getPlayUrl(item, resource, episode) {}',
-          findPage('playUrl')!.code,
-        );
-      break;
-  }
-  try {
-    switch (showingType.value) {
-      case 'photo':
-        loadPhotoExtensionString(code, true);
-        break;
-      case 'song':
-        loadSongExtensionString(code, true);
-        break;
-      case 'book':
-        loadBookExtensionString(code, true);
-        break;
-      case 'comic':
-        loadComicExtensionString(code, true);
-        break;
-      case 'video':
-        loadVideoExtensionString(code, true);
-        break;
-    }
-    return code;
-  } catch (error) {
-    showFailToast(`代码错误: ${error}`);
-  }
+  return generateCode(form.value[showingType.value], data.id, data.name);
 }
 
 function showLocalSave() {

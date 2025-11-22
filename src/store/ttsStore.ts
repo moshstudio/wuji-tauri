@@ -5,12 +5,13 @@ import { defineStore } from 'pinia';
 import { showFailToast, showToast } from 'vant';
 import { onMounted, reactive, ref } from 'vue';
 import { clearTimeout, setInterval, setTimeout } from 'worker-timers';
-import { EdgeTTSClient } from '@/utils/edge-tts';
 import { SimpleLRUCache } from '@/utils/lruCache';
+import { EdgeTTSClient } from '@/utils/edge-tts';
 
 export interface Voice {
   Name: string;
   ChineseName: string;
+  ShortName: string;
   Gender: 'Female' | 'Male';
   Locale?: string;
   type: 'edge';
@@ -123,6 +124,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-HK, HiuGaaiNeural)',
       ChineseName: '晓佳(香港)',
+      ShortName: 'zh-HK-HiuGaaiNeural',
       Gender: 'Female',
       Locale: 'zh-HK',
       type: 'edge',
@@ -214,9 +216,9 @@ export const useTTSStore = defineStore('ttsStore', () => {
     }
     if (_generating.has(uid)) {
       // 等待生成完成，最长等待30秒
-      return new Promise<boolean>((resolve, reject) => {
+      return new Promise<boolean>((resolve, _reject) => {
         const timer = setTimeout(() => {
-          reject(false);
+          resolve(false);
         }, 30000);
         const check = () => {
           if (lruCache.has(uid)) {
@@ -275,14 +277,12 @@ export const useTTSStore = defineStore('ttsStore', () => {
       slideReadingContent.value = content;
     }
     const uid = CryptoJS.MD5(message + JSON.stringify(voice) + rate).toString();
+    let success = lruCache.has(uid);
     if (!lruCache.has(uid)) {
-      let success = false;
-      let times = 3;
-      do {
-        success = await generateVoice(content, voice, rate);
-      } while (!success && times-- > 0);
+      success = await generateVoice(content, voice, rate);
     }
-    if (!lruCache.has(uid)) {
+
+    if (!success) {
       showFailToast('TTS生成失败');
       audioPlayer.value?.pause();
       isReading.value = false;

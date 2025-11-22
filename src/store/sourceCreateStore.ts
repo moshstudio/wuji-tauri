@@ -101,6 +101,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           result: undefined,
           ts: undefined,
         },
+
       ],
     },
     song: {
@@ -182,6 +183,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           result: undefined,
           ts: undefined,
         },
+
       ],
     },
     book: {
@@ -290,6 +292,7 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           result: undefined,
           ts: undefined,
         },
+
       ],
     },
     video: {

@@ -27,6 +27,7 @@ import queryComicElementsTypes from '@/components/codeEditor/monaco-types/monaco
 import queryPhotoElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-photo/index.d.ts.txt?raw';
 import querySongElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-song/index.d.ts.txt?raw';
 import queryVideoElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-video/index.d.ts.txt?raw';
+import sourceExtensionTypes from '@/components/codeEditor/monaco-types/source-extension/index.d.ts.txt?raw';
 
 export function addCompletions(monaco: MonacoEditor) {
   monaco.languages.typescript.javascriptDefaults.addExtraLib(
@@ -161,6 +162,10 @@ export function addCompletions(monaco: MonacoEditor) {
     'node_modules/@types/query-song-elements/index.d.ts',
   );
   monaco.languages.typescript.javascriptDefaults.addExtraLib(
+    sourceExtensionTypes,
+    'node_modules/@wuji-tauri/source-extension/index.d.ts',
+  );
+  monaco.languages.typescript.javascriptDefaults.addExtraLib(
     `export function queryChapters(
     body: Document,
     tags: {
@@ -213,6 +218,7 @@ export function addCompletions(monaco: MonacoEditor) {
      import * as log from 'log';
      import * as myConsts from 'my-consts';
      import * as getM3u8ProxyUrl from 'm3u8-proxy';
+     import { BookExtension, ComicExtension, PhotoExtension, VideoExtension, SongExtension } from '@wuji-tauri/source-extension';
 
      declare const _: typeof _;
      declare global {
@@ -239,6 +245,11 @@ export function addCompletions(monaco: MonacoEditor) {
       var baseUrl: typeof import('my-consts').baseUrl;
       var getM3u8ProxyUrl: typeof import('m3u8-proxy').getM3u8ProxyUrl;
       var getProxyUrl: typeof import('proxy').getProxyUrl;
+      var BookExtension: typeof import('@wuji-tauri/source-extension').BookExtension;
+      var ComicExtension: typeof import('@wuji-tauri/source-extension').ComicExtension;
+      var PhotoExtension: typeof import('@wuji-tauri/source-extension').PhotoExtension;
+      var VideoExtension: typeof import('@wuji-tauri/source-extension').VideoExtension;
+      var SongExtension: typeof import('@wuji-tauri/source-extension').SongExtension;
 
       interface GlobalThis {
         pLimit: typeof import('p-limit').pLimit;

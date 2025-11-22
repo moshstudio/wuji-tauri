@@ -50,10 +50,10 @@ async function load(pageNo?: number, type?: string) {
     return;
   }
   const code = COMIC_TEMPLATE.replace(
-    'constructor() {}',
+    '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
   ).replace(
-    'async getRecommendComics(pageNo, type) {}',
+    '// @METHOD_LIST',
     findPage('list')!.code,
   );
   runStatus.value = RunStatus.running;

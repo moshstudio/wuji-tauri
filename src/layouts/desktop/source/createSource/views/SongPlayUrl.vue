@@ -70,15 +70,15 @@ async function load(pageNo: number) {
     return;
   }
   const code = SONG_TEMPLATE.replace(
-    'constructor() {}',
+    '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
   )
-    .replace('async getRecommendSongs(pageNo) {}', findPage('songList')!.code)
+    .replace('// @METHOD_SONG_LIST', findPage('songList')!.code)
     .replace(
-      'async searchSongs(keyword, pageNo) {}',
-      findPage('searchPlaylist')!.code,
+      '// @METHOD_SEARCH_SONG_LIST',
+      findPage('searchSongList')!.code,
     )
-    .replace('async getSongUrl(item, size) {}', findPage('playUrl')!.code);
+    .replace('// @METHOD_PLAY_URL', findPage('playUrl')!.code);
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('SongExtension', code);

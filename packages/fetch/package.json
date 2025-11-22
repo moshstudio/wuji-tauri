@@ -13,5 +13,8 @@
     "dev": "vite build --watch",
     "build": "vite build && tsc",
     "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "@wuji-tauri/fetch": "link:"
   }
 }

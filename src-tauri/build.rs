@@ -14,6 +14,10 @@ fn main() {
             .plugin(
                 "proxy-plugin",
                 tauri_build::InlinedPlugin::new().commands(&["get_m3u8_url", "get_proxy_url"]),
+            )
+            .plugin(
+                "websocket-plugin",
+                tauri_build::InlinedPlugin::new().commands(&["connect", "send"]),
             ),
     )
     .expect("failed to run tauri-build");

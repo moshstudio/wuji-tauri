@@ -2,15 +2,15 @@ class CustomBookExtension extends BookExtension {
   id = 'testBook';
   name = '测试';
 
-  constructor() {}
+  // @METHOD_CONSTRUCTOR
 
-  async getRecommendBooks(pageNo, type) {}
+  // @METHOD_LIST
 
-  async search(keyword, pageNo) {}
+  // @METHOD_SEARCH_LIST
 
-  async getBookDetail(item, pageNo) {}
+  // @METHOD_DETAIL
 
-  async getContent(item, chapter) {}
+  // @METHOD_CONTENT
 
 }
 
