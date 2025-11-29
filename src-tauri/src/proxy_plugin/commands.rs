@@ -1,44 +1,60 @@
-use m3u8_rs::AlternativeMediaType::Audio;
-use m3u8_rs::{MediaPlaylist, Playlist};
+use m3u8_rs::{AlternativeMediaType, MediaPlaylist, Playlist};
 use once_cell::sync::Lazy;
 use reqwest;
-use reqwest::header::HeaderMap as ReqwestHeaderMap;
-use reqwest::Method as ReqwestMethod;
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::net::TcpListener;
-use std::str::FromStr;
-use std::string::ToString;
 use std::sync::atomic::{AtomicU16, Ordering};
 use std::time::Duration;
 use unicase::Ascii;
 use urlencoding::{decode, encode};
-use warp::http::header::{
-    HeaderMap as WarpHeaderMap, HeaderName as WarpHeaderName, HeaderValue as WarpHeaderValue,
-};
-use warp::http::Method as WarpMethod;
-use warp::http::{HeaderMap, HeaderValue};
+use warp::http::header::HeaderName as WarpHeaderName;
 use warp::reply::Reply;
 use warp::{self, Filter};
 
+// Constants
 const HOST: &str = "http://127.0.0.1";
-// Store actual port and request data
+const DEFAULT_START_PORT: u16 = 1430;
+const PORT_SCAN_RANGE: u16 = 100;
+const REQUEST_TIMEOUT_SECS: u64 = 60;
+const CONNECT_TIMEOUT_SECS: u64 = 15;
+const MAX_REDIRECT_COUNT: u8 = 10;
+
+// Store actual port
 static ACTUAL_PORT: AtomicU16 = AtomicU16::new(0);
 
-fn convert_headers(
-    http_headers: http::HeaderMap,
-) -> Result<warp::http::HeaderMap, Box<dyn std::error::Error>> {
-    let mut new_headers = warp::http::HeaderMap::new();
-    for (k, v) in http_headers.iter() {
-        let key_str = k.as_str();
-        let value_str = v.to_str()?; // 自动传播ToStrError
+// Helper function to parse headers from encoded string
+fn parse_encoded_headers(headers_part: &str) -> reqwest::header::HeaderMap {
+    let mut header_map = reqwest::header::HeaderMap::new();
 
-        let new_key = warp::http::header::HeaderName::from_str(key_str)?; // 自动传播FromStr错误
-        let new_value = warp::http::header::HeaderValue::from_str(value_str)?;
-
-        new_headers.insert(new_key, new_value);
+    let decoded_headers = urlencoding::decode(headers_part).unwrap_or_default();
+    if decoded_headers.is_empty() {
+        return header_map;
     }
-    Ok(new_headers)
+
+    for header_pair in decoded_headers.split(',') {
+        if let Some((name_part, value_part)) = header_pair.split_once(':') {
+            if let Ok(header_name) = name_part.parse::<http::header::HeaderName>() {
+                if let Ok(header_value) = http::HeaderValue::from_str(value_part) {
+                    header_map.insert(header_name, header_value);
+                }
+            }
+        }
+    }
+    header_map
+}
+
+// Helper function to merge headers, excluding specific ones
+fn merge_headers(
+    target: &mut reqwest::header::HeaderMap,
+    source: reqwest::header::HeaderMap,
+    excluded: &[reqwest::header::HeaderName],
+) {
+    for (name, value) in source.iter() {
+        if !excluded.contains(name) && !target.contains_key(name) {
+            target.insert(name.clone(), value.clone());
+        }
+    }
 }
 
 async fn get_m3u8_content_async(
@@ -46,153 +62,193 @@ async fn get_m3u8_content_async(
     url: String,
     headers: warp::http::HeaderMap,
 ) -> Result<impl warp::Reply, Infallible> {
-    // 解码headers
-    let decoded_headers = urlencoding::decode(&headers_part).unwrap_or_default();
-    let mut header_map = reqwest::header::HeaderMap::new();
-    if !decoded_headers.is_empty() {
-        for header_pair in decoded_headers.split(',') {
-            if let Some((name_part, value_part)) = header_pair.split_once(':') {
-                if let Ok(header_name) = name_part.parse::<http::header::HeaderName>() {
-                    if let Ok(header_value) = http::HeaderValue::from_str(value_part) {
-                        header_map.insert(header_name, header_value);
-                    }
+    get_m3u8_content_with_redirect(headers_part, url, headers, 0).await
+}
+
+fn get_m3u8_content_with_redirect(
+    headers_part: String,
+    url: String,
+    headers: warp::http::HeaderMap,
+    redirect_count: u8,
+) -> std::pin::Pin<
+    Box<dyn std::future::Future<Output = Result<warp::http::Response<String>, Infallible>> + Send>,
+> {
+    Box::pin(async move {
+        // Prevent infinite redirects
+        if redirect_count >= MAX_REDIRECT_COUNT {
+            return Ok(warp::http::Response::builder()
+                .status(508) // Loop Detected
+                .body("Too many redirects".to_string())
+                .unwrap());
+        }
+
+        // Parse headers from encoded part
+        let mut header_map = parse_encoded_headers(&headers_part);
+
+        // Merge request headers (excluding host, referer, origin)
+        let excluded_headers: [reqwest::header::HeaderName; 3] = [
+            reqwest::header::HeaderName::from_static("host"),
+            reqwest::header::HeaderName::from_static("referer"),
+            reqwest::header::HeaderName::from_static("origin"),
+        ];
+        let reqwest_headers = convert_to_reqwest_headers(headers);
+        merge_headers(&mut header_map, reqwest_headers, &excluded_headers);
+
+        // Create HTTP client
+        let client = get_m3u8_http_client(&url, &header_map);
+
+        #[cfg(debug_assertions)]
+        println!("[M3U8] Request: url={}, headers={:?}", &url, &header_map);
+
+        // Send request
+        let response = match client.get(&url).send().await {
+            Ok(resp) => resp,
+            Err(e) => {
+                eprintln!("[M3U8] Request failed: {}", e);
+                return Ok(warp::http::Response::builder()
+                    .status(500)
+                    .body("".to_string())
+                    .unwrap());
+            }
+        };
+
+        let response_status = response.status();
+        let response_headers = response.headers().clone();
+
+        // Handle redirects
+        if response_status.is_redirection() {
+            if let Some(location) = response_headers.get("Location") {
+                if let Ok(redirect_url) = location.to_str() {
+                    return get_m3u8_content_with_redirect(
+                        headers_part,
+                        redirect_url.to_string(),
+                        warp::http::HeaderMap::new(),
+                        redirect_count + 1,
+                    )
+                    .await;
                 }
             }
         }
-    }
-    let reqwest_headers = convert_to_reqwest_headers(headers.clone());
-    let excluded_headers: [reqwest::header::HeaderName; 3] = [
-        reqwest::header::HeaderName::from_static("host"),
-        reqwest::header::HeaderName::from_static("referer"),
-        reqwest::header::HeaderName::from_static("origin"),
-    ];
-    // 遍历源 headers
-    for (name, value) in reqwest_headers.iter() {
-        // 检查头部是否不在排除列表中且不在目标 header_map 中
-        if !excluded_headers.contains(&name) && !header_map.contains_key(name) {
-            // 由于 HeaderValue 是不可变的，我们可以直接克隆它
-            header_map.insert(name.clone(), value.clone());
-        }
-    }
 
-    // 创建HTTP客户端
-    let client = get_m3u8_http_client(Some(url.clone()), Some(header_map.clone()), None);
-
-    let dbg_info = format!(
-        "get_m3u8_content_async send request: url={}, headers={:?}",
-        &url.clone(),
-        header_map.clone(),
-    );
-    dbg!(dbg_info);
-    // First try with redirects disabled to check for 302
-    let result = client.get(&url).send().await;
-    if result.is_err() {
-        return Ok(warp::http::Response::builder()
-            .status(500)
-            .body("".to_string())
-            .unwrap());
-    }
-    let response = result.unwrap(); // 提前解包并存储
-    let status = response.status();
-    if status.is_redirection() {
-        if let Some(location) = response.headers().get("Location") {
-            if let Ok(redirect_url) = location.to_str() {
-                return Box::pin(get_m3u8_content_async(
-                    headers_part.to_string(),
-                    redirect_url.to_string(),
-                    headers.clone(),
-                ))
-                .await;
+        // Process normal response
+        let m3u8_content = match response.text().await {
+            Ok(content) => process_m3u8(&url, &content, &headers_part),
+            Err(e) => {
+                eprintln!("[M3U8] Failed to read response body: {}", e);
+                "".to_string()
             }
-        }
-    }
-    // Process normal response (non-redirect)
-    // 提前获取 headers 和 status，避免 response 被提前 move
-    let headers = response.headers().clone();
-    let status = response.status();
+        };
 
-    // Process normal response (non-redirect)
-    let content = response.text().await;
-    let m3u8 = match &content {
-        Ok(c) => process_m3u8(&url, c.clone(), headers_part),
-        Err(_) => "".to_string(),
-    };
-    let dbg_info = format!(
-        "get_m3u8_content_async response: status={}, headers={:?}, content(or length)={}",
-        status.as_u16(),
-        headers.clone(),
-        if m3u8.len() > 300 {
-            m3u8.len().to_string()
-        } else {
-            m3u8.clone()
-        }
-    );
-    dbg!(dbg_info);
+        #[cfg(debug_assertions)]
+        println!(
+            "[M3U8] Response: status={}, content_length={}",
+            response_status.as_u16(),
+            m3u8_content.len()
+        );
 
-    let content_type = headers
-        .get("Content-Type")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("application/vnd.apple.mpegurl");
+        let content_type = response_headers
+            .get("Content-Type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/vnd.apple.mpegurl");
 
-    let res = warp::http::Response::builder()
-        .status(200)
-        .header("Content-Type", content_type)
-        .body(m3u8)
-        .unwrap();
-    Ok(res)
+        Ok(warp::http::Response::builder()
+            .status(200)
+            .header("Content-Type", content_type)
+            .body(m3u8_content)
+            .unwrap())
+    })
 }
 fn smart_parse_m3u8(content: &str) -> Result<Playlist, Box<dyn std::error::Error>> {
     let cleaned_content = content.trim_start_matches('+').trim();
     let content_bytes = cleaned_content.as_bytes();
 
-    // 首先尝试通用解析
-    match m3u8_rs::parse_playlist_res(content_bytes) {
-        Ok(playlist) => {
-            // 如果通用解析成功，直接返回
-            return Ok(playlist);
-        }
-        Err(_) => {
-            // 通用解析失败，继续尝试特定解析
-        }
+    // Try general parsing first
+    if let Ok(playlist) = m3u8_rs::parse_playlist_res(content_bytes) {
+        return Ok(playlist);
     }
 
-    // 尝试作为Master Playlist解析
+    // Try as Master Playlist
     if let Ok(master_pl) = m3u8_rs::parse_master_playlist_res(content_bytes) {
         return Ok(Playlist::MasterPlaylist(master_pl));
     }
 
-    // 尝试作为Media Playlist解析（包括直播流）
+    // Try as Media Playlist
     if let Ok(media_pl) = m3u8_rs::parse_media_playlist_res(content_bytes) {
         return Ok(Playlist::MediaPlaylist(media_pl));
     }
 
-    // 所有尝试都失败，根据内容长度输出不同的错误信息
-    if content.len() > 500 {
-        Err(format!(
-            "无法解析M3U8内容：既不是有效的Master Playlist也不是Media Playlist。内容长度：{}字符",
+    // All parsing attempts failed
+    Err(if content.len() > 500 {
+        format!(
+            "Failed to parse M3U8: Invalid format. Content length: {} chars",
             content.len()
         )
-        .into())
     } else {
-        Err(format!(
-            "无法解析M3U8内容：既不是有效的Master Playlist也不是Media Playlist。内容：'{}'",
+        format!(
+            "Failed to parse M3U8: Invalid format. Content: '{}'",
             content
         )
-        .into())
     }
+    .into())
 }
-/// process m3u8
-fn process_m3u8(m3u8_path: &String, mut content: String, headers_part: String) -> String {
+/// Helper function to check if a URL is valid
+fn is_valid_url(url: &str) -> bool {
+    if url.is_empty() {
+        return false;
+    }
+    // Check if it's an HTTP/HTTPS URL
+    if url.starts_with("http://") || url.starts_with("https://") {
+        return true;
+    }
+    // Check if it's a relative path (considered valid)
+    if !url.contains("://") {
+        return true;
+    }
+    false
+}
+
+/// Process m3u8 content and rewrite URLs to use proxy
+fn process_m3u8(m3u8_path: &str, content: &str, headers_part: &str) -> String {
     if content.is_empty() {
-        return "".to_string();
+        return String::new();
     }
 
-    match smart_parse_m3u8(&content) {
+    let mut modified_content = content.to_string();
+
+    match smart_parse_m3u8(content) {
         Ok(Playlist::MediaPlaylist(mut pl)) => {
-            dbg!("process_m3u8 media type");
+            #[cfg(debug_assertions)]
+            println!("[M3U8] Processing MediaPlaylist {:?}", pl);
+
+            // Remove invalid encryption keys from segments
+            pl.segments.iter_mut().for_each(|segment| {
+                // 检查并移除 segment.key 中的无效密钥
+                if let Some(ref key) = segment.key {
+                    if let Some(ref uri) = key.uri {
+                        if !is_valid_url(uri) {
+                            #[cfg(debug_assertions)]
+                            println!("[M3U8] Removing invalid key URI from segment.key: {}", uri);
+                            segment.key = None;
+                        }
+                    }
+                }
+
+                // 检查并移除 unknown_tags 中的 X-KEY 标签
+                segment.unknown_tags.retain(|tag| {
+                    if tag.tag == "X-KEY" {
+                        #[cfg(debug_assertions)]
+                        println!("[M3U8] Removing X-KEY from unknown_tags: {:?}", tag);
+                        false // 移除这个标签
+                    } else {
+                        true // 保留其他标签
+                    }
+                });
+            });
+
+            // Rewrite segment URIs to use proxy
             pl.segments.iter_mut().for_each(|segment| {
                 let port = ACTUAL_PORT.load(Ordering::SeqCst);
-                let path_prefix = format!("{}:{}/ts/", HOST, port);
+                let path_prefix = format!("{}:{}/ts/{}/", HOST, port, headers_part);
 
                 if segment.uri.starts_with("http") {
                     segment.uri = format!("{}{}", path_prefix, encode(&segment.uri));
@@ -205,20 +261,23 @@ fn process_m3u8(m3u8_path: &String, mut content: String, headers_part: String) -
                 }
             });
             let mut v: Vec<u8> = Vec::new();
-            if let Ok(_) = pl.write_to(&mut v) {
-                content = String::from_utf8(v).unwrap();
+            if pl.write_to(&mut v).is_ok() {
+                if let Ok(s) = String::from_utf8(v) {
+                    modified_content = s;
+                }
             }
         }
         Ok(Playlist::MasterPlaylist(mut pl)) => {
-            dbg!("process_m3u8 master type");
+            #[cfg(debug_assertions)]
+            println!("[M3U8] Processing MasterPlaylist");
             // println!("{:?}", pl.alternatives);
             let port = ACTUAL_PORT.load(Ordering::SeqCst);
 
             let path_prefix = format!("{}:{}/m3u8/{}/", HOST, port, headers_part);
 
-            // process audio
-            pl.alternatives.iter_mut().for_each(|mut media| {
-                if media.media_type == Audio && media.uri.is_some() {
+            // Process audio
+            pl.alternatives.iter_mut().for_each(|media| {
+                if media.media_type == AlternativeMediaType::Audio && media.uri.is_some() {
                     if media.uri.as_ref().unwrap().starts_with("http") {
                         media.uri = Some(format!(
                             "{}{}",
@@ -235,9 +294,8 @@ fn process_m3u8(m3u8_path: &String, mut content: String, headers_part: String) -
                 }
             });
 
-            // process m3u8 list
-            pl.variants.iter_mut().for_each(|mut variant| {
-                // let path_prefix = format!("{}:{}/m3u8/", HOST, PORT);
+            // Process m3u8 variant list
+            pl.variants.iter_mut().for_each(|variant| {
                 if variant.uri.starts_with("http") {
                     variant.uri = format!("{}{}", path_prefix, encode(&variant.uri));
                 } else {
@@ -249,17 +307,18 @@ fn process_m3u8(m3u8_path: &String, mut content: String, headers_part: String) -
                 }
             });
             let mut v: Vec<u8> = Vec::new();
-            if let Ok(_) = pl.write_to(&mut v) {
-                content = String::from_utf8(v).unwrap();
+            if pl.write_to(&mut v).is_ok() {
+                if let Ok(s) = String::from_utf8(v) {
+                    modified_content = s;
+                }
             }
         }
         Err(e) => {
-            dbg!("process_m3u8 unknown type", &e);
+            eprintln!("[M3U8] Failed to parse playlist: {}", e);
         }
     }
 
-    return content;
-    // return AdRemover::new().run(content);
+    modified_content
 }
 
 fn remove_m3u8_ad(content: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -353,14 +412,26 @@ fn is_filename_jump(prev: &str, current: &str) -> bool {
     }
 }
 
-/// proxy ts
-async fn get_ts_content_async(ts: String) -> Result<impl warp::Reply, Infallible> {
-    // let url = "https://live.v1.mk/api/bestv.php?id=cctv1hd8m/8000000";
-    // let url = "http://39.135.138.58:18890/PLTV/88888888/224/3221225918/index.m3u8";
-    // let url = "http://test.8ne5i.10.vs.rxip.sc96655.com/live/8ne5i_sccn,CCTV-6H265_hls_pull_4000K/280/085/429.ts";
+/// Proxy TS segments
+async fn get_ts_content_async(
+    headers_part: String,
+    url: String,
+    headers: warp::http::HeaderMap,
+) -> Result<impl warp::Reply, Infallible> {
+    #[cfg(debug_assertions)]
+    println!("[TS] Proxying: {} {}", headers_part, url);
+    let mut header_map = parse_encoded_headers(&headers_part);
 
-    let client = get_m3u8_http_client(None, None, None);
-    let result = client.get(&ts).send().await;
+    // Merge request headers (excluding host, referer, origin)
+    let excluded_headers: [reqwest::header::HeaderName; 3] = [
+        reqwest::header::HeaderName::from_static("host"),
+        reqwest::header::HeaderName::from_static("referer"),
+        reqwest::header::HeaderName::from_static("origin"),
+    ];
+    let reqwest_headers = convert_to_reqwest_headers(headers);
+    merge_headers(&mut header_map, reqwest_headers, &excluded_headers);
+    let client = get_m3u8_http_client(&url, &header_map);
+    let result = client.get(&url).send().await;
     if result.is_err() {
         return Ok(warp::http::Response::builder()
             .status(500)
@@ -412,8 +483,8 @@ fn is_hop_header(header_name: &str) -> bool {
 }
 
 fn remove_hop_headers(
-    headers: &warp::http::HeaderMap<HeaderValue>,
-) -> warp::http::HeaderMap<HeaderValue> {
+    headers: &warp::http::HeaderMap<warp::http::HeaderValue>,
+) -> warp::http::HeaderMap<warp::http::HeaderValue> {
     headers
         .iter()
         .filter_map(|(k, v)| {
@@ -434,204 +505,222 @@ async fn handle_proxy_request(
     headers: warp::http::HeaderMap,
     body: warp::hyper::body::Bytes,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let params_clone = params.clone();
-    let method_clone = method.clone();
+    handle_proxy_request_with_redirect(
+        headers_part.to_string(),
+        encoded_url.to_string(),
+        params,
+        method,
+        headers,
+        body,
+        0,
+    )
+    .await
+}
 
-    // 解码URL
-    let url_cow = match urlencoding::decode(encoded_url) {
-        Ok(decoded) => decoded,
-        Err(_) => {
+fn handle_proxy_request_with_redirect(
+    headers_part: String,
+    encoded_url: String,
+    params: Option<String>,
+    method: warp::http::Method,
+    headers: warp::http::HeaderMap,
+    body: warp::hyper::body::Bytes,
+    redirect_count: u8,
+) -> std::pin::Pin<
+    Box<
+        dyn std::future::Future<
+                Output = Result<warp::http::Response<warp::hyper::Body>, warp::Rejection>,
+            > + Send,
+    >,
+> {
+    Box::pin(async move {
+        // Prevent infinite redirects
+        if redirect_count >= MAX_REDIRECT_COUNT {
             let reply = warp::reply::with_status(
-                "Invalid URL encoding".to_string(),
-                warp::http::StatusCode::BAD_REQUEST,
+                "Too many redirects".to_string(),
+                warp::http::StatusCode::LOOP_DETECTED,
             );
             return Ok(reply.into_response());
         }
-    };
 
-    let uri: warp::http::Uri = match url_cow.parse() {
-        Ok(u) => u,
-        Err(_) => {
-            let reply = warp::reply::with_status(
-                "Invalid target URL".to_string(),
-                warp::http::StatusCode::BAD_REQUEST,
-            );
-            return Ok(reply.into_response());
+        // Decode URL
+        let url_cow = match urlencoding::decode(&encoded_url) {
+            Ok(decoded) => decoded,
+            Err(e) => {
+                let reply = warp::reply::with_status(
+                    format!("Invalid URL encoding: {}", e),
+                    warp::http::StatusCode::BAD_REQUEST,
+                );
+                return Ok(reply.into_response());
+            }
+        };
+
+        let uri: warp::http::Uri = match url_cow.parse() {
+            Ok(u) => u,
+            Err(e) => {
+                let reply = warp::reply::with_status(
+                    format!("Invalid target URL: {}", e),
+                    warp::http::StatusCode::BAD_REQUEST,
+                );
+                return Ok(reply.into_response());
+            }
+        };
+
+        let mut url = if let Some(ref p) = params {
+            format!("{}?{}", uri, p)
+        } else {
+            uri.to_string()
+        };
+
+        if url.starts_with("//") {
+            url = format!("http:{}", url);
         }
-    };
 
-    let mut url = if let Some(params) = params {
-        format!("{}?{}", uri.to_string(), params)
-    } else {
-        uri.to_string()
-    };
+        // Parse headers from encoded part
+        let mut header_map = parse_encoded_headers(&headers_part);
 
-    if url.starts_with(r"//") {
-        url = format!("http:{}", url);
-    }
+        // Merge request headers
+        let excluded_headers: [reqwest::header::HeaderName; 3] = [
+            reqwest::header::HeaderName::from_static("host"),
+            reqwest::header::HeaderName::from_static("referer"),
+            reqwest::header::HeaderName::from_static("origin"),
+        ];
+        let reqwest_headers = convert_to_reqwest_headers(headers);
+        merge_headers(&mut header_map, reqwest_headers, &excluded_headers);
 
-    // 解码headers
-    let decoded_headers = urlencoding::decode(headers_part).unwrap_or_default();
-    let mut header_map = reqwest::header::HeaderMap::new();
-    if !decoded_headers.is_empty() {
-        for header_pair in decoded_headers.split(',') {
-            if let Some((name_part, value_part)) = header_pair.split_once(':') {
-                if let Ok(header_name) = name_part.parse::<http::header::HeaderName>() {
-                    if let Ok(header_value) = http::HeaderValue::from_str(value_part) {
-                        header_map.insert(header_name, header_value);
-                    }
+        #[cfg(debug_assertions)]
+        println!(
+            "[Proxy] Request: method={}, url={}, headers={:?}, body_len={}",
+            method,
+            &url,
+            &header_map,
+            body.len()
+        );
+
+        // Create HTTP client
+        let client = get_proxy_http_client(&url, &header_map);
+
+        // Build request
+        let reqwest_request = match client
+            .request(convert_to_reqwest_method(&method), &url)
+            .headers(header_map)
+            .body(body.to_vec())
+            .build()
+        {
+            Ok(req) => req,
+            Err(e) => {
+                eprintln!("[Proxy] Failed to build request: {}", e);
+                let reply = warp::reply::with_status(
+                    format!("Failed to build request: {}", e),
+                    warp::http::StatusCode::INTERNAL_SERVER_ERROR,
+                );
+                return Ok(reply.into_response());
+            }
+        };
+
+        // Execute request with timeout
+        let response = match execute_request_with_timeout(client, reqwest_request).await {
+            Ok(Some(res)) => res,
+            Ok(None) => {
+                eprintln!("[Proxy] Request timeout");
+                let reply = warp::reply::with_status(
+                    "Request timeout".to_string(),
+                    warp::http::StatusCode::REQUEST_TIMEOUT,
+                );
+                return Ok(reply.into_response());
+            }
+            Err(e) => {
+                eprintln!("[Proxy] Request failed: {}", e);
+                let reply = warp::reply::with_status(
+                    format!("Request failed: {}", e),
+                    warp::http::StatusCode::BAD_GATEWAY,
+                );
+                return Ok(reply.into_response());
+            }
+        };
+
+        let response_headers = response.headers().clone();
+        let response_status = warp::http::StatusCode::from_u16(response.status().as_u16())
+            .unwrap_or(warp::http::StatusCode::INTERNAL_SERVER_ERROR);
+
+        // Handle redirects
+        if response_status.is_redirection() {
+            if let Some(location) = response_headers.get(reqwest::header::LOCATION) {
+                if let Ok(redirect_url) = location.to_str() {
+                    return handle_proxy_request_with_redirect(
+                        headers_part,
+                        redirect_url.to_string(),
+                        params,
+                        method,
+                        warp::http::HeaderMap::new(),
+                        warp::hyper::body::Bytes::new(),
+                        redirect_count + 1,
+                    )
+                    .await;
                 }
             }
         }
-    }
 
-    let reqwest_headers = convert_to_reqwest_headers(headers.clone());
-    let excluded_headers: [reqwest::header::HeaderName; 3] = [
-        reqwest::header::HeaderName::from_static("host"),
-        reqwest::header::HeaderName::from_static("referer"),
-        reqwest::header::HeaderName::from_static("origin"),
-    ];
-    // 遍历源 headers
-    for (name, value) in reqwest_headers.iter() {
-        // 检查头部是否不在排除列表中且不在目标 header_map 中
-        if !excluded_headers.contains(&name) && !header_map.contains_key(name) {
-            // 由于 HeaderValue 是不可变的，我们可以直接克隆它
-            header_map.insert(name.clone(), value.clone());
-        }
-    }
+        #[cfg(debug_assertions)]
+        println!(
+            "[Proxy] Response: status={}, streaming body",
+            response_status
+        );
 
-    dbg!(
-        "handle_proxy_request send request:",
-        url.clone(),
-        header_map.clone(),
-        body.len(),
-    );
+        // Stream response body
+        let response_body = response.bytes_stream();
 
-    // 创建HTTP客户端（配置超时）
-    let client = get_proxy_http_client(Some(url.clone()), Some(header_map.clone()), None);
+        // Create streaming response
+        let body = warp::hyper::Body::wrap_stream(response_body);
+        let mut reply = warp::http::Response::new(body);
+        *reply.status_mut() = response_status;
+        *reply.headers_mut() = remove_hop_headers(&convert_to_wrap_headers(response_headers));
 
-    // 构建请求
-    let reqwest_request = match client
-        .request(convert_to_reqwest_method(method), url.clone())
-        .headers(header_map)
-        .body(body)
-        .build()
-    {
-        Ok(req) => req,
-        Err(e) => {
-            let reply = warp::reply::with_status(
-                format!("Failed to build request: {}", e),
-                warp::http::StatusCode::INTERNAL_SERVER_ERROR,
-            );
-            return Ok(reply.into_response());
-        }
-    };
-
-    // 执行请求并处理可能的取消
-    let response = match execute_request_with_cancel(client, reqwest_request).await {
-        Ok(Some(res)) => res,
-        Ok(None) => {
-            // 请求被取消
-            let reply = warp::reply::with_status(
-                "Request cancelled".to_string(),
-                warp::http::StatusCode::REQUEST_TIMEOUT,
-            );
-            return Ok(reply.into_response());
-        }
-        Err(e) => {
-            let reply = warp::reply::with_status(
-                format!("Request failed: {}", e),
-                warp::http::StatusCode::BAD_GATEWAY,
-            );
-            return Ok(reply.into_response());
-        }
-    };
-
-    // 转换响应状态码
-    let response_headers = response.headers().clone();
-    let response_status = warp::http::StatusCode::from_u16(response.status().as_u16())
-        .unwrap_or(warp::http::StatusCode::INTERNAL_SERVER_ERROR);
-
-    // 处理重定向
-    if response_status.is_redirection() {
-        if let Some(location) = response_headers.get(reqwest::header::LOCATION) {
-            if let Ok(redirect_url) = location.to_str() {
-                // 避免无限重定向，可以添加重定向次数限制
-                return Box::pin(handle_proxy_request(
-                    headers_part,
-                    redirect_url,
-                    params_clone,
-                    method_clone,
-                    headers,
-                    warp::hyper::body::Bytes::new(), // 重定向通常不需要body
-                ))
-                .await;
-            }
-        }
-    }
-
-    // 流式传输响应体
-    let response_body = response.bytes_stream();
-
-    dbg!(
-        "handle_proxy_request response:",
-        response_status,
-        response_headers.clone(),
-        "streaming body"
-    );
-
-    // 创建流式响应
-    let body = warp::hyper::Body::wrap_stream(response_body);
-    let mut reply = warp::http::Response::new(body);
-    *reply.status_mut() = response_status;
-    *reply.headers_mut() = remove_hop_headers(&convert_to_wrap_headers(response_headers));
-
-    Ok(reply)
+        Ok(reply)
+    })
 }
 
-/// 执行请求并支持取消
-async fn execute_request_with_cancel(
+/// Execute request with timeout support
+async fn execute_request_with_timeout(
     client: reqwest::Client,
     request: reqwest::Request,
 ) -> Result<Option<reqwest::Response>, reqwest::Error> {
     tokio::select! {
-        result = client.execute(request) => {
-            match result {
-                Ok(response) => Ok(Some(response)),
-                Err(e) => Err(e),
-            }
-        }
-        _ = tokio::time::sleep(Duration::from_secs(60)) => {
-            // 超时或客户端断开连接时会触发
-            Ok(None)
-        }
+        result = client.execute(request) => result.map(Some),
+        _ = tokio::time::sleep(Duration::from_secs(REQUEST_TIMEOUT_SECS)) => Ok(None),
     }
 }
 
-// 辅助函数：转换headers
+// Helper: Convert reqwest headers to warp headers
 fn convert_to_wrap_headers(headers: reqwest::header::HeaderMap) -> warp::http::HeaderMap {
     let mut warp_headers = warp::http::HeaderMap::new();
     for (name, value) in headers.iter() {
-        let name = WarpHeaderName::from_bytes(name.as_str().as_bytes()).unwrap();
-        let value = HeaderValue::from_bytes(value.as_bytes()).unwrap();
-        warp_headers.insert(name, value);
+        if let (Ok(warp_name), Ok(warp_value)) = (
+            WarpHeaderName::from_bytes(name.as_str().as_bytes()),
+            warp::http::HeaderValue::from_bytes(value.as_bytes()),
+        ) {
+            warp_headers.insert(warp_name, warp_value);
+        }
     }
     warp_headers
 }
 
+// Helper: Convert warp headers to reqwest headers
 fn convert_to_reqwest_headers(headers: warp::http::HeaderMap) -> reqwest::header::HeaderMap {
     let mut reqwest_headers = reqwest::header::HeaderMap::new();
     for (name, value) in headers.iter() {
-        let name = reqwest::header::HeaderName::from_bytes(name.as_str().as_bytes()).unwrap();
-        let value = reqwest::header::HeaderValue::from_bytes(value.as_bytes()).unwrap();
-        reqwest_headers.insert(name, value);
+        if let (Ok(req_name), Ok(req_value)) = (
+            reqwest::header::HeaderName::from_bytes(name.as_str().as_bytes()),
+            reqwest::header::HeaderValue::from_bytes(value.as_bytes()),
+        ) {
+            reqwest_headers.insert(req_name, req_value);
+        }
     }
     reqwest_headers
 }
 
-// 辅助函数：转换HTTP方法
-fn convert_to_reqwest_method(method: warp::http::Method) -> reqwest::Method {
-    match method {
+// Helper: Convert warp HTTP method to reqwest method
+fn convert_to_reqwest_method(method: &warp::http::Method) -> reqwest::Method {
+    match *method {
         warp::http::Method::GET => reqwest::Method::GET,
         warp::http::Method::POST => reqwest::Method::POST,
         warp::http::Method::PUT => reqwest::Method::PUT,
@@ -639,27 +728,23 @@ fn convert_to_reqwest_method(method: warp::http::Method) -> reqwest::Method {
         warp::http::Method::PATCH => reqwest::Method::PATCH,
         warp::http::Method::HEAD => reqwest::Method::HEAD,
         warp::http::Method::OPTIONS => reqwest::Method::OPTIONS,
-        _ => reqwest::Method::GET, // 默认回退
+        _ => reqwest::Method::GET,
     }
 }
 
-fn get_m3u8_http_client(
-    url: Option<String>,
-    headers: Option<reqwest::header::HeaderMap>,
-    redirect: Option<reqwest::redirect::Policy>,
-) -> reqwest::Client {
-    let mut headers = headers.unwrap_or_else(|| reqwest::header::HeaderMap::new());
+fn get_m3u8_http_client(_url: &str, headers: &reqwest::header::HeaderMap) -> reqwest::Client {
+    let mut headers = headers.clone();
+
+    // Set default User-Agent for M3U8 requests (PotPlayer compatible)
     if !headers.contains_key(reqwest::header::USER_AGENT) {
-        let ua = if let Some(url_str) = url {
-            "(Windows NT 10.0; WOW64) PotPlayer/25.06.25"
-        } else {
-            "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko"
-        };
         headers.insert(
             reqwest::header::USER_AGENT,
-            reqwest::header::HeaderValue::from_static(ua),
+            reqwest::header::HeaderValue::from_static(
+                "(Windows NT 10.0; WOW64) PotPlayer/25.06.25",
+            ),
         );
     }
+
     if !headers.contains_key(reqwest::header::ACCEPT) {
         headers.insert(
             reqwest::header::ACCEPT,
@@ -667,55 +752,75 @@ fn get_m3u8_http_client(
         );
     }
 
-    return reqwest::Client::builder()
+    reqwest::Client::builder()
         .default_headers(headers)
-        .redirect(redirect.unwrap_or(reqwest::redirect::Policy::none()))
-        .connect_timeout(Duration::from_secs(15))
+        .redirect(reqwest::redirect::Policy::none())
+        .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_SECS))
         .http1_title_case_headers()
         .build()
-        .unwrap();
+        .expect("Failed to build M3U8 HTTP client")
 }
 
-fn get_proxy_http_client(
-    url: Option<String>,
-    headers: Option<reqwest::header::HeaderMap>,
-    redirect: Option<reqwest::redirect::Policy>,
-) -> reqwest::Client {
-    let mut headers = headers.unwrap_or_else(|| reqwest::header::HeaderMap::new());
+fn get_proxy_http_client(_url: &str, headers: &reqwest::header::HeaderMap) -> reqwest::Client {
+    let mut headers = headers.clone();
+
+    // Set default headers for proxy requests (Chrome compatible)
     if !headers.contains_key(reqwest::header::USER_AGENT) {
         headers.insert(
             reqwest::header::USER_AGENT,
-            reqwest::header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"),
+            reqwest::header::HeaderValue::from_static(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+            ),
         );
     }
+
     if !headers.contains_key(reqwest::header::ACCEPT) {
         headers.insert(
             reqwest::header::ACCEPT,
             reqwest::header::HeaderValue::from_static("*/*"),
         );
     }
+
     if !headers.contains_key(reqwest::header::ACCEPT_ENCODING) {
         headers.insert(
             reqwest::header::ACCEPT_ENCODING,
             reqwest::header::HeaderValue::from_static("gzip, deflate, br, zstd"),
         );
     }
+
     if !headers.contains_key(reqwest::header::ACCEPT_LANGUAGE) {
         headers.insert(
             reqwest::header::ACCEPT_LANGUAGE,
             reqwest::header::HeaderValue::from_static("zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"),
         );
     }
+
     headers.insert(
         reqwest::header::UPGRADE_INSECURE_REQUESTS,
         reqwest::header::HeaderValue::from_static("1"),
     );
-    return reqwest::Client::builder()
+
+    reqwest::Client::builder()
         .default_headers(headers)
-        .redirect(redirect.unwrap_or(reqwest::redirect::Policy::none()))
-        .connect_timeout(Duration::from_secs(15))
+        .redirect(reqwest::redirect::Policy::none())
+        .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_SECS))
         .build()
-        .unwrap();
+        .expect("Failed to build proxy HTTP client")
+}
+
+// Helper: Encode headers to URL-safe string
+fn encode_headers_to_string(headers: &HashMap<String, String>) -> String {
+    if headers.is_empty() {
+        return encode("_").into_owned();
+    }
+
+    let headers_str = headers
+        .iter()
+        .map(|(name, value)| format!("{}:{}", name, value))
+        .collect::<Vec<_>>()
+        .join(",");
+
+    encode(&headers_str).into_owned()
 }
 
 #[tauri::command]
@@ -724,39 +829,19 @@ pub(crate) async fn get_m3u8_url(
     headers: HashMap<String, String>,
 ) -> Result<String, String> {
     let port = ACTUAL_PORT.load(Ordering::SeqCst);
+    let encoded_url = encode(&original_url);
+    let headers_part = encode_headers_to_string(&headers);
 
-    let encoded_url = encode(original_url.as_str());
-    dbg!("get_m3u8_url", &original_url, &encoded_url);
-
-    let mut headers_part = if !headers.is_empty() {
-        let mut headers_str = String::new();
-        for (name, value) in headers.iter() {
-            headers_str.push_str(&format!("{}:{},", name.as_str(), value));
-        }
-        // 移除最后的逗号
-        if !headers_str.is_empty() {
-            headers_str.pop();
-        }
-        encode(&headers_str).into_owned()
-    } else {
-        encode("").into_owned()
-    };
-    if headers_part.is_empty() {
-        headers_part = encode("_").into_owned();
-    }
+    #[cfg(debug_assertions)]
+    println!(
+        "[M3U8 URL] original={}, encoded={}",
+        &original_url, &encoded_url
+    );
 
     Ok(format!(
         "{}:{}/m3u8/{}/{}",
         HOST, port, headers_part, encoded_url
     ))
-
-    // Return proxy URL with the original URL as path
-    // Ok(format!(
-    //     "{}:{}/m3u8/{}",
-    //     HOST,
-    //     port,
-    //     encode(original_url.as_str())
-    // ))
 }
 
 #[tauri::command]
@@ -765,26 +850,14 @@ pub(crate) fn get_proxy_url(
     headers: HashMap<String, String>,
 ) -> Result<String, String> {
     let port = ACTUAL_PORT.load(Ordering::SeqCst);
+    let encoded_url = encode(&original_url);
+    let headers_part = encode_headers_to_string(&headers);
 
-    let encoded_url = encode(original_url.as_str());
-    dbg!("get_proxy_url", &original_url, &encoded_url);
-
-    let mut headers_part = if !headers.is_empty() {
-        let mut headers_str = String::new();
-        for (name, value) in headers.iter() {
-            headers_str.push_str(&format!("{}:{},", name.as_str(), value));
-        }
-        // 移除最后的逗号
-        if !headers_str.is_empty() {
-            headers_str.pop();
-        }
-        encode(&headers_str).into_owned()
-    } else {
-        encode("").into_owned()
-    };
-    if headers_part.is_empty() {
-        headers_part = encode("_").into_owned();
-    }
+    #[cfg(debug_assertions)]
+    println!(
+        "[Proxy URL] original={}, encoded={}",
+        &original_url, &encoded_url
+    );
 
     Ok(format!(
         "{}:{}/proxy/{}/{}",
@@ -793,34 +866,52 @@ pub(crate) fn get_proxy_url(
 }
 
 fn find_available_port(start_port: u16) -> Option<u16> {
-    (start_port..=start_port + 100).find(|port| TcpListener::bind(("127.0.0.1", *port)).is_ok())
+    (start_port..=start_port + PORT_SCAN_RANGE)
+        .find(|port| TcpListener::bind(("127.0.0.1", *port)).is_ok())
 }
 
 pub(crate) fn start_proxy_server() -> std::io::Result<()> {
-    let port = find_available_port(1430).ok_or_else(|| {
-        std::io::Error::new(std::io::ErrorKind::AddrInUse, "No available port found")
+    let port = find_available_port(DEFAULT_START_PORT).ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::AddrInUse,
+            format!(
+                "No available port found in range {}-{}",
+                DEFAULT_START_PORT,
+                DEFAULT_START_PORT + PORT_SCAN_RANGE
+            ),
+        )
     })?;
 
     ACTUAL_PORT.store(port, Ordering::SeqCst);
+
+    println!("[Proxy Server] Starting on port {}", port);
 
     let cors = warp::cors()
         .allow_any_origin()
         .allow_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
         .allow_headers(vec!["Content-Type"]);
+
+    // M3U8 proxy route
     let m3u8_proxy_router = warp::path!("m3u8" / String / String)
         .and(warp::header::headers_cloned())
         .and_then(
             |headers_part: String, url: String, headers: warp::http::HeaderMap| async move {
-                let decoded = decode(url.as_str()).expect("UTF-8");
-                get_m3u8_content_async(headers_part.to_string(), decoded.to_string(), headers).await
+                let decoded = decode(&url).expect("UTF-8");
+                get_m3u8_content_async(headers_part, decoded.to_string(), headers).await
             },
         );
-    // proxy ts
-    let ts_proxy_router = warp::path!("ts" / String).and_then(move |url: String| {
-        let decoded = decode(url.as_str()).expect("UTF-8");
-        get_ts_content_async(decoded.to_string())
-    });
 
+    // TS proxy route
+    let ts_proxy_router = warp::path!("ts" / String / String)
+        .and(warp::header::headers_cloned())
+        .and_then(
+            |headers_part: String, url: String, headers: warp::http::HeaderMap| async move {
+                let decoded = decode(&url).expect("UTF-8");
+                get_ts_content_async(headers_part, decoded.to_string(), headers).await
+            },
+        );
+
+    // General proxy route
     let proxy = warp::path!("proxy" / String / String)
         .and(
             warp::query::raw()
@@ -842,8 +933,6 @@ pub(crate) fn start_proxy_server() -> std::io::Result<()> {
                     .await
             },
         );
-
-    // let route = warp::any().map(|| warp::redirect(Uri::from_static("https://120.77.38.213:9443/flv/2008180000000304/ZjE4ejhGVUU0QzJ0Y3M4QixhNDMzNmQyOWQwMTBlOTk2.ts?edge=on")));
 
     let routers = m3u8_proxy_router.or(ts_proxy_router).or(proxy).with(cors);
 

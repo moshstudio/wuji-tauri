@@ -49,7 +49,7 @@ async function load(pageNo?: number, type?: string) {
   }
   if (!findPage('list')?.passed) {
     showDialog({
-      message: '请先执行通过《推荐书籍》',
+      message: '请先执行通过《推荐漫画》',
       showCancelButton: false,
     });
     return;

@@ -7,11 +7,10 @@ import {
   VideoEpisode,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import Player from 'xgplayer';
 import { useDisplayStore } from '@/store';
-import { useRect } from '@vant/use';
 import { useResizeObserver, useWindowSize } from '@vueuse/core';
 
 const showPlaylist = defineModel<boolean>('showPlaylist', {
@@ -85,9 +84,23 @@ useResizeObserver(videoListElement, (entries) => {
 
     <div
       ref="videoListElement"
-      class="video-list flex h-full w-full cursor-auto flex-col overflow-hidden rounded-l-lg bg-[var(--van-background-2)] text-[var(--van-text-color)]"
+      class="video-list flex h-full w-full cursor-auto flex-col overflow-hidden bg-[var(--van-background-2)] text-[var(--van-text-color)]"
+      :class="displayStore.fullScreenMode ? 'rounded-l-lg' : 'rounded-t-lg'"
     >
       <div class="flex flex-shrink-0 items-center justify-end gap-2">
+        <van-icon
+          :name="inShelf ? 'like' : 'like-o'"
+          :color="inShelf ? 'red' : ''"
+          size="22"
+          class="van-haptics-feedback p-2"
+          @click="
+            () => {
+              if (videoItem) {
+                addToShelf(videoItem);
+              }
+            }
+          "
+        />
         <van-icon
           name="search"
           size="22"

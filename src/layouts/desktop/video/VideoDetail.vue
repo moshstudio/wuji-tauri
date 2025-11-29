@@ -55,7 +55,15 @@ const activeTabName = ref('');
 <template>
   <div
     class="xgplayer-container grid h-full w-full overflow-hidden bg-black transition-all duration-300"
-    :class="showPlaylist ? 'grid-cols-[0.65fr_0.35fr]' : 'grid-cols-[1fr_0fr]'"
+    :class="
+      displayStore.fullScreenMode
+        ? showPlaylist
+          ? 'grid-cols-[0.75fr_0.25fr]'
+          : 'grid-cols-[1fr_0fr]'
+        : showPlaylist
+          ? 'grid-cols-[0.65fr_0.35fr]'
+          : 'grid-cols-[1fr_0fr]'
+    "
   >
     <slot></slot>
 
@@ -63,6 +71,19 @@ const activeTabName = ref('');
       class="video-list flex h-full w-full cursor-auto flex-col overflow-hidden rounded-l-lg bg-[var(--van-background-2)] text-[var(--van-text-color)]"
     >
       <div class="flex flex-shrink-0 items-center justify-end gap-2">
+        <van-icon
+          :name="inShelf ? 'like' : 'like-o'"
+          :color="inShelf ? 'red' : ''"
+          size="22"
+          class="van-haptics-feedback p-2"
+          @click="
+            () => {
+              if (videoItem) {
+                addToShelf(videoItem);
+              }
+            }
+          "
+        />
         <van-icon
           name="search"
           size="22"

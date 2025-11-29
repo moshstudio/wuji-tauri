@@ -47,21 +47,21 @@ async function load() {
   }
   if (!findPage('list')?.passed) {
     showDialog({
-      message: '请先执行通过《推荐书籍》',
+      message: '请先执行通过《推荐漫画》',
       showCancelButton: false,
     });
     return;
   }
   if (!findPage('searchList')?.passed) {
     showDialog({
-      message: '请先执行通过《搜索书籍》',
+      message: '请先执行通过《搜索漫画》',
       showCancelButton: false,
     });
     return;
   }
   if (!findPage('list')?.result && !findPage('searchList')?.result) {
     showDialog({
-      message: '请先保证《推荐书籍》或《搜索书籍》执行不为空',
+      message: '请先保证《推荐漫画》或《搜索漫画》执行不为空',
       showCancelButton: false,
     });
     return;

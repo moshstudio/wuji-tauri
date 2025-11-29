@@ -39,9 +39,15 @@ import 'xgplayer/dist/index.min.css';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 import { onMountedOrActivated } from '@vant/use';
 import BackButtonPlugin from '@/components/media/plugins/backButton';
+import FavoriteButtonPlugin from '@/components/media/plugins/favoriteButton';
+import SpacerPlugin from '@/components/media/plugins/spacer';
 import PlaylistButtonPlugin from '@/components/media/plugins/playlistButton';
+import LeftSpeedUpPlugin from '@/components/media/plugins/leftSpeedUp';
+import RightSpeedUpPlugin from '@/components/media/plugins/rightSpeedUp';
 import Fullscreen from 'xgplayer/es/plugins/fullscreen';
 import VideoJsPlugin from '@/components/media/plugins/videoJs';
+import VideoNamePlugin from '@/components/media/plugins/videoName';
+import { router } from '@/router';
 
 const { videoId, sourceId } = defineProps<{
   videoId: string;
@@ -165,12 +171,10 @@ async function play(resource: VideoResource, episode: VideoEpisode) {
 }
 
 const inShelf = computed(() => {
-  for (const shelf of videoShelf.value) {
-    if (shelf.videos.some((video) => video.video.id === videoId)) {
-      return true;
-    }
-  }
-  return false;
+  const result = videoShelf.value.some((shelf) =>
+    shelf.videos.some((video) => video.video.id === videoId),
+  );
+  return result;
 });
 
 const showAddShelfSheet = ref(false);
@@ -189,6 +193,14 @@ const addShelfActions = computed(() => {
 
 const showSearchDialog = ref(false);
 const searchText = ref('');
+
+const onAddToShelf = () => {
+  if (inShelf.value) {
+    router.push({ name: 'VideoShelf' });
+  } else {
+    showAddShelfSheet.value = true;
+  }
+};
 
 const flatVideoItems = computed(() => {
   return videoItem.value?.resources
@@ -310,11 +322,22 @@ const createPlayer = async (video?: VideoUrlMap) => {
       crossOrigin: 'anonymous',
     },
   });
+  // 注册左右长按倍速插件
+  videoPlayer.value.registerPlugin(LeftSpeedUpPlugin);
+  videoPlayer.value.registerPlugin(RightSpeedUpPlugin);
   videoPlayer.value.registerPlugin(BackButtonPlugin, {
     onClick: () => {
       backStore.back(true);
     },
   });
+  const videoName = `${item.title || ''} - ${episode.title || ''}`;
+  videoPlayer.value.registerPlugin(VideoNamePlugin, {
+    videoName,
+  });
+  // videoPlayer.value.registerPlugin(FavoriteButtonPlugin, {
+  //   isFavorited: inShelf.value,
+  //   onClick: onAddToShelf,
+  // });
   videoPlayer.value.registerPlugin(PlaylistButtonPlugin, {
     onClick: () => {
       showPlaylist.value = !showPlaylist.value;
@@ -373,12 +396,26 @@ watch(videoSrc, (newVideo) => {
       return;
     }
     console.log('load video src:', newVideo);
-
     createPlayer(newVideo);
   } else {
     videoPlayer.value?.resetState();
   }
 });
+
+watch(
+  inShelf,
+  (newInShelf) => {
+    const favoritePlugin = videoPlayer.value?.getPlugin(
+      'favoriteButtonPlugin',
+    ) as FavoriteButtonPlugin | undefined;
+    if (favoritePlugin) {
+      favoritePlugin.setFavorited(newInShelf);
+    } else {
+      console.warn('[VideoDetail] 未找到 favoritePlugin');
+    }
+  },
+  { flush: 'post' },
+);
 
 let savedVideoSrc: VideoUrlMap | undefined;
 
@@ -466,7 +503,7 @@ onUnmounted(() => {
         :video-src="videoSrc"
         :play="play"
         :in-shelf="inShelf"
-        :add-to-shelf="() => (showAddShelfSheet = true)"
+        :add-to-shelf="onAddToShelf"
         :show-search="() => (showSearchDialog = true)"
       >
         <div
@@ -494,7 +531,7 @@ onUnmounted(() => {
         :video-src="videoSrc"
         :play="play"
         :in-shelf="inShelf"
-        :add-to-shelf="() => (showAddShelfSheet = true)"
+        :add-to-shelf="onAddToShelf"
         :show-search="() => (showSearchDialog = true)"
       >
         <div
@@ -520,3 +557,9 @@ onUnmounted(() => {
 </template>
 
 <style scoped lang="less"></style>
+
+<style lang="less">
+.xg-top-bar {
+  width: 100% !important;
+}
+</style>
