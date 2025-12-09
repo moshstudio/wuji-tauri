@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import type { BookItem } from '@wuji-tauri/source-extension';
 import { Icon } from '@iconify/vue';
-import _ from 'lodash';
+import { castArray } from 'lodash';
+import { computed } from 'vue';
 import LoadImage from '../../LoadImage.vue';
 
-defineProps<{
+const props = defineProps<{
   book: BookItem;
   click: (item: BookItem) => void;
 }>();
+
+const tagsText = computed(() => {
+  const tags = castArray(props.book.tags);
+  return tags.length ? `${tags.join(',')} ` : '';
+});
 </script>
 
 <template>
@@ -43,11 +49,7 @@ defineProps<{
       </p>
       <p class="truncate text-xs">
         {{ book.author ? `${book.author} ` : '佚名' }}
-        {{
-          _.castArray(book.tags).length
-            ? `${_.castArray(book.tags)?.join(',')} `
-            : ''
-        }}
+        {{ tagsText }}
         {{ book.status || '' }}
       </p>
       <p class="line-clamp-3 text-xs">

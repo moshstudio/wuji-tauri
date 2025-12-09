@@ -93,8 +93,8 @@ watch(
         />
       </div>
 
-      <ResponsiveGrid2>
-        <van-loading v-if="item.list.length === 0" class="p-2" />
+      <van-loading v-if="item.list.length === 0" class="p-2" size="24px" />
+      <ResponsiveGrid2 v-else>
         <template
           v-for="(book, index) in item.list"
           :key="source.item.id + index.toString() + book.id"

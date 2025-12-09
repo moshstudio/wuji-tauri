@@ -1,7 +1,7 @@
 {
-  "version": "0.1.19",
-  "notes": "新增阅读主题等功能，微调UI",
-  "pub_date": "2025-11-06T08:00:00+08:00",
+  "version": "0.1.20",
+  "notes": "优化视频播放组件",
+  "pub_date": "2025-11-30T08:00:00+08:00",
   "platforms": {
     "cloudpan": {
       "url": "https://wwtn.lanzout.com/s/WUJI"

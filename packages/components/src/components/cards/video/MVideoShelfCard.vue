@@ -5,7 +5,7 @@ import type {
   VideoSource,
 } from '@wuji-tauri/source-extension';
 import { Icon } from '@iconify/vue';
-import _ from 'lodash';
+import { castArray } from 'lodash';
 import { computed } from 'vue';
 import LoadImage from '../../LoadImage.vue';
 
@@ -39,6 +39,10 @@ const lastWatchEpisode = computed((): VideoEpisode | undefined => {
     ?.episodes?.find((episode) => {
       return episode.id === props.video.video.lastWatchEpisodeId;
     });
+});
+
+const tagsText = computed(() => {
+  return castArray(props.video.video.tags).join(',');
 });
 </script>
 
@@ -79,7 +83,7 @@ const lastWatchEpisode = computed((): VideoEpisode | undefined => {
       v-if="video.video.tags"
       class="absolute bottom-6 left-0 max-w-full truncate rounded bg-gray-800/60 p-1 text-xs text-gray-200"
     >
-      {{ _.castArray(video.video.tags).join(',') }}
+      {{ tagsText }}
     </p>
     <p
       v-if="source && selectMode"

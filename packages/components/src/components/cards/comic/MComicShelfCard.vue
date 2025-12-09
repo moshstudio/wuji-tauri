@@ -5,11 +5,11 @@ import type {
   ComicSource,
 } from '@wuji-tauri/source-extension';
 import { Icon } from '@iconify/vue';
-import _ from 'lodash';
-import { ref } from 'vue';
+import { last } from 'lodash';
+import { computed, ref } from 'vue';
 import MoreOptionsSheet from '../../MoreOptionsSheet.vue';
 
-defineProps<{
+const props = defineProps<{
   comic: ComicItemInShelf;
   shelf: ComicShelf;
   source?: ComicSource;
@@ -19,6 +19,10 @@ defineProps<{
 }>();
 
 const showMoreOptions = ref(false);
+
+const latestChapterTitle = computed(() => {
+  return last(props.comic.comic.chapters)?.title;
+});
 </script>
 
 <template>
@@ -65,7 +69,7 @@ const showMoreOptions = ref(false);
       </p>
       <p>
         <span class="line-clamp-1 text-xs">
-          {{ _.last(comic.comic.chapters)?.title }}
+          {{ latestChapterTitle }}
         </span>
       </p>
     </div>

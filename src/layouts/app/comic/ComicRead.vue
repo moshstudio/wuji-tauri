@@ -145,6 +145,7 @@ onDeactivated(() => {
             :headers="chapterContent?.photosHeaders"
             :compress="false"
             fit="contain"
+            :lazy-load="true"
           />
         </div>
       </div>

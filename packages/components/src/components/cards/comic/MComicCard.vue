@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import type { ComicItem } from '@wuji-tauri/source-extension';
 import { Icon } from '@iconify/vue';
-import _ from 'lodash';
+import { castArray } from 'lodash';
+import { computed } from 'vue';
 import LoadImage from '../../LoadImage.vue';
 
-defineProps<{
+const props = defineProps<{
   comic: ComicItem;
   click: (item: ComicItem) => void;
 }>();
+
+const tagsText = computed(() => {
+  const tags = castArray(props.comic.tags);
+  return tags.length ? `${tags.join(',')} ` : '';
+});
 </script>
 
 <template>
@@ -37,11 +43,7 @@ defineProps<{
       </p>
       <p class="truncate text-xs">
         {{ comic.author ? `${comic.author} ` : '佚名' }}
-        {{
-          _.castArray(comic.tags).length
-            ? `${_.castArray(comic.tags)?.join(',')} `
-            : ''
-        }}
+        {{ tagsText }}
         {{ comic.status || '' }}
       </p>
       <p class="line-clamp-3 text-xs">

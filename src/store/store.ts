@@ -85,6 +85,7 @@ import { createKVStore } from './utils';
 import { useVideoShelfStore } from './videoShelfStore';
 import { useSourceCreateStore } from './sourceCreateStore';
 import { isMembershipOrderValid } from '@/types/user';
+import { userInfo } from 'node:os';
 
 export const useStore = defineStore('store', () => {
   const hotItems = ref<HotItem[]>([]); // 热搜榜
@@ -1004,10 +1005,10 @@ export const useStore = defineStore('store', () => {
     marketSource: MarketSource,
   ): Promise<boolean> => {
     let needPermission = true;
+    const { userInfo } = storeToRefs(serverStore);
     if (marketSource.permissions?.includes(MarketSourcePermission.NoLogin)) {
       needPermission = false;
     } else {
-      const { userInfo } = storeToRefs(serverStore);
       if (
         marketSource.permissions?.includes(MarketSourcePermission.Login) &&
         userInfo.value
@@ -1028,7 +1029,21 @@ export const useStore = defineStore('store', () => {
       }
     }
     if (needPermission) {
-      showToast('权限不足');
+      if (!userInfo.value) {
+        showConfirmDialog({
+          title: '请登录',
+          message: '请登录以访问此内容',
+        }).then(() => {
+          router.push({ name: 'Login' });
+        });
+      } else {
+        showConfirmDialog({
+          title: '权限不足',
+          message: '请升级会员以访问此内容',
+        }).then(() => {
+          router.push({ name: 'VipDetail' });
+        });
+      }
       return false;
     }
     const t = showLoadingToast('导入中');
@@ -1370,7 +1385,7 @@ export const useStore = defineStore('store', () => {
         console.log('暂未实现 removeFromSource', sourceType);
     }
   };
-  const loadSubscribeSources = (load?: boolean, loadDelay = 3000) => {
+  const loadSubscribeSources = (load?: boolean, loadDelay = 2000) => {
     load ??= false;
     const added: string[] = [];
 
@@ -1579,50 +1594,45 @@ export const useStore = defineStore('store', () => {
     showToast('缓存已清空');
   };
 
-  const { subscribeSources } = storeToRefs(subscribeSourceStore);
-  // 初始化操作
-  watch(
-    subscribeSources,
-    (subscribeSources) => {
-      if (subscribeSources.length === 0) {
-        showConfirmDialog({
-          message: '需要添加订阅源才能使用, \n是否立即导入默认订阅源?',
-        }).then(async (action) => {
-          if (action === 'confirm') {
-            const source = await serverStore.getDefaultMarketSource();
-            if (source) {
-              const success = await addMarketSource(source);
-              if (!success) {
-                showToast('请手动在 订阅源市场 导入');
-                return;
-              } else {
-                showSuccessToast('默认源已导入');
-              }
+  const checkAfterSubscribeLoaded = async () => {
+    const { subscribeSources } = storeToRefs(subscribeSourceStore);
+    if (subscribeSources.value.length === 0) {
+      showConfirmDialog({
+        message: '需要添加订阅源才能使用, \n是否立即导入默认订阅源?',
+      }).then(async (action) => {
+        if (action === 'confirm') {
+          const source = await serverStore.getDefaultMarketSource();
+          if (source) {
+            const success = await addMarketSource(source);
+            if (!success) {
+              showToast('请手动在 订阅源市场 导入');
+              return;
             } else {
-              await sleep(2000);
+              showSuccessToast('默认源已导入');
             }
-            showConfirmDialog({
-              title: '提示',
-              message: '您可以在 订阅源市场 添加更多订阅源',
-              confirmButtonText: '去添加',
-            }).then((action) => {
-              if (action === 'confirm') {
-                router.push({ name: 'SourceMarket' });
-              }
-            });
+          } else {
+            await sleep(2000);
           }
-        });
-      }
-      // keepTest.value = true;
-      // addTestSource(new TestSongExtension(), SourceType.Song);
-      // addTestSource(new TestBookExtension(), SourceType.Book);
-      // addTestSource(new TestPhotoExtension(), SourceType.Photo);
-      // addTestSource(new TestComicExtension(), SourceType.Comic);
-      // addTestSource(new TestVideoExtension(), SourceType.Video);
-      loadSubscribeSources(true);
-    },
-    { once: true },
-  );
+          showConfirmDialog({
+            title: '提示',
+            message: '您可以在 订阅源市场 添加更多订阅源',
+            confirmButtonText: '去添加',
+          }).then((action) => {
+            if (action === 'confirm') {
+              router.push({ name: 'SourceMarket' });
+            }
+          });
+        }
+      });
+    }
+    // keepTest.value = true;
+    // addTestSource(new TestSongExtension(), SourceType.Song);
+    // addTestSource(new TestBookExtension(), SourceType.Book);
+    // addTestSource(new TestPhotoExtension(), SourceType.Photo);
+    // addTestSource(new TestComicExtension(), SourceType.Comic);
+    // addTestSource(new TestVideoExtension(), SourceType.Video);
+    loadSubscribeSources(true);
+  };
 
   return {
     sourceClasses,
@@ -1683,5 +1693,6 @@ export const useStore = defineStore('store', () => {
 
     clearData,
     clearCache,
+    checkAfterSubscribeLoaded,
   };
 });

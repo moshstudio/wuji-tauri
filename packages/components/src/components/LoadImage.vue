@@ -11,11 +11,13 @@ const props = withDefaults(
     src?: string;
     headers?: Record<string, string> | null;
     compress?: boolean;
+    lazyLoad?: boolean;
   }>(),
   {
     src: '',
     headers: undefined,
     compress: true,
+    lazyLoad: false,
   },
 );
 
@@ -25,6 +27,7 @@ const { headers, ...restProps } = attrs;
 if (!restProps.fit) {
   restProps.fit = 'cover';
 }
+console.log(props.lazyLoad);
 
 // 获取事件监听器
 const listeners = {
@@ -128,6 +131,7 @@ watch(
         : `min-height: ${attrs.height || '36'}px; min-width: ${attrs.width || '36'}px;`
     "
     v-bind="restProps"
+    :lazy-load="lazyLoad"
     :class="attrs.class"
     v-on="listeners"
     @load="onLoadFinished"

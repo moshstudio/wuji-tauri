@@ -75,7 +75,7 @@ export const useDisplayStore = defineStore('display', () => {
   const isDark = useDark();
   const toggleDark = useToggle(isDark);
 
-  const showVideoPlaylist = ref(false);
+  const showVideoPlaylist = ref(true);
   const showSongPlayingList = ref(false);
   const showLeftPopup = ref(false);
 
@@ -217,6 +217,8 @@ export const useDisplayStore = defineStore('display', () => {
   );
 
   const videoPlayer = ref<Player>();
+  const videoVolume = useStorageAsync('videoVolume', 1);
+  const videoPlaybackRate = useStorageAsync('videoPlaybackRate', 1);
 
   return {
     showNews,
@@ -273,5 +275,7 @@ export const useDisplayStore = defineStore('display', () => {
     paginationPosition,
 
     videoPlayer,
+    videoVolume,
+    videoPlaybackRate,
   };
 });

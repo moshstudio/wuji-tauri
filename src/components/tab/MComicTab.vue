@@ -91,8 +91,8 @@ watch(
           :to-page="(page: number) => changePage(index, page)"
         />
       </van-row>
-      <van-loading v-if="!item.list.length" class="p-2" />
-      <div class="flex flex-col">
+      <van-loading v-if="!item.list.length" class="p-2" size="24px" />
+      <div v-else class="flex flex-col">
         <MComicCard
           v-for="(comic, index) in item.list"
           :key="source.item.id + index.toString() + comic.id"
@@ -133,8 +133,8 @@ watch(
         :to-page="(page: number) => changePage(0, page)"
       />
     </van-row>
-    <van-loading v-if="!source.list.list.length" class="p-2" />
-    <div class="flex flex-col">
+    <van-loading v-if="!source.list.list.length" class="p-2" size="24px" />
+    <div v-else class="flex flex-col">
       <template
         v-for="(comic, index) in source.list.list"
         :key="source.item.id + index.toString() + comic.id"

@@ -40,7 +40,6 @@ import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 import { onMountedOrActivated } from '@vant/use';
 import BackButtonPlugin from '@/components/media/plugins/backButton';
 import FavoriteButtonPlugin from '@/components/media/plugins/favoriteButton';
-import SpacerPlugin from '@/components/media/plugins/spacer';
 import PlaylistButtonPlugin from '@/components/media/plugins/playlistButton';
 import LeftSpeedUpPlugin from '@/components/media/plugins/leftSpeedUp';
 import RightSpeedUpPlugin from '@/components/media/plugins/rightSpeedUp';
@@ -59,21 +58,30 @@ const store = useStore();
 const backStore = useBackStore();
 const displayStore = useDisplayStore();
 const shelfStore = useVideoShelfStore();
-const { showVideoPlaylist: showPlaylist, videoPlayer } =
-  storeToRefs(displayStore);
+const {
+  showVideoPlaylist: showPlaylist,
+  videoPlayer,
+  videoVolume,
+  videoPlaybackRate,
+} = storeToRefs(displayStore);
 const { videoShelf } = storeToRefs(shelfStore);
 
 const videoElement = ref<HTMLElement>();
 
 const videoSource = ref<VideoSource>();
 const videoItem = ref<VideoItem>();
+const shouldReload = ref(false);
 
 const playingResource = ref<VideoResource>();
 const playingEpisode = ref<VideoEpisode>();
 const videoSrc = ref<VideoUrlMap>();
 
 const loadData = retryOnFalse({
-  onFailed: backStore.back,
+  onFailed: () => {
+    if (route.name === 'VideoDetail') {
+      backStore.back();
+    }
+  },
 })(
   createCancellableFunction(async (signal: AbortSignal, pageNo?: number) => {
     if (!videoPlayer.value) {
@@ -85,31 +93,48 @@ const loadData = retryOnFalse({
     videoSrc.value = undefined;
     playingResource.value = undefined;
     playingEpisode.value = undefined;
+    shouldReload.value = false;
 
     if (!videoId || !sourceId) {
+      shouldReload.value = true;
       return false;
     }
+
     const source = store.getVideoSource(sourceId);
     if (!source) {
       showToast('源不存在或未启用');
+      shouldReload.value = true;
       return false;
     }
+
     videoSource.value = source;
     videoItem.value = store.getVideoItem(source, videoId!);
     if (!videoItem.value) {
+      shouldReload.value = true;
       return false;
     }
+
     const t = displayStore.showToast();
     const detail =
       (await store.videoDetail(source!, videoItem.value)) || undefined;
     displayStore.closeToast(t);
+
     if (detail?.id != videoItem.value?.id) {
+      shouldReload.value = true;
       return false;
     }
+
     Object.assign(videoItem.value, detail);
     if (!videoItem.value || signal.aborted) {
+      shouldReload.value = true;
       return false;
     }
+
+    // 检查是否有资源和剧集
+    const hasContent =
+      videoItem.value.resources?.length &&
+      videoItem.value.resources.some((r) => r.episodes?.length);
+    shouldReload.value = !hasContent;
 
     playingResource.value ||=
       _.find(
@@ -121,7 +146,9 @@ const loadData = retryOnFalse({
         playingResource.value?.episodes,
         (episode) => episode.id == videoItem.value?.lastWatchEpisodeId,
       ) || playingResource.value?.episodes?.[0];
+
     if (signal.aborted) return false;
+
     if (playingResource.value && playingEpisode.value) {
       shelfStore.updateVideoPlayInfo(videoItem.value, {
         resource: playingResource.value,
@@ -129,6 +156,7 @@ const loadData = retryOnFalse({
       });
       await getPlayUrl();
     }
+
     return true;
   }),
 );
@@ -284,6 +312,8 @@ const playNext = async () => {
 };
 
 const createPlayer = async (video?: VideoUrlMap) => {
+  const volume = videoVolume.value || 1;
+  const rate = videoPlaybackRate.value || 1;
   videoPlayer.value?.destroy();
   videoPlayer.value?.offAll();
   await nextTick();
@@ -293,7 +323,6 @@ const createPlayer = async (video?: VideoUrlMap) => {
   if (!item || !resource || !episode) {
     return;
   }
-
   const preset = video?.isLive
     ? LivePreset
     : displayStore.isAndroid
@@ -310,7 +339,8 @@ const createPlayer = async (video?: VideoUrlMap) => {
     loop: false,
     playsinline: true,
     cssFullscreen: false,
-    volume: 1,
+    volume: volume,
+    defaultPlaybackRate: rate,
     isMobileSimulateMode: displayStore.isAndroid ? 'mobile' : 'pc',
     isLive: videoSrc.value?.isLive || false,
     startTime: playingEpisode.value?.lastWatchPosition || 0,
@@ -320,6 +350,10 @@ const createPlayer = async (video?: VideoUrlMap) => {
     presets: [preset],
     videoAttributes: {
       crossOrigin: 'anonymous',
+    },
+    keyboard: {
+      checkVisible: true,
+      disable: false,
     },
   });
   // 注册左右长按倍速插件
@@ -352,6 +386,19 @@ const createPlayer = async (video?: VideoUrlMap) => {
       videoPlayer.value?.pause();
     }
   });
+  // 监听音量和倍速变化，保存到 store
+  videoPlayer.value.on(Events.VOLUME_CHANGE, () => {
+    const currentVolume = videoPlayer.value?.volume;
+    if (currentVolume !== undefined) {
+      videoVolume.value = currentVolume;
+    }
+  });
+  videoPlayer.value.on(Events.RATE_CHANGE, () => {
+    const currentRate = videoPlayer.value?.playbackRate;
+    if (currentRate !== undefined) {
+      videoPlaybackRate.value = currentRate;
+    }
+  });
   const updateTime = _.throttle((position: number) => {
     episode.lastWatchPosition = position;
     if (video) {
@@ -366,11 +413,13 @@ const createPlayer = async (video?: VideoUrlMap) => {
     if (route.name !== 'VideoDetail') {
       // 页面已切换
       videoPlayer.value?.pause();
+      return;
     }
     const position = videoPlayer.value?.currentTime;
     updateTime(position);
   });
   videoPlayer.value.on(Events.ENDED, () => {
+    updateTime(0);
     playNext();
   });
   videoPlayer.value.on(Events.ERROR, (error) => {
@@ -428,16 +477,6 @@ watch(
   { immediate: true },
 );
 
-onMountedOrActivated(() => {
-  if (displayStore.isAndroid) {
-    keepScreenOn(true);
-  }
-  if (savedVideoSrc && savedVideoSrc.isLive) {
-    videoSrc.value = savedVideoSrc;
-    savedVideoSrc = undefined;
-  }
-});
-
 onMounted(async () => {
   await nextTick();
   videoPlayer.value = new Player({
@@ -447,11 +486,12 @@ onMounted(async () => {
     ) as HTMLElement,
     nullUrlStart: true,
     cssFullscreen: false,
-    volume: 1,
+    volume: videoVolume.value || 1,
     isMobileSimulateMode: displayStore.isAndroid ? 'mobile' : 'pc',
     height: '100%',
     width: '100%',
     plugins: [VideoJsPlugin],
+    ignores: ['fullscreen', 'keyboard'],
   });
   videoPlayer.value.registerPlugin(BackButtonPlugin, {
     onClick: () => {
@@ -469,6 +509,26 @@ onMounted(async () => {
   videoPlayer.value.controls?.show();
 });
 
+onMountedOrActivated(() => {
+  if (displayStore.isAndroid) {
+    keepScreenOn(true);
+  }
+  if (videoPlayer.value) {
+    const keyboard = videoPlayer.value.getPlugin('keyboard');
+    if (keyboard) {
+      keyboard.disable = false;
+      keyboard.config.disable = false;
+    }
+  }
+  if (savedVideoSrc && savedVideoSrc.isLive) {
+    videoSrc.value = savedVideoSrc;
+    savedVideoSrc = undefined;
+  }
+  if (shouldReload.value) {
+    loadData();
+  }
+});
+
 onDeactivated(() => {
   if (displayStore.isAndroid) {
     keepScreenOn(false);
@@ -478,9 +538,16 @@ onDeactivated(() => {
   } catch (error) {
     console.warn('video player pause error', error);
   }
+  if (videoPlayer.value) {
+    const keyboard = videoPlayer.value.getPlugin('keyboard');
+    if (keyboard) {
+      keyboard.disable = true;
+      keyboard.config.disable = true;
+    }
+  }
   if (videoSrc.value?.isLive) {
     savedVideoSrc = videoSrc.value;
-    videoPlayer.value?.reset();
+    videoPlayer.value?.destroy();
     videoSrc.value = undefined;
   }
 });

@@ -92,8 +92,8 @@ watch(
           :to-page="(page: number) => changePage(index, page)"
         />
       </van-row>
-      <ResponsiveGrid2>
-        <van-loading v-if="item.list.length === 0" class="p-2" />
+      <van-loading v-if="item.list.length === 0" class="p-2" size="24px" />
+      <ResponsiveGrid2 v-else>
         <WComicCard
           v-for="(comic, index) in item.list"
           :key="source.item.id + index.toString() + comic.id"
@@ -134,8 +134,8 @@ watch(
         :to-page="(page: number) => changePage(0, page)"
       />
     </van-row>
-    <van-loading v-if="!source.list.list.length" class="p-2" />
-    <ResponsiveGrid2>
+    <van-loading v-if="!source.list.list.length" class="p-2" size="24px" />
+    <ResponsiveGrid2 v-else>
       <template
         v-for="(comic, index) in source.list.list"
         :key="source.item.id + index.toString() + comic.id"

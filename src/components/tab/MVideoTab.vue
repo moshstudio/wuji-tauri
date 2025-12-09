@@ -93,8 +93,8 @@ watch(
           :to-page="(page: number) => changePage(index, page)"
         />
       </van-row>
-      <van-loading v-if="!item.list?.length" class="p-2" />
-      <ResponsiveGrid2 min-width="80" max-width="100">
+      <van-loading v-if="!item.list?.length" class="p-2" size="24px" />
+      <ResponsiveGrid2 v-else min-width="80" max-width="100">
         <template
           v-for="(video, index) in item.list"
           :key="source.item.id + index.toString() + video.id"
@@ -135,8 +135,8 @@ watch(
         :to-page="(page: number) => changePage(0, page)"
       />
     </van-row>
-    <van-loading v-if="!source.list.list?.length" class="p-2" />
-    <ResponsiveGrid2 min-width="80" max-width="100">
+    <van-loading v-if="!source.list.list?.length" class="p-2" size="24px" />
+    <ResponsiveGrid2 v-else min-width="80" max-width="100">
       <template
         v-for="(video, index) in source.list.list"
         :key="source.item.id + index.toString() + video.id"

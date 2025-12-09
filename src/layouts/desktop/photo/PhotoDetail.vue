@@ -59,6 +59,7 @@ watch(
           :src="item"
           :headers="photoDetail?.photosHeaders"
           fit="contain"
+          :lazy-load="true"
           :compress="false"
         />
       </div>

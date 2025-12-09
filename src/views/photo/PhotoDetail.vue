@@ -7,7 +7,8 @@ import type { PhotoSource } from '@/types';
 import { BaseDirectory } from '@tauri-apps/plugin-fs';
 import _ from 'lodash';
 import { showFailToast, showSuccessToast, showToast } from 'vant';
-import { computed, ref, watch } from 'vue';
+import { computed, onActivated, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppPhotoDetail from '@/layouts/app/photo/PhotoDetail.vue';
 import DesktopPhotoDetail from '@/layouts/desktop/photo/PhotoDetail.vue';
@@ -26,10 +27,12 @@ const backStore = useBackStore();
 const displayStore = useDisplayStore();
 const shelfStore = usePhotoShelfStore();
 
+const route = useRoute();
 const photoSource = ref<PhotoSource>();
 const photoItem = ref<PhotoItem>();
 const photoDetail = ref<PhotoDetailType>();
 const currentPage = ref<number>(1);
+const shouldReload = ref(false);
 const showSelectShelf = ref(false);
 const selectShelfActions = computed(() => {
   return shelfStore.photoShelf.map((shelf) => {
@@ -47,29 +50,37 @@ const selectShelfActions = computed(() => {
 });
 
 function back() {
-  backStore.back();
+  if (route.name === 'PhotoDetail') {
+    backStore.back();
+  }
 }
+
 function clear() {
   photoSource.value = undefined;
   photoItem.value = undefined;
   photoDetail.value = undefined;
   currentPage.value = 1;
+  shouldReload.value = false;
 }
 
 const toPage = retryOnFalse({ onFailed: back })(
   createCancellableFunction(async (signal: AbortSignal, pageNo?: number) => {
     clear();
     if (!id || !sourceId) {
+      shouldReload.value = true;
       return false;
     }
+
     photoSource.value = store.getPhotoSource(sourceId!);
     if (!photoSource.value) {
       showToast('源不存在或未启用');
+      shouldReload.value = true;
       return false;
     }
 
     photoItem.value = store.getPhotoItem(photoSource.value, id!);
     if (!photoItem.value) {
+      shouldReload.value = true;
       return false;
     }
 
@@ -82,6 +93,7 @@ const toPage = retryOnFalse({ onFailed: back })(
         sourceId: photoItem.value.sourceId,
       };
       currentPage.value = 1;
+      shouldReload.value = !photoDetail.value.photos.length;
       return true;
     }
 
@@ -91,10 +103,12 @@ const toPage = retryOnFalse({ onFailed: back })(
       pageNo,
     );
     if (signal.aborted) return false;
+
     photoDetail.value = detail || undefined;
     currentPage.value = detail?.page || 1;
+    shouldReload.value = !detail || !detail.photos?.length;
 
-    return true;
+    return !!detail;
   }),
 );
 
@@ -138,6 +152,12 @@ watch(
   },
   { immediate: true },
 );
+
+onActivated(() => {
+  if (shouldReload.value) {
+    toPage(currentPage.value || 1);
+  }
+});
 </script>
 
 <template>

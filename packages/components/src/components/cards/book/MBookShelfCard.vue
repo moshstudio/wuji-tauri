@@ -5,12 +5,12 @@ import type {
   BookSource,
 } from '@wuji-tauri/source-extension';
 import { Icon } from '@iconify/vue';
-import _ from 'lodash';
-import { ref } from 'vue';
+import { last } from 'lodash';
+import { computed, ref } from 'vue';
 import LoadImage from '../../LoadImage.vue';
 import MoreOptionsSheet from '../../MoreOptionsSheet.vue';
 
-defineProps<{
+const props = defineProps<{
   book: BookItemInShelf;
   shelf: BookShelf;
   source?: BookSource;
@@ -20,6 +20,10 @@ defineProps<{
 }>();
 
 const showMoreOptions = ref(false);
+
+const latestChapterTitle = computed(() => {
+  return last(props.book.book.chapters)?.title;
+});
 </script>
 
 <template>
@@ -67,7 +71,7 @@ const showMoreOptions = ref(false);
       </p>
       <p>
         <span class="line-clamp-1 text-xs">
-          {{ _.last(book.book.chapters)?.title }}
+          {{ latestChapterTitle }}
         </span>
       </p>
     </div>

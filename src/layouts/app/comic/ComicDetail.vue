@@ -19,6 +19,10 @@ withDefaults(
   }>(),
   {},
 );
+
+const getRandomColor = () => tinycolor.random().toRgbString();
+const joinTags = (tags: string | string[] | undefined) =>
+  _.castArray(tags)?.join(',');
 </script>
 
 <template>
@@ -45,7 +49,7 @@ withDefaults(
               <template #loading>
                 <div
                   class="h-[100px] w-[80px] content-center self-center p-1 text-center text-lg"
-                  :style="{ color: tinycolor.random().toRgbString() }"
+                  :style="{ color: getRandomColor() }"
                 >
                   {{ comic.title }}
                 </div>
@@ -61,7 +65,7 @@ withDefaults(
             </div>
             <p class="flex gap-2 text-xs">
               <span>{{ comic.author }}</span>
-              <span>{{ _.castArray(comic.tags)?.join(',') }}</span>
+              <span>{{ joinTags(comic.tags) }}</span>
               <span>{{ comic.status }}</span>
             </p>
 

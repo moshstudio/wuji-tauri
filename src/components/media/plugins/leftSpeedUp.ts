@@ -1,5 +1,6 @@
 import { Plugin } from 'xgplayer';
 import { showToast, closeToast } from 'vant';
+import { vibrate } from 'tauri-plugin-commands-api';
 
 const { POSITIONS } = Plugin;
 
@@ -105,6 +106,7 @@ export default class LeftSpeedUpPlugin extends Plugin {
     // 设置2倍速播放
     this.player.playbackRate = 2;
     this.player.play();
+    vibrate(25);
 
     // 显示持续提示
     this.toastInstance = showToast({

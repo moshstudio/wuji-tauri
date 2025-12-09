@@ -1,10 +1,10 @@
 import type { SubscribeSource } from '@/types';
 import _ from 'lodash';
 import { defineStore } from 'pinia';
-import { computed, markRaw, onMounted } from 'vue';
+import { computed, markRaw, onMounted, ref } from 'vue';
 import { createKVStore } from './utils';
 import { debounceFilter, useStorage, useStorageAsync } from '@vueuse/core';
-import { estimateJsonSize } from '@/utils';
+import { estimateJsonSize, sleep } from '@/utils';
 import { useServerStore } from './serverStore';
 import { useDisplayStore } from './displayStore';
 import { useStore } from './store';
@@ -21,6 +21,17 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       eventFilter: debounceFilter(1000),
     },
   );
+
+  // 等待加载完成
+  const onLoaded = async () => {
+    const timeout = Date.now() + 8000;
+    while (!storage.loaded && Date.now() < timeout) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    await sleep(1000);
+    const store = useStore();
+    await store.checkAfterSubscribeLoaded();
+  };
 
   const addSubscribeSource = async (source: SubscribeSource) => {
     const index = subscribeSources.value.findIndex(
@@ -122,6 +133,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       // if (!serverStore.isVipOrSuperVip) return;
       updateSubscribeSourceFromServer();
     }
+    onLoaded();
   });
 
   return {
@@ -136,5 +148,6 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     syncData,
     loadSyncData,
     isEmpty,
+    onLoaded,
   };
 });

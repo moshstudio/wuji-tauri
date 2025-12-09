@@ -3,7 +3,8 @@ import type { ComicChapter, ComicItem } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
 import { storeToRefs } from 'pinia';
 import { showLoadingToast, showToast } from 'vant';
-import { computed, ref, watch } from 'vue';
+import { computed, onActivated, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppComicDetail from '@/layouts/app/comic/ComicDetail.vue';
 import DesktopComicDetail from '@/layouts/desktop/comic/ComicDetail.vue';
@@ -17,6 +18,7 @@ const { comicId, sourceId } = defineProps({
   sourceId: String,
 });
 
+const route = useRoute();
 const store = useStore();
 const backStore = useBackStore();
 const shelfStore = useComicShelfStore();
@@ -24,6 +26,7 @@ const { comicShelf } = storeToRefs(shelfStore);
 
 const comic = ref<ComicItem>();
 const comicSource = ref<ComicSource>();
+const shouldReload = ref(false);
 const inShelf = computed(() => {
   for (const shelf of comicShelf.value) {
     if (shelf.comics.some((comic) => comic.comic.id === comicId)) {
@@ -46,21 +49,32 @@ const addShelfActions = computed(() => {
   }));
 });
 
-const loadData = retryOnFalse({ onFailed: backStore.back })(async () => {
+const loadData = retryOnFalse({
+  onFailed: () => {
+    if (route.name === 'ComicDetail') {
+      backStore.back();
+    }
+  },
+})(async () => {
   comic.value = undefined;
   comicSource.value = undefined;
+  shouldReload.value = false;
+
   if (!comicId || !sourceId) {
+    shouldReload.value = true;
     return false;
   }
 
   comicSource.value = store.getComicSource(sourceId);
   if (!comicSource.value) {
     showToast('源不存在或未启用');
+    shouldReload.value = true;
     return false;
   }
 
   comic.value = store.getComicItem(comicSource.value, comicId);
   if (!comic.value) {
+    shouldReload.value = true;
     return false;
   }
 
@@ -71,15 +85,17 @@ const loadData = retryOnFalse({ onFailed: backStore.back })(async () => {
     closeOnClickOverlay: false,
   });
   const detail = await store.comicDetail(comicSource.value, comic.value);
-
   toast.close();
+
   if (detail) {
     comic.value = detail;
   }
-  if (!detail?.chapters) {
+  if (!detail?.chapters?.length) {
     showToast('章节列表为空');
   }
-  return true;
+
+  shouldReload.value = !detail || !detail.chapters?.length;
+  return !!detail;
 });
 
 function toChapter(_comic: ComicItem, chapter: ComicChapter) {
@@ -100,6 +116,12 @@ watch(
   },
   { immediate: true },
 );
+
+onActivated(() => {
+  if (shouldReload.value) {
+    loadData();
+  }
+});
 </script>
 
 <template>

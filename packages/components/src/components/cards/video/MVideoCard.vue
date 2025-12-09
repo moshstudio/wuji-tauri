@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import type { VideoItem } from '@wuji-tauri/source-extension';
-import _ from 'lodash';
+import { castArray } from 'lodash';
+import { computed } from 'vue';
 import LoadImage from '../../LoadImage.vue';
 
-defineProps<{
+const props = defineProps<{
   video: VideoItem;
   click: (video: VideoItem) => void;
 }>();
+
+const tagsText = computed(() => {
+  return castArray(props.video.tags).join(',');
+});
 </script>
 
 <template>
@@ -32,7 +37,7 @@ defineProps<{
       v-if="video.tags"
       class="absolute bottom-[22px] left-0 max-w-full truncate rounded bg-gray-800/60 p-1 text-xs text-gray-200"
     >
-      {{ _.castArray(video.tags).join(',') }}
+      {{ tagsText }}
     </p>
   </div>
 </template>

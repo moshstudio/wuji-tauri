@@ -10,7 +10,8 @@ import {
   SongSelectShelfSheet,
 } from '@wuji-tauri/components/src';
 import { showLoadingToast, showToast } from 'vant';
-import { ref, watch } from 'vue';
+import { onActivated, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppPlaylistDetail from '@/layouts/app/song/PlaylistDetail.vue';
 import DesktopPlaylistDetail from '@/layouts/desktop/song/PlaylistDetail.vue';
@@ -23,11 +24,13 @@ const { playlistId, sourceId } = defineProps({
   sourceId: String,
 });
 
+const route = useRoute();
 const store = useStore();
 const backStore = useBackStore();
 const shelfStore = useSongShelfStore();
 const songSource = ref<SongSource>();
 const playlist = ref<PlaylistInfo>();
+const shouldReload = ref(false);
 
 const currentPage = ref(1);
 
@@ -39,23 +42,33 @@ function clear() {
   songSource.value = undefined;
   playlist.value = undefined;
   currentPage.value = 1;
+  shouldReload.value = false;
 }
 
-const toPage = retryOnFalse({ onFailed: backStore.back })(async (
-  pageNo?: number,
-) => {
+const toPage = retryOnFalse({
+  onFailed: () => {
+    if (route.name === 'SongPlaylistDetail') {
+      backStore.back();
+    }
+  },
+})(async (pageNo?: number) => {
   clear();
   currentPage.value = pageNo || 1;
+
   if (!playlistId || !sourceId) {
+    shouldReload.value = true;
     return false;
   }
+
   songSource.value = store.getSongSource(sourceId);
   if (!songSource.value) {
+    shouldReload.value = true;
     return false;
   }
 
   playlist.value = store.getPlaylistInfo(songSource.value, playlistId);
   if (!playlist.value) {
+    shouldReload.value = true;
     return false;
   }
 
@@ -72,8 +85,11 @@ const toPage = retryOnFalse({ onFailed: backStore.back })(async (
       pageNo,
     )) || undefined;
   toast.close();
+
   currentPage.value = playlist.value?.list?.page || 1;
-  return true;
+  shouldReload.value = !playlist.value || !playlist.value.list?.list?.length;
+
+  return !!playlist.value;
 });
 
 async function playAll() {
@@ -113,6 +129,12 @@ watch(
   },
   { immediate: true },
 );
+
+onActivated(() => {
+  if (shouldReload.value) {
+    toPage(currentPage.value || 1);
+  }
+});
 </script>
 
 <template>
