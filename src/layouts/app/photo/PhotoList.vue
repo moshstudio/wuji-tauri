@@ -74,7 +74,10 @@ async function onRefresh() {
               />
             </div>
             <ResponsiveGrid2 min-width="80" max-width="100">
-              <template v-for="photo in item.list?.list" :key="photo">
+              <template
+                v-for="photo in item.list?.list"
+                :key="item.item.id + photo.id"
+              >
                 <MPhotoCard
                   :item="photo"
                   @click="

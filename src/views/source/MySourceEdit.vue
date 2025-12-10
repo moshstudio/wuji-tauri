@@ -22,7 +22,7 @@ const serverStore = useServerStore();
 
 const { myMarketSources } = storeToRefs(serverStore);
 
-const source = ref<MarketSource>();
+const currentSource = ref<MarketSource>();
 
 function clickSourceContent(
   source: MarketSource,
@@ -45,6 +45,14 @@ function deleteSourceContent(
   }).then(async (confirm) => {
     if (confirm === 'confirm') {
       await serverStore.deleteMarketSourceContent(source, sourceContent);
+      currentSource.value = myMarketSources.value.find(
+        (item) => item._id === props.sourceId,
+      );
+      if (!currentSource.value) {
+        backStore.back().then(() => {
+          showToast('未找到该资源');
+        });
+      }
     }
   });
 }
@@ -59,10 +67,10 @@ onMountedOrActivated(async () => {
       showToast('请先登录');
     });
   } else {
-    source.value = myMarketSources.value.find(
+    currentSource.value = myMarketSources.value.find(
       (item) => item._id === props.sourceId,
     );
-    if (!source.value) {
+    if (!currentSource.value) {
       backStore.back().then(() => {
         showToast('未找到该资源');
       });
@@ -75,7 +83,7 @@ onMountedOrActivated(async () => {
   <PlatformSwitch>
     <template #app>
       <AppMySourceEdit
-        :source="source"
+        :source="currentSource"
         :save="save"
         :click-source-content="clickSourceContent"
         :delete-source-content="deleteSourceContent"
@@ -83,7 +91,7 @@ onMountedOrActivated(async () => {
     </template>
     <template #desktop>
       <DesktopMySourceEdit
-        :source="source"
+        :source="currentSource"
         :save="save"
         :click-source-content="clickSourceContent"
         :delete-source-content="deleteSourceContent"

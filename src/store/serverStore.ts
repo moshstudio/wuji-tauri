@@ -21,7 +21,7 @@ import {
   showNotify,
   showSuccessToast,
 } from 'vant';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, triggerRef, watch } from 'vue';
 import { isMembershipOrderValid, UserInfo } from '@/types/user';
 import { getDeviceId } from '@/utils/device';
 import { createKVStore, useDisplayStore } from '.';
@@ -469,6 +469,7 @@ export const useServerStore = defineStore('serverStore', () => {
         t.close();
         const json = await response.json();
         myMarketSources.value = json;
+        triggerRef(myMarketSources);
         return json;
       },
       async () => {

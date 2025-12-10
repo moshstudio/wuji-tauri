@@ -89,7 +89,7 @@ onDeactivated(() => {
             size="22"
             @click="backStore.back"
           />
-          <span class="ml-2 line-clamp-1 text-sm">
+          <span class="ml-2 line-clamp-1 text-sm text-[var(--van-text-color)]">
             {{ comic?.title }}
           </span>
         </div>

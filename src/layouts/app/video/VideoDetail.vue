@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import _ from 'lodash';
+import { castArray } from 'lodash';
 import {
   VideoSource,
   VideoItem,
@@ -56,9 +56,9 @@ const videoListElementHeight = ref(0);
 const activeTabName = ref('');
 const tabOffsetTop = computed(() => {
   if (displayStore.fullScreenMode) {
-    return '24px';
+    return '30px';
   } else {
-    return windowHeight.value - videoListElementHeight.value - 24;
+    return windowHeight.value - videoListElementHeight.value - 30;
   }
 });
 useResizeObserver(videoListElement, (entries) => {
@@ -126,7 +126,7 @@ useResizeObserver(videoListElement, (entries) => {
             </h2>
             <div class="flex gap-1 overflow-x-auto">
               <van-tag
-                v-for="tag in _.castArray(videoItem?.tags)"
+                v-for="tag in castArray(videoItem?.tags)"
                 plain
                 color="rgba(100,100,100,0.3)"
                 text-color="var(--van-text-color-2)"
