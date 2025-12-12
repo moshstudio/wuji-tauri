@@ -58,6 +58,7 @@ const tagsText = computed(() => {
       :src="video.video.cover"
       :headers="video.video.coverHeaders"
       class="h-full min-h-[120px] w-full"
+      lazy-load
     >
       <template #loading>
         <Icon icon="codicon:comic" width="48" height="48" />

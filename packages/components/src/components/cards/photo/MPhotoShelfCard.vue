@@ -43,6 +43,7 @@ function onClick() {
       :src="typeof item.cover === 'string' ? item.cover : item.cover[0]"
       :headers="item.coverHeaders || undefined"
       class="h-full min-h-[100px] w-full"
+      lazy-load
     />
 
     <p

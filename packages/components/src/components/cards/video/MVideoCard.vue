@@ -25,6 +25,7 @@ const tagsText = computed(() => {
       :src="video.cover!"
       :headers="video.coverHeaders || undefined"
       class="h-full min-h-[120px] w-full"
+      lazy-load
     />
 
     <p

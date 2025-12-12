@@ -45,6 +45,7 @@ function onMouseLeave() {
       fit="cover"
       :src="photoUrl || ''"
       :headers="headers"
+      lazy-load
     >
       <template #loading>
         <Icon icon="basil:music-solid" width="22" height="22" />

@@ -22,7 +22,13 @@ const tagsText = computed(() => {
     @click="() => click(comic)"
   >
     <div class="h-[100px] w-[80px]">
-      <LoadImage width="80px" height="100px" radius="4" :src="comic.cover">
+      <LoadImage
+        width="80px"
+        height="100px"
+        radius="4"
+        :src="comic.cover"
+        lazy-load
+      >
         <template #loading>
           <Icon icon="codicon:comic" width="48" height="48" />
         </template>

@@ -38,6 +38,7 @@ const latestChapterTitle = computed(() => {
         radius="4"
         :src="book.book.cover"
         :headers="book.book.coverHeaders"
+        lazy-load
       >
         <template #loading>
           <Icon icon="codicon:book" width="48" height="48" />

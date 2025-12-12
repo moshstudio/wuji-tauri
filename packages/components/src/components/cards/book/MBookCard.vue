@@ -28,6 +28,7 @@ const tagsText = computed(() => {
         radius="4"
         :src="book.cover"
         :headers="book.coverHeaders"
+        lazy-load
       >
         <template #loading>
           <Icon icon="codicon:book" width="48" height="48" />

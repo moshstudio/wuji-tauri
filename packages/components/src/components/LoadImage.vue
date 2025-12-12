@@ -27,8 +27,6 @@ const { headers, ...restProps } = attrs;
 if (!restProps.fit) {
   restProps.fit = 'cover';
 }
-console.log(props.lazyLoad);
-
 // 获取事件监听器
 const listeners = {
   click: attrs.onClick, // 手动绑定 click 事件
