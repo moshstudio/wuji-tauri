@@ -35,14 +35,13 @@ import Player, { Events } from 'xgplayer';
 import MobilePreset from 'xgplayer/es/presets/mobile';
 import DefaultPreset from 'xgplayer/es/presets/default';
 import LivePreset from 'xgplayer/es/presets/live';
+import PlayNextIcon from 'xgplayer/es/plugins/playNext';
 import 'xgplayer/dist/index.min.css';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 import { onMountedOrActivated } from '@vant/use';
 import BackButtonPlugin from '@/components/media/plugins/backButton';
 import FavoriteButtonPlugin from '@/components/media/plugins/favoriteButton';
 import PlaylistButtonPlugin from '@/components/media/plugins/playlistButton';
-import LeftSpeedUpPlugin from '@/components/media/plugins/leftSpeedUp';
-import RightSpeedUpPlugin from '@/components/media/plugins/rightSpeedUp';
 import Fullscreen from 'xgplayer/es/plugins/fullscreen';
 import VideoJsPlugin from '@/components/media/plugins/videoJs';
 import VideoNamePlugin from '@/components/media/plugins/videoName';
@@ -346,7 +345,7 @@ const createPlayer = async (video?: VideoUrlMap) => {
     startTime: playingEpisode.value?.lastWatchPosition || 0,
     height: '100%',
     width: '100%',
-    plugins: [VideoJsPlugin],
+    plugins: [VideoJsPlugin, PlayNextIcon],
     presets: [preset],
     videoAttributes: {
       crossOrigin: 'anonymous',
@@ -355,10 +354,19 @@ const createPlayer = async (video?: VideoUrlMap) => {
       checkVisible: true,
       disable: false,
     },
+    mobile: {
+      darkness: true,
+      disablePress: false,
+      gestureY: true,
+      gestureX: true,
+      scopeL: 0.5,
+      scopeR: 0.5,
+    },
+    playNext: {
+      position: 'controlsLeft',
+      urlList: [video?.url],
+    },
   });
-  // 注册左右长按倍速插件
-  videoPlayer.value.registerPlugin(LeftSpeedUpPlugin);
-  videoPlayer.value.registerPlugin(RightSpeedUpPlugin);
   videoPlayer.value.registerPlugin(BackButtonPlugin, {
     onClick: () => {
       backStore.back(true);
@@ -368,10 +376,6 @@ const createPlayer = async (video?: VideoUrlMap) => {
   videoPlayer.value.registerPlugin(VideoNamePlugin, {
     videoName,
   });
-  // videoPlayer.value.registerPlugin(FavoriteButtonPlugin, {
-  //   isFavorited: inShelf.value,
-  //   onClick: onAddToShelf,
-  // });
   videoPlayer.value.registerPlugin(PlaylistButtonPlugin, {
     onClick: () => {
       showPlaylist.value = !showPlaylist.value;
@@ -385,6 +389,9 @@ const createPlayer = async (video?: VideoUrlMap) => {
       // 页面已切换
       videoPlayer.value?.pause();
     }
+  });
+  videoPlayer.value.on(Events.PLAYNEXT, () => {
+    playNext();
   });
   // 监听音量和倍速变化，保存到 store
   videoPlayer.value.on(Events.VOLUME_CHANGE, () => {
