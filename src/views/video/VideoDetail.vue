@@ -20,10 +20,10 @@ import {
 } from '@/store';
 import { storeToRefs } from 'pinia';
 import { useRoute } from 'vue-router';
-import { retryOnFalse, sleep } from '@/utils';
+import { retryOnFalse } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 import _ from 'lodash';
-import { showFailToast, showNotify, showToast } from 'vant';
+import { showFailToast, showToast } from 'vant';
 import {
   VideoSource,
   VideoItem,
@@ -35,7 +35,6 @@ import Player, { Events } from 'xgplayer';
 import MobilePreset from 'xgplayer/es/presets/mobile';
 import DefaultPreset from 'xgplayer/es/presets/default';
 import LivePreset from 'xgplayer/es/presets/live';
-import PlayNextIcon from 'xgplayer/es/plugins/playNext';
 import 'xgplayer/dist/index.min.css';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 import { onMountedOrActivated } from '@vant/use';
@@ -46,6 +45,7 @@ import Fullscreen from 'xgplayer/es/plugins/fullscreen';
 import VideoJsPlugin from '@/components/media/plugins/videoJs';
 import VideoNamePlugin from '@/components/media/plugins/videoName';
 import { router } from '@/router';
+import VideoSwiper from '@/components/media/VideoSwiper.vue';
 
 const { videoId, sourceId } = defineProps<{
   videoId: string;
@@ -83,9 +83,7 @@ const loadData = retryOnFalse({
   },
 })(
   createCancellableFunction(async (signal: AbortSignal, pageNo?: number) => {
-    if (!videoPlayer.value) {
-      createPlayer();
-    }
+    createPlayer();
 
     videoSource.value = undefined;
     videoItem.value = undefined;
@@ -310,6 +308,51 @@ const playNext = async () => {
   await play(playingResource.value, playingResource.value.episodes[index + 1]);
 };
 
+const playPrevious = async () => {
+  if (
+    !playingResource.value?.episodes ||
+    !playingEpisode.value ||
+    !videoItem.value
+  ) {
+    return;
+  }
+  updateVideoPlayInfo(0);
+  const index = playingResource.value.episodes.findIndex(
+    (item) => item.id == playingEpisode.value!.id,
+  );
+
+  if (index === undefined || index === -1) return;
+  if (index === 0) {
+    showToast('已经是第一集了');
+    return;
+  }
+  await play(playingResource.value, playingResource.value.episodes[index - 1]);
+};
+
+const prevEpisode = computed(() => {
+  if (!playingResource.value?.episodes || !playingEpisode.value) {
+    return null;
+  }
+  const index = playingResource.value.episodes.findIndex(
+    (item) => item.id === playingEpisode.value!.id,
+  );
+  if (index <= 0) return null;
+  return playingResource.value.episodes[index - 1];
+});
+
+const nextEpisode = computed(() => {
+  if (!playingResource.value?.episodes || !playingEpisode.value) {
+    return null;
+  }
+  const index = playingResource.value.episodes.findIndex(
+    (item) => item.id === playingEpisode.value!.id,
+  );
+  if (index === -1 || index === playingResource.value.episodes.length - 1) {
+    return null;
+  }
+  return playingResource.value.episodes[index + 1];
+});
+
 const createPlayer = async (video?: VideoUrlMap) => {
   const volume = videoVolume.value || 1;
   const rate = videoPlaybackRate.value || 1;
@@ -319,9 +362,6 @@ const createPlayer = async (video?: VideoUrlMap) => {
   const item = videoItem.value;
   const resource = playingResource.value;
   const episode = playingEpisode.value;
-  if (!item || !resource || !episode) {
-    return;
-  }
   const preset = video?.isLive
     ? LivePreset
     : displayStore.isAndroid
@@ -333,7 +373,7 @@ const createPlayer = async (video?: VideoUrlMap) => {
       '.xgplayer-container',
     ) as HTMLElement,
     url: video?.url,
-    nullUrlStart: !video?.url,
+    nullUrlStart: !!!video?.url,
     autoplay: true,
     loop: false,
     playsinline: true,
@@ -345,7 +385,7 @@ const createPlayer = async (video?: VideoUrlMap) => {
     startTime: playingEpisode.value?.lastWatchPosition || 0,
     height: '100%',
     width: '100%',
-    plugins: [VideoJsPlugin, PlayNextIcon],
+    plugins: [VideoJsPlugin],
     presets: [preset],
     videoAttributes: {
       crossOrigin: 'anonymous',
@@ -355,16 +395,14 @@ const createPlayer = async (video?: VideoUrlMap) => {
       disable: false,
     },
     mobile: {
-      darkness: true,
       disablePress: false,
-      gestureY: true,
+      darkness: false,
+      gestureY: false,
       gestureX: true,
-      scopeL: 0.5,
-      scopeR: 0.5,
     },
-    playNext: {
-      position: 'controlsLeft',
-      urlList: [video?.url],
+    controls: {
+      initShow: true,
+      autoHide: !!video?.url,
     },
   });
   videoPlayer.value.registerPlugin(BackButtonPlugin, {
@@ -372,65 +410,73 @@ const createPlayer = async (video?: VideoUrlMap) => {
       backStore.back(true);
     },
   });
-  const videoName = `${item.title || ''} - ${episode.title || ''}`;
-  videoPlayer.value.registerPlugin(VideoNamePlugin, {
-    videoName,
-  });
   videoPlayer.value.registerPlugin(PlaylistButtonPlugin, {
     onClick: () => {
       showPlaylist.value = !showPlaylist.value;
     },
   });
-  videoPlayer.value.on(Events.FULLSCREEN_CHANGE, (isFullScreen) => {
-    displayStore.fullScreenMode = isFullScreen;
-  });
-  videoPlayer.value.on(Events.PLAY, () => {
-    if (route.name !== 'VideoDetail') {
-      // 页面已切换
-      videoPlayer.value?.pause();
-    }
-  });
-  videoPlayer.value.on(Events.PLAYNEXT, () => {
-    playNext();
-  });
-  // 监听音量和倍速变化，保存到 store
-  videoPlayer.value.on(Events.VOLUME_CHANGE, () => {
-    const currentVolume = videoPlayer.value?.volume;
-    if (currentVolume !== undefined) {
-      videoVolume.value = currentVolume;
-    }
-  });
-  videoPlayer.value.on(Events.RATE_CHANGE, () => {
-    const currentRate = videoPlayer.value?.playbackRate;
-    if (currentRate !== undefined) {
-      videoPlaybackRate.value = currentRate;
-    }
-  });
-  const updateTime = _.throttle((position: number) => {
-    episode.lastWatchPosition = position;
-    if (video) {
-      shelfStore.updateVideoPlayInfo(item, {
-        resource,
-        episode,
-        position,
-      });
-    }
-  }, 500);
-  videoPlayer.value.on(Events.TIME_UPDATE, () => {
-    if (route.name !== 'VideoDetail') {
-      // 页面已切换
-      videoPlayer.value?.pause();
-      return;
-    }
-    const position = videoPlayer.value?.currentTime;
-    updateTime(position);
-  });
-  videoPlayer.value.on(Events.ENDED, () => {
-    updateTime(0);
-    playNext();
-  });
+  videoPlayer.value.controls?.show();
+  if (item && resource && episode) {
+    const videoName = `${item.title || ''} - ${episode.title || ''}`;
+    videoPlayer.value.registerPlugin(VideoNamePlugin, {
+      videoName,
+    });
+    videoPlayer.value.on(Events.FULLSCREEN_CHANGE, (isFullScreen) => {
+      displayStore.fullScreenMode = isFullScreen;
+    });
+    videoPlayer.value.on(Events.PLAY, () => {
+      if (route.name !== 'VideoDetail') {
+        // 页面已切换
+        videoPlayer.value?.pause();
+      }
+    });
+    videoPlayer.value.on(Events.PLAYNEXT, () => {
+      playNext();
+    });
+    // 监听音量和倍速变化，保存到 store
+    videoPlayer.value.on(Events.VOLUME_CHANGE, () => {
+      const currentVolume = videoPlayer.value?.volume;
+      if (currentVolume !== undefined) {
+        videoVolume.value = currentVolume;
+      }
+    });
+    videoPlayer.value.on(Events.RATE_CHANGE, () => {
+      const currentRate = videoPlayer.value?.playbackRate;
+      if (currentRate !== undefined) {
+        videoPlaybackRate.value = currentRate;
+      }
+    });
+    const updateTime = _.throttle((position: number) => {
+      episode.lastWatchPosition = position;
+      if (video) {
+        shelfStore.updateVideoPlayInfo(item, {
+          resource,
+          episode,
+          position,
+        });
+      }
+    }, 500);
+    videoPlayer.value.on(Events.TIME_UPDATE, () => {
+      if (route.name !== 'VideoDetail') {
+        // 页面已切换
+        videoPlayer.value?.pause();
+        return;
+      }
+      const position = videoPlayer.value?.currentTime;
+      updateTime(position);
+    });
+    videoPlayer.value.on(Events.ENDED, () => {
+      updateTime(0);
+      playNext();
+    });
+  }
+
   videoPlayer.value.on(Events.ERROR, (error) => {
     console.warn(`播放失败: ${JSON.stringify(error)}`);
+  });
+  videoPlayer.value.getPlugin('error').useHooks('errorRetry', () => {
+    getPlayUrl();
+    return false;
   });
   if (displayStore.isAndroid) {
     videoPlayer.value
@@ -446,16 +492,15 @@ const createPlayer = async (video?: VideoUrlMap) => {
 };
 
 watch(videoSrc, (newVideo) => {
-  if (newVideo) {
-    if (route.name !== 'VideoDetail') {
-      // 页面已切换
-      return;
+  if (route.name !== 'VideoDetail') {
+    // 页面已切换
+    if (videoPlayer.value?.isPlaying) {
+      videoPlayer.value?.pause();
     }
-    console.log('load video src:', newVideo);
-    createPlayer(newVideo);
-  } else {
-    videoPlayer.value?.resetState();
+    return;
   }
+  console.log('load video src:', newVideo);
+  createPlayer(newVideo);
 });
 
 watch(
@@ -486,34 +531,7 @@ watch(
 
 onMounted(async () => {
   await nextTick();
-  videoPlayer.value = new Player({
-    el: videoElement.value,
-    fullscreenTarget: document.querySelector(
-      '.xgplayer-container',
-    ) as HTMLElement,
-    nullUrlStart: true,
-    cssFullscreen: false,
-    volume: videoVolume.value || 1,
-    isMobileSimulateMode: displayStore.isAndroid ? 'mobile' : 'pc',
-    height: '100%',
-    width: '100%',
-    plugins: [VideoJsPlugin],
-    ignores: ['fullscreen', 'keyboard'],
-  });
-  videoPlayer.value.registerPlugin(BackButtonPlugin, {
-    onClick: () => {
-      backStore.back(true);
-    },
-  });
-  videoPlayer.value.registerPlugin(PlaylistButtonPlugin, {
-    onClick: () => {
-      showPlaylist.value = !showPlaylist.value;
-    },
-  });
-  videoPlayer.value.on(Events.FULLSCREEN_CHANGE, (isFullScreen) => {
-    displayStore.fullScreenMode = isFullScreen;
-  });
-  videoPlayer.value.controls?.show();
+  await createPlayer();
 });
 
 onMountedOrActivated(() => {
@@ -527,12 +545,17 @@ onMountedOrActivated(() => {
       keyboard.config.disable = false;
     }
   }
-  if (savedVideoSrc && savedVideoSrc.isLive) {
-    videoSrc.value = savedVideoSrc;
-    savedVideoSrc = undefined;
-  }
+  // if (savedVideoSrc && savedVideoSrc.isLive) {
+  //   videoSrc.value = savedVideoSrc;
+  //   savedVideoSrc = undefined;
+  // }
   if (shouldReload.value) {
     loadData();
+  } else if (savedVideoSrc) {
+    videoSrc.value = savedVideoSrc;
+    savedVideoSrc = undefined;
+  } else {
+    createPlayer();
   }
 });
 
@@ -540,11 +563,11 @@ onDeactivated(() => {
   if (displayStore.isAndroid) {
     keepScreenOn(false);
   }
-  try {
-    videoPlayer.value?.pause();
-  } catch (error) {
-    console.warn('video player pause error', error);
-  }
+  // try {
+  //   videoPlayer.value?.pause();
+  // } catch (error) {
+  //   console.warn('video player pause error', error);
+  // }
   if (videoPlayer.value) {
     const keyboard = videoPlayer.value.getPlugin('keyboard');
     if (keyboard) {
@@ -552,11 +575,14 @@ onDeactivated(() => {
       keyboard.config.disable = true;
     }
   }
-  if (videoSrc.value?.isLive) {
-    savedVideoSrc = videoSrc.value;
-    videoPlayer.value?.destroy();
-    videoSrc.value = undefined;
-  }
+  // if (videoSrc.value?.isLive) {
+  //   savedVideoSrc = videoSrc.value;
+  //   videoPlayer.value?.destroy();
+  //   videoSrc.value = undefined;
+  // }
+  savedVideoSrc = videoSrc.value;
+  videoPlayer.value?.destroy();
+  videoSrc.value = undefined;
 });
 
 onUnmounted(() => {
@@ -580,10 +606,17 @@ onUnmounted(() => {
         :add-to-shelf="onAddToShelf"
         :show-search="() => (showSearchDialog = true)"
       >
-        <div
-          ref="videoElement"
-          class="xg-video-player !relative !h-full !w-full flex-grow"
-        ></div>
+        <VideoSwiper
+          :prev-episode="prevEpisode"
+          :next-episode="nextEpisode"
+          :on-play-previous="playPrevious"
+          :on-play-next="playNext"
+        >
+          <div
+            ref="videoElement"
+            class="xg-video-player !relative !h-full !w-full flex-grow"
+          ></div>
+        </VideoSwiper>
         <SearchDialog
           v-model:show="showSearchDialog"
           v-model:search-text="searchText"
@@ -608,10 +641,17 @@ onUnmounted(() => {
         :add-to-shelf="onAddToShelf"
         :show-search="() => (showSearchDialog = true)"
       >
-        <div
-          ref="videoElement"
-          class="xg-video-player !relative !h-full !w-full flex-grow"
-        ></div>
+        <VideoSwiper
+          :prev-episode="prevEpisode"
+          :next-episode="nextEpisode"
+          :on-play-previous="playPrevious"
+          :on-play-next="playNext"
+        >
+          <div
+            ref="videoElement"
+            class="xg-video-player !relative !h-full !w-full flex-grow"
+          ></div>
+        </VideoSwiper>
         <SearchDialog
           v-model:show="showSearchDialog"
           v-model:search-text="searchText"

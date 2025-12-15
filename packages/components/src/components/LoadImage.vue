@@ -70,30 +70,14 @@ async function processSrc(
     const proxyUrl = await getProxyUrl(src, headers);
     return proxyUrl || src;
   } else {
-    let response: Response;
-    try {
-      response = await cachedFetch(
-        props.src,
-        {
-          headers,
-          verify: false,
-          maxRedirections: 0,
-        },
-        props.compress,
-      );
-      if (!response.ok) {
-        throw new Error('maxRedirections == 0 failed');
-      }
-    } catch (error) {
-      response = await cachedFetch(
-        props.src,
-        {
-          headers,
-          verify: true,
-        },
-        props.compress,
-      );
-    }
+    const response = await cachedFetch(
+      props.src,
+      {
+        headers,
+        verify: false,
+      },
+      props.compress,
+    );
 
     const blob = await response.blob();
     if (blob.size === 0) {

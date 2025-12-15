@@ -81,6 +81,7 @@ declare module 'vue' {
     VanTabs: typeof import('vant/es')['Tabs']
     VanTag: typeof import('vant/es')['Tag']
     VanTextEllipsis: typeof import('vant/es')['TextEllipsis']
+    VideoSwiper: typeof import('./src/components/media/VideoSwiper.vue')['default']
     VipButton: typeof import('./src/components/button/VipButton.vue')['default']
     VolumeControl: typeof import('./src/components/songbar/VolumeControl.vue')['default']
     WBookTab: typeof import('./src/components/tab/WBookTab.vue')['default']

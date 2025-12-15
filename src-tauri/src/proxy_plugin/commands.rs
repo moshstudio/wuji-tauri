@@ -596,8 +596,8 @@ fn handle_proxy_request_with_redirect(
             body.len()
         );
 
-        // Create HTTP client
-        let client = get_proxy_http_client(&url, &header_map);
+        // Create HTTP client (with certificate verification disabled)
+        let client = get_proxy_http_client(&url, &header_map, true);
 
         // Build request
         let reqwest_request = match client
@@ -761,7 +761,11 @@ fn get_m3u8_http_client(_url: &str, headers: &reqwest::header::HeaderMap) -> req
         .expect("Failed to build M3U8 HTTP client")
 }
 
-fn get_proxy_http_client(_url: &str, headers: &reqwest::header::HeaderMap) -> reqwest::Client {
+fn get_proxy_http_client(
+    _url: &str,
+    headers: &reqwest::header::HeaderMap,
+    danger_accept_invalid_certs: bool,
+) -> reqwest::Client {
     let mut headers = headers.clone();
 
     // Set default headers for proxy requests (Chrome compatible)
@@ -804,6 +808,8 @@ fn get_proxy_http_client(_url: &str, headers: &reqwest::header::HeaderMap) -> re
         .default_headers(headers)
         .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_SECS))
+        .danger_accept_invalid_certs(danger_accept_invalid_certs)
+        .danger_accept_invalid_hostnames(danger_accept_invalid_certs)
         .build()
         .expect("Failed to build proxy HTTP client")
 }
