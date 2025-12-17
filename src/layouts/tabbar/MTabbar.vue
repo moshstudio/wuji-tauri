@@ -6,6 +6,7 @@ import {
 } from 'tauri-plugin-commands-api';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
 import { useDisplayStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
 
@@ -141,7 +142,7 @@ window.androidBackCallback = async () => {
         v-show="showTabBar"
         v-model="activeKey"
         placeholder
-        class="z-[1002] h-[50px] shrink-0"
+        class="mtabbar-root z-[1002] h-[50px] shrink-0"
         active-color="var(--van-text-color)"
       >
         <van-tabbar-item
@@ -151,8 +152,16 @@ window.androidBackCallback = async () => {
           :to="page.to"
         >
           <template #icon>
-            <van-icon v-if="activeKey == index" :name="page.selectedIcon" />
-            <van-icon v-else :name="page.icon" />
+            <van-icon
+              v-if="activeKey == index"
+              :name="page.selectedIcon"
+              class="mtabbar-icon mtabbar-icon--active"
+            />
+            <van-icon
+              v-else
+              :name="page.icon"
+              class="mtabbar-icon mtabbar-icon--inactive"
+            />
           </template>
         </van-tabbar-item>
       </van-tabbar>
@@ -186,5 +195,31 @@ window.androidBackCallback = async () => {
 .slide-leave-to {
   transform: translateX(-20px);
   opacity: 0;
+}
+
+:deep(.van-tabbar-item) {
+  transition:
+    background-color 0.18s ease-out,
+    transform 0.18s ease-out;
+}
+
+.mtabbar-icon {
+  font-size: 20px;
+  transition:
+    transform 0.18s ease-out,
+    color 0.18s ease-out,
+    opacity 0.18s ease-out,
+    text-shadow 0.18s ease-out;
+}
+
+.mtabbar-icon--inactive {
+  opacity: 0.7;
+}
+
+.mtabbar-icon--active {
+  opacity: 1;
+  color: var(--van-primary-color);
+  transform: scale(1.05);
+  text-shadow: 0 0 6px rgb(from var(--van-text-color) r g b / 35%);
 }
 </style>

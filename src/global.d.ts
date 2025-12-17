@@ -1,9 +1,7 @@
-export {};
-declare global {
-  interface Window {
-    androidBackCallback?: () => void;
-    sendGreeting?: () => void;
-  }
+// Global Window interface extension
+interface Window {
+  androidBackCallback?: () => void;
+  sendGreeting?: () => void;
 }
 
 // Type definitions for vue-virtual-scroller
@@ -28,4 +26,12 @@ declare module 'vue-virtual-scroller' {
   }): ComponentOptions<Vue> | typeof Vue;
 
   export default plugin;
+}
+
+// Type definitions for @tinymomentum/liquid-glass-vue
+declare module '@tinymomentum/liquid-glass-vue' {
+  const LiquidGlassContainer: any;
+  const LiquidGlassButton: any;
+  const LiquidGlassLink: any;
+  export { LiquidGlassContainer, LiquidGlassButton, LiquidGlassLink };
 }

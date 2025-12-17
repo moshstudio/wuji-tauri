@@ -10,9 +10,11 @@ import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/son
 import { SongPlayMode } from '@wuji-tauri/source-extension';
 import { storeToRefs } from 'pinia';
 import { computed, ref } from 'vue';
+import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
 import PlayingSongList from '@/components/list/PlayingSongList.vue';
 import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
 import { transTime } from '@/utils';
+import { useWindowSize } from '@vueuse/core';
 
 withDefaults(
   defineProps<{
@@ -43,6 +45,8 @@ const { playingSong } = storeToRefs(songStore);
 const showLyric = ref(true);
 const showMoreOptions = ref(false);
 const showAddToShelfSheet = ref(false);
+const { width: windowWidth, height: WindowHeight } = useWindowSize();
+
 const actions = computed(() => {
   return shelfStore.songCreateShelf.map((item) => {
     const existed = item.playlist.list?.list.some(
@@ -81,33 +85,32 @@ const actions = computed(() => {
       </LoadImage>
     </div>
 
-    <div class="relative flex h-full w-full flex-col">
+    <div class="area relative flex h-full w-full flex-col">
       <!-- 按钮区域 -->
-      <div class="z-[12] bg-black/25 px-4 py-2 shadow-lg backdrop-blur-lg">
-        <div
-          class="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white to-transparent opacity-30"
-        />
-        <van-icon
-          name="arrow-left"
-          class="van-haptics-feedback text-white"
-          @click.self="() => back()"
-        />
-      </div>
+      <LiquidGlassContainer
+        :width="windowWidth"
+        :height="40"
+        :borderRadius="0"
+        :frostBlurRadius="3"
+        class="z-[12] flex-1 flex-col items-start justify-start"
+      >
+        <div class="flex h-full w-full items-center justify-start px-4">
+          <van-icon
+            name="arrow-left"
+            class="van-haptics-feedback text-white"
+            @click.self="() => back()"
+          />
+        </div>
+      </LiquidGlassContainer>
 
       <div
-        class="relative z-[11] min-h-0 flex-1"
+        class="lyric-area flex-0 relative z-[11] h-full min-h-0"
         @click="showLyric = !showLyric"
       >
-        <!-- 背景模糊层，当显示歌词时出现 -->
         <div
-          class="absolute inset-0 backdrop-blur-lg backdrop-filter transition-opacity duration-300"
+          class="transition duration-500 ease-in-out"
           :class="showLyric ? 'opacity-100' : 'opacity-0'"
-          :style="{
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }"
-        />
-        <div v-if="showLyric">
+        >
           <div v-if="lyric">
             <ul
               class="mt-[30vh] flex h-full max-h-full w-full flex-col items-center justify-start gap-[10px] overflow-hidden p-6 text-center transition duration-500 ease-in-out"
@@ -128,129 +131,132 @@ const actions = computed(() => {
         </div>
       </div>
       <!-- 控制区域 -->
-      <div
-        class="relative z-[12] flex flex-col gap-2 bg-black/25 px-4 py-2 shadow-lg backdrop-blur-lg"
+      <LiquidGlassContainer
+        :width="windowWidth"
+        :height="170"
+        :borderRadius="0"
+        :frostBlurRadius="3"
+        class="z-[12] flex-1 flex-col items-center justify-end"
       >
-        <div
-          class="absolute left-0 right-0 top-0 h-4 bg-gradient-to-b from-white to-transparent opacity-30"
-        />
-        <div class="flex w-full items-center justify-between pt-2">
-          <div class="flex flex-col">
-            <p class="text-base font-bold text-gray-200">
-              {{ playingSong.name || '等待播放' }}
-            </p>
-            <p class="text-sm text-gray-300">
-              {{ joinSongArtists(playingSong.artists) || '' }}
-            </p>
+        <div class="flex h-full w-full flex-col gap-2 px-4 py-2">
+          <div class="flex w-full items-center justify-between pt-2">
+            <div class="flex flex-col">
+              <p class="text-base font-bold text-gray-200">
+                {{ playingSong.name || '等待播放' }}
+              </p>
+              <p class="text-sm text-gray-200">
+                {{ joinSongArtists(playingSong.artists) || '' }}
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="van-haptics-feedback">
+                <van-icon
+                  v-if="shelfStore.songInLikeShelf(playingSong)"
+                  class="text-red-600"
+                  name="like"
+                  :size="20"
+                  @click="() => shelfStore.removeSongFromShelf(playingSong)"
+                />
+                <van-icon
+                  v-else
+                  class="text-gray-200"
+                  name="like-o"
+                  :size="20"
+                  @click="() => shelfStore.addSongToShelf(playingSong)"
+                />
+              </div>
+              <div class="van-haptics-feedback">
+                <van-icon
+                  name="ellipsis"
+                  class="clickable p-2 text-gray-200"
+                  :size="20"
+                  @click="() => (showMoreOptions = !showMoreOptions)"
+                />
+              </div>
+            </div>
           </div>
-          <div class="flex items-center gap-2">
-            <div class="van-haptics-feedback">
-              <van-icon
-                v-if="shelfStore.songInLikeShelf(playingSong)"
-                class="text-red-600"
-                name="like"
-                :size="20"
-                @click="() => shelfStore.removeSongFromShelf(playingSong)"
+          <van-slider
+            v-model="songStore.audioCurrent"
+            :min="0"
+            :max="songStore.audioDuration"
+            button-size="8px"
+            active-color="rgba(255, 255, 255, 0.7)"
+            inactive-color="rgba(255, 255, 255, 0.3)"
+            class="mt-2"
+            @change="(value) => songStore.seek(value)"
+          />
+          <div class="mb-2 flex items-center justify-between">
+            <span class="text-xs text-gray-200">
+              {{ transTime(songStore.audioCurrent) }}
+            </span>
+            <span class="text-right text-xs text-gray-200">
+              {{ transTime(songStore.audioDuration) }}
+            </span>
+          </div>
+          <div class="z-[13] flex w-full items-center justify-between">
+            <div label="playMode">
+              <Icon
+                v-if="songStore.playMode === SongPlayMode.list"
+                icon="fluent-mdl2:repeat-all"
+                width="19"
+                height="19"
+                color="rgba(255, 255, 255, 0.7)"
+                class="van-haptics-feedback cursor-pointer text-gray-100 hover:text-[--van-text-color]"
+                @click="songStore.playMode = SongPlayMode.single"
               />
-              <van-icon
+              <Icon
+                v-else-if="songStore.playMode === SongPlayMode.single"
+                icon="fluent-mdl2:repeat-one"
+                width="19"
+                height="19"
+                color="rgba(255, 255, 255, 0.7)"
+                class="van-haptics-feedback cursor-pointer text-gray-100 hover:text-[--van-text-color]"
+                @click="songStore.playMode = SongPlayMode.random"
+              />
+              <Icon
                 v-else
-                class="text-gray-300"
-                name="like-o"
-                :size="20"
-                @click="() => shelfStore.addSongToShelf(playingSong)"
+                icon="lets-icons:sort-random-light"
+                width="19"
+                height="19"
+                color="rgba(255, 255, 255, 0.7)"
+                class="van-haptics-feedback cursor-pointer text-gray-100 hover:text-[--van-text-color]"
+                @click="songStore.playMode = SongPlayMode.list"
               />
             </div>
-            <div class="van-haptics-feedback">
-              <van-icon
-                name="ellipsis"
-                class="clickable p-2 text-gray-300"
-                :size="20"
-                @click="() => (showMoreOptions = !showMoreOptions)"
-              />
-            </div>
-          </div>
-        </div>
-        <van-slider
-          v-model="songStore.audioCurrent"
-          :min="0"
-          :max="songStore.audioDuration"
-          button-size="8px"
-          active-color="rgba(220, 220, 220, 0.7)"
-          inactive-color="rgba(255, 255, 255, 0.3)"
-          class="mt-2"
-          @change="(value) => songStore.seek(value)"
-        />
-        <div class="mb-2 flex items-center justify-between">
-          <span class="text-xs text-gray-300">
-            {{ transTime(songStore.audioCurrent) }}
-          </span>
-          <span class="text-right text-xs text-gray-300">
-            {{ transTime(songStore.audioDuration) }}
-          </span>
-        </div>
-        <div class="flex w-full items-center justify-between">
-          <div label="playMode">
             <Icon
-              v-if="songStore.playMode === SongPlayMode.list"
-              icon="fluent-mdl2:repeat-all"
-              width="19"
-              height="19"
-              color="rgba(220, 220, 220, 0.7)"
-              class="van-haptics-feedback cursor-pointer text-gray-400 hover:text-[--van-text-color]"
-              @click="songStore.playMode = SongPlayMode.single"
+              icon="ion:play-skip-back"
+              width="22px"
+              height="22px"
+              color="rgba(255, 255, 255, 0.7)"
+              class="van-haptics-feedback"
+              @click="songStore.prevSong"
+            />
+            <PlayPauseButton
+              size="36"
+              color="rgba(255, 255, 255, 0.7)"
+              :is-playing="songStore.isPlaying"
+              :play="songStore.onPlay"
+              :pause="songStore.onPause"
             />
             <Icon
-              v-else-if="songStore.playMode === SongPlayMode.single"
-              icon="fluent-mdl2:repeat-one"
-              width="19"
-              height="19"
-              color="rgba(220, 220, 220, 0.7)"
-              class="van-haptics-feedback cursor-pointer text-gray-400 hover:text-[--van-text-color]"
-              @click="songStore.playMode = SongPlayMode.random"
+              icon="ion:play-skip-forward"
+              width="22px"
+              height="22px"
+              color="rgba(255, 255, 255, 0.7)"
+              class="van-haptics-feedback"
+              @click="songStore.nextSong"
             />
             <Icon
-              v-else
-              icon="lets-icons:sort-random-light"
-              width="19"
-              height="19"
-              color="rgba(220, 220, 220, 0.7)"
-              class="van-haptics-feedback cursor-pointer text-gray-400 hover:text-[--van-text-color]"
-              @click="songStore.playMode = SongPlayMode.list"
+              icon="iconamoon:playlist-thin"
+              width="20"
+              height="20"
+              color="rgba(255, 255, 255, 0.7)"
+              class="van-haptics-feedback"
+              @click="showPlayingList = !showPlayingList"
             />
           </div>
-          <Icon
-            icon="ion:play-skip-back"
-            width="22px"
-            height="22px"
-            color="rgba(220, 220, 220, 0.7)"
-            class="van-haptics-feedback"
-            @click="songStore.prevSong"
-          />
-          <PlayPauseButton
-            size="36"
-            color="rgba(220, 220, 220, 0.7)"
-            :is-playing="songStore.isPlaying"
-            :play="songStore.onPlay"
-            :pause="songStore.onPause"
-          />
-          <Icon
-            icon="ion:play-skip-forward"
-            width="22px"
-            height="22px"
-            color="rgba(220, 220, 220, 0.7)"
-            class="van-haptics-feedback"
-            @click="songStore.nextSong"
-          />
-          <Icon
-            icon="iconamoon:playlist-thin"
-            width="20"
-            height="20"
-            color="rgba(220, 220, 220, 0.7)"
-            class="van-haptics-feedback"
-            @click="showPlayingList = !showPlayingList"
-          />
         </div>
-      </div>
+      </LiquidGlassContainer>
     </div>
     <PlayingSongList v-model:show="showPlayingList" />
     <MoreOptionsSheet
@@ -288,7 +294,7 @@ const actions = computed(() => {
   &.active-line {
     color: v-bind(activeLyricColor) !important;
     transform: scale(1.3);
-    font-weight: bold;
+    font-weight: 800;
   }
 }
 </style>

@@ -29,6 +29,7 @@ import '@vant/touch-emulator';
 import '@/styles/index.css';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 import 'animate.css';
+import '@tinymomentum/liquid-glass-vue/dist/liquid-glass-vue.css';
 
 loader.config({
   paths: {

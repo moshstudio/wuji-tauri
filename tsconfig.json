@@ -22,7 +22,8 @@
     "noUnusedParameters": true,
     "noEmit": true,
     "isolatedModules": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": []
   },
   "references": [{ "path": "./tsconfig.node.json" }],
   "include": [
@@ -31,5 +32,6 @@
     "src/**/*.tsx",
     "src/**/*.vue",
     "src/**/*.js"
-  ]
+  ],
+  "files": ["src/global.d.ts"]
 }

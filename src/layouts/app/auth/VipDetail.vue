@@ -96,7 +96,7 @@ watch(
 
 <template>
   <div
-    class="relative flex h-full w-full flex-col overflow-auto bg-[var(--van-background-color)]"
+    class="relative flex h-full w-full flex-col bg-[var(--van-background-color)]"
   >
     <MNavBar title="会员计划" />
 
@@ -141,7 +141,7 @@ watch(
       shrink
       animated
       swipeable
-      class="flex-grow"
+      class="flex-grow overflow-auto"
     >
       <van-tab title="VIP会员">
         <div class="p-4">
@@ -149,7 +149,7 @@ watch(
             <div
               v-for="plan in vipPlans"
               :key="plan._id"
-              class="flex w-28 flex-col items-center justify-start rounded-xl border-2 p-4 transition-all duration-200"
+              class="flex h-36 w-28 flex-col items-center justify-start rounded-xl border-2 p-4 transition-all duration-200"
               :class="{
                 'border-orange-400 bg-gradient-to-br from-orange-50 to-amber-50 shadow-md dark:from-orange-900/30 dark:to-amber-900/30':
                   selectedVipPlan?._id === plan._id,
@@ -236,7 +236,7 @@ watch(
             <div
               v-for="plan in sVipPlans"
               :key="plan._id"
-              class="flex w-28 flex-col items-center justify-start rounded-xl border-2 p-4 transition-all duration-200"
+              class="flex h-36 w-28 flex-col items-center justify-start rounded-xl border-2 p-4 transition-all duration-200"
               :class="{
                 'border-purple-400 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md dark:from-purple-900/30 dark:to-pink-900/30':
                   selectedSvipPlan?._id === plan._id,
@@ -263,7 +263,7 @@ watch(
                 <span class="text-2xl font-bold">{{ plan.price }}</span>
               </div>
               <p
-                class="mt-2 text-center text-xs text-gray-500 dark:text-gray-400"
+                class="mt-2 line-clamp-2 text-center text-xs text-gray-500 dark:text-gray-400"
               >
                 {{
                   plan.billingCycle === MembershipPlanBillingCycle.Lifetime

@@ -184,8 +184,13 @@ watch(
             <template #title>
               <van-icon
                 :name="activeKey == `${index}` ? page.selectedIcon : page.icon"
-                class="hover:scale-105"
-                size="26"
+                :class="[
+                  'wtabbar-icon',
+                  activeKey == `${index}`
+                    ? 'wtabbar-icon--active'
+                    : 'wtabbar-icon--inactive',
+                ]"
+                size="22"
               />
             </template>
           </van-sidebar-item>
@@ -255,12 +260,68 @@ body {
   overflow: hidden;
   -ms-overflow-style: none;
 }
+
+.sidebar {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.14);
+  border-right: 1px solid rgb(from var(--van-text-color) r g b / 6%);
+}
+
 :deep(.van-sidebar) {
   width: 50px;
 }
+
 :deep(.van-sidebar-item) {
   padding: 12px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  transition:
+    background-color 0.16s ease-out,
+    transform 0.16s ease-out;
 }
+
+:deep(.van-sidebar-item:hover) {
+  background-color: rgb(from var(--van-text-color) r g b / 4%);
+}
+
+:deep(.van-sidebar-item--select) {
+  background-color: rgb(from var(--van-text-color) r g b / 6%);
+}
+
+:deep(.van-sidebar-item--select::before) {
+  width: 3px;
+  border-radius: 999px;
+  background: var(--van-primary-color);
+}
+
+.wtabbar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 6px;
+  transition:
+    background-color 0.16s ease-out,
+    box-shadow 0.16s ease-out,
+    transform 0.16s ease-out,
+    color 0.16s ease-out,
+    opacity 0.16s ease-out;
+}
+
+.wtabbar-icon--inactive {
+  opacity: 0.7;
+}
+
+.wtabbar-icon--active {
+  opacity: 1;
+  color: var(--van-primary-color);
+  background-color: rgb(from var(--van-text-color) r g b / 8%);
+  box-shadow: 0 0 0 1px rgb(from var(--van-text-color) r g b / 12%);
+  transform: scale(1.05);
+}
+
 .van-toast .van-toast__icon {
   font-size: var(--van-toast-icon-size);
 }

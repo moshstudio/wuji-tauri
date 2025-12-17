@@ -10,6 +10,7 @@ import { Icon } from '@iconify/vue';
 import { LoadImage } from '@wuji-tauri/components/src';
 import { storeToRefs } from 'pinia';
 import { nextTick, onActivated, onDeactivated, ref, watch } from 'vue';
+import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
 import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import { router } from '@/router';
 import { useDisplayStore } from '@/store';
@@ -154,26 +155,31 @@ onDeactivated(() => {
         axis="xy"
         magnetic="x"
         :gap="6"
-        class="!h-[90px] !w-[40px] !border !border-[var(--van-border-color)] !bg-[color:rgb(var(--van-background)/0.5)] active:!opacity-100"
+        class="!h-[90px] !w-[40px] !rounded-[20px] !border-none !bg-transparent active:!opacity-100"
       >
-        <div class="flex h-[90px] flex-col items-center gap-[0px] leading-[0]">
-          <van-button
-            icon="arrow-up"
-            square
-            hairline
-            size="small"
-            class="h-[45px] w-[40px]"
-            @click="() => prevChapter()"
-          />
-          <van-button
-            icon="arrow-down"
-            square
-            hairline
-            size="small"
-            class="h-[45px] w-[40px]"
-            @click="() => nextChapter()"
-          />
-        </div>
+        <LiquidGlassContainer
+          :width="40"
+          :height="90"
+          :frostBlurRadius="1"
+          class="flex-col"
+        >
+          <div
+            class="flex h-full w-full flex-col items-center gap-0 leading-[0]"
+          >
+            <div
+              class="z-10 flex h-full w-full flex-1 items-center justify-center"
+              @click="() => prevChapter()"
+            >
+              <van-icon name="arrow-up" size="14" color="white" />
+            </div>
+            <div
+              class="test z-10 flex h-full w-full flex-1 items-center justify-center"
+              @click="() => nextChapter()"
+            >
+              <van-icon name="arrow-down" size="14" color="white" />
+            </div>
+          </div>
+        </LiquidGlassContainer>
       </van-floating-bubble>
     </div>
 

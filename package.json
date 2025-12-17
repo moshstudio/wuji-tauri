@@ -28,6 +28,7 @@
     "@tauri-apps/plugin-store": "~2.3.0",
     "@tauri-apps/plugin-updater": "~2.9.0",
     "@tauri-apps/plugin-window-state": "~2.2.3",
+    "@tinymomentum/liquid-glass-vue": "^1.0.9",
     "@vant/touch-emulator": "^1.4.0",
     "@vant/use": "^1.6.0",
     "@videojs-player/vue": "^1.0.0",

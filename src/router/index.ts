@@ -45,10 +45,16 @@ export const routes: RouteRecordRaw[] = [
             component: () => import('@/views/song/index.vue'),
           },
           {
-            path: 'play-view',
-            name: 'SongPlayView',
-            component: () => import('@/views/song/SongPlayView.vue'),
+            path: 'play',
+            children: [
+              {
+                path: 'play-view',
+                name: 'SongPlayView',
+                component: () => import('@/views/song/SongPlayView.vue'),
+              },
+            ],
           },
+
           {
             path: 'shelf',
             children: [

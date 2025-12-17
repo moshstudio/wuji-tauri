@@ -28,7 +28,7 @@ const pageNo = computed({
 });
 const bubbleOffset = ref({
   x: document.querySelector('body')!.clientWidth - 130,
-  y: document.querySelector('body')!.clientHeight - 100,
+  y: document.querySelector('body')!.clientHeight - 120,
 });
 watch(bubbleOffset, (offset) => {
   const ch = document.querySelector('body')!.clientHeight;
@@ -99,6 +99,7 @@ watch(
         teleport=".photo-detail"
       >
         <MPagination
+          use-glass
           :page-no="pageNo"
           :page-count="Number(photoDetail.totalPage)"
           :to-page="(pageNo) => toPage(pageNo)"
@@ -128,7 +129,7 @@ watch(
   width: 120px;
   border: none;
   border-radius: 4px;
-  background-color: rgb(from var(--van-background) r g b / 50%);
+  background-color: transparent;
 }
 :deep(.van-floating-bubble:active) {
   opacity: 1;

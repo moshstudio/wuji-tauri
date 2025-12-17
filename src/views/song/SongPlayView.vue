@@ -22,6 +22,18 @@ const activeIndex = ref<number>(0); // 高亮Index
 const transformStyle = ref<string>(''); // 偏移量
 const activeLyricColor = ref<string>('#FFD700');
 
+// 预设的高质量明显颜色
+const PRESET_COLORS = [
+  '#FF6B9D', // 粉红
+  '#FFA500', // 橙色
+  '#FFD700', // 金色
+  '#00E5FF', // 青色
+  '#B388FF', // 紫色
+  '#69F0AE', // 绿色
+  '#FF5252', // 红色
+  '#64FFDA', // 蓝绿
+];
+
 watch(
   playingSong,
   async (newSong) => {
@@ -45,29 +57,27 @@ watch(
       newSong.picHeaders,
       (color) => {
         if (!color) {
-          activeLyricColor.value = '#FFD700';
+          // 随机选择一个预设颜色
+          const randomIndex = Math.floor(Math.random() * PRESET_COLORS.length);
+          activeLyricColor.value = PRESET_COLORS[randomIndex];
           return;
         }
 
-        let contrastColor = color.isDark()
-          ? color.clone().brighten(30)
-          : color.clone().darken(30);
+        // 提取颜色的色相，创建鲜艳明亮的版本
+        const hue = color.toHsl().h;
 
-        // 确保颜色不是黑白，同时提高其鲜艳程度
-        contrastColor = contrastColor.saturate(30);
+        // 创建高饱和度、适中亮度的颜色（确保明显且好看）
+        const vibrantColor = tinycolor({ h: hue, s: 0.85, l: 0.65 });
 
-        // 如果颜色接近白色或黑色，调整其亮度和饱和度
-        if (contrastColor.isLight()) {
-          contrastColor = contrastColor.spin(180).saturate(20);
+        // 检查颜色是否足够明显（亮度在合理范围内）
+        const brightness = vibrantColor.getBrightness();
+        if (brightness < 100 || brightness > 230) {
+          // 如果太暗或太亮，使用与色相最接近的预设颜色
+          const closestPreset = findClosestPresetColor(hue);
+          activeLyricColor.value = closestPreset;
+        } else {
+          activeLyricColor.value = vibrantColor.toHexString();
         }
-        if (
-          contrastColor.toHex() === '#ffffff' ||
-          contrastColor.toHex() === '#000000'
-        ) {
-          // 强制调整色调和饱和度以避免黑白
-          contrastColor = contrastColor.spin(180).saturate(50).lighten(10);
-        }
-        activeLyricColor.value = contrastColor.toHexString();
       },
     );
   },
@@ -105,6 +115,27 @@ watch(
   },
   { immediate: true },
 );
+
+// 根据色相找到最接近的预设颜色
+function findClosestPresetColor(hue: number): string {
+  const presetHues = PRESET_COLORS.map((color) => tinycolor(color).toHsl().h);
+  let minDiff = 360;
+  let closestIndex = 0;
+
+  presetHues.forEach((presetHue, index) => {
+    // 考虑色相环的循环特性
+    const diff = Math.min(
+      Math.abs(hue - presetHue),
+      360 - Math.abs(hue - presetHue),
+    );
+    if (diff < minDiff) {
+      minDiff = diff;
+      closestIndex = index;
+    }
+  });
+
+  return PRESET_COLORS[closestIndex];
+}
 
 async function analyzeImageColor(
   imageSrc: string | undefined,
