@@ -24,7 +24,6 @@ declare module 'vue' {
     MBookTab: typeof import('./src/components/tab/MBookTab.vue')['default']
     MBookTTSButton: typeof import('./src/components/button/MBookTTSButton.vue')['default']
     MComicTab: typeof import('./src/components/tab/MComicTab.vue')['default']
-    MFloatingBubble: typeof import('./src/components/floatingBubble/MFloatingBubble.vue')['default']
     MHeader: typeof import('./src/components/header/MHeader.vue')['default']
     MLoginButton: typeof import('./src/components/button/MLoginButton.vue')['default']
     MNavBar: typeof import('./src/components/header/MNavBar.vue')['default']

@@ -14,9 +14,8 @@ import { useComicShelfStore, useStore } from '@/store';
 
 const store = useStore();
 const shelfStore = useComicShelfStore();
-const { comicShelf } = storeToRefs(shelfStore);
+const { comicShelf, tabIndex } = storeToRefs(shelfStore);
 
-const activeIndex = ref(0);
 const isChapterRefreshing = ref(false);
 const showRemoveShelfSheet = ref(false);
 
@@ -103,7 +102,7 @@ function removeComicFromShelf(comic: ComicItemInShelf, shelfId: string) {
   <PlatformSwitch>
     <template #app>
       <AppComicShelf
-        v-model:active-index="activeIndex"
+        v-model:active-index="tabIndex"
         :comic-shelfs="comicShelf"
         :is-chapter-refreshing="isChapterRefreshing"
         :refresh-chapters="refreshChapters"
@@ -117,7 +116,7 @@ function removeComicFromShelf(comic: ComicItemInShelf, shelfId: string) {
     </template>
     <template #desktop>
       <DesktopComicShelf
-        v-model:active-index="activeIndex"
+        v-model:active-index="tabIndex"
         :comic-shelfs="comicShelf"
         :is-chapter-refreshing="isChapterRefreshing"
         :refresh-chapters="refreshChapters"

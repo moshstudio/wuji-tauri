@@ -160,6 +160,8 @@ onDeactivated(() => {
         <LiquidGlassContainer
           :width="40"
           :height="90"
+          :glassTintColor="'#000000'"
+          :glassTintOpacity="20"
           :frostBlurRadius="1"
           class="flex-col"
         >

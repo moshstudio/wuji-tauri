@@ -51,12 +51,53 @@ function changePage(params: PickerConfirmEventParams) {
     :width="120"
     :height="40"
     :border-radius="6"
-    :innerShadowBlur="0"
-    class="select-none p-1 text-[var(--van-text-color)]"
-    :class="useGlass ? '' : 'bg-[var(--van-background)]/50'"
+    :glassTintColor="'#000000'"
+    :glassTintOpacity="20"
+    :innerShadowBlur="1"
+    class="select-none text-[var(--van-text-color)]"
+    :class="useGlass ? '' : 'bg-[var(--van-background)]/50 h-[40px] w-[120px]'"
   >
-    <div class="flex h-full w-full items-center justify-around gap-2">
-      <van-button
+    <div class="flex h-full w-full items-center justify-around gap-2 p-2">
+      <div
+        class="van-haptics-feedback z-[10] flex h-full w-full flex-1 items-center justify-center"
+        @click="
+          () => {
+            if (pageNo > 1) {
+              toPage(pageNo - 1);
+            }
+          }
+        "
+      >
+        <van-icon
+          name="arrow-left"
+          size="14"
+          :color="useGlass ? 'white' : '--van-text-color'"
+        />
+      </div>
+      <div
+        class="z-[10] flex-1 cursor-pointer text-xs"
+        :class="useGlass ? 'text-white' : 'text-[var(--van-text-color)]'"
+        @click="showPicker = true"
+      >
+        {{ pageNo }}/{{ pageCount }}
+      </div>
+      <div
+        class="van-haptics-feedback z-[10] flex h-full w-full flex-1 items-center justify-center"
+        @click="
+          () => {
+            if (pageNo < Number(pageCount)) {
+              toPage(pageNo + 1);
+            }
+          }
+        "
+      >
+        <van-icon
+          name="arrow"
+          size="14"
+          :color="useGlass ? 'white' : '--van-text-color'"
+        />
+      </div>
+      <!-- <van-button
         :plain="true"
         size="small"
         :disabled="pageNo <= 1"
@@ -74,7 +115,7 @@ function changePage(params: PickerConfirmEventParams) {
         @click="() => toPage(pageNo + 1)"
       >
         <van-icon name="arrow" size="14" />
-      </van-button>
+      </van-button> -->
       <van-popup
         v-model:show="showPicker"
         destroy-on-close

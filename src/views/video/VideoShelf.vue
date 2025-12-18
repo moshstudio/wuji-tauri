@@ -8,9 +8,8 @@ import DesktopVideoShelf from '@/layouts/desktop/video/VideoShelf.vue';
 import { useVideoShelfStore } from '@/store';
 
 const shelfStore = useVideoShelfStore();
-const { videoShelf } = storeToRefs(shelfStore);
+const { videoShelf, tabIndex } = storeToRefs(shelfStore);
 
-const activeIndex = ref(0);
 const selecteMode = ref(false);
 const showDeleteSheet = ref(false);
 const deleteSheetActions = computed(() => {
@@ -60,7 +59,7 @@ function removeVideoFromShelf(
   <PlatformSwitch>
     <template #app>
       <AppVideoShelf
-        v-model:active-index="activeIndex"
+        v-model:active-index="tabIndex"
         v-model:selecte-mode="selecteMode"
         :create-shelf="createShelf"
         :delete-shelf="deleteShelf"
@@ -69,7 +68,7 @@ function removeVideoFromShelf(
     </template>
     <template #desktop>
       <DesktopVideoShelf
-        v-model:active-index="activeIndex"
+        v-model:active-index="tabIndex"
         v-model:selecte-mode="selecteMode"
         :create-shelf="createShelf"
         :delete-shelf="deleteShelf"

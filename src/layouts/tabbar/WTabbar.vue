@@ -300,7 +300,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
   padding: 6px;
   transition:
     background-color 0.16s ease-out,
@@ -317,8 +316,6 @@ body {
 .wtabbar-icon--active {
   opacity: 1;
   color: var(--van-primary-color);
-  background-color: rgb(from var(--van-text-color) r g b / 8%);
-  box-shadow: 0 0 0 1px rgb(from var(--van-text-color) r g b / 12%);
   transform: scale(1.05);
 }
 

@@ -76,7 +76,7 @@ const activeIndex = defineModel<number>('activeIndex', {
       shrink
       animated
       sticky
-      :active="activeIndex"
+      v-model:active="activeIndex"
       class="h-full w-full flex-1 overflow-y-scroll"
     >
       <van-tab v-for="shelf in comicShelfs" :key="shelf.id" :title="shelf.name">

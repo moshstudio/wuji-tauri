@@ -255,6 +255,7 @@ abstract class Extension {
         const img = element.querySelector(cover);
         let coverE =
           img?.getAttribute('data-original') ||
+          img?.getAttribute('data-lazy-src') ||
           img?.getAttribute('data-img') ||
           img?.getAttribute('data-src') ||
           img?.getAttribute('src') ||
@@ -348,6 +349,7 @@ abstract class Extension {
         const img = element.querySelector(cover);
         let coverE =
           img?.getAttribute('data-original') ||
+          img?.getAttribute('data-lazy-src') ||
           img?.getAttribute('data-img') ||
           img?.getAttribute('data-src') ||
           img?.getAttribute('src') ||
@@ -444,6 +446,7 @@ abstract class Extension {
         const img = element.querySelector(cover);
         let coverE =
           img?.getAttribute('data-original') ||
+          img?.getAttribute('data-lazy-src') ||
           img?.getAttribute('data-img') ||
           img?.getAttribute('data-src') ||
           img?.getAttribute('src') ||
@@ -526,6 +529,7 @@ abstract class Extension {
         const img = element.querySelector(picUrl);
         let coverE =
           img?.getAttribute('data-original') ||
+          img?.getAttribute('data-lazy-src') ||
           img?.getAttribute('data-img') ||
           img?.getAttribute('data-src') ||
           img?.getAttribute('src') ||
@@ -606,6 +610,7 @@ abstract class Extension {
         const img = element.querySelector(picUrl);
         let coverE =
           img?.getAttribute('data-original') ||
+          img?.getAttribute('data-lazy-src') ||
           img?.getAttribute('data-img') ||
           img?.getAttribute('data-src') ||
           img?.getAttribute('src') ||

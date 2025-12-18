@@ -1,5 +1,5 @@
 import type { PhotoItem, PhotoShelf } from '@wuji-tauri/source-extension';
-import { debounceFilter, useStorageAsync } from '@vueuse/core';
+import { debounceFilter, useStorage, useStorageAsync } from '@vueuse/core';
 
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
@@ -8,7 +8,6 @@ import { defineStore } from 'pinia';
 
 import { showToast } from 'vant';
 import { createKVStore } from './utils';
-import { estimateJsonSize } from '@/utils';
 import { markRaw } from 'vue';
 
 export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
@@ -30,6 +29,9 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
       eventFilter: debounceFilter(500),
     },
   );
+
+  const tabIndex = useStorage<number>('photoShelfTabIndex', 0);
+
   const photoInShelf = (itemId: string, shelfId?: string): boolean => {
     if (shelfId) {
       return (
@@ -129,6 +131,7 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
   return {
     storage,
     photoShelf,
+    tabIndex,
     photoInShelf,
     addPhotoToShelf,
     createShelf,

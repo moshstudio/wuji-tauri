@@ -6,7 +6,7 @@ import type {
   VideoShelf,
 } from '@wuji-tauri/source-extension';
 
-import { debounceFilter, useStorageAsync } from '@vueuse/core';
+import { debounceFilter, useStorage, useStorageAsync } from '@vueuse/core';
 
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
@@ -40,6 +40,8 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
       eventFilter: debounceFilter(1000),
     },
   );
+
+  const tabIndex = useStorage<number>('videoShelfTabIndex', 0);
 
   // 阅读历史
   const videoHistory = useStorageAsync<Array<VideoHistory>>(
@@ -312,6 +314,7 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
     storage,
     videoShelf,
     videoHistory,
+    tabIndex,
     createVideoShelf,
     removeVideoShelf,
     isVideoInShelf,

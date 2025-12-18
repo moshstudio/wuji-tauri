@@ -8,9 +8,8 @@ import DesktopPhotoShelf from '@/layouts/desktop/photo/PhotoShelf.vue';
 import { usePhotoShelfStore } from '@/store';
 
 const shelfStore = usePhotoShelfStore();
-const { photoShelf } = storeToRefs(shelfStore);
+const { photoShelf, tabIndex } = storeToRefs(shelfStore);
 
-const activeIndex = ref(0);
 const selecteMode = ref(false);
 const showDeleteSheet = ref(false);
 const deleteSheetActions = computed(() => {
@@ -59,7 +58,7 @@ function removePhotoFromShelf(
   <PlatformSwitch>
     <template #app>
       <AppPhotoShelf
-        v-model:active-index="activeIndex"
+        v-model:active-index="tabIndex"
         v-model:selecte-mode="selecteMode"
         :create-shelf="createShelf"
         :delete-shelf="deleteShelf"
@@ -68,7 +67,7 @@ function removePhotoFromShelf(
     </template>
     <template #desktop>
       <DesktopPhotoShelf
-        v-model:active-index="activeIndex"
+        v-model:active-index="tabIndex"
         v-model:selecte-mode="selecteMode"
         :create-shelf="createShelf"
         :delete-shelf="deleteShelf"

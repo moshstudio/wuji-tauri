@@ -91,6 +91,8 @@ const actions = computed(() => {
         :height="40"
         :borderRadius="0"
         :frostBlurRadius="3"
+        :glassTintColor="'#000000'"
+        :glassTintOpacity="20"
         class="z-[12] flex-1 flex-col items-start justify-start"
       >
         <div class="flex h-full w-full items-center justify-start px-4">
@@ -135,15 +137,17 @@ const actions = computed(() => {
         :height="170"
         :borderRadius="0"
         :frostBlurRadius="3"
+        :glassTintColor="'#000000'"
+        :glassTintOpacity="20"
         class="z-[12] flex-1 flex-col items-center justify-end"
       >
         <div class="flex h-full w-full flex-col gap-2 px-4 py-2">
           <div class="flex w-full items-center justify-between pt-2">
             <div class="flex flex-col">
-              <p class="text-base font-bold text-gray-200">
+              <p class="text-base font-bold text-white">
                 {{ playingSong.name || '等待播放' }}
               </p>
-              <p class="text-sm text-gray-200">
+              <p class="text-sm text-gray-100">
                 {{ joinSongArtists(playingSong.artists) || '' }}
               </p>
             </div>

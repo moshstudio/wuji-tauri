@@ -11,9 +11,8 @@ import { useBookShelfStore, useStore } from '@/store';
 
 const store = useStore();
 const shelfStore = useBookShelfStore();
-const { bookShelf } = storeToRefs(shelfStore);
+const { bookShelf, tabIndex } = storeToRefs(shelfStore);
 
-const activeIndex = ref(0);
 const isChapterRefreshing = ref(false);
 const showRemoveShelfSheet = ref(false);
 
@@ -100,7 +99,7 @@ function removeBookFromShelf(book: BookItemInShelf, shelfId: string) {
   <PlatformSwitch>
     <template #app>
       <AppBookShelf
-        v-model:active-index="activeIndex"
+        v-model:active-index="tabIndex"
         :book-shelfs="bookShelf"
         :is-chapter-refreshing="isChapterRefreshing"
         :refresh-chapters="refreshChapters"
@@ -114,7 +113,7 @@ function removeBookFromShelf(book: BookItemInShelf, shelfId: string) {
     </template>
     <template #desktop>
       <DesktopBookShelf
-        v-model:active-index="activeIndex"
+        v-model:active-index="tabIndex"
         :book-shelfs="bookShelf"
         :is-chapter-refreshing="isChapterRefreshing"
         :refresh-chapters="refreshChapters"

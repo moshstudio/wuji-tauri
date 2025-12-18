@@ -84,7 +84,7 @@ const { photoShelf } = storeToRefs(shelfStore);
       animated
       sticky
       :offset-top="90"
-      :active="activeIndex"
+      v-model:active="activeIndex"
       class="h-full w-full overflow-y-scroll"
     >
       <van-tab v-for="shelf in photoShelf" :key="shelf.id" :title="shelf.name">

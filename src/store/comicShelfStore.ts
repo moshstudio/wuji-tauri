@@ -4,7 +4,7 @@ import type {
   ComicShelf,
 } from '@wuji-tauri/source-extension';
 
-import { debounceFilter, useStorageAsync } from '@vueuse/core';
+import { debounceFilter, useStorage, useStorageAsync } from '@vueuse/core';
 
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
@@ -40,6 +40,8 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
       eventFilter: debounceFilter(500),
     },
   );
+
+  const tabIndex = useStorage<number>('comicShelfTabIndex', 0);
 
   // 阅读历史
   const comicHistory = useStorageAsync<Array<ComicHistory>>(
@@ -255,6 +257,7 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
     comicShelf,
     comicHistory,
     comicChapterRefreshing,
+    tabIndex,
     createComicShelf,
     removeComicShelf,
     isComicInShelf,

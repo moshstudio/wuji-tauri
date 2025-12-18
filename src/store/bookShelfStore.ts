@@ -3,7 +3,7 @@ import type {
   BookItem,
   BookShelf,
 } from '@wuji-tauri/source-extension';
-import { debounceFilter, useStorageAsync } from '@vueuse/core';
+import { debounceFilter, useStorage, useStorageAsync } from '@vueuse/core';
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
 import { defineStore } from 'pinia';
@@ -37,6 +37,8 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
       eventFilter: debounceFilter(1000),
     },
   );
+
+  const tabIndex = useStorage<number>('bookShelfTabIndex', 0);
 
   // 阅读历史
   const bookHistory = useStorageAsync<Array<BookHistory>>(
@@ -253,6 +255,7 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     storage,
     bookShelf,
     bookHistory,
+    tabIndex,
     createBookShelf,
     removeBookShelf,
     isBookInShelf,

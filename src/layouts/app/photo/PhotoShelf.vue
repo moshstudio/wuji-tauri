@@ -22,7 +22,7 @@ const shelfStore = usePhotoShelfStore();
 </script>
 
 <template>
-  <div class="h-full w-full flex-col overflow-hidden">
+  <div class="flex h-full w-full flex-col overflow-hidden">
     <MNavBar title="图片收藏" />
     <div class="flex h-[44px] w-full shrink-0 gap-2 px-4 pt-2">
       <van-button
@@ -78,7 +78,7 @@ const shelfStore = usePhotoShelfStore();
       shrink
       animated
       sticky
-      :active="activeIndex"
+      v-model:active="activeIndex"
       class="h-full w-full overflow-y-scroll"
     >
       <van-tab
@@ -87,22 +87,22 @@ const shelfStore = usePhotoShelfStore();
         :title="shelf.name"
       >
         <ResponsiveGrid2 min-width="80" max-width="100">
-          <template v-for="photo in shelf.photos" :key="photo">
-            <MPhotoShelfCard
-              v-model:selected="photo.extra.selected"
-              :item="photo"
-              :selecte-mode="selecteMode"
-              :source="store.getPhotoSource(photo.sourceId)"
-              @click="
-                (item) => {
-                  router.push({
-                    name: 'PhotoDetail',
-                    params: { id: item.id, sourceId: item.sourceId },
-                  });
-                }
-              "
-            />
-          </template>
+          <MPhotoShelfCard
+            v-for="photo in shelf.photos"
+            :key="shelf.id + photo.id"
+            v-model:selected="photo.extra.selected"
+            :item="photo"
+            :selecte-mode="selecteMode"
+            :source="store.getPhotoSource(photo.sourceId)"
+            @click="
+              (item) => {
+                router.push({
+                  name: 'PhotoDetail',
+                  params: { id: item.id, sourceId: item.sourceId },
+                });
+              }
+            "
+          />
         </ResponsiveGrid2>
       </van-tab>
     </van-tabs>

@@ -79,7 +79,7 @@ const shelfStore = useVideoShelfStore();
       shrink
       animated
       sticky
-      :active="activeIndex"
+      v-model:active="activeIndex"
       class="h-full w-full overflow-y-scroll"
     >
       <van-tab
