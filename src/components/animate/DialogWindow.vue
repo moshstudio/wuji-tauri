@@ -3,52 +3,56 @@
     <div
       v-if="isVisible"
       ref="windowRef"
-      class="window absolute overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg transition-all duration-300 ease-in-out dark:border-gray-600 dark:bg-gray-800"
+      class="window absolute overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl transition-all duration-300 ease-in-out dark:border-slate-700 dark:bg-slate-900"
       :class="{
         '!rounded-none !border-0 !shadow-none': isMaximized,
-        'scale-0 opacity-0': isMinimized,
-        'transition-none': isDragging, // 拖拽时禁用过渡效果
+        'scale-95 opacity-0': isMinimized,
+        'transition-none': isDragging,
       }"
       :style="windowStyle"
       @mousedown="bringToFront"
     >
       <!-- 窗口标题栏 -->
       <div
-        ref="titleBarRef"
-        class="title-bar flex h-8 cursor-default select-none items-center justify-between border-b border-gray-300 bg-gray-100 px-3 dark:border-gray-600 dark:bg-gray-700"
+        class="title-bar flex h-9 cursor-default select-none items-center justify-between border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100 px-3 text-xs dark:border-slate-700 dark:from-slate-800 dark:to-slate-700"
         @mousedown="startDrag"
       >
-        <div class="window-controls flex gap-2">
+        <div class="window-controls flex w-[64px] items-center gap-1.5">
           <button
-            class="control-btn close bg-red-500"
+            class="control-btn close"
             @click="handleControl('close')"
           ></button>
           <button
-            class="control-btn minimize bg-yellow-500"
+            class="control-btn minimize"
             @click="handleControl('minimize')"
           ></button>
           <button
-            class="control-btn maximize bg-green-500"
+            class="control-btn maximize"
             @click="handleControl('maximize')"
           ></button>
         </div>
 
         <span
-          class="title flex-1 text-center text-xs font-medium text-gray-800 dark:text-gray-200"
+          class="title flex-1 text-center text-xs font-medium tracking-wide text-slate-800 dark:text-slate-100"
         >
           温馨提示
         </span>
 
-        <div class="placeholder w-15"></div>
+        <div class="placeholder w-[64px]"></div>
       </div>
 
       <!-- 窗口内容 -->
       <div
-        class="max-h-100 flex items-center justify-center overflow-y-auto p-5 text-gray-800 transition-all duration-300 dark:bg-gray-800 dark:text-gray-200"
+        class="max-h-100 flex items-center justify-center overflow-y-auto bg-slate-50 p-6 text-sm leading-relaxed text-slate-700 transition-all duration-300 dark:bg-slate-900/40 dark:text-slate-100"
         :class="{ 'h-[calc(100%-40px)] !max-h-none': isMaximized }"
-        :style="{ backgroundColor: props.bgColor, color: props.color }"
+        :style="contentStyle"
       >
-        <p :class="isMaximized ? 'text-2xl' : ''">{{ message }}</p>
+        <p
+          class="inline-block max-w-[80%] text-center font-medium transition-transform duration-300 ease-in-out"
+          :class="isMaximized ? 'scale-[1.08] text-base' : 'scale-100 text-sm'"
+        >
+          {{ message }}
+        </p>
       </div>
     </div>
   </Transition>
@@ -74,12 +78,15 @@ const emit = defineEmits<{
 }>();
 
 const windowRef = ref<HTMLElement>();
-const titleBarRef = ref<HTMLElement>();
 const isVisible = ref(false);
 const isClosing = ref(false);
 const isMinimized = ref(false);
 const isMaximized = ref(false);
 const isDragging = ref(false);
+
+const ANIMATION_DURATION = 300;
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 // 窗口位置
 const windowPosition = ref({
@@ -107,6 +114,14 @@ const windowStyle = computed(() => ({
   zIndex: props.index,
   cursor: isDragging.value ? 'grabbing' : 'default',
 }));
+
+// 内容区域样式（仅在传入颜色时生效，默认使用柔和背景）
+const contentStyle = computed(() => {
+  const style: Record<string, string> = {};
+  if (props.bgColor) style.backgroundColor = props.bgColor;
+  if (props.color) style.color = props.color;
+  return style;
+});
 
 // 开始拖拽
 const startDrag = (e: MouseEvent) => {
@@ -200,24 +215,22 @@ const startClose = () => {
 // 开始最小化流程
 const startMinimize = async () => {
   isMinimized.value = true;
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await sleep(ANIMATION_DURATION);
   emit('minimize', props.id);
 };
 
 // 还原窗口
 const restoreWindow = async () => {
   isMinimized.value = false;
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await sleep(ANIMATION_DURATION);
 };
 
 // 最大化/还原切换
 const toggleMaximize = async () => {
   if (isMaximized.value) {
-    // 还原时使用原始位置，添加动画
     isMaximized.value = false;
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await sleep(ANIMATION_DURATION);
   } else {
-    // 最大化时保存当前位置
     originalPosition.value = {
       ...windowPosition.value,
       width: windowRef.value?.offsetWidth || 320,
@@ -226,7 +239,7 @@ const toggleMaximize = async () => {
         : 'auto',
     };
     isMaximized.value = true;
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await sleep(ANIMATION_DURATION);
   }
 };
 
@@ -290,6 +303,18 @@ onMounted(() => {
   transition: none;
 }
 .control-btn {
-  @apply h-3 w-3 cursor-pointer rounded-full border-none transition-all duration-200 hover:scale-110 hover:brightness-90;
+  @apply h-3.5 w-3.5 cursor-pointer rounded-full border border-transparent transition-all duration-150;
+}
+
+.control-btn.close {
+  @apply bg-red-400 hover:bg-red-500 dark:bg-red-500 dark:hover:bg-red-400;
+}
+
+.control-btn.minimize {
+  @apply bg-amber-300 hover:bg-amber-400 dark:bg-amber-400 dark:hover:bg-amber-300;
+}
+
+.control-btn.maximize {
+  @apply bg-emerald-400 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400;
 }
 </style>

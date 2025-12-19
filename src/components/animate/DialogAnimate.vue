@@ -76,10 +76,10 @@ function dialogFocus(id: number) {
   });
 }
 const getRandomPosition = (): { top: number; left: number } => {
-  const maxX = containerWidth.value - 20;
-  const maxY = containerHeight.value - 100;
-  const top = Math.max(-20, Math.random() * maxY);
-  const left = Math.max(-20, Math.random() * maxX);
+  const maxX = containerWidth.value - 80;
+  const maxY = containerHeight.value - 80;
+  const top = Math.max(-200, Math.random() * maxY);
+  const left = Math.max(-100, Math.random() * maxX);
   return { top, left };
 };
 
