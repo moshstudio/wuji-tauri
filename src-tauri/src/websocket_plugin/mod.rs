@@ -174,8 +174,8 @@ async fn connect<R: Runtime>(
                     let manager = window_.state::<ConnectionManager>();
                     manager.0.lock().await.remove(&id);
                 }
-                dbg!(&message);
-                dbg!(matches!(message, Ok(Message::Binary(_))));
+                // dbg!(&message);
+                // dbg!(matches!(message, Ok(Message::Binary(_))));
 
                 let response = match message {
                     Ok(Message::Text(t)) => {
