@@ -79,6 +79,8 @@
     },
     "dialog:default",
     "keep-screen-on:default",
-    "opener:default"
+    "opener:default",
+    "process:default",
+    "process:allow-exit"
   ]
 }

@@ -86,6 +86,9 @@ body,
 .van-button--danger .van-button__content {
   color: white;
 }
+.van-back-top {
+  background-color: transparent !important;
+}
 .not-mobile-scrollbar {
   ::-webkit-scrollbar {
     background-color: transparent;
@@ -149,11 +152,3 @@ body,
     background-color: rgba(110, 110, 110, 0.8);
   }
 }
-
-/* 倍速插件可点击区域调试样式（开发时可取消注释查看区域）*/
-/* .left-speed-up-area {
-  background-color: rgba(255, 0, 0, 0.2) !important;
-}
-.right-speed-up-area {
-  background-color: rgba(0, 0, 255, 0.2) !important;
-} */

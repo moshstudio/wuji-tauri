@@ -7,6 +7,7 @@ export * from './comicStore';
 export * from './displayStore';
 export * from './photoShelfStore';
 export * from './serverStore';
+export * from './settingStore';
 export * from './songCacheStore';
 export * from './songShelfStore';
 export * from './songStore';

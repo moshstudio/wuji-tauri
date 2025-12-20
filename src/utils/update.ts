@@ -101,6 +101,9 @@ async function windowsCheckAndUpdate() {
         await relaunch();
       }
     } catch (error) {}
+    return true;
+  } else {
+    return false;
   }
 }
 
@@ -184,14 +187,17 @@ async function androidCheckAndUpdate() {
         });
       }
     }
+    return true;
+  } else {
+    return false;
   }
 }
 
 export async function checkAndUpdate() {
   const displayStore = useDisplayStore();
   if (displayStore.isWindows) {
-    await windowsCheckAndUpdate();
+    return await windowsCheckAndUpdate();
   } else if (displayStore.isAndroid) {
-    await androidCheckAndUpdate();
+    return await androidCheckAndUpdate();
   }
 }

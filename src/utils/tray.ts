@@ -3,6 +3,7 @@ import { Image } from '@tauri-apps/api/image';
 import { Menu } from '@tauri-apps/api/menu';
 import { TrayIcon } from '@tauri-apps/api/tray';
 import { Window } from '@tauri-apps/api/window';
+import { exit } from '@tauri-apps/plugin-process';
 import ico from '@/assets/icon.ico';
 
 export default async function buildTray() {
@@ -17,8 +18,9 @@ export default async function buildTray() {
           action: async () => {
             const windows = await Window.getAll();
             windows.forEach((window) => {
-              window.close();
+              window.destroy();
             });
+            await exit(0);
           },
         },
       ],

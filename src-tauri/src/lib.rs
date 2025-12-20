@@ -34,8 +34,6 @@ pub fn run() {
             handle.plugin(fetch_plugin::init())?;
             handle.plugin(proxy_plugin::init())?;
             handle.plugin(websocket_plugin::init())?;
-            #[cfg(desktop)]
-            handle.plugin(tauri_plugin_updater::Builder::new().build())?;
             Ok(())
         })
         .plugin(tauri_plugin_mywebview::init())
@@ -49,12 +47,15 @@ pub fn run() {
     // 仅在桌面端添加
     #[cfg(desktop)]
     {
-        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
-            let _ = app
-                .get_webview_window("main")
-                .expect("no main window")
-                .set_focus();
-        }));
+        builder = builder
+            .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+                let _ = app
+                    .get_webview_window("main")
+                    .expect("no main window")
+                    .set_focus();
+            }))
+            .plugin(tauri_plugin_autostart::Builder::new().build())
+            .plugin(tauri_plugin_updater::Builder::new().build());
     }
 
     builder

@@ -1223,11 +1223,6 @@ export const useStore = defineStore('store', () => {
             const marketSource = await serverStore.getMarketSourceById(
               source.detail.id,
             );
-            console.log(
-              marketSource?.version,
-              source.detail.version,
-              marketSource?.version === source.detail.version,
-            );
 
             if (marketSource) {
               if (
@@ -1236,7 +1231,6 @@ export const useStore = defineStore('store', () => {
                   marketSource.version === source.detail.version
                 )
               ) {
-                console.log(1234);
 
                 const success = await addMarketSource(marketSource);
                 if (!success) {

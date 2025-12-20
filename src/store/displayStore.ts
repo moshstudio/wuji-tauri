@@ -4,13 +4,14 @@ import type { TrayIcon } from '@tauri-apps/api/tray';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { useDark, useStorage, useStorageAsync, useToggle } from '@vueuse/core';
-import { defineStore } from 'pinia';
+import { defineStore, storeToRefs } from 'pinia';
 
 import * as commands from 'tauri-plugin-commands-api';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import buildTray from '@/utils/tray';
 import { tauriAddPluginListener } from './utils';
 import Player from 'xgplayer';
+import { useSettingStore } from './settingStore';
 
 export const useDisplayStore = defineStore('display', () => {
   const showNews = useStorage('showNews', true);
@@ -93,6 +94,22 @@ export const useDisplayStore = defineStore('display', () => {
   if (isWindows.value) {
     onMounted(async () => {
       tray.value = await buildTray();
+
+      // 监听窗口关闭请求
+      const unlisten = await getCurrentWindow().onCloseRequested(
+        async (event) => {
+          const settingStore = useSettingStore();
+
+          if (settingStore.closeAction === 'minimize') {
+            // 阻止默认关闭行为
+            event.preventDefault();
+            // 隐藏窗口到托盘
+            await getCurrentWindow().hide();
+          }
+          // 如果是 'close'，则执行默认关闭行为
+        },
+      );
+
       window.addEventListener('beforeunload', () => {
         tray.value?.close();
       });
@@ -203,18 +220,15 @@ export const useDisplayStore = defineStore('display', () => {
     await commands.return_to_home();
   };
 
-  const songAutoSwitchSource = useStorageAsync('songAutoSwitchSource', true);
-  const showViewHistory = useStorageAsync('showViewHistory', true);
-  const autoUpdateSubscribeSource = useStorage(
-    'autoUpdateSubscribeSource',
-    false,
-  );
-
-  // 换页按钮位置设置：'top' - 列表上方, 'bottom' - 列表下方, 'both' - 列表上下方
-  const paginationPosition = useStorageAsync<'top' | 'bottom' | 'both'>(
-    'paginationPosition',
-    'top',
-  );
+  // 从 settingStore 重新导出设置项，保持向后兼容
+  const settingStore = useSettingStore();
+  const {
+    songAutoSwitchSource,
+    showViewHistory,
+    autoUpdateSubscribeSource,
+    paginationPosition,
+    enableAutostart,
+  } = storeToRefs(settingStore);
 
   const videoPlayer = ref<Player>();
   const videoVolume = useStorageAsync('videoVolume', 1);
@@ -273,6 +287,8 @@ export const useDisplayStore = defineStore('display', () => {
     autoUpdateSubscribeSource,
 
     paginationPosition,
+
+    enableAutostart,
 
     videoPlayer,
     videoVolume,

@@ -4,17 +4,20 @@ import { ref } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppSetting from '@/layouts/app/setting/index.vue';
 import DesktopSetting from '@/layouts/desktop/setting/index.vue';
-import { useDisplayStore, useStore } from '@/store';
+import { useDisplayStore, useSettingStore, useStore } from '@/store';
 
 const store = useStore();
 const displayStore = useDisplayStore();
+const settingStore = useSettingStore();
+const { isDark } = storeToRefs(displayStore);
 const {
-  isDark,
   songAutoSwitchSource,
   showViewHistory,
   autoUpdateSubscribeSource,
   paginationPosition,
-} = storeToRefs(displayStore);
+  enableAutostart,
+  closeAction,
+} = storeToRefs(settingStore);
 
 const showConfirmClearData = ref(false);
 
@@ -43,6 +46,8 @@ function clearData() {
         v-model:song-auto-switch-source="songAutoSwitchSource"
         v-model:auto-update-subscribe-source="autoUpdateSubscribeSource"
         v-model:pagination-position="paginationPosition"
+        v-model:enable-autostart="enableAutostart"
+        v-model:close-action="closeAction"
         :clear-cache="store.clearCache"
         :clear-data="clearData"
       />
