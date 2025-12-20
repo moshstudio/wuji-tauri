@@ -6604,7 +6604,7 @@ dependencies = [
 
 [[package]]
 name = "wuji-app"
-version = "0.1.21"
+version = "0.1.22"
 dependencies = [
  "futures-util",
  "http 1.4.0",

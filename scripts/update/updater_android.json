@@ -1,6 +1,6 @@
 {
-  "version": "0.1.21",
-  "notes": "修复bug",
+  "version": "0.1.22",
+  "notes": "优化页面显示，修复听书",
   "pub_date": "2025-12-15T08:00:00+08:00",
   "platforms": {
     "cloudpan": {
