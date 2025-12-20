@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import WNavbar from '@/components/header/WNavbar.vue';
+import { useDisplayStore } from '@/store';
 
 defineProps<{
   clearCache: () => void;
@@ -23,8 +24,18 @@ const paginationPosition = defineModel<'top' | 'bottom' | 'both'>(
     required: true,
   },
 );
+const enableAutostart = defineModel<boolean>('enableAutostart', {
+  required: false,
+  default: false,
+});
+const closeAction = defineModel<'close' | 'minimize'>('closeAction', {
+  required: false,
+  default: 'close',
+});
 
+const displayStore = useDisplayStore();
 const showPaginationSheet = ref(false);
+const showCloseActionSheet = ref(false);
 </script>
 
 <template>
@@ -48,6 +59,31 @@ const showPaginationSheet = ref(false);
         <van-cell center is-link @click="clearData">
           <template #title>
             <p class="text-red">清空数据</p>
+          </template>
+        </van-cell>
+      </van-cell-group>
+
+      <van-cell-group v-if="displayStore.isWindows" inset class="w-full">
+        <van-cell
+          center
+          title="开机自启"
+          is-link
+          @click="() => (enableAutostart = !enableAutostart)"
+        >
+          <template #right-icon>
+            <van-switch v-model="enableAutostart" @click.stop />
+          </template>
+        </van-cell>
+        <van-cell
+          center
+          title="关闭窗口时"
+          is-link
+          @click="showCloseActionSheet = true"
+        >
+          <template #value>
+            <div class="text-[var(--van-gray-6)]">
+              {{ closeAction === 'close' ? '关闭应用' : '最小化到托盘' }}
+            </div>
           </template>
         </van-cell>
       </van-cell-group>
@@ -120,6 +156,18 @@ const showPaginationSheet = ref(false);
         else if (item.name === '列表下方') paginationPosition = 'bottom';
         else paginationPosition = 'both';
         showPaginationSheet = false;
+      }
+    "
+  />
+  <van-action-sheet
+    v-model:show="showCloseActionSheet"
+    :actions="[{ name: '关闭应用' }, { name: '最小化到托盘' }]"
+    cancel-text="取消"
+    @select="
+      (item: any) => {
+        if (item.name === '关闭应用') closeAction = 'close';
+        else closeAction = 'minimize';
+        showCloseActionSheet = false;
       }
     "
   />

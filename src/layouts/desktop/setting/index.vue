@@ -22,6 +22,12 @@ const paginationPosition = defineModel<'top' | 'bottom' | 'both'>(
     required: true,
   },
 );
+const enableAutostart = defineModel<boolean>('enableAutostart', {
+  required: true,
+});
+const closeAction = defineModel<'close' | 'minimize'>('closeAction', {
+  required: true,
+});
 </script>
 
 <template>
@@ -31,6 +37,8 @@ const paginationPosition = defineModel<'top' | 'bottom' | 'both'>(
     v-model:song-auto-switch-source="songAutoSwitchSource"
     v-model:auto-update-subscribe-source="autoUpdateSubscribeSource"
     v-model:pagination-position="paginationPosition"
+    v-model:enable-autostart="enableAutostart"
+    v-model:close-action="closeAction"
     :clear-cache="clearCache"
     :clear-data="clearData"
   ></AppSetting>

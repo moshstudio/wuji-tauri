@@ -169,13 +169,13 @@ onDeactivated(() => {
             class="flex h-full w-full flex-col items-center gap-0 leading-[0]"
           >
             <div
-              class="flex h-full w-full flex-1 items-center justify-center"
+              class="z-10 flex h-full w-full flex-1 items-center justify-center"
               @click="() => prevChapter()"
             >
               <van-icon name="arrow-up" size="14" color="white" />
             </div>
             <div
-              class="flex h-full w-full flex-1 items-center justify-center"
+              class="z-10 flex h-full w-full flex-1 items-center justify-center"
               @click="() => nextChapter()"
             >
               <van-icon name="arrow-down" size="14" color="white" />

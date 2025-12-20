@@ -2,6 +2,7 @@
 import type { VideoItem } from '@wuji-tauri/source-extension';
 import type { VideoSource } from '@/types';
 import { ref } from 'vue';
+import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
 import WHeader from '@/components/header/WHeader.vue';
 import WVideoTab from '@/components/tab/WVideoTab.vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
@@ -88,7 +89,18 @@ async function onRefresh() {
           </van-collapse-item>
         </div>
       </van-collapse>
-      <van-back-top bottom="60" right="10" />
+      <van-back-top bottom="60" right="10">
+        <LiquidGlassContainer
+          :width="40"
+          :height="40"
+          :borderRadius="20"
+          :glassTintColor="'#000000'"
+          :glassTintOpacity="20"
+          :frostBlurRadius="1"
+        >
+          <van-icon name="arrow-up"></van-icon>
+        </LiquidGlassContainer>
+      </van-back-top>
     </van-pull-refresh>
   </div>
 </template>

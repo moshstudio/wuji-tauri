@@ -4,6 +4,7 @@ import type { ComicSource } from '@/types';
 import { LoadImage } from '@wuji-tauri/components/src';
 import _ from 'lodash';
 import tinycolor from 'tinycolor2';
+import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
 import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MNavBar from '@/components/header/MNavBar.vue';
@@ -136,7 +137,18 @@ const joinTags = (tags: string | string[] | undefined) =>
       <div v-if="!comic" class="flex w-full items-center justify-center">
         <van-loading />
       </div>
-      <van-back-top bottom="60" right="10" />
+      <van-back-top bottom="60" right="10">
+        <LiquidGlassContainer
+          :width="40"
+          :height="40"
+          :borderRadius="20"
+          :glassTintColor="'#000000'"
+          :glassTintOpacity="20"
+          :frostBlurRadius="1"
+        >
+          <van-icon name="arrow-up"></van-icon>
+        </LiquidGlassContainer>
+      </van-back-top>
     </main>
   </div>
 </template>

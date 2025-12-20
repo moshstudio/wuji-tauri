@@ -95,7 +95,7 @@ const actions = computed(() => {
         :glassTintOpacity="20"
         class="z-[12] flex-1 flex-col items-start justify-start"
       >
-        <div class="flex h-full w-full items-center justify-start px-4">
+        <div class="z-10 flex h-full w-full items-center justify-start px-4">
           <van-icon
             name="arrow-left"
             class="van-haptics-feedback text-white"
@@ -106,6 +106,7 @@ const actions = computed(() => {
 
       <div
         class="lyric-area flex-0 relative z-[11] h-full min-h-0"
+        :class="showLyric ? 'bg-black/10' : 'bg-transparent'"
         @click="showLyric = !showLyric"
       >
         <div
@@ -141,7 +142,7 @@ const actions = computed(() => {
         :glassTintOpacity="20"
         class="z-[12] flex-1 flex-col items-center justify-end"
       >
-        <div class="flex h-full w-full flex-col gap-2 px-4 py-2">
+        <div class="z-10 flex h-full w-full flex-col gap-2 px-4 py-2">
           <div class="flex w-full items-center justify-between pt-2">
             <div class="flex flex-col">
               <p class="text-base font-bold text-white">
@@ -196,7 +197,7 @@ const actions = computed(() => {
               {{ transTime(songStore.audioDuration) }}
             </span>
           </div>
-          <div class="z-[13] flex w-full items-center justify-between">
+          <div class="z-10 flex w-full items-center justify-between">
             <div label="playMode">
               <Icon
                 v-if="songStore.playMode === SongPlayMode.list"

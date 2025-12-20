@@ -57,9 +57,9 @@ function changePage(params: PickerConfirmEventParams) {
     class="select-none text-[var(--van-text-color)]"
     :class="useGlass ? '' : 'bg-[var(--van-background)]/50 h-[40px] w-[120px]'"
   >
-    <div class="flex h-full w-full items-center justify-around gap-2 p-2">
+    <div class="flex h-full w-full items-center justify-around">
       <div
-        class="van-haptics-feedback z-[10] flex h-full w-full flex-1 items-center justify-center"
+        class="van-haptics-feedback z-[10] flex h-full w-full flex-1 items-center justify-center p-2"
         @click="
           () => {
             if (pageNo > 1) {
@@ -75,14 +75,14 @@ function changePage(params: PickerConfirmEventParams) {
         />
       </div>
       <div
-        class="z-[10] flex-1 cursor-pointer text-xs"
+        class="z-[10] flex h-full w-full flex-1 cursor-pointer items-center justify-center p-2 text-xs"
         :class="useGlass ? 'text-white' : 'text-[var(--van-text-color)]'"
         @click="showPicker = true"
       >
         {{ pageNo }}/{{ pageCount }}
       </div>
       <div
-        class="van-haptics-feedback z-[10] flex h-full w-full flex-1 items-center justify-center"
+        class="van-haptics-feedback z-[10] flex h-full w-full flex-1 items-center justify-center p-2"
         @click="
           () => {
             if (pageNo < Number(pageCount)) {

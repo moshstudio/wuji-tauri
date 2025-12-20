@@ -3,6 +3,7 @@ import type { PhotoSource } from '@/types';
 import { MPhotoCard } from '@wuji-tauri/components/src';
 import { ref } from 'vue';
 import { storeToRefs } from 'pinia';
+import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MHeader from '@/components/header/MHeader.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
@@ -109,7 +110,18 @@ async function onRefresh() {
           </van-collapse-item>
         </div>
       </van-collapse>
-      <van-back-top bottom="60" right="10" target=".photo-main-container" />
+      <van-back-top bottom="60" right="10">
+        <LiquidGlassContainer
+          :width="40"
+          :height="40"
+          :borderRadius="20"
+          :glassTintColor="'#000000'"
+          :glassTintOpacity="20"
+          :frostBlurRadius="1"
+        >
+          <van-icon name="arrow-up"></van-icon>
+        </LiquidGlassContainer>
+      </van-back-top>
     </van-pull-refresh>
   </div>
 </template>
