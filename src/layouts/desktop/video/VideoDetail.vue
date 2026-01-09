@@ -70,7 +70,7 @@ const activeTabName = ref('');
     <div
       class="video-list flex h-full w-full cursor-auto flex-col overflow-hidden rounded-l-lg bg-[var(--van-background-2)] text-[var(--van-text-color)]"
     >
-      <div class="flex flex-shrink-0 items-center justify-end gap-2">
+      <div class="flex h-[38px] flex-shrink-0 items-center justify-end gap-2">
         <van-icon
           :name="inShelf ? 'like' : 'like-o'"
           :color="inShelf ? 'red' : ''"
@@ -159,7 +159,7 @@ const activeTabName = ref('');
           v-model:active="activeTabName"
           swipe-threshold="3"
           sticky
-          offset-top="30px"
+          offset-top="38px"
         >
           <van-tab
             v-for="(resource, index) in videoItem?.resources"

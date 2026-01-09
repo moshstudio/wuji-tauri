@@ -12,4 +12,5 @@ export interface SyncOption {
   name: string;
   sync: boolean;
   size?: number;
+  isIncremental?: boolean; // 是否增量更新/下载
 }

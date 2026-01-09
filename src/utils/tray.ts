@@ -6,12 +6,24 @@ import { Window } from '@tauri-apps/api/window';
 import { exit } from '@tauri-apps/plugin-process';
 import ico from '@/assets/icon.ico';
 
+async function open() {
+  const windows = await Window.getAll();
+  const window =
+    windows.find((window) => window.label === 'main') || windows[0];
+  window?.show();
+  window?.setFocus();
+}
 export default async function buildTray() {
   const options: TrayIconOptions = {
     tooltip: '无极',
     icon: await Image.fromBytes(await (await fetch(ico)).arrayBuffer()),
     menu: await Menu.new({
       items: [
+        {
+          id: 'open',
+          text: '打开',
+          action: open,
+        },
         {
           id: 'quit',
           text: '退出',
@@ -27,12 +39,7 @@ export default async function buildTray() {
     }),
     action: async (event: TrayIconEvent) => {
       if (event.type === 'DoubleClick') {
-        const windows = await Window.getAll();
-        const window =
-          windows.find((window) => window.label === 'main') || windows[0];
-
-        window?.show();
-        window?.setFocus();
+        await open();
       }
     },
   };

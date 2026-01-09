@@ -41,6 +41,8 @@ const onSlideChange = async (swiper: SwiperType) => {
     :slides-per-view="1"
     :space-between="0"
     :touch-start-prevent-default="false"
+    :edge-swipe-detection="true"
+    :edge-swipe-threshold="20"
     class="h-full w-full"
     @swiper="onSwiper"
     @slide-change-transition-end="onSlideChange"

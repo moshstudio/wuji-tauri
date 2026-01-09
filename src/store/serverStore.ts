@@ -105,6 +105,8 @@ export const useServerStore = defineStore('serverStore', () => {
       headers.set('Authorization', `Bearer ${accessToken.value}`);
     }
     try {
+      console.log('request', `${API_BASE_URL}${endpoint}`, options);
+
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
         headers,
@@ -643,7 +645,10 @@ export const useServerStore = defineStore('serverStore', () => {
     );
   };
 
-  const syncToServer = async (data: { type: string; data: any }[]) => {
+  const syncToServer = async (
+    data: { type: string; data: any }[],
+    isIncremental: boolean = false,
+  ) => {
     if (!userInfo.value?.email) {
       showFailToast('请先登录');
       return;
@@ -667,7 +672,7 @@ export const useServerStore = defineStore('serverStore', () => {
       showConfirmButton: false,
     });
     return await sendRequest<boolean>(
-      'sync/upload',
+      'sync/upload?incremental=' + isIncremental,
       {
         method: 'POST',
         body: JSON.stringify(data),

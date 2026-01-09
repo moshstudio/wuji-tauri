@@ -7,6 +7,7 @@ import type {
 import { Icon } from '@iconify/vue';
 import { last } from 'lodash';
 import { computed, ref } from 'vue';
+import LoadImage from '../../LoadImage.vue';
 import MoreOptionsSheet from '../../MoreOptionsSheet.vue';
 
 const props = defineProps<{
@@ -31,11 +32,12 @@ const latestChapterTitle = computed(() => {
     @click="() => click(comic, comic.lastReadChapter?.id)"
   >
     <div class="h-[100px] w-[80px]">
-      <van-image
+      <LoadImage
         width="80px"
         height="100px"
         radius="4"
         :src="comic.comic.cover"
+        :headers="comic.comic.coverHeaders"
       >
         <template #loading>
           <Icon icon="codicon:comic" width="48" height="48" />
@@ -43,7 +45,7 @@ const latestChapterTitle = computed(() => {
         <template #error>
           <Icon icon="codicon:comic" width="48" height="48" />
         </template>
-      </van-image>
+      </LoadImage>
     </div>
 
     <div

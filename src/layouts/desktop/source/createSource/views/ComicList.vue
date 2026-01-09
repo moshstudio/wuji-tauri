@@ -52,10 +52,7 @@ async function load(pageNo?: number, type?: string) {
   const code = COMIC_TEMPLATE.replace(
     '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
-  ).replace(
-    '// @METHOD_LIST',
-    findPage('list')!.code,
-  );
+  ).replace('// @METHOD_LIST', findPage('list')!.code);
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('ComicExtension', code);
@@ -185,7 +182,7 @@ defineExpose({
         <div class="flex flex-col">
           <template
             v-for="comic in result.list"
-            :key="`${item.id}_${comic.id}`"
+            :key="`${result.id}_${comic.id}`"
           >
             <MComicCard :comic="comic" :click="() => {}" />
           </template>

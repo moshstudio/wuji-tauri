@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 讨论区
+    url: https://github.com/moshstudio/wuji-tauri/discussions
+    about: 在讨论区提问或分享想法
+  - name: 📖 文档
+    url: https://github.com/moshstudio/wuji-tauri#readme
+    about: 查看项目文档和使用说明

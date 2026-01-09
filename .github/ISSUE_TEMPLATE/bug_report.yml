@@ -1,0 +1,111 @@
+name: 🐛 Bug 报告
+description: 报告一个 Bug 或问题
+title: '[Bug]: '
+labels: ['bug', '待确认']
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你花时间填写这个 Bug 报告！请尽可能详细地描述问题，这将帮助我们更快地解决它。
+
+  - type: checkboxes
+    id: existing-issue
+    attributes:
+      label: 前置检查
+      description: 在提交之前，请确认以下内容
+      options:
+        - label: 我已经搜索过现有的 Issues，没有找到相同的问题
+          required: true
+        - label: 我正在使用最新版本的应用
+          required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 操作系统
+      description: 你使用的是什么操作系统？
+      options:
+        - Windows
+        - Android
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: 系统版本
+      description: 操作系统的具体版本（如 Windows 11 23H2, macOS 14.0）
+      placeholder: '例如：Windows 11 23H2'
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: 应用版本
+      description: 出现问题时使用的应用版本号
+      placeholder: '例如：1.0.0'
+    validations:
+      required: true
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Bug 描述
+      description: 清晰详细地描述这个 Bug
+      placeholder: '描述你遇到的问题...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: 复现步骤
+      description: 请提供详细的复现步骤
+      placeholder: |
+        1. 打开应用
+        2. 点击 '...'
+        3. 滚动到 '...'
+        4. 出现错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: 期望行为
+      description: 描述你期望发生的行为
+      placeholder: '我期望...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: 实际行为
+      description: 描述实际发生的行为
+      placeholder: '实际上发生了...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图或视频
+      description: 如果可能，请添加截图或视频来帮助解释问题
+      placeholder: '拖拽图片到此处或粘贴链接'
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 错误日志
+      description: 如果有相关的错误日志，请粘贴在这里
+      render: shell
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 其他信息
+      description: 添加任何其他可能有用的信息

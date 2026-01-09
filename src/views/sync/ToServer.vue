@@ -32,36 +32,42 @@ const syncOptions = ref<SyncOption[]>([
     name: '订阅源',
     sync: true,
     size: undefined,
+    isIncremental: false,
   },
   {
     type: SyncTypes.PhotoShelf,
     name: '图片收藏',
     sync: true,
     size: undefined,
+    isIncremental: false,
   },
   {
     type: SyncTypes.SongShelf,
     name: '音乐收藏',
     sync: true,
     size: undefined,
+    isIncremental: false,
   },
   {
     type: SyncTypes.BookShelf,
     name: '书籍书架',
     sync: true,
     size: undefined,
+    isIncremental: false,
   },
   {
     type: SyncTypes.ComicShelf,
     name: '漫画书架',
     sync: true,
     size: undefined,
+    isIncremental: false,
   },
   {
     type: SyncTypes.VideoShelf,
     name: '影视收藏',
     sync: true,
     size: undefined,
+    isIncremental: false,
   },
 ]);
 
@@ -79,6 +85,10 @@ const onSync = async () => {
     return;
   }
   const data = [];
+  // 获取第一个选中项的增量设置，所有项使用相同设置
+  const isIncremental =
+    syncOptions.value.find((item) => item.sync)?.isIncremental ?? false;
+
   if (syncOptions.value[0].sync) {
     data.push({
       type: SyncTypes.SubscribeSource,
@@ -115,7 +125,7 @@ const onSync = async () => {
       data: JSON.stringify(videoShelfStore.syncData()),
     });
   }
-  await serverStore.syncToServer(data);
+  await serverStore.syncToServer(data, isIncremental);
 };
 
 onMountedOrActivated(async () => {

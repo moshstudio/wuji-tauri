@@ -52,7 +52,7 @@ async function processSrc(
   }
   if (src.startsWith('data:image') && src.includes('base64')) {
     // 转为blob
-    async function dataURLToBlobURL(dataURL: string) {
+    const dataURLToBlobURL = async (dataURL: string) => {
       try {
         const response = await fetch(dataURL);
         const blob = await response.blob();
@@ -61,7 +61,7 @@ async function processSrc(
         console.error('image 转换失败:', error);
         throw error;
       }
-    }
+    };
     return await dataURLToBlobURL(src);
   }
   if (!headers && !props.compress) {
@@ -78,9 +78,9 @@ async function processSrc(
       },
       props.compress,
     );
-
     const blob = await response.blob();
     if (blob.size === 0) {
+      console.warn(' image fetch size=0');
       return src;
     }
     loadFinished.value = true;

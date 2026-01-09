@@ -27,6 +27,7 @@ const tagsText = computed(() => {
         height="100px"
         radius="4"
         :src="comic.cover"
+        :headers="comic.coverHeaders"
         lazy-load
       >
         <template #loading>

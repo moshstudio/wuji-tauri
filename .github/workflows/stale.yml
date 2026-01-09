@@ -1,0 +1,58 @@
+name: 自动关闭不活跃 Issues
+
+on:
+  schedule:
+    # 每天 UTC 时间 00:00 运行
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 允许手动触发
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # Issue 相关配置
+          stale-issue-message: |
+            👋 你好！
+
+            这个 Issue 已经 **30 天**没有任何活动了。为了保持项目的整洁，我们会在 **7 天后**自动关闭它。
+
+            如果这个问题仍然存在或你有更多信息要补充，请留言让我们知道，Issue 将保持打开状态。
+
+            感谢你的理解和支持！ 🙏
+          close-issue-message: |
+            🔒 这个 Issue 因为长时间没有活动已被自动关闭。
+
+            如果问题仍然存在，欢迎重新打开或创建新的 Issue。谢谢！
+          stale-issue-label: 'stale'
+          days-before-issue-stale: 30
+          days-before-issue-close: 7
+          exempt-issue-labels: 'pinned,help wanted,good first issue,bug,enhancement,待处理'
+
+          # Pull Request 相关配置
+          stale-pr-message: |
+            👋 你好！
+
+            这个 Pull Request 已经 **14 天**没有任何活动了。
+
+            如果你还在进行中，请更新一下进度。否则，我们将在 **7 天后**自动关闭它。
+
+            感谢你的贡献！ 🙏
+          close-pr-message: |
+            🔒 这个 Pull Request 因为长时间没有活动已被自动关闭。
+
+            如果你想继续这个工作，欢迎重新打开。谢谢！
+          stale-pr-label: 'stale'
+          days-before-pr-stale: 14
+          days-before-pr-close: 7
+          exempt-pr-labels: 'pinned,work in progress,待审核'
+
+          # 其他配置
+          operations-per-run: 100
+          remove-stale-when-updated: true
+          delete-branch: false

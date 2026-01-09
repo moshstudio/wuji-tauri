@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { SyncOption } from '@/types/sync';
 import { bytesToSize } from '@/utils';
+import { ref } from 'vue';
 
 const syncOptions = defineModel<SyncOption[]>('syncOptions', {
   required: true,
@@ -8,6 +9,35 @@ const syncOptions = defineModel<SyncOption[]>('syncOptions', {
 defineProps<{
   onSync: () => Promise<void>;
 }>();
+
+const syncMode = ref<'overwrite' | 'incremental'>('incremental');
+const showSyncModeSheet = ref(false);
+
+const syncModeActions = [
+  {
+    name: '覆盖模式',
+    subname: '上传的数据会完全覆盖服务器已有数据',
+    value: 'overwrite',
+  },
+  {
+    name: '增量模式',
+    subname: '上传的数据会与服务器数据合并，保留服务器已有数据',
+    value: 'incremental',
+  },
+];
+
+const onSelectSyncMode = (action: any) => {
+  syncMode.value = action.value;
+  showSyncModeSheet.value = false;
+  const isIncremental = action.value === 'incremental';
+  syncOptions.value.forEach((option) => {
+    option.isIncremental = isIncremental;
+  });
+};
+
+const getSyncModeText = () => {
+  return syncMode.value === 'overwrite' ? '覆盖模式' : '增量模式';
+};
 </script>
 
 <template>
@@ -42,15 +72,29 @@ defineProps<{
           </template>
         </van-cell>
       </van-cell-group>
+
+      <van-cell-group inset class="mt-4 flex-shrink-0">
+        <van-cell
+          title="同步模式"
+          :value="getSyncModeText()"
+          is-link
+          clickable
+          @click="showSyncModeSheet = true"
+        />
+      </van-cell-group>
+
       <van-button class="m-4 flex-shrink-0" type="primary" @click="onSync">
         同步至服务器
       </van-button>
-      <div class="flex flex-grow items-end justify-center">
-        <p class="text-xs text-[var(--van-text-color-2)]">
-          同步后会覆盖服务器已有数据
-        </p>
-      </div>
     </main>
+
+    <van-action-sheet
+      v-model:show="showSyncModeSheet"
+      :actions="syncModeActions"
+      cancel-text="取消"
+      close-on-click-action
+      @select="onSelectSyncMode"
+    />
   </div>
 </template>
 

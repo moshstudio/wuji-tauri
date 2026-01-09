@@ -40,6 +40,8 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
           ?.photos.some((item) => item.id === itemId) || false
       );
     } else {
+      console.log(photoShelf.value);
+
       for (const shelf of photoShelf.value) {
         if (shelf.photos.find((item) => item.id === itemId)) {
           return true;

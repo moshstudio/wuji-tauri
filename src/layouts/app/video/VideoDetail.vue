@@ -56,9 +56,9 @@ const videoListElementHeight = ref(0);
 const activeTabName = ref('');
 const tabOffsetTop = computed(() => {
   if (displayStore.fullScreenMode) {
-    return '30px';
+    return '50px';
   } else {
-    return windowHeight.value - videoListElementHeight.value - 30;
+    return windowHeight.value - videoListElementHeight.value - 50 + 38;
   }
 });
 useResizeObserver(videoListElement, (entries) => {
@@ -87,7 +87,7 @@ useResizeObserver(videoListElement, (entries) => {
       class="video-list flex h-full w-full cursor-auto flex-col overflow-hidden bg-[var(--van-background-2)] text-[var(--van-text-color)]"
       :class="displayStore.fullScreenMode ? 'rounded-l-lg' : 'rounded-t-lg'"
     >
-      <div class="flex flex-shrink-0 items-center justify-end gap-2">
+      <div class="flex h-[38px] flex-shrink-0 items-center justify-end gap-2">
         <van-icon
           :name="inShelf ? 'like' : 'like-o'"
           :color="inShelf ? 'red' : ''"

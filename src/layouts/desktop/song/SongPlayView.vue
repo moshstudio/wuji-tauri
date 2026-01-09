@@ -143,12 +143,12 @@ const actions = computed(() => {
         class="z-[12] flex-1 flex-col items-center justify-end"
       >
         <div class="z-10 flex h-full w-full flex-col gap-2 px-4 py-2">
-          <div class="flex w-full items-center justify-between pt-2">
-            <div class="flex flex-col">
-              <p class="text-base font-bold text-white">
+          <div class="flex w-full items-center justify-between gap-1 pt-2">
+            <div class="flex min-w-0 flex-col">
+              <p class="truncate text-base font-bold text-white">
                 {{ playingSong.name || '等待播放' }}
               </p>
-              <p class="text-sm text-gray-100">
+              <p class="truncate text-sm text-gray-100">
                 {{ joinSongArtists(playingSong.artists) || '' }}
               </p>
             </div>
@@ -172,7 +172,7 @@ const actions = computed(() => {
               <div class="van-haptics-feedback">
                 <van-icon
                   name="ellipsis"
-                  class="clickable p-2 text-gray-200"
+                  class="text-gray-200"
                   :size="20"
                   @click="() => (showMoreOptions = !showMoreOptions)"
                 />

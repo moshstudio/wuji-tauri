@@ -1,0 +1,82 @@
+name: ❓ 问题咨询
+description: 提出使用相关的问题或寻求帮助
+title: '[Question]: '
+labels: ['question', '待回复']
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        有问题需要帮助？请尽可能详细地描述你的问题！
+
+  - type: checkboxes
+    id: existing-issue
+    attributes:
+      label: 前置检查
+      description: 在提交之前，请确认以下内容
+      options:
+        - label: 我已经阅读过项目的 README 文档
+          required: true
+        - label: 我已经搜索过现有的 Issues，没有找到相关的答案
+          required: true
+
+  - type: dropdown
+    id: question-type
+    attributes:
+      label: 问题类型
+      description: 你的问题属于什么类型？
+      options:
+        - 安装/配置问题
+        - 使用方法问题
+        - 功能理解问题
+        - 兼容性问题
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: 应用版本
+      description: 你使用的应用版本号
+      placeholder: '例如：1.0.0'
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 操作系统
+      description: 你使用的是什么操作系统？
+      options:
+        - Windows
+        - Android
+        - 不适用
+
+  - type: textarea
+    id: question
+    attributes:
+      label: 问题描述
+      description: 详细描述你的问题
+      placeholder: '我想了解...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-tried
+    attributes:
+      label: 已尝试的解决方法
+      description: 描述你已经尝试过的解决方法
+      placeholder: '我已经尝试过...'
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图
+      description: 如果有助于说明问题，请添加截图
+      placeholder: '拖拽图片到此处或粘贴链接'
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 其他信息
+      description: 添加任何其他可能有用的信息
