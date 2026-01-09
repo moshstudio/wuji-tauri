@@ -82,7 +82,7 @@ async function onRefresh() {
             v-show="
               item.list && !(!Array.isArray(item.list) && !item.list?.list)
             "
-            :name="item.item.name"
+            :name="index + item.item.id"
             :title="item.item.name"
           >
             <MBookTab :source="item" :to-page="toPage" :to-detail="toDetail" />

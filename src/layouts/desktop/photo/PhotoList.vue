@@ -52,11 +52,11 @@ async function onRefresh() {
       @refresh="onRefresh"
     >
       <van-collapse v-model="displayStore.photoCollapse">
-        <div v-for="(item, _) in photoSources" :key="item.item.id">
+        <div v-for="(item, index) in photoSources" :key="item.item.id">
           <van-collapse-item
             v-if="!!item.list?.list.length"
             v-show="item.list"
-            :name="item.item.name"
+            :name="index + item.item.id"
             :title="item.item.name"
           >
             <div
