@@ -24,5 +24,6 @@ pub struct FetchRequest {
 pub struct FetchResponse {
     pub content: String,
     pub cookie: String,
+    pub title: String,
     pub url: String,
 }

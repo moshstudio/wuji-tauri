@@ -14,6 +14,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import org.json.JSONObject
 import wuji.plugin.mywebview.exception.NoStackTraceException
 import wuji.plugin.mywebview.coroutine.Coroutine
 import kotlinx.coroutines.Dispatchers.IO
@@ -32,6 +33,7 @@ data class StrResponse(
     val content: String? = null,
     val cookie: String? = null,
     val url: String? = null,
+    val title: String? = null,
 )
 
 /**
@@ -142,6 +144,13 @@ class BackstageWebView(
         settings.userAgentString = AppConst.UA
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
+        // 桌面模式设置
+        settings.useWideViewPort = true
+        settings.loadWithOverviewMode = true
+        settings.setSupportZoom(true)
+        settings.builtInZoomControls = true
+        settings.displayZoomControls = false
+
         setInitialCookie(webView)
 
         if (sourceRegex.isNullOrBlank() && overrideUrlRegex.isNullOrBlank()) {
@@ -181,26 +190,13 @@ class BackstageWebView(
     private inner class HtmlWebViewClient : WebViewClient() {
 
         private var runnable: EvalJsRunnable? = null
-        private var isRedirect = false
-
-        override fun shouldOverrideUrlLoading(
-            view: WebView,
-            request: WebResourceRequest
-        ): Boolean {
-            isRedirect = isRedirect || if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                request.isRedirect
-            } else {
-                request.url.toString() != view.url
-            }
-            return super.shouldOverrideUrlLoading(view, request)
-        }
 
         override fun onPageFinished(view: WebView, url: String) {
             setCookie(url)
-            if (runnable == null) {
-                runnable = EvalJsRunnable(view, url, getJs())
-            }
-            mHandler.removeCallbacks(runnable!!)
+            view.evaluateJavascript(MUTE_JS, null)
+            view.evaluateJavascript(SPOOF_JS, null)
+            runnable?.let { mHandler.removeCallbacks(it) }
+            runnable = EvalJsRunnable(view, url, getJs())
             mHandler.postDelayed(runnable!!, 1000 + delayTime)
         }
 
@@ -228,10 +224,23 @@ class BackstageWebView(
 
             private fun handleResult(result: String) = Coroutine.async {
                 if (result.isNotEmpty() && result != "null") {
-                    val content = StringEscapeUtils.unescapeJson(result)
+                    var content = StringEscapeUtils.unescapeJson(result)
                         .replace(quoteRegex, "")
+                    var title: String? = null
                     try {
-                        val response = buildStrResponse(content)
+                        if (content.startsWith("{") && content.endsWith("}")) {
+                            val jsonObject = JSONObject(content)
+                            if (jsonObject.has("content")) {
+                                content = jsonObject.getString("content")
+                                title = jsonObject.optString("title")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+
+                    try {
+                        val response = buildStrResponse(content, title)
                         callback?.onResult(response)
                     } catch (e: Exception) {
                         callback?.onError(e)
@@ -252,18 +261,14 @@ class BackstageWebView(
                 mHandler.postDelayed(this@EvalJsRunnable, 1000)
             }
 
-            private fun buildStrResponse(content: String): StrResponse {
-                val url = if (!isRedirect) {
-                    url
-                } else {
-                    this@BackstageWebView.url ?: url
-                }
+            private fun buildStrResponse(content: String, title: String?): StrResponse {
                 val cookie = CookieManager.getInstance().getCookie(url)
                 return StrResponse(
                     success = true,
                     url = url,
                     content = content,
                     cookie = cookie,
+                    title = title,
                 )
             }
         }
@@ -326,6 +331,8 @@ class BackstageWebView(
 
         override fun onPageFinished(webView: WebView, url: String) {
             setCookie(url)
+            webView.evaluateJavascript(MUTE_JS, null)
+            webView.evaluateJavascript(SPOOF_JS, null)
             if (!javaScript.isNullOrEmpty()) {
                 val runnable = LoadJsRunnable(webView, javaScript)
                 mHandler.postDelayed(runnable, 500L + delayTime)
@@ -354,7 +361,41 @@ class BackstageWebView(
     }
 
     companion object {
-        const val JS = "btoa(encodeURIComponent(document.documentElement.innerHTML))"
+        const val JS = "JSON.stringify({content: btoa(encodeURIComponent(document.documentElement.innerHTML)), title: document.title})"
+        val MUTE_JS = """
+            (function() {
+                function mute(elem) {
+                    elem.muted = true;
+                    elem.volume = 0;
+                    elem.pause();
+                }
+                function handleNode(node) {
+                    if (node.nodeType === 1) {
+                        if (node.tagName === 'VIDEO' || node.tagName === 'AUDIO') mute(node);
+                        node.querySelectorAll('video, audio').forEach(mute);
+                    }
+                }
+                new MutationObserver((mutations) => {
+                    mutations.forEach((m) => m.addedNodes.forEach(handleNode));
+                }).observe(document.documentElement, { childList: true, subtree: true });
+                
+                const p = HTMLMediaElement.prototype.play;
+                HTMLMediaElement.prototype.play = function() {
+                    this.muted = true;
+                    return p.apply(this, arguments);
+                };
+            })();
+            })();
+        """.trimIndent()
+        
+        // 伪装桌面环境的 JS (平台标识、触控点)
+        val SPOOF_JS = """
+            try {
+                Object.defineProperty(navigator, 'platform', { get: function() { return 'Win32'; } });
+                Object.defineProperty(navigator, 'maxTouchPoints', { get: function() { return 0; } });
+            } catch(e) {}
+        """.trimIndent()
+
         private val quoteRegex = "^\"|\"$".toRegex()
     }
 

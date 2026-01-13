@@ -1,3 +1,6 @@
 packages:
   - 'packages/*'
   - .
+  - tauri-plugin-mywebview
+  - tauri-plugin-commands
+  - tauri-plugin-mediasession

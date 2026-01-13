@@ -46,6 +46,7 @@ class WebviewPlugin(private val activity: Activity) : Plugin(activity) {
                     ret.put("content", response.content ?: "")
                     ret.put("cookie", response.cookie ?: "")
                     ret.put("url", response.url ?: "")
+                    ret.put("title", response.title ?: "")
                     invoke.resolve(ret)
                 },
                 onError = { error ->
@@ -53,6 +54,7 @@ class WebviewPlugin(private val activity: Activity) : Plugin(activity) {
                     ret.put("content", "")
                     ret.put("cookie", "")
                     ret.put("url", "")
+                    ret.put("title", "")
                     invoke.resolve(ret)
                 }
             )

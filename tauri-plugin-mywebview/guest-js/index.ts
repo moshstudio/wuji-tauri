@@ -4,6 +4,7 @@ export interface FetchWebviewResult {
   content: string;
   url: string;
   cookie: string;
+  title: string;
 }
 
 export async function ping(value: string): Promise<string | null> {

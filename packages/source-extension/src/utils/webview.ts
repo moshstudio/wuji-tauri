@@ -79,17 +79,55 @@ export async function fetchWebview(url: string): Promise<Document | null> {
     // 创建自定义 cookie 存储
     (document as any)._customCookies = ret.cookie;
 
-    Object.defineProperty(document, 'cookie', {
-      get: function () {
-        return this._customCookies || '';
-      },
-      set: function (value) {
-        this._customCookies = value;
-      },
-      configurable: true,
-    });
+    if (ret.title) {
+      document.title = ret.title;
+    }
 
-    return document;
+    if (ret.url) {
+      (document as any)._customUrl = ret.url;
+    }
+
+    const proxy = new Proxy(document, {
+      get: (target, prop) => {
+        if (prop === 'cookie') {
+          return (target as any)._customCookies || '';
+        }
+        if (prop === 'URL' && (target as any)._customUrl) {
+          return (target as any)._customUrl;
+        }
+        if (prop === 'location' && (target as any)._customUrl) {
+          try {
+            return new URL((target as any)._customUrl);
+          } catch (e) {
+            console.error(e);
+            return {
+              href: (target as any)._customUrl,
+              toString: function () {
+                return this.href;
+              },
+            };
+          }
+        }
+        const value = Reflect.get(target, prop);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+      set: (target, prop, value, receiver) => {
+        if (prop === 'cookie') {
+          (target as any)._customCookies = value;
+          return true;
+        }
+        if (
+          (prop === 'URL' || prop === 'location') &&
+          (target as any)._customUrl
+        ) {
+          (target as any)._customUrl = value;
+          return true;
+        }
+        return Reflect.set(target, prop, value, receiver);
+      },
+    });
+    
+    return proxy;
   } finally {
     // 无论成功还是失败，都要释放信号量
     semaphore.release();

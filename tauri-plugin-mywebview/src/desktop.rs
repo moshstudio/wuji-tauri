@@ -55,6 +55,7 @@ impl<R: Runtime> Mywebview<R> {
                         content: String::new(),
                         url: String::new(),
                         cookie: String::new(),
+                        title: String::new(),
                     }
                 }
             };
@@ -136,14 +137,22 @@ async fn scrap_text_by_url<R: Runtime>(
         // 正常结果
         res = rx => {
             match res {
-                Ok(content) => {
+                Ok(content_json) => {
                     let cookie_string = window_clone.cookies().unwrap()
                         .iter()
                         .map(|cookie| format!("{}={}", cookie.name(), cookie.value()))
                         .collect::<Vec<_>>()
                         .join("; ");
 
-                    let url_string = window_clone.url().unwrap().to_string();
+                    let (content, title) = if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content_json) {
+                        (
+                            v["content"].as_str().unwrap_or("").to_string(),
+                            v["title"].as_str().unwrap_or("").to_string(),
+                        )
+                    } else {
+                        (content_json, window_clone.title().unwrap_or_default())
+                    };
+                    let url = window_clone.url().map(|u| u.to_string()).unwrap_or_default();
 
                     if use_saved_cookie && domain_str.is_some() {
                         if let Some(domain)  = domain_str {
@@ -151,13 +160,14 @@ async fn scrap_text_by_url<R: Runtime>(
                             let _ = store.save();
                         }
                     }
-                    Ok(FetchResponse { content:content, url: url_string, cookie: cookie_string })
+
+                    Ok(FetchResponse { content, url, cookie: cookie_string, title })
                 },
                 Err(_) => Err("Channel receive error".to_string())
             }
         }
         // 超时情况
-        _ = tokio::time::sleep(Duration::from_secs(20)) => {
+        _ = tokio::time::sleep(Duration::from_secs(25)) => {
             Err("Operation timed out".to_string())
         }
     };
@@ -189,7 +199,33 @@ async fn create_scraping_window<R: Runtime>(
     let redirect_times = Arc::new(AtomicUsize::new(0));
     let load_finish_times = Arc::new(AtomicUsize::new(0));
 
+    let mute_script = r#"
+        (function() {
+            function mute(elem) {
+                elem.muted = true;
+                elem.volume = 0;
+                elem.pause();
+            }
+            function handleNode(node) {
+                if (node.nodeType === 1) {
+                    if (node.tagName === 'VIDEO' || node.tagName === 'AUDIO') mute(node);
+                    node.querySelectorAll('video, audio').forEach(mute);
+                }
+            }
+            new MutationObserver((mutations) => {
+                mutations.forEach((m) => m.addedNodes.forEach(handleNode));
+            }).observe(document.documentElement, { childList: true, subtree: true });
+            
+            const p = HTMLMediaElement.prototype.play;
+            HTMLMediaElement.prototype.play = function() {
+                this.muted = true;
+                return p.apply(this, arguments);
+            };
+        })();
+    "#;
+
     let builder = WebviewWindowBuilder::new(app_handle, window_name, WebviewUrl::External(url))
+        .initialization_script(mute_script)
         .on_navigation({
             println!("on_navigation");
             let counter = redirect_times.clone();
@@ -291,12 +327,7 @@ async fn listen_for_scraping_result<R: Runtime>(
 
 // 处理payload
 fn process_payload(payload: &str) -> String {
-    let result = payload
-        .chars()
-        .skip(1)
-        .take(payload.len().saturating_sub(2))
-        .collect::<String>();
-    result.replace(r#"\""#, r#"""#)
+    serde_json::from_str(payload).unwrap_or_else(|_| payload.to_string())
 }
 
 // 发送空结果（错误处理）
@@ -309,30 +340,34 @@ async fn send_empty_result(window_name: &str) {
 // 常量定义
 // document.querySelector('#root').shadowRoot.querySelector('.chakra-portal')
 const SCRAPING_SCRIPT: &str = r#"
-function waitForLoad() {
-    return new Promise((resolve) => {
-        const maxWait = 18000;
-        const startTime = Date.now();
-        
-        function check() {
-            const currentTime = Date.now();
-            const elapsed = currentTime - startTime;
-            if (document.readyState === 'complete') {
-                resolve(true);
-            } else if (elapsed >= maxWait) {
-                resolve(false);
-            } else {
-                setTimeout(check, 100);
+(function() {
+    function waitForLoad() {
+        return new Promise((resolve) => {
+            const maxWait = 18000;
+            const startTime = Date.now();
+            
+            function check() {
+                const currentTime = Date.now();
+                const elapsed = currentTime - startTime;
+                if (document.readyState === 'complete') {
+                    resolve(true);
+                } else if (elapsed >= maxWait) {
+                    resolve(false);
+                } else {
+                    setTimeout(check, 100);
+                }
             }
-        }
-        check();
-    });
-}
+            check();
+        });
+    }
 
-waitForLoad().then(() => {
-    const scrapedData = btoa(encodeURIComponent(document.documentElement.innerHTML));
-    window.__TAURI__.event.emit("wuji_event_scrap_{{window_id}}", scrapedData);
-});
+    waitForLoad().then(() => {
+        const content = btoa(encodeURIComponent(document.documentElement.innerHTML));
+        const title = document.title;
+        const data = JSON.stringify({ content, title });
+        window.__TAURI__.event.emit("wuji_event_scrap_{{window_id}}", data);
+    });
+})();
 "#;
 
 /// 清理scrap session：关闭窗口并从管理器中移除
