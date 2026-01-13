@@ -94,11 +94,11 @@ Write-Host "打包完成!" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan
 
 $allApks = Get-ChildItem -Path $OutputDir -Filter "wuji-$version-*.apk"
-Write-Host "\n共生成 $($allApks.Count) 个APK文件:" -ForegroundColor Green
+Write-Host "共生成 $($allApks.Count) 个APK文件:" -ForegroundColor Green
 foreach ($apk in $allApks) {
     $size = [math]::Round($apk.Length / 1MB, 2)
     Write-Host "  - $($apk.Name) ($size MB)" -ForegroundColor Gray
 }
 
-Write-Host "\n所有APK已保存到: $OutputDir" -ForegroundColor Green
+Write-Host "所有APK已保存到: $OutputDir" -ForegroundColor Green
 Write-Host ""

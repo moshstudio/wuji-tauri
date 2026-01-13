@@ -10,6 +10,7 @@ import * as iconv from 'iconv-lite';
 import _ from 'lodash';
 import * as m3u8Parser from 'm3u8-parser';
 import { nanoid } from 'nanoid';
+import * as uuid from 'uuid';
 import forge from 'node-forge';
 import pLimit from 'p-limit';
 import {
@@ -177,6 +178,7 @@ abstract class Extension {
 
   getContentText: (element?: HTMLElement) => string | null;
   nanoid: typeof nanoid;
+  uuid: typeof uuid;
   urlJoin: (...parts: (string | null | undefined)[]) => string;
   maxPageNoFromElements: typeof maxPageNoFromElements;
   log: (...args: any[]) => void;
@@ -226,6 +228,7 @@ abstract class Extension {
       throw new Error(`fetch error: ${input.toString()} `);
     };
     this.nanoid = nanoid;
+    this.uuid = uuid;
 
     this.urlJoin = (...parts: (string | null | undefined)[]): string => {
       return myUrlJoin(parts, { baseUrl: this.baseUrl });

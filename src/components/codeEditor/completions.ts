@@ -28,6 +28,7 @@ import queryPhotoElementsTypes from '@/components/codeEditor/monaco-types/monaco
 import querySongElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-song/index.d.ts.txt?raw';
 import queryVideoElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-video/index.d.ts.txt?raw';
 import sourceExtensionTypes from '@/components/codeEditor/monaco-types/source-extension/index.d.ts.txt?raw';
+import uuidTypes from '@/components/codeEditor/monaco-types/monaco-uuid/index.d.ts.txt?raw';
 
 export function addCompletions(monaco: MonacoEditor) {
   monaco.languages.typescript.javascriptDefaults.addExtraLib(
@@ -193,6 +194,10 @@ export function addCompletions(monaco: MonacoEditor) {
     ): Promise<string | null>}`,
     'node_modules/@types/m3u8-proxy/index.d.ts',
   );
+  monaco.languages.typescript.javascriptDefaults.addExtraLib(
+    uuidTypes,
+    'node_modules/@types/uuid/index.d.ts',
+  );
   // 声明全局
   monaco.languages.typescript.javascriptDefaults.addExtraLib(
     `import _ from 'lodash';
@@ -206,6 +211,7 @@ export function addCompletions(monaco: MonacoEditor) {
      import * as fetchDom from 'fetch-dom';
      import * as fetchWebview from 'fetch-webview';
      import * as nanoid from 'nanoid';
+     import * as uuid from 'uuid';
      import * as urlJoin from 'url-join';
      import * as maxPageNoFromElements from 'max-page-no';
      import * as queryBookElements from 'query-book-elements';
@@ -231,6 +237,7 @@ export function addCompletions(monaco: MonacoEditor) {
       var fetchDom: typeof import('fetch-dom').fetchDom;
       var fetchWebview: typeof import('fetch-webview').fetchWebview;
       var nanoid: typeof import('nanoid').nanoid;
+      var uuid: typeof import('uuid');
       var urlJoin: typeof import('url-join').urlJoin;
       var maxPageNoFromElements: typeof import('max-page-no').maxPageNoFromElements;
       var queryBookElements: typeof import('query-book-elements').queryBookElements;

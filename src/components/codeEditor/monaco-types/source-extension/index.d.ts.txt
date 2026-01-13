@@ -4,6 +4,7 @@ import * as forge from 'forge';
 import * as iconv from 'iconv';
 import * as m3u8Parser from 'm3u8-parser';
 import { nanoid } from 'nanoid';
+import * as uuid from 'uuid';
 import pLimit from 'p-limit';
 import { fetch } from 'my-fetch';
 import { fetchWebview } from 'fetch-webview';
@@ -125,6 +126,7 @@ export abstract class Extension {
     }[]>;
     getContentText: (element?: HTMLElement) => string | null;
     nanoid: typeof nanoid;
+    uuid: typeof uuid;
     urlJoin: (...parts: (string | null | undefined)[]) => string;
     maxPageNoFromElements: (elements?: NodeListOf<Element> | null, onlyKeepNumbers?: boolean) => number | null;
     log: (...args: any[]) => void;

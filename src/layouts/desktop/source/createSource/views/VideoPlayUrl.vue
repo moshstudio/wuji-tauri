@@ -9,7 +9,7 @@ import Player, { Events } from 'xgplayer';
 import 'xgplayer/dist/index.min.css';
 import { VideoExtension } from '@wuji-tauri/source-extension';
 import { showDialog } from 'vant';
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onDeactivated, ref, watch } from 'vue';
 import BOOK_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import { FormItem } from '@/store/sourceCreateStore';
@@ -89,16 +89,10 @@ async function load() {
     '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
   )
-    .replace(
-      '// @METHOD_LIST',
-      findPage('list')!.code,
-    )
+    .replace('// @METHOD_LIST', findPage('list')!.code)
     .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
     .replace('// @METHOD_DETAIL', findPage('detail')!.code)
-    .replace(
-      '// @METHOD_PLAY_URL',
-      findPage('playUrl')!.code,
-    );
+    .replace('// @METHOD_PLAY_URL', findPage('playUrl')!.code);
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('VideoExtension', code);
@@ -192,6 +186,13 @@ watch(
   },
   { immediate: true },
 );
+
+onDeactivated(() => {
+  if (videoPlayer.value) {
+    videoPlayer.value.pause();
+    videoPlayer.value.reset();
+  }
+});
 
 function loadEpisode(episode: VideoEpisode) {
   selectedEpisode.value = episode;

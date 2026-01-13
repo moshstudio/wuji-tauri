@@ -1,7 +1,7 @@
 {
-  "version": "0.1.22",
-  "notes": "优化页面显示，修复听书",
-  "pub_date": "2025-12-15T08:00:00+08:00",
+  "version": "0.1.23",
+  "notes": "修复了一些bug",
+  "pub_date": "2026-01-13T08:00:00+08:00",
   "platforms": {
     "cloudpan": {
       "url": "https://wwtn.lanzout.com/s/WUJI"
