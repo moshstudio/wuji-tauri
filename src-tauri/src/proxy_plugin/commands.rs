@@ -7,6 +7,7 @@ use std::net::TcpListener;
 use std::sync::atomic::{AtomicU16, Ordering};
 use std::time::Duration;
 use unicase::Ascii;
+use url::Url;
 use urlencoding::{decode, encode};
 use warp::http::header::HeaderName as WarpHeaderName;
 use warp::reply::Reply;
@@ -214,6 +215,7 @@ fn process_m3u8(m3u8_path: &str, content: &str, headers_part: &str) -> String {
     }
 
     let mut modified_content = content.to_string();
+    let base_url = Url::parse(m3u8_path).ok();
 
     match smart_parse_m3u8(content) {
         Ok(Playlist::MediaPlaylist(mut pl)) => {
@@ -250,13 +252,31 @@ fn process_m3u8(m3u8_path: &str, content: &str, headers_part: &str) -> String {
                 let port = ACTUAL_PORT.load(Ordering::SeqCst);
                 let path_prefix = format!("{}:{}/ts/{}/", HOST, port, headers_part);
 
+                if let Some(ref mut key) = segment.key {
+                    if let Some(ref uri) = key.uri {
+                        let replaced_uri = if uri.starts_with("http") {
+                            Some(format!("{}{}", path_prefix, encode(uri)))
+                        } else if let Some(ref base) = base_url {
+                            if let Ok(joined) = base.join(uri) {
+                                Some(format!("{}{}", path_prefix, encode(joined.as_str())))
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        };
+
+                        if let Some(new_uri) = replaced_uri {
+                            key.uri = Some(new_uri);
+                        }
+                    }
+                }
+
                 if segment.uri.starts_with("http") {
                     segment.uri = format!("{}{}", path_prefix, encode(&segment.uri));
-                } else {
-                    if let Some(position) = m3u8_path.rfind("/") {
-                        let url = &m3u8_path[..position + 1];
-                        let real_url = format!("{}{}", url, &segment.uri);
-                        segment.uri = format!("{}{}", path_prefix, encode(&real_url));
+                } else if let Some(ref base) = base_url {
+                    if let Ok(real_url) = base.join(&segment.uri) {
+                        segment.uri = format!("{}{}", path_prefix, encode(real_url.as_str()));
                     }
                 }
             });
@@ -278,17 +298,13 @@ fn process_m3u8(m3u8_path: &str, content: &str, headers_part: &str) -> String {
             // Process audio
             pl.alternatives.iter_mut().for_each(|media| {
                 if media.media_type == AlternativeMediaType::Audio && media.uri.is_some() {
-                    if media.uri.as_ref().unwrap().starts_with("http") {
-                        media.uri = Some(format!(
-                            "{}{}",
-                            path_prefix,
-                            encode(media.uri.as_ref().unwrap())
-                        ));
-                    } else {
-                        if let Some(position) = m3u8_path.rfind("/") {
-                            let url = &m3u8_path[..position + 1];
-                            let real_url = format!("{}{}", url, media.uri.as_ref().unwrap());
-                            media.uri = Some(format!("{}{}", &path_prefix, encode(&real_url)));
+                    let uri = media.uri.as_ref().unwrap();
+                    if uri.starts_with("http") {
+                        media.uri = Some(format!("{}{}", path_prefix, encode(uri)));
+                    } else if let Some(ref base) = base_url {
+                        if let Ok(real_url) = base.join(uri) {
+                            media.uri =
+                                Some(format!("{}{}", &path_prefix, encode(real_url.as_str())));
                         }
                     }
                 }
@@ -298,11 +314,9 @@ fn process_m3u8(m3u8_path: &str, content: &str, headers_part: &str) -> String {
             pl.variants.iter_mut().for_each(|variant| {
                 if variant.uri.starts_with("http") {
                     variant.uri = format!("{}{}", path_prefix, encode(&variant.uri));
-                } else {
-                    if let Some(position) = m3u8_path.rfind("/") {
-                        let url = &m3u8_path[..position + 1];
-                        let real_url = format!("{}{}", url, &variant.uri);
-                        variant.uri = format!("{}{}", &path_prefix, encode(&real_url));
+                } else if let Some(ref base) = base_url {
+                    if let Ok(real_url) = base.join(&variant.uri) {
+                        variant.uri = format!("{}{}", &path_prefix, encode(real_url.as_str()));
                     }
                 }
             });
