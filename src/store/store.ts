@@ -85,7 +85,6 @@ import { createKVStore } from './utils';
 import { useVideoShelfStore } from './videoShelfStore';
 import { useSourceCreateStore } from './sourceCreateStore';
 import { isMembershipOrderValid } from '@/types/user';
-import { userInfo } from 'node:os';
 
 export const useStore = defineStore('store', () => {
   const hotItems = ref<HotItem[]>([]); // 热搜榜
