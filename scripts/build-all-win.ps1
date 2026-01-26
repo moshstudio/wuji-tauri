@@ -89,22 +89,26 @@ if ($LASTEXITCODE -eq 0) {
                 $encodedName = [Uri]::EscapeDataString($exeName)
                 $downloadUrl = "https://wuji.moshangwangluo.com/$encodedName"
 
-                # 更新 windows-x86_64 节点
-                if ($jsonContent.platforms.'windows-x86_64') {
-                    $jsonContent.platforms.'windows-x86_64'.signature = $sigContent
-                    $jsonContent.platforms.'windows-x86_64'.url = $downloadUrl
-                    Write-Host "  已更新 updater_win.json (version, signature, url)" -ForegroundColor Green
-                } else {
-                    Write-Host "  警告: updater_win.json 中未找到 windows-x86_64 节点" -ForegroundColor Yellow
+                # 更新所有平台节点
+                $platforms = $jsonContent.platforms.PSObject.Properties | Select-Object -ExpandProperty Name
+                foreach ($platform in $platforms) {
+                    if ($jsonContent.platforms.$platform) {
+                        $jsonContent.platforms.$platform.signature = $sigContent
+                        $jsonContent.platforms.$platform.url = $downloadUrl
+                    }
                 }
+                Write-Host "  已更新 updater_win.json (所有平台)" -ForegroundColor Green
 
-                # 保存 JSON
+                # 保存 JSON (保持 UTF8, 无 BOM)
                 $jsonOptions = @{
                     Depth = 10
                     Compress = $false
                 }
                 $newJson = $jsonContent | ConvertTo-Json @jsonOptions
-                [System.IO.File]::WriteAllText($updaterJsonPath, $newJson, [System.Text.Encoding]::UTF8)
+                
+                # 使用无 BOM 的 UTF-8 编码
+                $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+                [System.IO.File]::WriteAllText($updaterJsonPath, $newJson, $utf8NoBom)
 
             } catch {
                 Write-Host "✗ 更新 updater_win.json 失败: $_" -ForegroundColor Red
