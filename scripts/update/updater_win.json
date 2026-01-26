@@ -1,23 +1,23 @@
-{
-  "version": "0.1.23",
-  "notes": "修复了一些bug",
-  "pub_date": "2026-01-13T08:00:00+08:00",
+﻿{
+  "version": "0.1.24",
+  "notes": "修复听书错误",
+  "pub_date": "2026-01-26T16:19:16+08:00",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVReGt3NC8xenVFQ3VZQzZHYnAzZlJWQnFhdHBRR0xEenkyYVdtWGxSQXMwYzVjOGorMm9QclZadllIOHg3VWtFSlJGeCsyWnVOdGl3b0tUYkNUWnUvOVE1Zm1DakZQVndvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY4MzA5Mzk2CWZpbGU65peg5p6BXzAuMS4yM194NjQtc2V0dXAuZXhlCkJiVkNnc3ZnQ0p3TG01elNXSHh2TFJEUFFtUEtBUGU4dkdBYWxlVk5lYkVYYjlPVUozUnprVFB4VEdQNmxRNlFtTDlKMGcrYjhiZW5CdFp1Z0xoVUNRPT0K",
-      "url": "https://wuji.moshangwangluo.com/%E6%97%A0%E6%9E%81_0.1.23_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVReGt3NC8xenVFQ2liZFJYdzlEL0pkYVkwdWpBL0pJUUpPbWdvbkNlR1FiS1k1YllkckhKU0NiOTdQVlNVTXhQZ2VYbGdvZU5GK2F5Tmw5SncyL0ZYVitwV2M1Vys0c3dRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY5NDE1NTU2CWZpbGU65peg5p6BXzAuMS4yNF94NjQtc2V0dXAuZXhlCmVtdkdQVGNTMjR3MW1pNEo1UDZLMWxsMDNmOXZHaGZ1MTdyUEVwcmxjKzFyaXkzb0dXRHRyTDc1Skw1bW9YSlhDL2NnUHA4WFFxVkgvWURRQnFXa0RnPT0K",
+      "url": "https://wuji.moshangwangluo.com/%E6%97%A0%E6%9E%81_0.1.24_x64-setup.exe"
     },
     "windows-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVReGt3NC8xenVFQ3VZQzZHYnAzZlJWQnFhdHBRR0xEenkyYVdtWGxSQXMwYzVjOGorMm9QclZadllIOHg3VWtFSlJGeCsyWnVOdGl3b0tUYkNUWnUvOVE1Zm1DakZQVndvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY4MzA5Mzk2CWZpbGU65peg5p6BXzAuMS4yM194NjQtc2V0dXAuZXhlCkJiVkNnc3ZnQ0p3TG01elNXSHh2TFJEUFFtUEtBUGU4dkdBYWxlVk5lYkVYYjlPVUozUnprVFB4VEdQNmxRNlFtTDlKMGcrYjhiZW5CdFp1Z0xoVUNRPT0K",
-      "url": "https://wuji.moshangwangluo.com/%E6%97%A0%E6%9E%81_0.1.23_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVReGt3NC8xenVFQ2tzZlYvYlhIcGFseUhUN3BMMHl5Ni94MUZsUTJacW9sNFBwL1JGeWlPMFFGTC9KNVdZQll6OWxvR1JuOElXa1lzb3BnNjlyL0JDNDBRZlFscTlqbmdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY5NDE0ODgwCWZpbGU65peg5p6BXzAuMS4yNF94NjQtc2V0dXAuZXhlCjQycnBneG1oVnFETGxkYUU2a1pibXROVi91WENFM3hhZXlpbjR1N3kwWjhRYnUrYUxPWHd3MW14NTJkejBBYXd4ZFY4THVsMzlCR0xHSXE3Q1RuTUFRPT0K",
+      "url": "https://wuji.moshangwangluo.com/%E6%97%A0%E6%9E%81_0.1.24_x64-setup.exe"
     },
     "windows-i686": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVReGt3NC8xenVFQ3VZQzZHYnAzZlJWQnFhdHBRR0xEenkyYVdtWGxSQXMwYzVjOGorMm9QclZadllIOHg3VWtFSlJGeCsyWnVOdGl3b0tUYkNUWnUvOVE1Zm1DakZQVndvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY4MzA5Mzk2CWZpbGU65peg5p6BXzAuMS4yM194NjQtc2V0dXAuZXhlCkJiVkNnc3ZnQ0p3TG01elNXSHh2TFJEUFFtUEtBUGU4dkdBYWxlVk5lYkVYYjlPVUozUnprVFB4VEdQNmxRNlFtTDlKMGcrYjhiZW5CdFp1Z0xoVUNRPT0K",
-      "url": "https://wuji.moshangwangluo.com/%E6%97%A0%E6%9E%81_0.1.23_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVReGt3NC8xenVFQ2tzZlYvYlhIcGFseUhUN3BMMHl5Ni94MUZsUTJacW9sNFBwL1JGeWlPMFFGTC9KNVdZQll6OWxvR1JuOElXa1lzb3BnNjlyL0JDNDBRZlFscTlqbmdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY5NDE0ODgwCWZpbGU65peg5p6BXzAuMS4yNF94NjQtc2V0dXAuZXhlCjQycnBneG1oVnFETGxkYUU2a1pibXROVi91WENFM3hhZXlpbjR1N3kwWjhRYnUrYUxPWHd3MW14NTJkejBBYXd4ZFY4THVsMzlCR0xHSXE3Q1RuTUFRPT0K",
+      "url": "https://wuji.moshangwangluo.com/%E6%97%A0%E6%9E%81_0.1.24_x64-setup.exe"
     },
     "windows-armv7": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVReGt3NC8xenVFQ3VZQzZHYnAzZlJWQnFhdHBRR0xEenkyYVdtWGxSQXMwYzVjOGorMm9QclZadllIOHg3VWtFSlJGeCsyWnVOdGl3b0tUYkNUWnUvOVE1Zm1DakZQVndvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY4MzA5Mzk2CWZpbGU65peg5p6BXzAuMS4yM194NjQtc2V0dXAuZXhlCkJiVkNnc3ZnQ0p3TG01elNXSHh2TFJEUFFtUEtBUGU4dkdBYWxlVk5lYkVYYjlPVUozUnprVFB4VEdQNmxRNlFtTDlKMGcrYjhiZW5CdFp1Z0xoVUNRPT0K",
-      "url": "https://wuji.moshangwangluo.com/%E6%97%A0%E6%9E%81_0.1.23_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVReGt3NC8xenVFQ2tzZlYvYlhIcGFseUhUN3BMMHl5Ni94MUZsUTJacW9sNFBwL1JGeWlPMFFGTC9KNVdZQll6OWxvR1JuOElXa1lzb3BnNjlyL0JDNDBRZlFscTlqbmdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY5NDE0ODgwCWZpbGU65peg5p6BXzAuMS4yNF94NjQtc2V0dXAuZXhlCjQycnBneG1oVnFETGxkYUU2a1pibXROVi91WENFM3hhZXlpbjR1N3kwWjhRYnUrYUxPWHd3MW14NTJkejBBYXd4ZFY4THVsMzlCR0xHSXE3Q1RuTUFRPT0K",
+      "url": "https://wuji.moshangwangluo.com/%E6%97%A0%E6%9E%81_0.1.24_x64-setup.exe"
     }
   }
 }
