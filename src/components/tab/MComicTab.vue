@@ -18,21 +18,32 @@ const { paginationPosition } = storeToRefs(displayStore);
 
 const props = defineProps<{
   source: ComicSource;
-  toPage: (source: ComicSource, pageNo?: number, type?: string) => void;
+  toPage: (
+    source: ComicSource,
+    pageNo?: number,
+    type?: string,
+  ) => Promise<any> | void;
   toDetail: (source: ComicSource, item: ComicItem) => void;
 }>();
 
 const active = ref(0);
 const tabKey = ref(nanoid()); // 修改此值来重新渲染组件
-function load(index: number) {
-  if (!props.source.list) return;
-  let t: ComicList;
-  if (Array.isArray(props.source.list)) {
-    t = props.source.list[index];
-  } else {
-    t = props.source.list;
+const loadingMap = new Set<number>();
+async function load(i: number | string) {
+  if (!props.source.list || !Array.isArray(props.source.list)) return;
+  const index = Number(i);
+  if (isNaN(index)) return;
+
+  const t = props.source.list[index];
+  if (t.list && t.list.length) return;
+  if (loadingMap.has(index)) return;
+
+  loadingMap.add(index);
+  try {
+    await props.toPage(props.source, 1, t.type);
+  } finally {
+    loadingMap.delete(index);
   }
-  props.toPage(props.source, 1, t.type);
 }
 
 function changePage(index: number, pageNo?: number) {
@@ -69,7 +80,8 @@ watch(
     v-model:active="active"
     shrink
     animated
-    @rendered="(index) => load(index)"
+    @rendered="(n) => load(n)"
+    @change="(n) => load(n)"
   >
     <van-tab
       v-for="(item, index) in source.list"
