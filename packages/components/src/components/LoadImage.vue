@@ -70,14 +70,22 @@ async function processSrc(
     const proxyUrl = await getProxyUrl(src, headers);
     return proxyUrl || src;
   } else {
+    const maxRedirections = props.src.includes('imgdb.cn') ? 0 : undefined;
     const response = await cachedFetch(
       props.src,
       {
         headers,
         verify: false,
+        maxRedirections,
       },
       props.compress,
     );
+    if (!response.ok) {
+      console.warn(
+        ` image fetch failed: ${props.src} ${response.status} ${response.statusText}`,
+      );
+      return src;
+    }
     const blob = await response.blob();
     if (blob.size === 0) {
       console.warn(' image fetch size=0');
