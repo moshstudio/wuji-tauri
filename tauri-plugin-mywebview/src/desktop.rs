@@ -56,6 +56,7 @@ impl<R: Runtime> Mywebview<R> {
                         url: String::new(),
                         cookie: String::new(),
                         title: String::new(),
+                        resources: vec![],
                     }
                 }
             };
@@ -112,7 +113,7 @@ async fn scrap_text_by_url<R: Runtime>(
             .and_then(|cookie_value| cookie_value.as_str().map(|s| s.to_string()))
     };
 
-    // 5. 创建窗口并设置事件处理
+    // 5. 创建窗口并设置事件处理（同时注入嗅探脚本）
     let window = create_scraping_window(&app_handle, &window_name, parsed_url, cookie).await?;
     let window_ref = Arc::new(window);
 
@@ -144,13 +145,14 @@ async fn scrap_text_by_url<R: Runtime>(
                         .collect::<Vec<_>>()
                         .join("; ");
 
-                    let (content, title) = if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content_json) {
+                    let (content, title, resources) = if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content_json) {
                         (
                             v["content"].as_str().unwrap_or("").to_string(),
                             v["title"].as_str().unwrap_or("").to_string(),
+                            parse_sniffed_resources(&v["resources"]),
                         )
                     } else {
-                        (content_json, window_clone.title().unwrap_or_default())
+                        (content_json, window_clone.title().unwrap_or_default(), vec![])
                     };
                     let url = window_clone.url().map(|u| u.to_string()).unwrap_or_default();
 
@@ -161,7 +163,7 @@ async fn scrap_text_by_url<R: Runtime>(
                         }
                     }
 
-                    Ok(FetchResponse { content, url, cookie: cookie_string, title })
+                    Ok(FetchResponse { content, url, cookie: cookie_string, title, resources })
                 },
                 Err(_) => Err("Channel receive error".to_string())
             }
@@ -178,6 +180,29 @@ async fn scrap_text_by_url<R: Runtime>(
     result
 }
 
+/// 从 JSON 中解析嗅探到的资源列表
+fn parse_sniffed_resources(v: &serde_json::Value) -> Vec<SniffedResource> {
+    let mut resources = Vec::new();
+    if let Some(arr) = v.as_array() {
+        for item in arr {
+            let url = item["url"].as_str().unwrap_or("").to_string();
+            if url.is_empty() {
+                continue;
+            }
+            resources.push(SniffedResource {
+                url,
+                resource_type: item["type"].as_str().unwrap_or("other").to_string(),
+                method: item["method"].as_str().map(|s| s.to_string()),
+                content_type: item["contentType"].as_str().map(|s| s.to_string()),
+                size: item["size"].as_u64(),
+                request_data: item["requestData"].as_str().map(|s| s.to_string()),
+                response_body: item["responseBody"].as_str().map(|s| s.to_string()),
+            });
+        }
+    }
+    resources
+}
+
 async fn acquire_semaphore_with_timeout(
     semaphore: &Arc<Semaphore>,
 ) -> Result<tokio::sync::SemaphorePermit<'_>, String> {
@@ -189,7 +214,7 @@ async fn acquire_semaphore_with_timeout(
         .map_err(|_| "Failed to acquire semaphore".to_string())
 }
 
-// 创建爬取窗口
+// 创建爬取窗口（同时注入嗅探脚本）
 async fn create_scraping_window<R: Runtime>(
     app_handle: &AppHandle<R>,
     window_name: &str,
@@ -199,33 +224,9 @@ async fn create_scraping_window<R: Runtime>(
     let redirect_times = Arc::new(AtomicUsize::new(0));
     let load_finish_times = Arc::new(AtomicUsize::new(0));
 
-    let mute_script = r#"
-        (function() {
-            function mute(elem) {
-                elem.muted = true;
-                elem.volume = 0;
-                elem.pause();
-            }
-            function handleNode(node) {
-                if (node.nodeType === 1) {
-                    if (node.tagName === 'VIDEO' || node.tagName === 'AUDIO') mute(node);
-                    node.querySelectorAll('video, audio').forEach(mute);
-                }
-            }
-            new MutationObserver((mutations) => {
-                mutations.forEach((m) => m.addedNodes.forEach(handleNode));
-            }).observe(document.documentElement, { childList: true, subtree: true });
-            
-            const p = HTMLMediaElement.prototype.play;
-            HTMLMediaElement.prototype.play = function() {
-                this.muted = true;
-                return p.apply(this, arguments);
-            };
-        })();
-    "#;
-
     let builder = WebviewWindowBuilder::new(app_handle, window_name, WebviewUrl::External(url))
-        .initialization_script(mute_script)
+        // 注入嗅探初始化脚本（拦截 XHR/Fetch、扫描媒体标签）
+        .initialization_script(SNIFF_INIT_SCRIPT)
         .on_navigation({
             println!("on_navigation");
             let counter = redirect_times.clone();
@@ -296,7 +297,7 @@ fn handle_page_load_finished<R: Runtime>(
             // 监听结果事件
             listen_for_scraping_result(window.clone(), window_name.clone()).await;
 
-            // 执行 JavaScript 获取内容
+            // 执行 JavaScript 获取内容（含嗅探结果收集）
             if window
                 .eval(SCRAPING_SCRIPT.replace("{{window_id}}", &window_name))
                 .is_err()
@@ -337,8 +338,228 @@ async fn send_empty_result(window_name: &str) {
     }
 }
 
-// 常量定义
-// document.querySelector('#root').shadowRoot.querySelector('.chakra-portal')
+// ============================================================
+// 嗅探初始化脚本（页面加载前注入）：
+//   - 静音所有媒体元素
+//   - 拦截 XHR（XMLHttpRequest.open/send）
+//   - 拦截 Fetch API
+//   - 用 MutationObserver 扫描动态插入的 video/audio/img/source 元素
+//   所有捕获的 URL 存入 window.__wuji_sniffed__
+// ============================================================
+const SNIFF_INIT_SCRIPT: &str = r#"
+(function() {
+    // 存储嗅探结果
+    if (!window.__wuji_sniffed__) {
+        window.__wuji_sniffed__ = [];
+    }
+
+    const sniffed = window.__wuji_sniffed__;
+    const seenUrls = new Set();
+
+    function addResource(url, type, method, contentType, size, requestData, responseBody) {
+        if (!url || typeof url !== 'string') return;
+        // 过滤掉 data: blob: 等非HTTP链接
+        if (!url.startsWith('http://') && !url.startsWith('https://')) return;
+        
+        const existing = sniffed.find(r => r.url === url);
+        if (existing) {
+            existing.type = type || existing.type;
+            existing.method = method || existing.method;
+            existing.contentType = contentType || existing.contentType;
+            existing.size = size || existing.size;
+            if (requestData) existing.requestData = requestData;
+            if (responseBody) existing.responseBody = responseBody;
+        } else {
+            sniffed.push({
+                url,
+                type: type || 'other',
+                method: method || null,
+                contentType: contentType || null,
+                size: size || null,
+                requestData: requestData || null,
+                responseBody: responseBody || null,
+            });
+        }
+    }
+
+    // -------- 静音所有媒体 --------
+    function mute(elem) {
+        elem.muted = true;
+        elem.volume = 0;
+        elem.pause && elem.pause();
+    }
+
+    // -------- 拦截 XHR --------
+    const OrigXHR = window.XMLHttpRequest;
+    function PatchedXHR() {
+        const xhr = new OrigXHR();
+        let _method = 'GET';
+        let _url = '';
+        let _requestData = null;
+
+        const origOpen = xhr.open.bind(xhr);
+        xhr.open = function(method, url, ...args) {
+            _method = method;
+            _url = typeof url === 'string' ? url : String(url);
+            return origOpen(method, url, ...args);
+        };
+
+        xhr.addEventListener('load', function() {
+            const ct = xhr.getResponseHeader('Content-Type') || undefined;
+            const cl = xhr.getResponseHeader('Content-Length');
+            const size = cl ? parseInt(cl, 10) : undefined;
+            const type = guessTypeFromContentType(ct) || guessTypeFromUrl(_url) || 'xhr';
+            
+            let _responseBody = null;
+            if (ct && (ct.includes('json') || ct.includes('text') || ct.includes('xml') || ct.includes('protobuf') || ct.includes('urlencoded'))) {
+                try {
+                    if (xhr.responseType === '' || xhr.responseType === 'text') {
+                        _responseBody = (xhr.responseText || '').substring(0, 500000); // 截断500KB防止溢出
+                    }
+                } catch(e) {}
+            }
+            addResource(_url, type, _method, ct, size, _requestData, _responseBody);
+        });
+
+        const origSend = xhr.send.bind(xhr);
+        xhr.send = function(...args) {
+            if (args[0] && typeof args[0] === 'string') {
+                _requestData = args[0].substring(0, 500000);
+            }
+            // 请求发出时先记录
+            addResource(_url, guessTypeFromUrl(_url) || 'xhr', _method, null, null, _requestData, null);
+            return origSend(...args);
+        };
+
+        return xhr;
+    }
+    PatchedXHR.prototype = OrigXHR.prototype;
+    window.XMLHttpRequest = PatchedXHR;
+
+    // -------- 拦截 Fetch --------
+    const origFetch = window.fetch;
+    window.fetch = function(input, init) {
+        let url = typeof input === 'string' ? input : (input && input.url) || '';
+        let method = (init && init.method) || (input && input.method) || 'GET';
+        let requestData = null;
+        
+        if (init && init.body && typeof init.body === 'string') {
+            requestData = init.body.substring(0, 500000);
+        }
+        addResource(url, guessTypeFromUrl(url) || 'fetch', method, null, null, requestData, null);
+
+        return origFetch.apply(this, arguments).then(function(response) {
+            try {
+                const ct = response.headers.get('Content-Type') || undefined;
+                const cl = response.headers.get('Content-Length');
+                const size = cl ? parseInt(cl, 10) : undefined;
+                const type = guessTypeFromContentType(ct) || guessTypeFromUrl(url) || 'fetch';
+                
+                addResource(url, type, method, ct, size, requestData, null);
+
+                if (ct && (ct.includes('json') || ct.includes('text') || ct.includes('xml') || ct.includes('protobuf') || ct.includes('urlencoded'))) {
+                    // clone 响应体以供读取
+                    const clone = response.clone();
+                    clone.text().then(text => {
+                        addResource(url, type, method, ct, size, requestData, text.substring(0, 500000));
+                    }).catch(e => {});
+                }
+            } catch(e) {}
+            return response;
+        });
+    };
+
+
+    // -------- 扫描 DOM 中的媒体元素 --------
+    function scanElement(el) {
+        if (!el || el.nodeType !== 1) return;
+        const tag = el.tagName && el.tagName.toUpperCase();
+        if (tag === 'VIDEO' || tag === 'AUDIO') {
+            if (el.src) addResource(el.src, tag === 'VIDEO' ? 'video' : 'audio', null, null, null);
+            el.querySelectorAll('source').forEach(s => {
+                if (s.src) addResource(s.src, tag === 'VIDEO' ? 'video' : 'audio', null, null, null);
+            });
+            mute(el);
+        } else if (tag === 'IMG') {
+            if (el.src) addResource(el.src, 'image', null, null, null);
+            if (el.srcset) {
+                el.srcset.split(',').forEach(part => {
+                    const u = part.trim().split(/\s+/)[0];
+                    if (u) addResource(u, 'image', null, null, null);
+                });
+            }
+        } else if (tag === 'SOURCE') {
+            if (el.src) {
+                const parentTag = el.parentElement && el.parentElement.tagName && el.parentElement.tagName.toUpperCase();
+                const t = parentTag === 'VIDEO' ? 'video' : parentTag === 'AUDIO' ? 'audio' : 'other';
+                addResource(el.src, t, null, null, null);
+            }
+        } else if (tag === 'LINK') {
+            if (el.rel === 'preload' && el.href) {
+                const as_ = el.getAttribute('as') || '';
+                const t = as_ === 'video' ? 'video' : as_ === 'audio' ? 'audio' : as_ === 'image' ? 'image' : 'other';
+                addResource(el.href, t, null, null, null);
+            }
+        }
+    }
+
+    function scanAll(root) {
+        root.querySelectorAll('video, audio, img, source, link[rel="preload"]').forEach(scanElement);
+    }
+
+    // 页面加载完成后扫描一次
+    if (document.readyState !== 'loading') {
+        scanAll(document);
+    } else {
+        document.addEventListener('DOMContentLoaded', () => scanAll(document));
+    }
+
+    // 监听动态插入
+    new MutationObserver((mutations) => {
+        mutations.forEach(m => {
+            m.addedNodes.forEach(node => {
+                if (node.nodeType === 1) {
+                    scanElement(node);
+                    if (node.querySelectorAll) {
+                        node.querySelectorAll('video, audio, img, source, link[rel="preload"]').forEach(scanElement);
+                    }
+                }
+            });
+        });
+    }).observe(document.documentElement, { childList: true, subtree: true });
+
+    // 静音所有媒体播放
+    const origPlay = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function() {
+        this.muted = true;
+        return origPlay.apply(this, arguments);
+    };
+
+    // -------- 工具函数 --------
+    function guessTypeFromContentType(ct) {
+        if (!ct) return null;
+        ct = ct.toLowerCase();
+        if (ct.includes('video')) return 'video';
+        if (ct.includes('audio')) return 'audio';
+        if (ct.includes('image')) return 'image';
+        return null;
+    }
+
+    function guessTypeFromUrl(url) {
+        if (!url) return null;
+        const u = url.toLowerCase().split('?')[0];
+        if (/\.(mp4|m3u8|m4v|mkv|webm|avi|mov|flv|ts|mpeg|mpg|wmv|rmvb|3gp)$/.test(u)) return 'video';
+        if (/\.(mp3|aac|ogg|flac|wav|m4a|opus|wma)$/.test(u)) return 'audio';
+        if (/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|avif|heic)$/.test(u)) return 'image';
+        return null;
+    }
+})();
+"#;
+
+// ============================================================
+// 爬取脚本（页面加载完成后执行）：
+//   获取页面 HTML 内容 + 收集嗅探到的资源列表，一并通过事件返回
+// ============================================================
 const SCRAPING_SCRIPT: &str = r#"
 (function() {
     function waitForLoad() {
@@ -349,7 +570,7 @@ const SCRAPING_SCRIPT: &str = r#"
             function check() {
                 const currentTime = Date.now();
                 const elapsed = currentTime - startTime;
-                if (document.readyState === 'complete') {
+                if (document.readyState === 'complete' || document.readyState === 'interactive') {
                     resolve(true);
                 } else if (elapsed >= maxWait) {
                     resolve(false);
@@ -362,10 +583,42 @@ const SCRAPING_SCRIPT: &str = r#"
     }
 
     waitForLoad().then(() => {
-        const content = btoa(encodeURIComponent(document.documentElement.innerHTML));
-        const title = document.title;
-        const data = JSON.stringify({ content, title });
-        window.__TAURI__.event.emit("wuji_event_scrap_{{window_id}}", data);
+        try {
+            // 尝试停止加载，防止一直处于加载中
+            if (window.stop) window.stop();
+
+            // 最后再补扫一次 DOM，捕获懒加载元素
+            const sniffed = window.__wuji_sniffed__ || [];
+            const seenUrls = new Set(sniffed.map(r => r.url));
+            function addIfNew(url, type) {
+                if (!url || !url.startsWith('http') || seenUrls.has(url)) return;
+                seenUrls.add(url);
+                sniffed.push({ url, type, method: null, contentType: null, size: null });
+            }
+            document.querySelectorAll('video').forEach(el => {
+                if (el.src) addIfNew(el.src, 'video');
+                el.querySelectorAll('source').forEach(s => s.src && addIfNew(s.src, 'video'));
+            });
+            document.querySelectorAll('audio').forEach(el => {
+                if (el.src) addIfNew(el.src, 'audio');
+                el.querySelectorAll('source').forEach(s => s.src && addIfNew(s.src, 'audio'));
+            });
+            document.querySelectorAll('img').forEach(el => {
+                if (el.src) addIfNew(el.src, 'image');
+            });
+            
+            const content = btoa(encodeURIComponent(document.documentElement.innerHTML));
+            const title = document.title;
+            const data = JSON.stringify({ content, title, resources: sniffed });
+            window.__TAURI__.event.emit("wuji_event_scrap_{{window_id}}", data);
+        } catch (e) {
+            console.error(e);
+            // 发生错误也尝试返回，避免超时
+            try {
+                const data = JSON.stringify({ content: "", title: "Error", resources: [] });
+                window.__TAURI__.event.emit("wuji_event_scrap_{{window_id}}", data);
+            } catch (_) {}
+        }
     });
 })();
 "#;

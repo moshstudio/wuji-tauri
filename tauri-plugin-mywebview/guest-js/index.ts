@@ -1,10 +1,30 @@
 import { invoke } from '@tauri-apps/api/core'
 
+/** 嗅探到的单条资源 */
+export interface SniffedResource {
+  /** 资源 URL */
+  url: string;
+  /** 资源类型: "video" | "audio" | "image" | "xhr" | "fetch" | "other" */
+  resourceType: string;
+  /** 请求方法（XHR/Fetch 才有） */
+  method?: string;
+  /** Content-Type 响应头 */
+  contentType?: string;
+  /** 资源大小（字节） */
+  size?: number;
+  /** 请求发送的数据（针对 xhr/fetch） */
+  requestData?: string;
+  /** 响应内容（截断处理，针对 xhr/fetch） */
+  responseBody?: string;
+}
+
 export interface FetchWebviewResult {
   content: string;
   url: string;
   cookie: string;
   title: string;
+  /** 页面中嗅探到的媒体/网络请求资源列表 */
+  resources: SniffedResource[];
 }
 
 export async function ping(value: string): Promise<string | null> {
@@ -14,6 +34,7 @@ export async function ping(value: string): Promise<string | null> {
     },
   }).then((r) => (r.value ? r.value : null));
 }
+
 export async function fetchWebview(url: string): Promise<FetchWebviewResult | null> {
   return await invoke<FetchWebviewResult>('plugin:mywebview|fetch', {
     payload: {

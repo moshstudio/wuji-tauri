@@ -1,4 +1,9 @@
-import { fetchWebview as _fetchWebview } from 'tauri-plugin-mywebview-api';
+import {
+  fetchWebview as _fetchWebview,
+  type SniffedResource,
+} from 'tauri-plugin-mywebview-api';
+
+export type { SniffedResource };
 
 // 信号量类，用于控制并发数量
 class Semaphore {
@@ -87,6 +92,9 @@ export async function fetchWebview(url: string): Promise<Document | null> {
       (document as any)._customUrl = ret.url;
     }
 
+    // 存储嗅探到的资源列表
+    (document as any)._sniffedResources = ret.resources || [];
+
     const proxy = new Proxy(document, {
       get: (target, prop) => {
         if (prop === 'cookie') {
@@ -108,6 +116,9 @@ export async function fetchWebview(url: string): Promise<Document | null> {
             };
           }
         }
+        if (prop === '_sniffedResources') {
+          return (target as any)._sniffedResources || [];
+        }
         const value = Reflect.get(target, prop);
         return typeof value === 'function' ? value.bind(target) : value;
       },
@@ -126,7 +137,7 @@ export async function fetchWebview(url: string): Promise<Document | null> {
         return Reflect.set(target, prop, value, receiver);
       },
     });
-    
+
     return proxy;
   } finally {
     // 无论成功还是失败，都要释放信号量

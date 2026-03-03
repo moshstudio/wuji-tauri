@@ -1,1 +1,47 @@
+/** 嗅探到的单条资源 */
+export interface SniffedResource {
+  /** 资源 URL */
+  url: string;
+  /** 资源类型: "video" | "audio" | "image" | "xhr" | "fetch" | "other" */
+  resourceType: string;
+  /** 请求方法（XHR/Fetch 才有） */
+  method?: string;
+  /** Content-Type 响应头 */
+  contentType?: string;
+  /** 资源大小（字节） */
+  size?: number;
+  /** 请求发送的数据（针对 xhr/fetch） */
+  requestData?: string;
+  /** 响应内容（截断处理，针对 xhr/fetch） */
+  responseBody?: string;
+}
+
+/**
+ * 通过隐藏 Webview 窗口加载指定 URL，返回解析后的 Document 对象。
+ * 同时自动嗅探页面中的视频、音频、图片及 XHR/Fetch 请求链接。
+ *
+ * 返回的 Document 对象额外挂载了以下属性（通过 Proxy）：
+ * - `cookie`: 页面 Cookie
+ * - `URL`: 页面最终 URL
+ * - `location`: 页面最终 URL（URL 对象）
+ * - `_sniffedResources`: 嗅探到的资源列表 (SniffedResource[])
+ *
+ * @param url 目标页面 URL
+ * @returns 解析后的 Document 对象，若失败返回 null
+ *
+ * @example
+ * const doc = await fetchWebview('https://example.com');
+ * if (doc) {
+ *   // 获取页面内容
+ *   const title = doc.title;
+ *   const body = doc.body.innerHTML;
+ *
+ *   // 获取嗅探到的资源
+ *   const resources = (doc as any)._sniffedResources as SniffedResource[];
+ *   const videos = resources.filter(r => r.resourceType === 'video');
+ *   const audios = resources.filter(r => r.resourceType === 'audio');
+ *   const images = resources.filter(r => r.resourceType === 'image');
+ *   const xhrRequests = resources.filter(r => r.resourceType === 'xhr');
+ * }
+ */
 export declare function fetchWebview(url: string): Promise<Document | null>;

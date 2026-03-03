@@ -1,4 +1,9 @@
-import { fetchWebview as _fetchWebview } from 'tauri-plugin-mywebview-api';
+import {
+  fetchWebview as _fetchWebview,
+  type FetchWebviewResult,
+} from 'tauri-plugin-mywebview-api';
+
+export type { FetchWebviewResult };
 
 // 信号量类，用于控制并发数量
 class Semaphore {
@@ -52,7 +57,9 @@ class Semaphore {
 // 创建最大并发数为3的信号量实例
 const semaphore = new Semaphore(3);
 
-export async function fetWebview(url: string): Promise<string | null> {
+export async function fetWebview(
+  url: string,
+): Promise<FetchWebviewResult | null> {
   // 尝试获取信号量许可，最多等待20秒
   const acquired = await semaphore.acquire(20000);
 

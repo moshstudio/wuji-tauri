@@ -68,18 +68,9 @@ async function load(pageNo: number) {
     '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
   )
-    .replace(
-      '// @METHOD_PLAYLIST',
-      findPage('playlist')!.code,
-    )
-    .replace(
-      '// @METHOD_SEARCH_PLAYLIST',
-      findPage('searchPlaylist')!.code,
-    )
-    .replace(
-      '// @METHOD_PLAYLIST_DETAIL',
-      findPage('playlistDetail')!.code,
-    );
+    .replace('// @METHOD_PLAYLIST', findPage('playlist')!.code)
+    .replace('// @METHOD_SEARCH_PLAYLIST', findPage('searchPlaylist')!.code)
+    .replace('// @METHOD_PLAYLIST_DETAIL', findPage('playlistDetail')!.code);
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('SongExtension', code);
@@ -89,11 +80,19 @@ async function load(pageNo: number) {
       throw new Error('初始化中的baseUrl未定义!');
     }
     cls.log = props.log;
-    const item =
-      findPage('playlist')?.result?.list?.[0] ||
-      findPage('searchPlaylist')?.result?.list?.[0];
-    if (!item) {
+    const playlistList = findPage('playlist')?.result?.list;
+    const searchPlaylistList = findPage('searchPlaylist')?.result?.list;
+
+    if (!playlistList && !searchPlaylistList) {
       throw new Error('请先保证《推荐歌单》或《搜索歌单》执行不为空');
+    }
+
+    const item = playlistList?.[0] || searchPlaylistList?.[0];
+
+    if (!item) {
+      runStatus.value = RunStatus.success;
+      props.updateResult('song', 'playlistDetail', undefined, true);
+      return;
     }
     const res = await cls?.execGetPlaylistDetail(item, pageNo);
     if (!res) {
