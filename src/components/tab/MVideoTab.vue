@@ -88,7 +88,7 @@ watch(
     <van-tab
       v-for="(item, index) in source.list"
       :key="source.item.id + index.toString() + item.type"
-      :title="item.type"
+      :title="item.title || item.type"
     >
       <van-row
         v-if="

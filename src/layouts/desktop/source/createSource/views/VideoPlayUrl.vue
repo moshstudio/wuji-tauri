@@ -7,10 +7,14 @@ import type {
 } from '@wuji-tauri/source-extension';
 import Player, { Events } from 'xgplayer';
 import 'xgplayer/dist/index.min.css';
-import { VideoExtension } from '@wuji-tauri/source-extension';
+import {
+  VideoExtension,
+  CmsVideoExtension,
+} from '@wuji-tauri/source-extension';
 import { showDialog } from 'vant';
 import { computed, nextTick, onDeactivated, ref, watch } from 'vue';
-import BOOK_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
+import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
+import CMS_VIDEO_TEMPLATE from '@/components/codeEditor/templates/cmsVideoTemplate.txt?raw';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import { FormItem } from '@/store/sourceCreateStore';
 import VideoJsPlugin from '@/components/media/plugins/videoJs';
@@ -42,6 +46,9 @@ const selectedEpisode = ref<VideoEpisode>();
 
 async function initLoad() {
   result.value = undefined;
+  selectedResource.value = undefined;
+  selectedEpisode.value = undefined;
+  videoSrc.value = undefined;
   return await load();
 }
 
@@ -85,18 +92,18 @@ async function load() {
     });
     return;
   }
-  const code = BOOK_TEMPLATE.replace(
-    '// @METHOD_CONSTRUCTOR',
-    findPage('constructor')!.code,
-  )
+  const template =
+    props.content.mode === 'cms' ? CMS_VIDEO_TEMPLATE : VIDEO_TEMPLATE;
+  const code = template
+    .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
     .replace('// @METHOD_LIST', findPage('list')!.code)
     .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
     .replace('// @METHOD_DETAIL', findPage('detail')!.code)
     .replace('// @METHOD_PLAY_URL', findPage('playUrl')!.code);
   runStatus.value = RunStatus.running;
   try {
-    const func = new Function('VideoExtension', code);
-    const extensionclass = func(VideoExtension);
+    const func = new Function('VideoExtension', 'CmsVideoExtension', code);
+    const extensionclass = func(VideoExtension, CmsVideoExtension);
     const cls = new extensionclass() as VideoExtension;
     if (!cls.baseUrl) {
       throw new Error('初始化中的baseUrl未定义!');

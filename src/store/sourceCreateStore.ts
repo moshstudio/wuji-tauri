@@ -39,6 +39,8 @@ export interface FormItem<T = any> {
   id: string;
   name: string;
   version: string;
+  /** 影视类型的模式：custom（自定义）或 cms（CMS源） */
+  mode?: 'custom' | 'cms';
   pages: {
     type: string;
     chineseName: string;
@@ -101,7 +103,6 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           result: undefined,
           ts: undefined,
         },
-
       ],
     },
     song: {
@@ -183,7 +184,6 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           result: undefined,
           ts: undefined,
         },
-
       ],
     },
     book: {
@@ -292,7 +292,6 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
           result: undefined,
           ts: undefined,
         },
-
       ],
     },
     video: {
@@ -389,6 +388,8 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
       Object.entries(form.value).forEach(([type, page]) => {
         if (type in defaultForm) {
           page.chineseName = defaultForm[type as Type].chineseName;
+          // CMS 模式下不重置 defaultCode（使用 CMS 的默认代码）
+          if (type === 'video' && page.mode === 'cms') return;
           page.pages.forEach((p, index) => {
             p.defaultCode = defaultForm[type as Type].pages[index].defaultCode;
           });

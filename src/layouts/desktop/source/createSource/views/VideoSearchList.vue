@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import type { VideoList, VideosList } from '@wuji-tauri/source-extension';
 import { MVideoCard } from '@wuji-tauri/components/src';
-import { VideoExtension } from '@wuji-tauri/source-extension';
+import {
+  VideoExtension,
+  CmsVideoExtension,
+} from '@wuji-tauri/source-extension';
 import _ from 'lodash';
 import { showDialog, showFailToast } from 'vant';
 import { ref } from 'vue';
-import BOOK_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
+import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
+import CMS_VIDEO_TEMPLATE from '@/components/codeEditor/templates/cmsVideoTemplate.txt?raw';
 import MPagination from '@/components/pagination/MPagination.vue';
 import SearchField from '@/components/search/SearchField.vue';
 import { FormItem } from '@/store/sourceCreateStore';
@@ -58,19 +62,16 @@ async function load(pageNo?: number, type?: string) {
     showFailToast('code未定义!');
     return;
   }
-  const code = BOOK_TEMPLATE.replace(
-    '// @METHOD_CONSTRUCTOR',
-    findPage('constructor')!.code,
-  )
-    .replace(
-      '// @METHOD_LIST',
-      findPage('list')!.code,
-    )
+  const template =
+    props.content.mode === 'cms' ? CMS_VIDEO_TEMPLATE : VIDEO_TEMPLATE;
+  const code = template
+    .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
+    .replace('// @METHOD_LIST', findPage('list')!.code)
     .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code);
   runStatus.value = RunStatus.running;
   try {
-    const func = new Function('VideoExtension', code);
-    const extensionclass = func(VideoExtension);
+    const func = new Function('VideoExtension', 'CmsVideoExtension', code);
+    const extensionclass = func(VideoExtension, CmsVideoExtension);
     const cls = new extensionclass() as VideoExtension;
     if (!cls.baseUrl) {
       throw new Error('初始化中的baseUrl未定义!');

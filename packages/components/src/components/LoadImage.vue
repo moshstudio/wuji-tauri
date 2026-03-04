@@ -47,6 +47,9 @@ async function processSrc(
   src: string,
   headers?: Record<string, string>,
 ): Promise<string> {
+  if (!src || src.trim() === '') {
+    return '';
+  }
   if (src.startsWith('blob:')) {
     return src;
   }
@@ -70,31 +73,38 @@ async function processSrc(
     const proxyUrl = await getProxyUrl(src, headers);
     return proxyUrl || src;
   } else {
-    const maxRedirections = props.src.includes('imgdb.cn') ? 0 : undefined;
-    const response = await cachedFetch(
-      props.src,
-      {
-        headers,
-        verify: false,
-        maxRedirections,
-      },
-      props.compress,
-    );
-    if (!response.ok) {
-      console.warn(
-        ` image fetch failed: ${props.src} ${response.status} ${response.statusText}`,
+    try {
+      const maxRedirections = props.src.includes('imgdb.cn') ? 0 : undefined;
+      const response = await cachedFetch(
+        props.src,
+        {
+          headers,
+          verify: false,
+          maxRedirections,
+        },
+        props.compress,
       );
+      if (!response.ok) {
+        // status 为 0 通常表示网络错误或请求被取消，不需要重复打印警告
+        if (response.status !== 0) {
+          console.warn(
+            `image fetch failed: ${props.src} ${response.status} ${response.statusText}`,
+          );
+        }
+        return src;
+      }
+      const blob = await response.blob();
+      if (blob.size === 0) {
+        return src;
+      }
+      loadFinished.value = true;
+      return URL.createObjectURL(
+        new Blob([blob], { type: blob.type || 'image/png' }),
+      );
+    } catch (error) {
+      // 网络异常时静默回退到原始 src
       return src;
     }
-    const blob = await response.blob();
-    if (blob.size === 0) {
-      console.warn(' image fetch size=0');
-      return src;
-    }
-    loadFinished.value = true;
-    return URL.createObjectURL(
-      new Blob([blob], { type: blob.type || 'image/png' }),
-    );
   }
 }
 

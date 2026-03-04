@@ -1,0 +1,18 @@
+class CustomCmsVideoExtension extends CmsVideoExtension {
+  id = 'testCmsVideo';
+  name = '测试';
+  version = '1.0.0';
+
+  // @METHOD_CONSTRUCTOR
+
+  // @METHOD_LIST
+
+  // @METHOD_SEARCH_LIST
+
+  // @METHOD_DETAIL
+
+  // @METHOD_PLAY_URL
+
+}
+
+return CustomCmsVideoExtension;

@@ -51,6 +51,7 @@ export interface VideoItem {
 
 export interface VideoList {
   id?: string;
+  title?: string;
   list?: VideoItem[];
   page: number;
   pageSize?: number | null;

@@ -8,11 +8,7 @@ import { format } from 'date-fns';
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
 import { storeToRefs } from 'pinia';
-import {
-  showConfirmDialog,
-  showLoadingToast,
-  showToast,
-} from 'vant';
+import { showConfirmDialog, showLoadingToast, showToast } from 'vant';
 import { Icon } from '@iconify/vue';
 import { computed, nextTick, ref, watch } from 'vue';
 import LocalSaveDialog from '@/components/codeEditor/dialogs/LocalSave.vue';
@@ -49,6 +45,13 @@ import VideoSearchList from './views/VideoSearchList.vue';
 
 import { generateCode } from './utils';
 import { copyText } from '@/utils';
+import {
+  VIDEO_CONSTRUCTOR,
+  VIDEO_LIST,
+  VIDEO_SEARCH,
+  VIDEO_DETAIL,
+  VIDEO_PLAY_URL,
+} from '@/components/codeEditor/templates';
 
 type Type = 'photo' | 'song' | 'book' | 'comic' | 'video';
 
@@ -275,6 +278,57 @@ const showingCode = computed({
 const showingContent = computed(() => {
   return form.value[showingType.value];
 });
+
+// ===== 影视类型的 CMS/自定义 模式切换 =====
+const CMS_DEFAULTS: Record<string, string> = {
+  constructor: `constructor() {
+  super();
+  this.baseUrl = 'https://360zy.com/api.php/provide/vod';
+  // 可选：设置代理请求头，用于 m3u8/mp4 播放地址代理时携带
+  // this.proxyHeaders = { Referer: 'https://example.com/' };
+}`,
+  list: `// CMS源已内置，如需自定义可覆写
+async getRecommendVideos(pageNo, type) {
+  return await super.getRecommendVideos(pageNo, type);
+}`,
+  searchList: `// CMS源已内置，如需自定义可覆写
+async search(keyword, pageNo) {
+  return await super.search(keyword, pageNo);
+}`,
+  detail: `// CMS源已内置，如需自定义可覆写
+async getVideoDetail(item) {
+  return await super.getVideoDetail(item);
+}`,
+  playUrl: `// CMS源已内置，如需自定义可覆写
+async getPlayUrl(item, resource, episode) {
+  return await super.getPlayUrl(item, resource, episode);
+}`,
+};
+
+function toggleVideoMode(mode: 'custom' | 'cms') {
+  const video = form.value.video;
+  if (video.mode === mode) return;
+  video.mode = mode;
+  // 自定义模式的原始默认代码
+  const CUSTOM_DEFAULTS: Record<string, string> = {
+    constructor: VIDEO_CONSTRUCTOR,
+    list: VIDEO_LIST,
+    searchList: VIDEO_SEARCH,
+    detail: VIDEO_DETAIL,
+    playUrl: VIDEO_PLAY_URL,
+  };
+  const defaults = mode === 'cms' ? CMS_DEFAULTS : CUSTOM_DEFAULTS;
+  // 重置所有页面代码为对应模式的默认代码
+  video.pages.forEach((page) => {
+    if (defaults[page.type]) {
+      page.code = defaults[page.type];
+      page.defaultCode = defaults[page.type];
+    }
+    page.passed = false;
+    page.result = undefined;
+    page.ts = undefined;
+  });
+}
 
 const showTypePicker = ref(false);
 const typePickerActions = computed(() =>
@@ -507,6 +561,33 @@ async function handleSaveMarket(data: { id: string; name: string }) {
         <van-button size="small" @click="showTypePicker = true">
           {{ form[showingType].chineseName }}
         </van-button>
+        <div
+          v-if="showingType === 'video'"
+          class="mode-toggle flex overflow-hidden rounded"
+        >
+          <button
+            class="mode-btn flex-1 py-1 text-xs transition-colors"
+            :class="
+              form.video.mode !== 'cms'
+                ? 'bg-[var(--van-primary-color)] text-white'
+                : 'bg-[var(--van-gray-2)] text-[var(--van-text-color)]'
+            "
+            @click="toggleVideoMode('custom')"
+          >
+            自定义
+          </button>
+          <button
+            class="mode-btn flex-1 py-1 text-xs transition-colors"
+            :class="
+              form.video.mode === 'cms'
+                ? 'bg-[var(--van-primary-color)] text-white'
+                : 'bg-[var(--van-gray-2)] text-[var(--van-text-color)]'
+            "
+            @click="toggleVideoMode('cms')"
+          >
+            CMS
+          </button>
+        </div>
         <van-button
           v-for="page in form[showingType].pages"
           :key="page.type"
@@ -664,4 +745,36 @@ async function handleSaveMarket(data: { id: string; name: string }) {
   </div>
 </template>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+.mode-toggle {
+  border: 1px solid var(--van-gray-4);
+
+  .mode-btn {
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    line-height: 1.4;
+    outline: none;
+
+    &:first-child {
+      border-right: 1px solid var(--van-gray-4);
+    }
+
+    &:hover {
+      opacity: 0.85;
+    }
+
+    &:active {
+      opacity: 0.7;
+    }
+  }
+}
+
+.page-select {
+  padding: 8px 6px;
+
+  .van-button {
+    flex-shrink: 0;
+  }
+}
+</style>

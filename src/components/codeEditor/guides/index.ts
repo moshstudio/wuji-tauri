@@ -28,7 +28,24 @@ const photoConstructorMD = `构造函数必须填写baseUrl`;
 const songConstructorMD = `构造函数必须填写baseUrl`;
 const bookConstructorMD = `构造函数必须填写baseUrl`;
 const comicConstructorMD = `构造函数必须填写baseUrl`;
-const videoConstructorMD = `构造函数必须填写baseUrl`;
+const videoConstructorMD = `构造函数必须填写baseUrl
+
+### CMS 模式额外字段
+
+- \`proxyHeaders\`（可选）：代理请求头，类型为 \`Record<string, string>\`。在 \`getPlayUrl\` 中调用 \`getM3u8ProxyUrl\` / \`getProxyUrl\` 时会自动携带这些 headers。适用于需要 Referer、User-Agent 等鉴权的 CMS 源。
+
+\`\`\`javascript
+constructor() {
+  super();
+  this.baseUrl = 'https://example.com/api.php/provide/vod';
+  // 设置代理请求头（可选）
+  this.proxyHeaders = {
+    Referer: 'https://example.com/',
+    'User-Agent': 'Mozilla/5.0 ...'
+  };
+}
+\`\`\`
+`;
 
 export const guideExamplesMD = {
   photo: {

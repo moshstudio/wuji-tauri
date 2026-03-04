@@ -1230,7 +1230,6 @@ export const useStore = defineStore('store', () => {
                   marketSource.version === source.detail.version
                 )
               ) {
-
                 const success = await addMarketSource(marketSource);
                 if (!success) {
                   failed.push(marketSource.name);

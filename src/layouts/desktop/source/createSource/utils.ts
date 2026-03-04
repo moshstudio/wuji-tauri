@@ -4,6 +4,7 @@ import COMIC_TEMPLATE from '@/components/codeEditor/templates/comicTemplate.txt?
 import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
 import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
 import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
+import CMS_VIDEO_TEMPLATE from '@/components/codeEditor/templates/cmsVideoTemplate.txt?raw';
 import {
   loadBookExtensionString,
   loadComicExtensionString,
@@ -13,7 +14,11 @@ import {
 } from '@wuji-tauri/source-extension';
 import { showFailToast } from 'vant';
 
-export async function generateCode(content: FormItem, id: string, name: string): Promise<string | undefined> {
+export async function generateCode(
+  content: FormItem,
+  id: string,
+  name: string,
+): Promise<string | undefined> {
   const findPage = (name: string) => {
     return content.pages.find((page) => page.type === name);
   };
@@ -35,7 +40,10 @@ export async function generateCode(content: FormItem, id: string, name: string):
         .replace('// @METHOD_PLAYLIST', findPage('playlist')!.code)
         .replace('// @METHOD_SONG_LIST', findPage('songList')!.code)
         .replace('// @METHOD_SEARCH_PLAYLIST', findPage('searchPlaylist')!.code)
-        .replace('// @METHOD_SEARCH_SONG_LIST', findPage('searchSongList')!.code)
+        .replace(
+          '// @METHOD_SEARCH_SONG_LIST',
+          findPage('searchSongList')!.code,
+        )
         .replace('// @METHOD_PLAYLIST_DETAIL', findPage('playlistDetail')!.code)
         .replace('// @METHOD_PLAY_URL', findPage('playUrl')!.code)
         .replace('// @METHOD_LYRIC', findPage('lyric')!.code);
@@ -58,8 +66,14 @@ export async function generateCode(content: FormItem, id: string, name: string):
         .replace('// @METHOD_DETAIL', findPage('detail')!.code)
         .replace('// @METHOD_CONTENT', findPage('content')!.code);
       break;
-    case 'video':
-      code = VIDEO_TEMPLATE.replace("id = 'testVideo';", `id = '${id}';`)
+    case 'video': {
+      const isCms = content.mode === 'cms';
+      const tpl = isCms ? CMS_VIDEO_TEMPLATE : VIDEO_TEMPLATE;
+      const idPlaceholder = isCms
+        ? "id = 'testCmsVideo';"
+        : "id = 'testVideo';";
+      code = tpl
+        .replace(idPlaceholder, `id = '${id}';`)
         .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
         .replace("name = '测试';", `name = '${name}';`)
         .replace('// @METHOD_LIST', findPage('list')!.code)
@@ -67,6 +81,7 @@ export async function generateCode(content: FormItem, id: string, name: string):
         .replace('// @METHOD_DETAIL', findPage('detail')!.code)
         .replace('// @METHOD_PLAY_URL', findPage('playUrl')!.code);
       break;
+    }
   }
 
   try {
@@ -84,6 +99,7 @@ export async function generateCode(content: FormItem, id: string, name: string):
         loadComicExtensionString(code, true);
         break;
       case 'video':
+        // loadVideoExtensionString 已兼容 CmsVideoExtension
         loadVideoExtensionString(code, true);
         break;
     }
@@ -104,6 +120,7 @@ export function getExtensionInstance(code: string, type: string) {
     case 'comic':
       return loadComicExtensionString(code, true);
     case 'video':
+      // loadVideoExtensionString 已兼容 CmsVideoExtension
       return loadVideoExtensionString(code, true);
   }
 }
