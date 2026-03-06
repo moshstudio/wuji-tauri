@@ -1,7 +1,7 @@
 {
   "version": "0.1.25",
-  "notes": "修复听书错误",
-  "pub_date": "2026-01-26T08:00:00+08:00",
+  "notes": "支持CMS影视",
+  "pub_date": "2026-03-06T08:00:00+08:00",
   "platforms": {
     "cloudpan": {
       "url": "https://wwtn.lanzout.com/s/WUJI"
