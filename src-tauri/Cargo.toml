@@ -1,6 +1,6 @@
 [package]
 name = "wuji-app"
-version = "0.1.24"
+version = "0.1.25"
 description = "一款简洁的资源聚合软件，支持单个应用中轻松浏览图片、音乐、小说，漫画、影视等资源"
 authors = ["moshangstudio"]
 edition = "2021"
@@ -32,6 +32,7 @@ reqwest = { version = "0.12", default-features = false, features = [
   "http2",
   "charset",
   "macos-system-configuration",
+  "stream",
 ] }
 rand = "0.8"
 regex = "1"

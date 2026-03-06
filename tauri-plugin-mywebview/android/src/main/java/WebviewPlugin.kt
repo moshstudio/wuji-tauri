@@ -26,8 +26,11 @@ class WebviewPlugin(private val activity: Activity) : Plugin(activity) {
     @Command
     fun ping(invoke: Invoke) {
         Log.e("ping", "ping")
-        val ret = JSObject()
-        ret.put("value", "")
+        val args = invoke.parseArgs(PingArgs::class.java)
+        val ret = app.tauri.plugin.JSObject()
+        if (args.value != null) {
+            ret.put("value", args.value)
+        }
         invoke.resolve(ret)
     }
 
@@ -42,19 +45,44 @@ class WebviewPlugin(private val activity: Activity) : Plugin(activity) {
             val backstageWebView = BackstageWebView(activity, args.url)
             backstageWebView.getStrResponse(
                 onResult = { response ->
-                    val ret = JSObject()
+                    val ret = app.tauri.plugin.JSObject()
                     ret.put("content", response.content ?: "")
                     ret.put("cookie", response.cookie ?: "")
                     ret.put("url", response.url ?: "")
                     ret.put("title", response.title ?: "")
+                    
+                    val resourcesArray = app.tauri.plugin.JSArray()
+                    response.resources?.let { resMap ->
+                        for (i in 0 until resMap.length()) {
+                            val item = resMap.optJSONObject(i)
+                            if (item != null) {
+                                val jsItem = app.tauri.plugin.JSObject()
+                                val keys = item.keys()
+                                while (keys.hasNext()) {
+                                    val key = keys.next()
+                                    val value = item.get(key)
+                                    // map 'type' to 'resourceType' to match Rust models.rs #[serde(rename_all = "camelCase")]
+                                    val mappedKey = if (key == "type") "resourceType" else key
+                                    // if null, skip or put empty
+                                    if (!item.isNull(key)) {
+                                        jsItem.put(mappedKey, value)
+                                    }
+                                }
+                                resourcesArray.put(jsItem)
+                            }
+                        }
+                    }
+                    ret.put("resources", resourcesArray)
+                    
                     invoke.resolve(ret)
                 },
                 onError = { error ->
-                    val ret = JSObject()
+                    val ret = app.tauri.plugin.JSObject()
                     ret.put("content", "")
                     ret.put("cookie", "")
                     ret.put("url", "")
                     ret.put("title", "")
+                    ret.put("resources", app.tauri.plugin.JSArray())
                     invoke.resolve(ret)
                 }
             )
