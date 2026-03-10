@@ -39,6 +39,8 @@ watch(
   () => props.sourceContent,
   async (sourceContent) => {
     if (sourceContent) {
+      if (name.value === sourceContent.name && code.value === sourceContent.code)
+        return;
       name.value = sourceContent.name;
       code.value = sourceContent.code;
     }

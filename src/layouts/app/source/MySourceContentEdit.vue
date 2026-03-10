@@ -36,10 +36,15 @@ watch(
   () => props.sourceContent,
   async (sourceContent) => {
     if (sourceContent) {
-      sourceContentWithCode.value =
-        await serverStore.getMarketSourceContent(sourceContent);
-      sourceContentName.value = sourceContentWithCode.value?.name;
-      sourceContentCode.value = sourceContentWithCode.value?.code;
+      // 如果 ID 没变且已经拉取过代码，则不再重新拉取
+      if (sourceContentWithCode.value?._id === sourceContent._id) return;
+      
+      const res = await serverStore.getMarketSourceContent(sourceContent);
+      if (res) {
+        sourceContentWithCode.value = res;
+        sourceContentName.value = res.name;
+        sourceContentCode.value = res.code;
+      }
     }
   },
   { immediate: true },

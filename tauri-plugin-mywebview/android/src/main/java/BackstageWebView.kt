@@ -178,10 +178,19 @@ class BackstageWebView(
     }
 
     private fun getJs(): String {
-        val finalJs = (javaScript?.takeIf { it.isNotEmpty() } ?: JS)
-        return finalJs
+        val rawJs = (javaScript?.takeIf { it.isNotEmpty() } ?: readAsset("scraping.js"))
+        return rawJs
             .replace("{{timeout}}", timeout.toString())
             .replace("{{target_type}}", waitForResources ?: "")
+    }
+
+    private fun readAsset(fileName: String): String {
+        return try {
+            context.assets.open(fileName).bufferedReader().use { it.readText() }
+        } catch (e: Exception) {
+            Log.e("BackstageWebView", "Failed to read asset: $fileName", e)
+            ""
+        }
     }
 
     private fun setCookie(url: String) {
@@ -194,12 +203,12 @@ class BackstageWebView(
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
             super.onPageStarted(view, url, favicon)
-            view?.evaluateJavascript(SNIFF_INIT_SCRIPT, null)
+            view?.evaluateJavascript(readAsset("sniff_init.js"), null)
         }
 
         override fun onPageFinished(view: WebView, url: String) {
             setCookie(url)
-            view.evaluateJavascript(SPOOF_JS, null)
+            view.evaluateJavascript(readAsset("spoof.js"), null)
             runnable?.let { mHandler.removeCallbacks(it) }
             runnable = EvalJsRunnable(view, url, getJs())
             mHandler.postDelayed(runnable!!, 1000 + delayTime)
@@ -350,12 +359,12 @@ class BackstageWebView(
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
             super.onPageStarted(view, url, favicon)
-            view?.evaluateJavascript(SNIFF_INIT_SCRIPT, null)
+            view?.evaluateJavascript(readAsset("sniff_init.js"), null)
         }
 
         override fun onPageFinished(webView: WebView, url: String) {
             setCookie(url)
-            webView.evaluateJavascript(SPOOF_JS, null)
+            webView.evaluateJavascript(readAsset("spoof.js"), null)
             if (!javaScript.isNullOrEmpty()) {
                 val runnable = LoadJsRunnable(webView, javaScript)
                 mHandler.postDelayed(runnable, 500L + delayTime)
@@ -380,234 +389,9 @@ class BackstageWebView(
                 mWebView.get()?.loadUrl("javascript:${mJavaScript}")
             }
         }
-
     }
 
     companion object {
-        const val JS = """
-(function() {
-    async function startScraping() {
-        const MAX_WAIT_MS = parseInt('{{timeout}}') || 20000;
-        const TARGET_TYPE = '{{target_type}}';
-        const SETTLE_MS = 2500;
-        
-        const startTime = Date.now();
-        let lastResourceCount = 0;
-        let lastChangeTime = Date.now();
-
-        while (Date.now() - startTime < MAX_WAIT_MS) {
-            const sniffed = window.__wuji_sniffed__ || [];
-            let matchedResources = [];
-            if (TARGET_TYPE) {
-                const targetTypes = TARGET_TYPE.split(',').map(t => t.trim());
-                matchedResources = sniffed.filter(function(r) { return targetTypes.includes(r.type); });
-            } else {
-                if (document.readyState === 'complete' && Date.now() - startTime > 2000) break;
-            }
-
-            if (TARGET_TYPE && matchedResources.length > 0) {
-                if (matchedResources.length > lastResourceCount) {
-                    lastResourceCount = matchedResources.length;
-                    lastChangeTime = Date.now();
-                } else if (Date.now() - lastChangeTime > SETTLE_MS) {
-                    break;
-                }
-            } else if (!TARGET_TYPE && document.readyState === 'complete') {
-                 if (Date.now() - startTime > 2000) break;
-            }
-            await new Promise(function(r) { setTimeout(r, 400); });
-        }
-
-        try {
-            if (window.stop) window.stop();
-            const sniffed = (window.__wuji_sniffed__ || []).map(function(r) { 
-                return Object.assign({}, r, { resourceType: r.type || 'other' });
-            });
-            const seenUrls = new Set(sniffed.map(function(r) { return r.url; }));
-            document.querySelectorAll('video, audio, img').forEach(function(el) {
-                const src = el.currentSrc || el.src;
-                if (src && src.startsWith('http') && !seenUrls.has(src)) {
-                    sniffed.push({ url: src, resourceType: el.tagName.toLowerCase(), source: 'FinalScan' });
-                }
-            });
-            const content = btoa(encodeURIComponent(document.documentElement.innerHTML));
-            const title = document.title;
-            return JSON.stringify({ content: content, title: title, resources: sniffed });
-        } catch (e) {
-            return JSON.stringify({ content: "", title: "Error", resources: [] });
-        }
-    }
-    return startScraping();
-})();
-"""
-        const val SNIFF_INIT_SCRIPT = """
-(function () {
-    'use strict';
-    if (window._mediaSnifferInjected) return;
-    window._mediaSnifferInjected = true;
-
-    if (!window.__wuji_sniffed__) window.__wuji_sniffed__ = [];
-    const sniffed = window.__wuji_sniffed__;
-    const seenUrls = new Set();
-
-    try {
-        Object.defineProperty(HTMLMediaElement.prototype, 'muted', {
-            get: function() { return true; },
-            set: function() { },
-            configurable: true
-        });
-        Object.defineProperty(HTMLMediaElement.prototype, 'volume', {
-            get: function() { return 0; },
-            set: function() { },
-            configurable: true
-        });
-    } catch (e) {}
-
-    function forceMute(elem) {
-        try {
-            elem.setAttribute('muted', 'muted');
-            elem.setAttribute('autoplay', 'autoplay');
-        } catch (e) {}
-    }
-
-    function guessType(url, ct) {
-        if (ct) {
-            ct = ct.toLowerCase();
-            if (ct.includes('video') || ct.includes('mpegurl') || ct.includes('application/vnd.apple.mpegurl')) return 'video';
-            if (ct.includes('audio')) return 'audio';
-            if (ct.includes('image')) return 'image';
-        }
-        if (url) {
-            const u = url.toLowerCase().split('?')[0];
-            if (/\.(mp4|m3u8|m4v|mkv|webm|avi|mov|flv|ts|mpeg|mpg|wmv|rmvb|3gp|mpd)$/.test(u)) return 'video';
-            if (/\.(mp3|aac|ogg|flac|wav|m4a|opus|wma)$/.test(u)) return 'audio';
-            if (/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|avif|heic)$/.test(u)) return 'image';
-        }
-        return 'other';
-    }
-
-    function addResource(url, source, details) {
-        if (!url || typeof url !== 'string' || url.startsWith('blob:') || url.startsWith('data:')) return;
-        details = details || {};
-        try {
-            const absoluteUrl = new URL(url, window.location.href).href;
-            const type = details.type || guessType(absoluteUrl, details.contentType);
-            const isMedia = type === 'video' || type === 'audio' || /m3u8|mpd/i.test(absoluteUrl);
-            if (!isMedia) return;
-
-            if (!seenUrls.has(absoluteUrl)) {
-                seenUrls.add(absoluteUrl);
-                sniffed.push({
-                    url: absoluteUrl,
-                    type: type,
-                    source: source,
-                    method: details.method || 'GET',
-                    contentType: details.contentType || null,
-                    size: details.size || null,
-                    requestData: details.requestData || null,
-                    responseBody: details.responseBody || null
-                });
-            }
-        } catch (e) {}
-    }
-
-    const OrigXHR = window.XMLHttpRequest;
-    function PatchedXHR() {
-        const xhr = new OrigXHR();
-        let _method = 'GET', _url = '', _reqData = null;
-        const origOpen = xhr.open.bind(xhr);
-        xhr.open = function(method, url) {
-            _method = method;
-            _url = url;
-            return origOpen.apply(xhr, arguments);
-        };
-        const origSend = xhr.send.bind(xhr);
-        xhr.send = function(data) {
-            _reqData = (data && typeof data === 'string') ? data.substring(0, 1000) : null;
-            return origSend.apply(xhr, arguments);
-        };
-        xhr.addEventListener('load', function() {
-            const ct = xhr.getResponseHeader('Content-Type');
-            const cl = xhr.getResponseHeader('Content-Length');
-            addResource(_url, 'XHR', {
-                method: _method,
-                contentType: ct,
-                size: cl ? parseInt(cl, 10) : null,
-                requestData: _reqData
-            });
-        });
-        return xhr;
-    }
-    PatchedXHR.prototype = OrigXHR.prototype;
-    window.XMLHttpRequest = PatchedXHR;
-
-    const origFetch = window.fetch;
-    window.fetch = function(input, init) {
-        const url = typeof input === 'string' ? input : (input && input.url) || '';
-        const method = (init && init.method) || (input && input.method) || 'GET';
-        return origFetch.apply(this, arguments).then(function(response) {
-            const ct = response.headers.get('Content-Type');
-            const cl = response.headers.get('Content-Length');
-            addResource(url, 'Fetch', {
-                method: method,
-                contentType: ct,
-                size: cl ? parseInt(cl, 10) : null
-            });
-            return response;
-        });
-    };
-
-    if (window.PerformanceObserver) {
-        const observer = new PerformanceObserver(function(list) {
-            list.getEntries().forEach(function(entry) {
-                if (['video', 'audio', 'resource', 'fetch', 'xmlhttprequest'].includes(entry.initiatorType)) {
-                    addResource(entry.name, 'Network (' + entry.initiatorType + ')', {
-                        size: entry.transferSize || entry.encodedBodySize
-                    });
-                }
-            });
-        });
-        observer.observe({ entryTypes: ['resource'] });
-    }
-
-    function scanAndMute() {
-        document.querySelectorAll('video, audio').forEach(function(el) {
-            forceMute(el);
-            if (el.src) addResource(el.src, 'DOM');
-            el.querySelectorAll('source').forEach(function(s) {
-                if (s.src) addResource(s.src, 'DOM');
-            });
-        });
-    }
-
-    new MutationObserver(function(mutations) {
-        mutations.forEach(function(m) {
-            m.addedNodes.forEach(function(node) {
-                if (node.tagName && (node.tagName === 'VIDEO' || node.tagName === 'AUDIO')) {
-                    forceMute(node);
-                    if (node.src) addResource(node.src, 'DOM');
-                } else if (node.querySelectorAll) {
-                    node.querySelectorAll('video, audio').forEach(function(el) {
-                        forceMute(el);
-                        if (el.src) addResource(el.src, 'DOM');
-                    });
-                }
-            });
-        });
-    }).observe(document.documentElement, { childList: true, subtree: true });
-
-    setInterval(scanAndMute, 2000);
-})();
-"""
-        
-        // 伪装桌面环境的 JS (平台标识、触控点)
-        val SPOOF_JS = """
-            try {
-                Object.defineProperty(navigator, 'platform', { get: function() { return 'Win32'; } });
-                Object.defineProperty(navigator, 'maxTouchPoints', { get: function() { return 0; } });
-            } catch(e) {}
-        """.trimIndent()
-
         private val quoteRegex = "^\"|\"$".toRegex()
     }
 

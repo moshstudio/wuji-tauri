@@ -25,7 +25,7 @@ import 'vant/es/dialog/style';
 import 'vant/es/notify/style';
 import 'vant/es/sticky/style';
 import 'vant/es/image-preview/style';
-import '@vant/touch-emulator';
+// import '@vant/touch-emulator'
 import '@/styles/index.css';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 import 'animate.css';
