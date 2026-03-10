@@ -51,6 +51,28 @@ export interface ClientOptions {
   noProxy?: boolean;
 }
 
+/**
+ * 发送网络请求 (增强版 fetch)。
+ * 在标准 Web fetch 基础上，增加了跨域支持、代理、SSL 验证控制及最大重定向等功能。
+ * 
+ * @param input 请求资源的 URL 字符串、URL 对象或 Request 对象。
+ * @param init 请求配置项，除标准参数外，还包含 ClientOptions。
+ * @returns 返回一个 Promise，解析为 Response 对象。
+ * 
+ * @example
+ * // 标准 GET
+ * const resp = await fetch('https://example.com');
+ * 
+ * // POST 请求并设置超时与跳过验证
+ * const resp = await fetch('https://api.example.com/data', {
+ *   method: 'POST',
+ *   verify: false,         // 忽略 SSL 证书验证
+ *   maxRedirections: 5,    // 最大重定向次数
+ *   connectTimeout: 5000,  // 连接超时 (毫秒)
+ *   headers: { 'Content-Type': 'application/json' },
+ *   body: JSON.stringify({ key: 'value' })
+ * });
+ */
 export declare function fetch(
   input: URL | Request | string,
   init?: RequestInit & ClientOptions,

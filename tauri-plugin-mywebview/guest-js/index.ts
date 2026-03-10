@@ -35,11 +35,26 @@ export async function ping(value: string): Promise<string | null> {
   }).then((r) => (r.value ? r.value : null));
 }
 
-export async function fetchWebview(url: string): Promise<FetchWebviewResult | null> {
+export type SniffedResourceType = 'video' | 'audio' | 'image' | 'xhr' | 'fetch' | 'other';
+
+export async function fetchWebview(
+  url: string,
+  options?: {
+    timeout?: number;
+    waitForResources?: SniffedResourceType | SniffedResourceType[];
+    useSavedCookie?: boolean;
+  }
+): Promise<FetchWebviewResult | null> {
+  const waitForResources = Array.isArray(options?.waitForResources)
+    ? options.waitForResources.join(',')
+    : options?.waitForResources;
+
   return await invoke<FetchWebviewResult>('plugin:mywebview|fetch', {
     payload: {
       url: url,
-      useSavedCookie: true,
+      useSavedCookie: options?.useSavedCookie ?? true,
+      timeout: options?.timeout,
+      waitForResources: waitForResources,
     },
   }).then((r) => (r ? r : null));
 }

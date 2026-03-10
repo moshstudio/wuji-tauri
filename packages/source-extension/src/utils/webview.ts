@@ -57,7 +57,20 @@ class Semaphore {
 // 创建最大并发数为5的信号量实例
 const semaphore = new Semaphore(5);
 
-export async function fetchWebview(url: string): Promise<Document | null> {
+export async function fetchWebview(
+  url: string,
+  options?: {
+    timeout?: number;
+    waitForResources?:
+      | 'video'
+      | 'audio'
+      | 'image'
+      | 'xhr'
+      | 'fetch'
+      | Array<'video' | 'audio' | 'image' | 'xhr' | 'fetch'>;
+    useSavedCookie?: boolean;
+  },
+): Promise<Document | null> {
   // 尝试获取信号量许可，最多等待25秒
   const acquired = await semaphore.acquire(25000);
 
@@ -67,7 +80,7 @@ export async function fetchWebview(url: string): Promise<Document | null> {
   }
 
   try {
-    const ret = await _fetchWebview(url);
+    const ret = await _fetchWebview(url, options);
 
     if (!ret) {
       console.warn('fetchWebview获取失败', url);
@@ -137,6 +150,7 @@ export async function fetchWebview(url: string): Promise<Document | null> {
         return Reflect.set(target, prop, value, receiver);
       },
     });
+    console.log('webview proxy is', proxy);
 
     return proxy;
   } finally {

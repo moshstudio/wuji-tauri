@@ -18,6 +18,8 @@ class PingArgs {
 @InvokeArg
 class FetchArgs {
     var url: String? = null
+    var timeout: Long? = null
+    var waitForResources: String? = null
 }
 
 @TauriPlugin
@@ -42,7 +44,12 @@ class WebviewPlugin(private val activity: Activity) : Plugin(activity) {
             ret.put("error", "URL is required")
             invoke.resolve(ret)
         } else {
-            val backstageWebView = BackstageWebView(activity, args.url)
+            val backstageWebView = BackstageWebView(
+                activity, 
+                args.url, 
+                timeout = args.timeout ?: 20000L, 
+                waitForResources = args.waitForResources
+            )
             backstageWebView.getStrResponse(
                 onResult = { response ->
                     val ret = app.tauri.plugin.JSObject()

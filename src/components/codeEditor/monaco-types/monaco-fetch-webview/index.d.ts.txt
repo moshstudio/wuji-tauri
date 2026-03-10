@@ -27,21 +27,37 @@ export interface SniffedResource {
  * - `_sniffedResources`: 嗅探到的资源列表 (SniffedResource[])
  *
  * @param url 目标页面 URL
+ * @param options 配置项
+ * @param options.timeout 超时时长 (单位: 秒, 默认 20)
+ * @param options.waitForResources 指定需等待嗅探到的资源类型（支持单种或多种，如 'video' 或 ['video', 'xhr']），抓取器将等待这些资源出现并稳定后再返回。
+ * @param options.useSavedCookie 是否自动补全已保存的 Cookie (默认 true)
  * @returns 解析后的 Document 对象，若失败返回 null
  *
  * @example
+ * // 基础用法
  * const doc = await fetchWebview('https://example.com');
- * if (doc) {
- *   // 获取页面内容
- *   const title = doc.title;
- *   const body = doc.body.innerHTML;
+ * 
+ * // 爬取视频页面：等待视频和 XHR 资源请求稳定
+ * const doc = await fetchWebview('https://v.qq.com/xxx', {
+ *   waitForResources: ['video', 'xhr'],
+ *   timeout: 30
+ * });
  *
- *   // 获取嗅探到的资源
+ * if (doc) {
  *   const resources = (doc as any)._sniffedResources as SniffedResource[];
- *   const videos = resources.filter(r => r.resourceType === 'video');
- *   const audios = resources.filter(r => r.resourceType === 'audio');
- *   const images = resources.filter(r => r.resourceType === 'image');
- *   const xhrRequests = resources.filter(r => r.resourceType === 'xhr');
  * }
  */
-export declare function fetchWebview(url: string): Promise<Document | null>;
+export declare function fetchWebview(
+  url: string,
+  options?: {
+    timeout?: number;
+    waitForResources?:
+      | 'video'
+      | 'audio'
+      | 'image'
+      | 'xhr'
+      | 'fetch'
+      | Array<'video' | 'audio' | 'image' | 'xhr' | 'fetch'>;
+    useSavedCookie?: boolean;
+  }
+): Promise<Document | null>;

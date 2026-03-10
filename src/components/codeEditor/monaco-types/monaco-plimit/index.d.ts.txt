@@ -54,11 +54,19 @@ export type LimitFunction = {
 };
 
 /**
-Run multiple promise-returning & async functions with limited concurrency.
-
-@param concurrency - Concurrency limit. Minimum: `1`.
-@returns A `limit` function.
-*/
+ * 创建并发限制器 (p-limit)。
+ * 用于限制异步操作的并发数量，防止因短时间内发起大量网络请求导致 IP 被封禁。
+ * 
+ * @param concurrency 最大并发数 (最小为 1)。
+ * @returns 返回一个包装函数，通过该函数执行异步操作。
+ * 
+ * @example
+ * // 创建并发数为 1 的限制器 (相当于顺序执行)
+ * const limit = this.pLimit(1);
+ * 
+ * const tasks = urls.map(url => limit(() => fetchWebview(url)));
+ * const results = await Promise.all(tasks);
+ */
 export default function pLimit(concurrency: number): LimitFunction;
 
 export type Options = {

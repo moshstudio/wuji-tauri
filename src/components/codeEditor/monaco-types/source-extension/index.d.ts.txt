@@ -24,17 +24,29 @@ export interface ClientOptions {
 export declare function transformResult<T>(func: (result: T) => T): (_target: any, key: string, descriptor: PropertyDescriptor) => PropertyDescriptor;
 
 export abstract class Extension {
+    /** 加密库：提供 MD5, SHA-1, AES 等算法 */
     cryptoJs: typeof CryptoJS;
+    /** 加密库：提供 RSA, X.509 等算法 */
     forge: typeof forge;
+    /** 并发限制器：用于控制异步操作并发数，防止请求过快被封 */
     pLimit: typeof pLimit;
+    /** 增强型 fetch：支持跨域、代理、SSL 验证控制 */
     fetch: typeof fetch;
+    /** 网页抓取器：启动隐藏 Webview 加载并嗅探资源 */
     fetchWebview: typeof fetchWebview;
+    /** 编码转换：用于处理 GBK 等非补码编码的网页 */
     iconv: typeof iconv;
+    /** M3U8 解析器：用于解析直播/视频流列表 */
     m3u8Parser: typeof m3u8Parser;
+    /** 获取内置代理地址：解决防盗链和跨域问题 */
     getProxyUrl: typeof getProxyUrl;
+    /** 获取 M3U8 内置代理地址：专门用于分片加载的代理 */
     getM3u8ProxyUrl: typeof getM3u8ProxyUrl;
+    /** 工具函数库：Lodash */
     _: typeof _;
+    /** 获取网页并自动解析为 DOM (支持编码转换) */
     fetchDom: (input: URL | Request | string, init?: RequestInit & ClientOptions, domType?: DOMParserSupportedType, encoding?: 'utf8' | 'gbk') => Promise<Document>;
+    /** 提取书籍列表信息 */
     queryBookElements: (body: Document, tags: {
         element?: string;
         cover?: string;
@@ -49,6 +61,7 @@ export abstract class Extension {
         latestUpdate?: string;
         coverDomain?: string;
     }) => Promise<BookItem[]>;
+    /** 提取漫画列表信息 */
     queryComicElements: (body: Document, tags: {
         element?: string;
         cover?: string;
@@ -62,6 +75,7 @@ export abstract class Extension {
         latestChapter?: string;
         latestUpdate?: string;
     }) => Promise<ComicItem[]>;
+    /** 提取视频列表信息 */
     queryVideoElements: (body: Document, tags: {
         element?: string;
         cover?: string;
@@ -80,6 +94,7 @@ export abstract class Extension {
         coverDomain?: string;
         baseUrl?: string;
     }) => Promise<VideoItem[]>;
+    /** 提取图片/照片列表信息 */
     queryPhotoElements: (body: Document, tags: {
         element?: string;
         cover?: string;
@@ -93,6 +108,7 @@ export abstract class Extension {
         url?: string;
         coverDomain?: string;
     }) => Promise<PhotoItem[]>;
+    /** 提取歌单列表信息 */
     queryPlaylistElements: (body: Document, tags: {
         element?: string;
         picUrl?: string;
@@ -105,6 +121,7 @@ export abstract class Extension {
         url?: string;
         coverDomain?: string;
     }) => Promise<PlaylistInfo[]>;
+    /** 提取单曲列表信息 */
     querySongElements: (body: Document, tags: {
         element?: string;
         picUrl?: string;
@@ -117,6 +134,7 @@ export abstract class Extension {
         lyric?: string;
         coverDomain?: string;
     }) => Promise<SongInfo[]>;
+    /** 从详情页提取章节列表 */
     queryChapters: (body: Document, tags: {
         element?: string;
     }) => Promise<{
@@ -124,11 +142,17 @@ export abstract class Extension {
         title: string;
         url?: string;
     }[]>;
+    /** 安全地获取元素的 text 内容，返回 null 如果元素不存在 */
     getContentText: (element?: HTMLElement) => string | null;
+    /** 生成唯一 ID (NanoID) */
     nanoid: typeof nanoid;
+    /** 生成 UUID (v4) */
     uuid: typeof uuid;
+    /** 智能拼接 URL 路径 */
     urlJoin: (...parts: (string | null | undefined)[]) => string;
+    /** 从分页元素中提取最大页码 */
     maxPageNoFromElements: (elements?: NodeListOf<Element> | null, onlyKeepNumbers?: boolean) => number | null;
+    /** 打印日志到插件控制台 */
     log: (...args: any[]) => void;
     abstract id: string;
     abstract name: string;

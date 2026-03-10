@@ -39,14 +39,43 @@ const response = await this.fetch(url, {
 
 ## `fetchWebview`
 
-通过网页访问的方式，获取网页内容Document，若获取失败，会返回空网页。
+通过网页访问的方式，获取网页内容 Document。该方法会启动一个隐藏窗口加载页面，并在加载完成后解析为 Document 对象返回。
+
+> **提示**：除了获取页面 HTML，它还会自动嗅探页面中的媒体请求（视频、音频、图片、XHR/Fetch 等），这些资源挂载在返回对象的 `_sniffedResources` 属性上。
 
 > 使用方法
 
 ```javascript
+// 基础用法
 const url = 'https://www.example.com';
 const document = await this.fetchWebview(url);
+
+// 高级用法：等待特定资源嗅探完成后再返回
+// 抓取视频播放地址时非常有用，可以确保异步加载的 m3u8 等资源被捕获
+const videoDoc = await this.fetchWebview(url, {
+  waitForResources: 'video', // 等待视频资源 (m3u8/mp4 等)
+  timeout: 30,               // 设置超时为 30 秒 (默认 20)
+  useSavedCookie: true       // 携带应用已保存的 Cookie
+});
+
+if (videoDoc) {
+  // 获取嗅探到的所有资源
+  const resources = videoDoc._sniffedResources;
+  // 过滤出视频资源
+  const videos = resources.filter(r => r.resourceType === 'video');
+  console.log('探测到的视频地址:', videos.map(v => v.url));
+}
 ```
+
+### 参数说明
+
+| 参数 | 类型 | 描述 |
+| :--- | :--- | :--- |
+| `url` | `string` | 目标网页的 URL 地址 |
+| `options` | `object` | 可选配置项 |
+| `options.timeout` | `number` | 超时时长（秒），默认 20 秒 |
+| `options.waitForResources` | `'video' \| 'audio' \| 'image' \| 'xhr' \| 'fetch'` | 指定需等待的资源类型，抓取器将持续探测直到该类资源出现并稳定，或触发超时 |
+| `options.useSavedCookie` | `boolean` | 是否在请求时携带已有的 Cookie，默认 true |
 
 ## `iconv`
 

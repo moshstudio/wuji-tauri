@@ -1,3 +1,18 @@
+/**
+ * 获取指定 URL 的内置代理服务器地址。
+ * 用于绕过浏览器跨域限制，支持自定义请求头（Referer, User-Agent 等）。
+ * 
+ * @param url 需要通过代理访问的目标原始 URL。
+ * @param headers 随请求发送的 HTTP 头部，常用于解决一些防盗链校验。
+ * @returns 代理后的 URL，如果失败则返回 null。
+ * 
+ * @example
+ * // 穿透防盗链
+ * const proxyUrl = await getProxyUrl('https://example.com/stream/1.m3u8', {
+ *   'Referer': 'https://example.com',
+ *   'User-Agent': 'Mozilla/5.0...'
+ * });
+ */
 export declare function getProxyUrl(
   url: string,
   headers?: Record<string, string>,

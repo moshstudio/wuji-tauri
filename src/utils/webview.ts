@@ -59,6 +59,17 @@ const semaphore = new Semaphore(3);
 
 export async function fetWebview(
   url: string,
+  options?: {
+    timeout?: number;
+    waitForResources?:
+      | 'video'
+      | 'audio'
+      | 'image'
+      | 'xhr'
+      | 'fetch'
+      | Array<'video' | 'audio' | 'image' | 'xhr' | 'fetch'>;
+    useSavedCookie?: boolean;
+  },
 ): Promise<FetchWebviewResult | null> {
   // 尝试获取信号量许可，最多等待20秒
   const acquired = await semaphore.acquire(20000);
@@ -68,7 +79,7 @@ export async function fetWebview(
   }
 
   try {
-    const ret = await _fetchWebview(url);
+    const ret = await _fetchWebview(url, options);
     return ret;
   } finally {
     // 无论成功还是失败，都要释放信号量

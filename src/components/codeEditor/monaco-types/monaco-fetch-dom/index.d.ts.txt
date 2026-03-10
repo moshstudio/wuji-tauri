@@ -51,6 +51,23 @@ export interface ClientOptions {
   noProxy?: boolean;
 }
 
+/**
+ * 获取网页并将其解析为 DOM 对象。
+ * 结合了增强型 fetch 与 DOM 解析逻辑，支持处理不同编码（如 GBK）。
+ * 
+ * @param input 目标 URL 或 Request 对象。
+ * @param init 请求配置项 (包含代理、超时等)。
+ * @param domType 解析文档的类型 (默认 'text/html')。
+ * @param encoding 指定源内容的字符集编码 (默认 'utf8')，处理非 UTF-8 网站时需指定（如 'gbk'）。
+ * @returns 返回解析后的 Document 对象。
+ * 
+ * @example
+ * // 解析普通网页
+ * const doc = await fetchDom('https://example.com');
+ * 
+ * // 解析 GBK 编码的网页
+ * const gbkDoc = await fetchDom('http://www.gbk-site.com', {}, 'text/html', 'gbk');
+ */
 export declare function fetchDom(
   input: URL | Request | string,
   init?: RequestInit & ClientOptions,

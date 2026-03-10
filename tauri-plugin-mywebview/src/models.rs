@@ -17,6 +17,8 @@ pub struct PingResponse {
 pub struct FetchRequest {
     pub url: String,
     pub use_saved_cookie: bool,
+    pub timeout: Option<u64>,
+    pub wait_for_resources: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]

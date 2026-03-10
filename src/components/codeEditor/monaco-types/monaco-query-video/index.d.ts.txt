@@ -36,6 +36,27 @@ export interface VideoItem {
   sourceId: string;
 }
 
+/**
+ * 从 DOM 文档中按 CSS 选择器提取视频 (VideoItem) 列表。
+ * 内置常见视频站点的解析逻辑，支持高度自定义的选择器配置。
+ * 
+ * @param body 待解析的 DOM 文档。
+ * @param tags CSS 选择器配置项。
+ * @param tags.element 视频项容器选择器 (默认 '.bookbox')。
+ * @param tags.title 标题选择器 (默认 'h3 a')。
+ * @param tags.cover 封面图选择器 (默认 'img', 支持 data-src)。
+ * @param tags.url 详情页跳转地址选择器 (默认 'a')。
+ * @param tags.baseUrl 用于补全相对路径的基础 URL。
+ * @returns 提取出的视频项数组。
+ * 
+ * @example
+ * const videos = await queryVideoElements(document, {
+ *   element: '.video-card',
+ *   title: '.title h2',
+ *   cover: '.lazy-load-img',
+ *   url: 'a.detail-link'
+ * });
+ */
 export declare function queryVideoElements(
   body: Document,
   tags: {
