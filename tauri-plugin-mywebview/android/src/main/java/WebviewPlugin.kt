@@ -39,6 +39,7 @@ class WebviewPlugin(private val activity: Activity) : Plugin(activity) {
     @Command
     fun fetch(invoke: Invoke) {
         val args = invoke.parseArgs(FetchArgs::class.java)
+        Log.e("WujiWebView", "[fetch] url=${args.url}, timeout=${args.timeout}, waitForResources=${args.waitForResources}")
         if (args.url == null) {
             val ret = JSObject()
             ret.put("error", "URL is required")
@@ -52,6 +53,8 @@ class WebviewPlugin(private val activity: Activity) : Plugin(activity) {
             )
             backstageWebView.getStrResponse(
                 onResult = { response ->
+                    Log.e("WujiWebView", "[fetch onResult] content length=${response.content?.length ?: 0}, title=${response.title}, url=${response.url}, resources count=${response.resources?.length() ?: 0}")
+                    Log.e("WujiWebView", "[fetch onResult] content first200=${response.content?.take(200)}")
                     val ret = app.tauri.plugin.JSObject()
                     ret.put("content", response.content ?: "")
                     ret.put("cookie", response.cookie ?: "")
@@ -67,12 +70,9 @@ class WebviewPlugin(private val activity: Activity) : Plugin(activity) {
                                 val keys = item.keys()
                                 while (keys.hasNext()) {
                                     val key = keys.next()
-                                    val value = item.get(key)
-                                    // map 'type' to 'resourceType' to match Rust models.rs #[serde(rename_all = "camelCase")]
-                                    val mappedKey = if (key == "type") "resourceType" else key
-                                    // if null, skip or put empty
+                                    // JS 脚本已同时输出 type 和 resourceType，直接透传
                                     if (!item.isNull(key)) {
-                                        jsItem.put(mappedKey, value)
+                                        jsItem.put(key, item.get(key))
                                     }
                                 }
                                 resourcesArray.put(jsItem)
@@ -80,10 +80,11 @@ class WebviewPlugin(private val activity: Activity) : Plugin(activity) {
                         }
                     }
                     ret.put("resources", resourcesArray)
-                    
+                    Log.e("WujiWebView", "[fetch] resolving with resources count=${resourcesArray.length()}")
                     invoke.resolve(ret)
                 },
                 onError = { error ->
+                    Log.e("WujiWebView", "[fetch onError] ${error.message}", error)
                     val ret = app.tauri.plugin.JSObject()
                     ret.put("content", "")
                     ret.put("cookie", "")

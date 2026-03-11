@@ -201,9 +201,17 @@ fn parse_sniffed_resources(v: &serde_json::Value) -> Vec<SniffedResource> {
             if url.is_empty() {
                 continue;
             }
+            // 优先从 resourceType 获取，兼容 type
+            let r_type = item["resourceType"]
+                .as_str()
+                .or_else(|| item["type"].as_str())
+                .unwrap_or("other")
+                .to_string();
+
             resources.push(SniffedResource {
                 url,
-                resource_type: item["type"].as_str().unwrap_or("other").to_string(),
+                r#type: r_type.clone(),
+                resource_type: r_type,
                 method: item["method"].as_str().map(|s| s.to_string()),
                 content_type: item["contentType"].as_str().map(|s| s.to_string()),
                 size: item["size"].as_u64(),
@@ -298,30 +306,49 @@ fn handle_page_load_finished<R: Runtime>(
     timeout: u64,
     target_type: Option<String>,
 ) {
-    load_finish_times.fetch_add(1, Ordering::Relaxed);
+    let current_load_id = load_finish_times.fetch_add(1, Ordering::Relaxed) + 1;
 
     tauri::async_runtime::spawn({
         let window = Arc::new(window);
         let window_name = window_name.to_string();
         let redirect_count = redirect_times.load(Ordering::Relaxed);
+        let load_finish_times = load_finish_times.clone();
+
         async move {
-            // 计算延迟时间
+            // 在注入前等待基础稳定期
             let additional_delay = if redirect_count > 0 {
-                Duration::from_millis(1000)
+                Duration::from_millis(1500)
             } else {
                 Duration::ZERO
             };
-            let total_delay = Duration::from_millis(300) + additional_delay;
-            sleep(total_delay).await;
+            sleep(Duration::from_millis(500) + additional_delay).await;
 
-            // 监听结果事件
-            listen_for_scraping_result(window.clone(), window_name.clone()).await;
+            // 检查在这期间是否有新的页面加载触发，如果有，说明当前这个已经过时，放弃执行
+            if load_finish_times.load(Ordering::Relaxed) != current_load_id {
+                println!(
+                    "[Desktop] Obsolete page load event for {}, skipping script injection.",
+                    window_name
+                );
+                return;
+            }
 
             // 注入脚本并替换动态配置
             let script = SCRAPING_SCRIPT
                 .replace("{{window_id}}", &window_name)
                 .replace("{{timeout}}", &timeout.to_string())
                 .replace("{{target_type}}", &target_type.unwrap_or_default());
+
+            // 设置监听器（一次性）
+            let window_name_inner = window_name.clone();
+            window.once(format!("wuji_event_scrap_{}", window_name), move |event| {
+                let payload = event.payload();
+                let scraped_str = process_payload(payload);
+                tauri::async_runtime::spawn(async move {
+                    if let Some(tx) = WINDOW_MANAGER.lock().await.remove(&window_name_inner) {
+                        let _ = tx.send(scraped_str);
+                    }
+                });
+            });
 
             if window.eval(&script).is_err() {
                 send_empty_result(&window_name).await;

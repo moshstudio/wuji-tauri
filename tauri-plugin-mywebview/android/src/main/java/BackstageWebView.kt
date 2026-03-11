@@ -11,9 +11,11 @@ import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.SslErrorHandler
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import java.io.ByteArrayInputStream
 import org.json.JSONObject
 import wuji.plugin.mywebview.exception.NoStackTraceException
 import wuji.plugin.mywebview.coroutine.Coroutine
@@ -134,25 +136,30 @@ class BackstageWebView(
             }
         } catch (e: Exception) {
             callback?.onError(e)
+            destroy()
         }
     }
 
     @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
     private fun createWebView(): WebView {
         val webView = WebView(context)
+
+        // 跳过渲染层缓存，减少不必要的渲染开销
+        webView.setLayerType(android.view.View.LAYER_TYPE_NONE, null)
+
         val settings = webView.settings
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.blockNetworkImage = true
         settings.userAgentString = AppConst.UA
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-
-        // 桌面模式设置
+        settings.cacheMode = WebSettings.LOAD_NO_CACHE
+        settings.setSupportMultipleWindows(false)
+        settings.loadsImagesAutomatically = false
+        // 桌面模式视口适配
         settings.useWideViewPort = true
         settings.loadWithOverviewMode = true
-        settings.setSupportZoom(true)
-        settings.builtInZoomControls = true
-        settings.displayZoomControls = false
+        settings.mediaPlaybackRequiresUserGesture = true
 
         setInitialCookie(webView)
 
@@ -166,6 +173,21 @@ class BackstageWebView(
         return webView
     }
 
+    /**
+     * 注入 CSS 来禁用所有视觉渲染，减轻主线程压力。
+     * 隐藏所有可见元素、禁用动画/过渡/滚动。
+     */
+    private fun injectMinimalRenderingCss(webView: WebView) {
+        val css = """
+            (function() {
+                var style = document.createElement('style');
+                style.textContent = '*, *::before, *::after { animation: none !important; transition: none !important; } body { overflow: hidden !important; }';
+                (document.head || document.documentElement).appendChild(style);
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(css, null)
+    }
+
     private fun setInitialCookie(webView: WebView) {
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
@@ -173,6 +195,8 @@ class BackstageWebView(
     }
 
     private fun destroy() {
+        mHandler.removeCallbacksAndMessages(null)
+        mWebView?.stopLoading()
         mWebView?.destroy()
         mWebView = null
     }
@@ -203,7 +227,10 @@ class BackstageWebView(
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
             super.onPageStarted(view, url, favicon)
-            view?.evaluateJavascript(readAsset("sniff_init.js"), null)
+            view?.let {
+                injectMinimalRenderingCss(it)
+                it.evaluateJavascript(readAsset("sniff_init.js"), null)
+            }
         }
 
         override fun onPageFinished(view: WebView, url: String) {
@@ -223,23 +250,75 @@ class BackstageWebView(
             handler?.proceed()
         }
 
+        override fun shouldInterceptRequest(
+            view: WebView?,
+            request: WebResourceRequest?
+        ): WebResourceResponse? {
+            val reqUrl = request?.url?.toString() ?: return super.shouldInterceptRequest(view, request)
+            if (isMediaUrl(reqUrl)) {
+                runOnUI {
+                    val script = "if(window.addResource){window.addResource('${reqUrl}', 'Native (Intercept)', {type: '${guessType(reqUrl)}'});}"
+                    view?.evaluateJavascript(script, null)
+                }
+            }
+            return super.shouldInterceptRequest(view, request)
+        }
+
         private inner class EvalJsRunnable(
             webView: WebView,
             private val url: String,
             private val mJavaScript: String
         ) : Runnable {
             var retry = 0
+            private var jsStarted = false
             private val mWebView: WeakReference<WebView> = WeakReference(webView)
+
             override fun run() {
-                mWebView.get()?.evaluateJavascript(mJavaScript) {
-                    handleResult(it)
+                val wv = mWebView.get()
+                if (wv == null) {
+                    callback?.onError(NoStackTraceException("WebView已被回收"))
+                    return
+                }
+
+                if (!jsStarted) {
+                    // 第一次执行：启动 scraping.js（它会在 JS 端异步轮询资源）
+                    Log.e("WujiWebView", "[EvalJsRunnable] Starting scraping.js")
+                    wv.evaluateJavascript(mJavaScript, null)
+                    jsStarted = true
+                    // 1秒后开始轮询结果
+                    mHandler.postDelayed(this, 1000)
+                    return
+                }
+
+                // 阶段一：只检查轻量标志位（几字节），不传输大数据
+                wv.evaluateJavascript("window.__wuji_scraping_ready__ === true") { readyResult ->
+                    val isReady = readyResult?.trim()?.removeSurrounding("\"") == "true"
+                    Log.e("WujiWebView", "[EvalJsRunnable] Polling ready=$isReady, retry=$retry")
+
+                    if (isReady) {
+                        // 阶段二：确认就绪后，才读取完整结果
+                        wv.evaluateJavascript("window.__wuji_scraping_result__") { rawResult ->
+                            handleResult(rawResult)
+                        }
+                    } else {
+                        // 结果还没准备好，继续轮询
+                        if (retry > 30) {
+                            callback?.onError(NoStackTraceException("js执行超时"))
+                            mHandler.post { destroy() }
+                            return@evaluateJavascript
+                        }
+                        retry++
+                        mHandler.postDelayed(this@EvalJsRunnable, 1000)
+                    }
                 }
             }
 
             private fun handleResult(result: String) = Coroutine.async {
+                Log.e("WujiWebView", "[handleResult] raw result length=${result.length}, first200=${result.take(200)}")
                 if (result.isNotEmpty() && result != "null") {
                     var content = StringEscapeUtils.unescapeJson(result)
                         .replace(quoteRegex, "")
+                    Log.e("WujiWebView", "[handleResult] after unescape length=${content.length}, startsWithBrace=${content.startsWith("{")}, endsWithBrace=${content.endsWith("}")}")
                     var title: String? = null
                     try {
                         if (content.startsWith("{") && content.endsWith("}")) {
@@ -248,6 +327,11 @@ class BackstageWebView(
                                 content = jsonObject.getString("content")
                                 title = jsonObject.optString("title")
                                 val resourcesArr = jsonObject.optJSONArray("resources")
+                                Log.e("WujiWebView", "[handleResult] parsed JSON - content length=${content.length}, title=$title, resources count=${resourcesArr?.length() ?: 0}")
+                                Log.e("WujiWebView", "[handleResult] content first200=${content.take(200)}")
+                                if (resourcesArr != null && resourcesArr.length() > 0) {
+                                    Log.e("WujiWebView", "[handleResult] first resource=${resourcesArr.optJSONObject(0)}")
+                                }
                                 
                                 try {
                                     val response = buildStrResponse(content, title, resourcesArr)
@@ -277,15 +361,10 @@ class BackstageWebView(
                     }
                     return@async
                 }
-                if (retry > 30) {
-                    callback?.onError(NoStackTraceException("js执行超时"))
-                    mHandler.post {
-                        destroy()
-                    }
-                    return@async
-                }
-                retry++
-                mHandler.postDelayed(this@EvalJsRunnable, 1000)
+                // 异常情况：ready 标志为 true 但结果为空
+                Log.e("WujiWebView", "[handleResult] unexpected empty result after ready=true")
+                callback?.onError(NoStackTraceException("结果为空"))
+                mHandler.post { destroy() }
             }
 
             private fun buildStrResponse(content: String, title: String?, resources: org.json.JSONArray?): StrResponse {
@@ -359,7 +438,10 @@ class BackstageWebView(
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
             super.onPageStarted(view, url, favicon)
-            view?.evaluateJavascript(readAsset("sniff_init.js"), null)
+            view?.let {
+                injectMinimalRenderingCss(it)
+                it.evaluateJavascript(readAsset("sniff_init.js"), null)
+            }
         }
 
         override fun onPageFinished(webView: WebView, url: String) {
@@ -380,6 +462,20 @@ class BackstageWebView(
             handler?.proceed()
         }
 
+        override fun shouldInterceptRequest(
+            view: WebView?,
+            request: WebResourceRequest?
+        ): WebResourceResponse? {
+            val reqUrl = request?.url?.toString() ?: return super.shouldInterceptRequest(view, request)
+            if (isMediaUrl(reqUrl)) {
+                runOnUI {
+                    val script = "if(window.addResource){window.addResource('${reqUrl}', 'Native (Intercept)', {type: '${guessType(reqUrl)}'});}"
+                    view?.evaluateJavascript(script, null)
+                }
+            }
+            return super.shouldInterceptRequest(view, request)
+        }
+
         private inner class LoadJsRunnable(
             webView: WebView,
             private val mJavaScript: String?
@@ -393,6 +489,22 @@ class BackstageWebView(
 
     companion object {
         private val quoteRegex = "^\"|\"$".toRegex()
+        private val mediaRegex = """\.(mp4|m3u8|m4v|mkv|webm|ts|mpd|m4s|mp3|aac|ogg|flac|wav|m4a|opus)($|\?|&|%|#)""".toRegex(RegexOption.IGNORE_CASE)
+
+        fun isMediaUrl(url: String): Boolean {
+            val u = url.lowercase()
+            if (mediaRegex.find(u) != null) return true
+            if (u.contains("filename") && (u.contains(".mp4") || u.contains(".m3u8") || u.contains(".ts"))) return true
+            if (u.contains("/hls/") || u.contains("/m3u8") || u.contains("playlist.m3u8") || u.contains(".isml")) return true
+            if (u.contains("video-content") || u.contains("media-source")) return true
+            return false
+        }
+
+        fun guessType(url: String): String {
+            val u = url.lowercase()
+            if (u.contains(".mp3") || u.contains(".aac") || u.contains(".ogg") || u.contains(".flac") || u.contains(".wav") || u.contains(".m4a") || u.contains(".opus")) return "audio"
+            return "video"
+        }
     }
 
     abstract class Callback {

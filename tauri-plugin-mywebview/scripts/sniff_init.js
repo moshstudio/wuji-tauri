@@ -3,232 +3,258 @@
     if (window._mediaSnifferInjected) return;
     window._mediaSnifferInjected = true;
 
-    // 初始化存储
+    var isTop = (window === window.top);
+
     if (!window.__wuji_sniffed__) window.__wuji_sniffed__ = [];
-    const sniffed = window.__wuji_sniffed__;
-    const seenUrls = new Set();
+    var sniffed = window.__wuji_sniffed__;
+    
+    // 桌面端优化：使用 Map 实现 O(1) 查重
+    var resourceMap = new Map();
+    sniffed.forEach(function(item, index) {
+        if (item && item.url) resourceMap.set(item.url, index);
+    });
 
-    // 强制静音逻辑：锁定属性防止 JS 修改
+    // 强制静音优化
     try {
-        Object.defineProperty(HTMLMediaElement.prototype, 'muted', {
-            get: function() { return true; },
-            set: function() { /* 忽略网站尝试取消静音的操作 */ },
-            configurable: true
-        });
-        Object.defineProperty(HTMLMediaElement.prototype, 'volume', {
-            get: function() { return 0; },
-            set: function() { /* 忽略网站尝试调节音量的操作 */ },
-            configurable: true
-        });
-    } catch (e) {
-        console.error('Failed to lock mute properties');
-    }
+        if (!HTMLMediaElement.prototype._mutedPatched) {
+            Object.defineProperty(HTMLMediaElement.prototype, 'muted', {
+                get: function() { return true; },
+                set: function() { },
+                configurable: true
+            });
+            Object.defineProperty(HTMLMediaElement.prototype, 'volume', {
+                get: function() { return 0; },
+                set: function() { },
+                configurable: true
+            });
+            HTMLMediaElement.prototype._mutedPatched = true;
+        }
+    } catch (e) {}
 
-    // 辅助静音函数 (用于处理 HTML 属性)
     function forceMute(elem) {
         try {
-            elem.setAttribute('muted', 'muted');
-            elem.setAttribute('autoplay', 'autoplay'); // 顺便辅助开启自动播放
+            if (elem.getAttribute('muted') !== 'muted') elem.setAttribute('muted', 'muted');
+            if (elem.getAttribute('autoplay') !== 'autoplay') elem.setAttribute('autoplay', 'autoplay');
+            if (!elem.muted) elem.muted = true;
+            if (elem.volume !== 0) elem.volume = 0;
         } catch (e) {}
     }
 
-    // 工具函数：根据 URL 或 Content-Type 判断类型
     function guessType(url, ct) {
         if (ct) {
             ct = ct.toLowerCase();
             if (ct.includes('video') || ct.includes('mpegurl') || ct.includes('application/vnd.apple.mpegurl')) return 'video';
             if (ct.includes('audio')) return 'audio';
             if (ct.includes('image')) return 'image';
-            if (ct.includes('json') || ct.includes('xml') || ct.includes('html') || ct.includes('text')) return 'data';
         }
         if (url) {
-            const u = url.toLowerCase().split('?')[0];
-            if (/\.(mp4|m3u8|m4v|mkv|webm|avi|mov|flv|ts|mpeg|mpg|wmv|rmvb|3gp|mpd)$/.test(u)) return 'video';
-            if (/\.(mp3|aac|ogg|flac|wav|m4a|opus|wma)$/.test(u)) return 'audio';
-            if (/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|avif|heic)$/.test(u)) return 'image';
-            if (/\.(json|xml|html|txt)$/.test(u)) return 'data';
+            var u = url.toLowerCase();
+            var mediaRegex = /\.(mp4|m3u8|m4v|mkv|webm|ts|mpd|m4s|mp3|aac|ogg|flac|wav|m4a|opus)($|\?|&|%|#)/;
+            if (mediaRegex.test(u)) return /\.(mp3|aac|ogg|flac|wav|m4a|opus)/.test(u) ? 'audio' : 'video';
         }
         return 'other';
     }
 
-    // 判断是否应该捕获响应体
-    function shouldCaptureBody(contentType, size) {
-        if (!contentType) return false;
-        const ct = contentType.toLowerCase();
-        const isText = ct.includes('json') || ct.includes('xml') || ct.includes('html') || ct.includes('text') || ct.includes('javascript') || ct.includes('application/x-www-form-urlencoded');
-        const isSmall = size === null || size < 1 * 1024 * 1024; // 1MB 以内
-        return isText && isSmall;
+    function isStaticAsset(url, ct) {
+        if (ct && (ct.includes('javascript') || ct.includes('css') || ct.includes('font'))) return true;
+        if (url) {
+            var uLow = url.toLowerCase().split('?')[0].split('#')[0];
+            var filterExtensions = ['.js', '.css', '.woff', '.woff2', '.ttf', '.otf', '.eot', '.svg', '.ico'];
+            for (var i = 0; i < filterExtensions.length; i++) {
+                if (uLow.endsWith(filterExtensions[i])) return true;
+            }
+        }
+        return false;
     }
 
-    // 核心添加逻辑
-    function addResource(url, source, details = {}) {
-        if (!url || typeof url !== 'string' || url.startsWith('blob:') || url.startsWith('data:')) return;
-        
+    function shouldCaptureBody(contentType, size) {
+        if (!contentType) return false;
+        var ct = contentType.toLowerCase();
+        var isTarget = ct.includes('json') || ct.includes('xml') || ct.includes('html') || ct.includes('text');
+        return isTarget && (size === null || size < 1024 * 1024);
+    }
+
+    function addResource(url, source, details) {
+        if (!url || typeof url !== 'string' || url.length > 2048 || url.startsWith('data:') || url.startsWith('blob:')) return;
+        details = details || {};
         try {
-            const absoluteUrl = new URL(url, window.location.href).href;
+            var absoluteUrl = new URL(url, window.location.href).href;
             
-            // 忽略 JS 和 CSS 文件
-            const u = absoluteUrl.toLowerCase().split('?')[0];
-            if (u.endsWith('.js') || u.endsWith('.css')) return;
-
-            const type = details.type || guessType(absoluteUrl, details.contentType);
-
-            // 检查是否已经存在 (如果存在则更新详情，特别是 responseBody)
-            let item = sniffed.find(r => r.url === absoluteUrl);
-            
-            if (!item) {
-                item = {
-                    url: absoluteUrl,
-                    type: type,
-                    source: source,
-                    method: details.method || 'GET',
-                    contentType: details.contentType || null,
-                    size: details.size || null,
-                    requestData: details.requestData || null,
-                    responseBody: details.responseBody || null,
-                    timestamp: Date.now()
-                };
-                sniffed.push(item);
-                seenUrls.add(absoluteUrl);
-            } else {
-                // 如果已有项目但没有响应体，且现在有了，则补齐
-                if (!item.responseBody && details.responseBody) {
-                    item.responseBody = details.responseBody;
+            if (resourceMap.has(absoluteUrl)) {
+                var item = sniffed[resourceMap.get(absoluteUrl)];
+                if (item) {
+                    if (!item.responseBody && details.responseBody) item.responseBody = details.responseBody;
+                    if (details.contentType) item.contentType = details.contentType;
                 }
-                if (!item.requestData && details.requestData) {
-                    item.requestData = details.requestData;
-                }
-                if (details.contentType) item.contentType = details.contentType;
+                return;
             }
+
+            var type = details.type || guessType(absoluteUrl, details.contentType);
+            if (isStaticAsset(absoluteUrl, details.contentType) && type !== 'video' && type !== 'audio') return;
+
+            var newItem = {
+                url: absoluteUrl,
+                type: type,
+                resourceType: type,
+                source: source + (isTop ? '' : ' (Frame)'),
+                method: details.method || 'GET',
+                contentType: details.contentType || null,
+                size: details.size || null,
+                requestData: details.requestData || null,
+                responseBody: details.responseBody || null,
+                timestamp: Date.now()
+            };
+
+            sniffed.push(newItem);
+            resourceMap.set(absoluteUrl, sniffed.length - 1);
+
+            if (!isTop) window.top.postMessage({ type: 'WUJI_RESOURCE_SNIFFED', resource: newItem }, '*');
         } catch (e) {}
     }
 
-    // --- 1. 拦截 XHR ---
-    const OrigXHR = window.XMLHttpRequest;
-    function PatchedXHR() {
-        const xhr = new OrigXHR();
-        let _method = 'GET', _url = '', _reqData = null;
-        const origOpen = xhr.open.bind(xhr);
-        xhr.open = function(method, url, ...args) {
-            _method = method;
-            _url = url;
-            return origOpen(method, url, ...args);
-        };
-        const origSend = xhr.send.bind(xhr);
-        xhr.send = function(...args) {
-            if (args[0]) {
-                if (typeof args[0] === 'string') _reqData = args[0].substring(0, 5000);
-                else if (args[0] instanceof FormData) _reqData = "[FormData]";
-                else if (args[0] instanceof ArrayBuffer) _reqData = "[ArrayBuffer]";
+    if (isTop) {
+        window.addEventListener('message', function(event) {
+            var data = event.data;
+            if (data && data.type === 'WUJI_RESOURCE_SNIFFED' && data.resource) {
+                var res = data.resource;
+                if (!resourceMap.has(res.url)) {
+                    sniffed.push(res);
+                    resourceMap.set(res.url, sniffed.length - 1);
+                }
             }
-            return origSend(...args);
-        };
-        xhr.addEventListener('load', function() {
-            try {
-                const ct = xhr.getResponseHeader('Content-Type');
-                const cl = xhr.getResponseHeader('Content-Length');
-                const size = cl ? parseInt(cl, 10) : (xhr.response ? (xhr.response.length || xhr.response.byteLength) : null);
-                
-                let responseBody = null;
-                if (shouldCaptureBody(ct, size)) {
-                    // 仅捕获文本类响应
-                    responseBody = xhr.responseText;
-                }
-
-                addResource(_url, 'XHR', {
-                    method: _method,
-                    contentType: ct,
-                    size: size,
-                    requestData: _reqData,
-                    responseBody: responseBody
-                });
-            } catch (err) {}
         });
-        return xhr;
     }
-    PatchedXHR.prototype = OrigXHR.prototype;
-    window.XMLHttpRequest = PatchedXHR;
 
-    // --- 2. 拦截 Fetch ---
-    const origFetch = window.fetch;
-    window.fetch = function(input, init) {
-        const url = typeof input === 'string' ? input : (input && input.url) || '';
-        const method = (init && init.method) || (input && input.method) || 'GET';
-        let requestData = null;
-        if (init && init.body && typeof init.body === 'string') {
-            requestData = init.body.substring(0, 5000);
+    // --- 0. 劫持 HTMLMediaElement ---
+    try {
+        var origSrcDescriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src');
+        if (origSrcDescriptor) {
+            Object.defineProperty(HTMLMediaElement.prototype, 'src', {
+                set: function(val) {
+                    if (val) addResource(val, 'Property (src)', { type: this.tagName.toLowerCase() });
+                    return origSrcDescriptor.set.apply(this, arguments);
+                },
+                get: function() { return origSrcDescriptor.get.apply(this, arguments); },
+                configurable: true
+            });
         }
+    } catch(e) {}
 
-        return origFetch.apply(this, arguments).then(async response => {
-            try {
-                const clonedResponse = response.clone();
-                const ct = response.headers.get('Content-Type');
-                const cl = response.headers.get('Content-Length');
-                const size = cl ? parseInt(cl, 10) : null;
+    // --- 1. 劫持 XHR ---
+    try {
+        var XHRProto = XMLHttpRequest.prototype;
+        var origOpen = XHRProto.open;
+        var origSend = XHRProto.send;
 
-                let responseBody = null;
-                if (shouldCaptureBody(ct, size)) {
-                    responseBody = await clonedResponse.text().catch(() => null);
-                }
+        XHRProto.open = function(method, url) {
+            this._wuji_method = method;
+            this._wuji_url = url;
+            return origOpen.apply(this, arguments);
+        };
 
-                addResource(url, 'Fetch', {
-                    method: method,
-                    contentType: ct,
-                    size: size,
-                    requestData: requestData,
-                    responseBody: responseBody
-                });
-            } catch (e) {}
-            return response;
-        });
-    };
+        XHRProto.send = function(data) {
+            if (data && typeof data === 'string') this._wuji_reqData = data.substring(0, 2000);
+            this.addEventListener('load', function() {
+                try {
+                    var ct = this.getResponseHeader('Content-Type');
+                    var cl = this.getResponseHeader('Content-Length');
+                    var size = cl ? parseInt(cl, 10) : (this.response ? (this.response.length || this.response.byteLength) : null);
+                    var responseBody = null;
+                    if (shouldCaptureBody(ct, size)) responseBody = this.responseText;
+                    
+                    addResource(this._wuji_url, 'XHR', {
+                        method: this._wuji_method,
+                        contentType: ct,
+                        size: size,
+                        requestData: this._wuji_reqData,
+                        responseBody: responseBody
+                    });
+                } catch (err) {}
+            });
+            return origSend.apply(this, arguments);
+        };
+    } catch (e) {}
 
-    // --- 3. 监听 Performance API ---
+    // --- 2. 劫持 Fetch API ---
+    if (window.fetch) {
+        var origFetch = window.fetch;
+        window.fetch = function(input, init) {
+            var url = typeof input === 'string' ? input : (input && input.url) || '';
+            var method = (init && init.method) || (input && input.method) || 'GET';
+            var requestData = (init && init.body && typeof init.body === 'string') ? init.body.substring(0, 2000) : null;
+
+            return origFetch.apply(this, arguments).then(function(response) {
+                try {
+                    var ct = response.headers.get('Content-Type');
+                    var cl = response.headers.get('Content-Length');
+                    var size = cl ? parseInt(cl, 10) : null;
+
+                    if (shouldCaptureBody(ct, size)) {
+                        response.clone().text().then(function(text) {
+                            addResource(url, 'Fetch', { method: method, contentType: ct, size: size, requestData: requestData, responseBody: text });
+                        }).catch(function() {});
+                    } else {
+                        addResource(url, 'Fetch', { method: method, contentType: ct, size: size, requestData: requestData });
+                    }
+                } catch (e) {}
+                return response;
+            });
+        };
+    }
+
+    // --- 3. PerformanceObserver ---
     if (window.PerformanceObserver) {
-        const observer = new PerformanceObserver((list) => {
-            list.getEntries().forEach(entry => {
-                // 捕获所有资源加载
-                addResource(entry.name, `Network (${entry.initiatorType})`, {
-                    size: entry.transferSize || entry.encodedBodySize
-                });
-            });
-        });
-        observer.observe({ entryTypes: ['resource'] });
-    }
-
-    // --- 4. 定期扫描 ---
-    function scanAndMute() {
-        document.querySelectorAll('video, audio').forEach(el => {
-            forceMute(el);
-            if (el.currentSrc || el.src) addResource(el.currentSrc || el.src, 'DOM');
-            el.querySelectorAll('source').forEach(s => {
-                if (s.src) addResource(s.src, 'DOM');
-            });
-        });
-        // 补扫图片
-        document.querySelectorAll('img').forEach(el => {
-            if (el.currentSrc || el.src) addResource(el.currentSrc || el.src, 'DOM');
-        });
-    }
-
-    new MutationObserver((mutations) => {
-        mutations.forEach(m => {
-            m.addedNodes.forEach(node => {
-                if (node.tagName && (node.tagName === 'VIDEO' || node.tagName === 'AUDIO' || node.tagName === 'IMG')) {
-                    if (node.tagName !== 'IMG') forceMute(node);
-                    const src = node.currentSrc || node.src;
-                    if (src) addResource(src, 'DOM');
-                } else if (node.querySelectorAll) {
-                    node.querySelectorAll('video, audio, img').forEach(el => {
-                        if (el.tagName !== 'IMG') forceMute(el);
-                        const src = el.currentSrc || el.src;
-                        if (src) addResource(src, 'DOM');
+        try {
+            var observer = new PerformanceObserver(function(list) {
+                var entries = list.getEntries();
+                for (var i = 0; i < entries.length; i++) {
+                    var entry = entries[i];
+                    var type = guessType(entry.name);
+                    if (entry.initiatorType === 'video' || entry.initiatorType === 'audio') type = entry.initiatorType;
+                    addResource(entry.name, 'Network (' + entry.initiatorType + ')', {
+                        size: entry.transferSize || entry.encodedBodySize,
+                        type: type
                     });
                 }
             });
-        });
-    }).observe(document.documentElement, { childList: true, subtree: true });
+            observer.observe({ entryTypes: ['resource'] });
+        } catch (e) {}
+    }
 
-    setInterval(scanAndMute, 2000);
+    var _scanProcessing = false;
+    function scanAndMute() {
+        if (_scanProcessing) return;
+        _scanProcessing = true;
+        try {
+            var media = document.querySelectorAll('video, audio');
+            for (var i = 0; i < media.length; i++) {
+                var el = media[i];
+                forceMute(el);
+                var src = el.currentSrc || el.src;
+                if (src) addResource(src, 'DOM', { type: el.tagName.toLowerCase() });
+            }
+        } finally {
+            _scanProcessing = false;
+            setTimeout(scanAndMute, 5000);
+        }
+    }
 
+    var _mo = new MutationObserver(function(mutations) {
+        for (var i = 0; i < mutations.length; i++) {
+            var added = mutations[i].addedNodes;
+            for (var j = 0; j < added.length; j++) {
+                var node = added[j];
+                if (!node.tagName) continue;
+                var tn = node.tagName.toLowerCase();
+                if (tn === 'video' || tn === 'audio') {
+                    forceMute(node);
+                    var src = node.currentSrc || node.src;
+                    if (src) addResource(src, 'Mutation');
+                }
+            }
+        }
+    });
+    if (document.documentElement) _mo.observe(document.documentElement, { childList: true, subtree: true });
+
+    setTimeout(scanAndMute, 1000);
 })();

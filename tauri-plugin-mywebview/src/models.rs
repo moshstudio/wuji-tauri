@@ -39,6 +39,9 @@ pub struct SniffedResource {
     /// 资源 URL
     pub url: String,
     /// 资源类型: "video" | "audio" | "image" | "xhr" | "fetch" | "other"
+    #[serde(rename = "type")]
+    pub r#type: String,
+    /// 资源类型（冗余字段，兼容 camelCase）
     pub resource_type: String,
     /// 请求方法（仅 XHR/Fetch 有意义）
     pub method: Option<String>,

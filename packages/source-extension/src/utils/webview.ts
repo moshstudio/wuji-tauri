@@ -86,7 +86,7 @@ export async function fetchWebview(
       console.warn('fetchWebview获取失败', url);
       return null;
     }
-    const content = decodeURIComponent(atob(ret.content));
+    const content = ret.content || '';
 
     const document = new DOMParser().parseFromString(content, 'text/html');
     if (!document) {
@@ -150,7 +150,6 @@ export async function fetchWebview(
         return Reflect.set(target, prop, value, receiver);
       },
     });
-    console.log('webview proxy is', proxy);
 
     return proxy;
   } finally {

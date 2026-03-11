@@ -1,4 +1,5 @@
 import type { HotItem } from '@wuji-tauri/hot-api';
+import { invoke } from '@tauri-apps/api/core';
 import type {
   BookChapter,
   BookExtension,
@@ -837,6 +838,31 @@ export const useStore = defineStore('store', () => {
   ): Promise<VideoUrlMap | null> => {
     const sc = (await sourceClass(source.item)) as VideoExtension;
     const res = await sc?.execGetPlayUrl(video, resource, episode);
+
+    // if (
+    //   res &&
+    //   displayStore.isAndroid &&
+    //   res.url &&
+    //   !res.url.startsWith('http://127.0.0.1')
+    // ) {
+    //   try {
+    //     const isM3u8 =
+    //       res.url.includes('.m3u8') || res.type === 'm3u8' || res.type === 'hls';
+    //     const proxyCommand = isM3u8
+    //       ? 'plugin:proxy-plugin|get_m3u8_url'
+    //       : 'plugin:proxy-plugin|get_proxy_url';
+    //     const proxyUrl = await invoke<string>(proxyCommand, {
+    //       originalUrl: res.url,
+    //       headers: res.headers || {},
+    //     });
+    //     if (proxyUrl) {
+    //       res.url = proxyUrl;
+    //     }
+    //   } catch (e) {
+    //     console.error('获取代理地址失败:', e);
+    //   }
+    // }
+
     return res;
   };
   const getVideoSource = (sourceId: string): VideoSource | undefined => {

@@ -909,7 +909,7 @@ pub(crate) fn start_proxy_server() -> std::io::Result<()> {
     let cors = warp::cors()
         .allow_any_origin()
         .allow_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-        .allow_headers(vec!["Content-Type"]);
+        .allow_headers(vec!["Content-Type", "Range", "User-Agent", "Referer", "Origin", "Accept"]);
 
     // M3U8 proxy route
     let m3u8_proxy_router = warp::path!("m3u8" / String / String)

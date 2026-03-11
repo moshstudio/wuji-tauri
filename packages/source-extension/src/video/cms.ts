@@ -89,6 +89,19 @@ abstract class CmsVideoExtension extends VideoExtension {
   pageSize = 20;
 
   /**
+   * 是否过滤敏感/不适当的分类 Tab（如"伦理"等），默认为 true。
+   * 设置为 false 可关闭过滤，显示所有分类。
+   */
+  filterSensitiveTypes = true;
+
+  /**
+   * 敏感分类关键词列表，分类名称包含其中任一关键词将被过滤。
+   * 仅在 filterSensitiveTypes 为 true 时生效。
+   * 子类可覆盖此属性以自定义过滤词。
+   */
+  sensitiveTypeKeywords: string[] = ['伦理', '福利', '情色', '成人'];
+
+  /**cd
    * 可选的代理请求 headers
    *
    * 在 getPlayUrl 中，调用 getM3u8ProxyUrl / getProxyUrl 时会携带这些 headers。
@@ -390,6 +403,16 @@ abstract class CmsVideoExtension extends VideoExtension {
         this._setValidClassesToStorage(validClasses);
       }
 
+      // 过滤敏感/不适当的分类
+      if (this.filterSensitiveTypes) {
+        displayClasses = displayClasses.filter(
+          (cls) =>
+            !this.sensitiveTypeKeywords.some((keyword) =>
+              cls.type_name.includes(keyword),
+            ),
+        );
+      }
+
       if (displayClasses.length === 0) {
         return this.fetchCategoryVideos(pageNo);
       }
@@ -499,9 +522,6 @@ abstract class CmsVideoExtension extends VideoExtension {
     _resource: VideoResource,
     episode: VideoEpisode,
   ): Promise<VideoUrlMap | null> {
-    console.log(_resource);
-    console.log(episode);
-    console.log('---');
 
     let url = episode.url;
     if (!url) return null;
