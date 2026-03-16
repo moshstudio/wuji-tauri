@@ -1,6 +1,6 @@
 use tauri::{
     plugin::{Builder, TauriPlugin},
-    Listener, Manager, RunEvent, Runtime,
+    Manager, RunEvent, Runtime,
 };
 
 pub use models::*;
@@ -58,7 +58,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                 // 添加窗口事件处理
                 RunEvent::WindowEvent {
                     label,
-                    event: tauri::WindowEvent::CloseRequested { api, .. },
+                    event: tauri::WindowEvent::CloseRequested { .. },
                     ..
                 } => {
                     if label == "main" {

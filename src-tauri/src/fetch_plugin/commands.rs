@@ -17,7 +17,7 @@ use tauri::{
 use tokio::sync::oneshot::{channel, Receiver, Sender};
 
 use crate::fetch_plugin::{
-    scope::{Entry, Scope},
+    scope::Entry,
     Error, Http, Result,
 };
 

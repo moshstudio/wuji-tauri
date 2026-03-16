@@ -6709,7 +6709,7 @@ dependencies = [
 
 [[package]]
 name = "wuji-app"
-version = "0.1.25"
+version = "0.1.26"
 dependencies = [
  "futures-util",
  "http 1.4.0",

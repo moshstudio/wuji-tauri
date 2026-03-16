@@ -19,9 +19,6 @@ pub enum Error {
     HttpInvalidHeaderName(#[from] http::header::InvalidHeaderName),
     #[error(transparent)]
     HttpInvalidHeaderValue(#[from] http::header::InvalidHeaderValue),
-    /// URL not allowed by the scope.
-    #[error("url not allowed on the configured scope: {0}")]
-    UrlNotAllowed(Url),
     #[error(transparent)]
     UrlParseError(#[from] url::ParseError),
     /// HTTP method error.

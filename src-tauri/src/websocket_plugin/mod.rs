@@ -245,16 +245,7 @@ pub struct Builder {
 }
 
 impl Builder {
-    pub fn new() -> Self {
-        Self {
-            tls_connector: None,
-        }
-    }
 
-    pub fn tls_connector(mut self, connector: Connector) -> Self {
-        self.tls_connector.replace(connector);
-        self
-    }
 
     pub fn build<R: Runtime>(self) -> TauriPlugin<R> {
         PluginBuilder::new("websocket-plugin")

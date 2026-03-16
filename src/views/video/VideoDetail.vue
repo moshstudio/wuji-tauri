@@ -78,11 +78,16 @@ const videoSrc = ref<VideoUrlMap>();
 const loadData = retryOnFalse({
   onFailed: () => {
     if (route.name === 'VideoDetail') {
-      backStore.back();
+      showFailToast('视频解析失败，请点击重试或尝试更换线路');
     }
   },
 })(
   createCancellableFunction(async (signal: AbortSignal, pageNo?: number) => {
+    // 如果已经离开了当前页面，直接返回 true 以终止自动重试机制
+    if (route.name !== 'VideoDetail' || signal.aborted) {
+      return true;
+    }
+
     createPlayer();
 
     videoSource.value = undefined;
@@ -101,7 +106,7 @@ const loadData = retryOnFalse({
     if (!source) {
       showToast('源不存在或未启用');
       shouldReload.value = true;
-      return false;
+      return true; // 源配置错误，不需要重试
     }
 
     videoSource.value = source;
@@ -116,13 +121,17 @@ const loadData = retryOnFalse({
       (await store.videoDetail(source!, videoItem.value)) || undefined;
     displayStore.closeToast(t);
 
+    if (route.name !== 'VideoDetail' || signal.aborted) {
+      return true;
+    }
+
     if (detail?.id != videoItem.value?.id) {
       shouldReload.value = true;
       return false;
     }
 
     Object.assign(videoItem.value, detail);
-    if (!videoItem.value || signal.aborted) {
+    if (!videoItem.value) {
       shouldReload.value = true;
       return false;
     }
@@ -144,7 +153,9 @@ const loadData = retryOnFalse({
         (episode) => episode.id == videoItem.value?.lastWatchEpisodeId,
       ) || playingResource.value?.episodes?.[0];
 
-    if (signal.aborted) return false;
+    if (route.name !== 'VideoDetail' || signal.aborted) {
+      return true;
+    }
 
     if (playingResource.value && playingEpisode.value) {
       shelfStore.updateVideoPlayInfo(videoItem.value, {
@@ -157,6 +168,7 @@ const loadData = retryOnFalse({
     return true;
   }),
 );
+
 
 const getPlayUrl = createCancellableFunction(async (signal: AbortSignal) => {
   if (!playingResource.value || !playingEpisode.value || !videoItem.value) {

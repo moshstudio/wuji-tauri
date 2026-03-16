@@ -214,10 +214,14 @@ fn process_m3u8(m3u8_path: &str, content: &str, headers_part: &str) -> String {
         return String::new();
     }
 
-    let mut modified_content = content.to_string();
+    // 调用新的广告过滤机制
+    let ad_remover = crate::proxy_plugin::ad_remove::AdRemover::new();
+    let clean_content = ad_remover.run(content).unwrap_or_else(|_| content.to_string());
+
+    let mut modified_content = clean_content.clone();
     let base_url = Url::parse(m3u8_path).ok();
 
-    match smart_parse_m3u8(content) {
+    match smart_parse_m3u8(&clean_content) {
         Ok(Playlist::MediaPlaylist(mut pl)) => {
             #[cfg(debug_assertions)]
             println!("[M3U8] Processing MediaPlaylist {:?}", pl);
@@ -335,96 +339,6 @@ fn process_m3u8(m3u8_path: &str, content: &str, headers_part: &str) -> String {
     modified_content
 }
 
-fn remove_m3u8_ad(content: &str) -> Result<String, Box<dyn std::error::Error>> {
-    println!("remove_m3u8_ad {:?}", content);
-    let mut new_playlist = String::new();
-    new_playlist.push_str("#EXTM3U\n");
-    new_playlist.push_str("#EXT-X-VERSION:3\n");
-
-    if let Ok(Playlist::MediaPlaylist(MediaPlaylist {
-        segments,
-        target_duration,
-        ..
-    })) = m3u8_rs::parse_playlist_res(content.as_bytes())
-    {
-        let mut in_ad = false;
-        let mut ad_ranges = Vec::new();
-        let mut current_range_start = 0;
-
-        // 首先识别广告段
-        for (i, segment) in segments.iter().enumerate() {
-            // 检测广告开始的条件
-            if segment.discontinuity
-                || (i > 0 && is_filename_jump(&segments[i - 1].uri, &segment.uri))
-            {
-                if !in_ad {
-                    current_range_start = i;
-                    in_ad = true;
-                }
-            } else if in_ad {
-                println!("Ad range: {}-{} {:?}", current_range_start, i - 1, segment);
-                ad_ranges.push((current_range_start, i - 1));
-                in_ad = false;
-            }
-        }
-
-        if in_ad {
-            ad_ranges.push((current_range_start, segments.len() - 1));
-        }
-
-        // 生成新的播放列表，跳过广告段
-        let mut last_was_discontinuity = false;
-        for (i, segment) in segments.iter().enumerate() {
-            if ad_ranges.iter().any(|&(start, end)| i >= start && i <= end) {
-                continue;
-            }
-
-            // 跳过连续 discontinuity 标记
-            if segment.discontinuity {
-                if last_was_discontinuity {
-                    continue;
-                }
-                last_was_discontinuity = true;
-            } else {
-                last_was_discontinuity = false;
-            }
-
-            // 写入 segment 信息
-            if segment.discontinuity {
-                new_playlist.push_str("#EXT-X-DISCONTINUITY\n");
-            }
-
-            new_playlist.push_str(&format!("#EXTINF:{},\n", segment.duration));
-            new_playlist.push_str(&segment.uri);
-            new_playlist.push('\n');
-        }
-
-        // 更新目标时长
-        new_playlist.push_str(&format!("#EXT-X-TARGETDURATION:{}\n", target_duration));
-        new_playlist.push_str("#EXT-X-ENDLIST\n");
-        Ok(new_playlist)
-    } else {
-        Ok(content.to_string())
-    }
-}
-
-// 检测文件名是否出现跳跃（广告特征）
-fn is_filename_jump(prev: &str, current: &str) -> bool {
-    let extract_number = |s: &str| {
-        s.rsplit('.')
-            .next()
-            .and_then(|name| name.split('_').last())
-            .and_then(|num| num.trim_end_matches(".ts").parse::<u64>().ok())
-    };
-
-    if let (Some(prev_num), Some(curr_num)) = (extract_number(prev), extract_number(current)) {
-        // 如果序号跳跃超过1000，认为是广告
-        println!("prev: {}, curr: {}", prev_num, curr_num);
-        curr_num > prev_num + 1000
-    } else {
-        false
-    }
-}
 
 /// Proxy TS segments
 async fn get_ts_content_async(
@@ -445,36 +359,31 @@ async fn get_ts_content_async(
     let reqwest_headers = convert_to_reqwest_headers(headers);
     merge_headers(&mut header_map, reqwest_headers, &excluded_headers);
     let client = get_m3u8_http_client(&url, &header_map);
-    let result = client.get(&url).send().await;
-    if result.is_err() {
-        return Ok(warp::http::Response::builder()
-            .status(500)
-            .header("Content-Type", "video/mp2t")
-            .body(vec![])
-            .unwrap());
-    }
-    let response = result.unwrap();
-    let headers_map = response.headers().clone();
-
-    let mut builder = warp::http::Response::builder();
-    let headers = builder.headers_mut().unwrap();
-    for (k, v) in headers_map.into_iter() {
-        let h = k.unwrap();
-        if h != "content-length" {
-            headers.insert(
-                warp::http::HeaderName::from_bytes(h.as_str().as_bytes()).unwrap(),
-                warp::http::HeaderValue::from_str(v.to_str().unwrap()).unwrap(),
-            );
+    
+    let response = match client.get(&url).send().await {
+        Ok(res) => res,
+        Err(e) => {
+            eprintln!("[TS] Request failed: {}", e);
+            return Ok(warp::http::Response::builder()
+                .status(500)
+                .header("Content-Type", "video/mp2t")
+                .body(warp::hyper::Body::empty())
+                .unwrap());
         }
-    }
-    // let url = Url::parse(&ts).unwrap();
-    // headers.insert("Host", HeaderValue::from_str(url.host().unwrap().to_string().as_str()).unwrap());
+    };
 
-    let content = response.bytes().await;
-    let ts = content.unwrap();
+    let response_status = warp::http::StatusCode::from_u16(response.status().as_u16())
+        .unwrap_or(warp::http::StatusCode::INTERNAL_SERVER_ERROR);
+    let response_headers = response.headers().clone();
 
-    let res = builder.status(200).body(ts.to_vec()).unwrap();
-    Ok(res)
+    let response_body = response.bytes_stream();
+    let body = warp::hyper::Body::wrap_stream(response_body);
+    let mut reply = warp::http::Response::new(body);
+    
+    *reply.status_mut() = response_status;
+    *reply.headers_mut() = remove_hop_headers(&convert_to_wrap_headers(response_headers));
+
+    Ok(reply)
 }
 
 /// Headers are checked using unicase to avoid case misfunctions
@@ -489,7 +398,6 @@ fn is_hop_header(header_name: &str) -> bool {
             Ascii::new("Trailers"),
             Ascii::new("Transfer-Encoding"),
             Ascii::new("Upgrade"),
-            Ascii::new("Content-Length"),
         ]
     });
 
@@ -909,7 +817,8 @@ pub(crate) fn start_proxy_server() -> std::io::Result<()> {
     let cors = warp::cors()
         .allow_any_origin()
         .allow_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-        .allow_headers(vec!["Content-Type", "Range", "User-Agent", "Referer", "Origin", "Accept"]);
+        .allow_headers(vec!["Content-Type", "Range", "User-Agent", "Referer", "Origin", "Accept"])
+        .expose_headers(vec!["Content-Length", "Content-Range", "Accept-Ranges"]);
 
     // M3U8 proxy route
     let m3u8_proxy_router = warp::path!("m3u8" / String / String)

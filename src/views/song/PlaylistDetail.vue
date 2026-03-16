@@ -9,7 +9,7 @@ import {
   MoreOptionsSheet,
   SongSelectShelfSheet,
 } from '@wuji-tauri/components/src';
-import { showLoadingToast, showToast } from 'vant';
+import { showLoadingToast, showToast, showFailToast } from 'vant';
 import { onActivated, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
@@ -18,6 +18,7 @@ import DesktopPlaylistDetail from '@/layouts/desktop/song/PlaylistDetail.vue';
 import { useSongShelfStore, useStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
 import { retryOnFalse } from '@/utils';
+import { createCancellableFunction } from '@/utils/cancelableFunction';
 
 const { playlistId, sourceId } = defineProps({
   playlistId: String,
@@ -48,49 +49,60 @@ function clear() {
 const toPage = retryOnFalse({
   onFailed: () => {
     if (route.name === 'SongPlaylistDetail') {
-      backStore.back();
+      showFailToast('歌单详情加载失败，请重试');
     }
   },
-})(async (pageNo?: number) => {
-  clear();
-  currentPage.value = pageNo || 1;
+})(
+  createCancellableFunction(async (signal: AbortSignal, pageNo?: number) => {
+    if (route.name !== 'SongPlaylistDetail' || signal.aborted) {
+      return true;
+    }
+    clear();
+    currentPage.value = pageNo || 1;
 
-  if (!playlistId || !sourceId) {
-    shouldReload.value = true;
-    return false;
-  }
+    if (!playlistId || !sourceId) {
+      shouldReload.value = true;
+      return false;
+    }
 
-  songSource.value = store.getSongSource(sourceId);
-  if (!songSource.value) {
-    shouldReload.value = true;
-    return false;
-  }
+    songSource.value = store.getSongSource(sourceId);
+    if (!songSource.value) {
+      showToast('源不存在或未启用');
+      shouldReload.value = true;
+      return true;
+    }
 
-  playlist.value = store.getPlaylistInfo(songSource.value, playlistId);
-  if (!playlist.value) {
-    shouldReload.value = true;
-    return false;
-  }
+    playlist.value = store.getPlaylistInfo(songSource.value, playlistId);
+    if (!playlist.value) {
+      shouldReload.value = true;
+      return false;
+    }
 
-  const toast = showLoadingToast({
-    message: '加载中',
-    duration: 0,
-    closeOnClick: true,
-    closeOnClickOverlay: false,
-  });
-  playlist.value =
-    (await store.songPlaylistDetail(
+    const toast = showLoadingToast({
+      message: '加载中',
+      duration: 0,
+      closeOnClick: true,
+      closeOnClickOverlay: false,
+    });
+    const detail = await store.songPlaylistDetail(
       songSource.value,
       playlist.value,
       pageNo,
-    )) || undefined;
-  toast.close();
+    );
+    toast.close();
 
-  currentPage.value = playlist.value?.list?.page || 1;
-  shouldReload.value = !playlist.value || !playlist.value.list?.list?.length;
+    if (route.name !== 'SongPlaylistDetail' || signal.aborted) {
+      return true;
+    }
 
-  return !!playlist.value;
-});
+    playlist.value = detail || undefined;
+    currentPage.value = playlist.value?.list?.page || 1;
+    shouldReload.value = !playlist.value || !playlist.value.list?.list?.length;
+
+    return !!playlist.value;
+  }),
+);
+
 
 async function playAll() {
   if (!playlist.value) {

@@ -63,8 +63,17 @@ function clear() {
   shouldReload.value = false;
 }
 
-const toPage = retryOnFalse({ onFailed: back })(
+const toPage = retryOnFalse({
+  onFailed: () => {
+    if (route.name === 'PhotoDetail') {
+      showFailToast('图集详情加载失败，请重试');
+    }
+  },
+})(
   createCancellableFunction(async (signal: AbortSignal, pageNo?: number) => {
+    if (route.name !== 'PhotoDetail' || signal.aborted) {
+      return true;
+    }
     clear();
     if (!id || !sourceId) {
       shouldReload.value = true;
@@ -75,7 +84,7 @@ const toPage = retryOnFalse({ onFailed: back })(
     if (!photoSource.value) {
       showToast('源不存在或未启用');
       shouldReload.value = true;
-      return false;
+      return true;
     }
 
     photoItem.value = store.getPhotoItem(photoSource.value, id!);
@@ -102,7 +111,10 @@ const toPage = retryOnFalse({ onFailed: back })(
       photoItem.value!,
       pageNo,
     );
-    if (signal.aborted) return false;
+
+    if (route.name !== 'PhotoDetail' || signal.aborted) {
+      return true;
+    }
 
     photoDetail.value = detail || undefined;
     currentPage.value = detail?.page || 1;
@@ -111,6 +123,7 @@ const toPage = retryOnFalse({ onFailed: back })(
     return !!detail;
   }),
 );
+
 
 function toShelf() {
   if (!photoItem.value) {

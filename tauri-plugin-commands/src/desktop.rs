@@ -22,25 +22,25 @@ impl<R: Runtime> Commands<R> {
     }
     pub async fn set_status_bar(
         &self,
-        payload: SetStatusBarRequest,
+        _payload: SetStatusBarRequest,
     ) -> crate::Result<SetStatusBarResponse> {
         Ok(SetStatusBarResponse { res: Some(true) })
     }
     pub async fn hide_status_bar(
         &self,
-        payload: HideStatusBarRequest,
+        _payload: HideStatusBarRequest,
     ) -> crate::Result<BoolResponse> {
         Ok(BoolResponse { res: Some(true) })
     }
     pub async fn get_system_font_scale(
         &self,
-        payload: EmptyRequest,
+        _payload: EmptyRequest,
     ) -> crate::Result<NumberResponse> {
         Ok(NumberResponse { value: 1.0 })
     }
     pub async fn get_screen_orientation(
         &self,
-        payload: EmptyRequest,
+        _payload: EmptyRequest,
     ) -> crate::Result<GetScreenOrientationResponse> {
         Ok(GetScreenOrientationResponse {
             orientation: "".to_string(),
@@ -48,32 +48,32 @@ impl<R: Runtime> Commands<R> {
     }
     pub async fn set_screen_orientation(
         &self,
-        payload: SetScreenOrientationRequest,
+        _payload: SetScreenOrientationRequest,
     ) -> crate::Result<BoolResponse> {
         Ok(BoolResponse { res: Some(true) })
     }
-    pub async fn get_brightness(&self, payload: EmptyRequest) -> crate::Result<NumberResponse> {
+    pub async fn get_brightness(&self, _payload: EmptyRequest) -> crate::Result<NumberResponse> {
         Ok(NumberResponse { value: 1.0 })
     }
     pub async fn get_system_brightness(
         &self,
-        payload: EmptyRequest,
+        _payload: EmptyRequest,
     ) -> crate::Result<NumberResponse> {
         Ok(NumberResponse { value: 1.0 })
     }
     pub async fn set_brightness(
         &self,
-        payload: SetBrightnessRequest,
+        _payload: SetBrightnessRequest,
     ) -> crate::Result<BoolResponse> {
         Ok(BoolResponse { res: Some(true) })
     }
-    pub async fn get_volume(&self, payload: EmptyRequest) -> crate::Result<NumberResponse> {
+    pub async fn get_volume(&self, _payload: EmptyRequest) -> crate::Result<NumberResponse> {
         Ok(NumberResponse { value: 1.0 })
     }
-    pub async fn set_volume(&self, payload: SetVolumeRequest) -> crate::Result<BoolResponse> {
+    pub async fn set_volume(&self, _payload: SetVolumeRequest) -> crate::Result<BoolResponse> {
         Ok(BoolResponse { res: Some(true) })
     }
-    pub async fn get_device_id(&self, payload: EmptyRequest) -> crate::Result<StringResponse> {
+    pub async fn get_device_id(&self, _payload: EmptyRequest) -> crate::Result<StringResponse> {
         use winreg::enums::HKEY_LOCAL_MACHINE;
         use winreg::RegKey;
 
@@ -90,23 +90,23 @@ impl<R: Runtime> Commands<R> {
             value: machine_guid,
         })
     }
-    pub async fn save_file(&self, payload: SaveFileRequest) -> crate::Result<BoolResponse> {
+    pub async fn save_file(&self, _payload: SaveFileRequest) -> crate::Result<BoolResponse> {
         Ok(BoolResponse { res: Some(true) })
     }
-    pub async fn vibrate(&self, payload: VibrateRequest) -> crate::Result<BoolResponse> {
+    pub async fn vibrate(&self, _payload: VibrateRequest) -> crate::Result<BoolResponse> {
         Ok(BoolResponse { res: Some(true) })
     }
 
     pub async fn vibrate_pattern(
         &self,
-        payload: VibratePatternRequest,
+        _payload: VibratePatternRequest,
     ) -> crate::Result<BoolResponse> {
         Ok(BoolResponse { res: Some(true) })
     }
 
     pub async fn vibrate_predefined(
         &self,
-        payload: VibratePredefinedRequest,
+        _payload: VibratePredefinedRequest,
     ) -> crate::Result<BoolResponse> {
         Ok(BoolResponse { res: Some(true) })
     }

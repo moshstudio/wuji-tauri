@@ -3,7 +3,7 @@ import type { BookChapter, BookItem } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
 import { storeToRefs } from 'pinia';
 
-import { showLoadingToast, showToast } from 'vant';
+import { showLoadingToast, showToast, showFailToast } from 'vant';
 import { computed, onActivated, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
@@ -13,6 +13,7 @@ import { router } from '@/router';
 import { useBookShelfStore, useStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
 import { retryOnFalse } from '@/utils';
+import { createCancellableFunction } from '@/utils/cancelableFunction';
 
 const { bookId, sourceId } = defineProps({
   bookId: String,
@@ -59,48 +60,59 @@ function clear() {
 const loadData = retryOnFalse({
   onFailed: () => {
     if (route.name === 'BookDetail') {
-      backStore.back();
+      showFailToast('书籍详情加载失败，请重试');
     }
   },
-})(async () => {
-  clear();
-  if (!bookId || !sourceId) {
-    shouldReload.value = true;
-    return false;
-  }
+})(
+  createCancellableFunction(async (signal: AbortSignal) => {
+    if (route.name !== 'BookDetail' || signal.aborted) {
+      return true;
+    }
+    clear();
+    if (!bookId || !sourceId) {
+      shouldReload.value = true;
+      return false;
+    }
 
-  bookSource.value = store.getBookSource(sourceId!);
-  if (!bookSource.value) {
-    showToast('源不存在或未启用');
-    shouldReload.value = true;
-    return false;
-  }
+    bookSource.value = store.getBookSource(sourceId!);
+    if (!bookSource.value) {
+      showToast('源不存在或未启用');
+      shouldReload.value = true;
+      return true;
+    }
 
-  book.value = store.getBookItem(bookSource.value, bookId);
-  if (!book.value) {
-    shouldReload.value = true;
-    return false;
-  }
+    book.value = store.getBookItem(bookSource.value, bookId);
+    if (!book.value) {
+      shouldReload.value = true;
+      return false;
+    }
 
-  const toast = showLoadingToast({
-    message: '书籍加载中',
-    duration: 0,
-    closeOnClick: true,
-    closeOnClickOverlay: false,
-  });
-  const detail = await store.bookDetail(bookSource.value, book.value);
-  toast.close();
+    const toast = showLoadingToast({
+      message: '书籍加载中',
+      duration: 0,
+      closeOnClick: true,
+      closeOnClickOverlay: false,
+    });
+    const detail = await store.bookDetail(bookSource.value, book.value);
+    toast.close();
 
-  if (detail) {
-    book.value = detail;
-  }
-  if (!detail?.chapters?.length) {
-    showToast('章节列表为空');
-  }
+    if (route.name !== 'BookDetail' || signal.aborted) {
+      return true;
+    }
 
-  shouldReload.value = !detail || !detail.chapters?.length;
-  return !!detail;
-});
+    if (detail) {
+      book.value = detail;
+    }
+    if (!detail?.chapters?.length) {
+      showToast('章节列表为空');
+    }
+
+    shouldReload.value = !detail || !detail.chapters?.length;
+    return !!detail;
+  }),
+);
+
+
 
 function toChapter(_book: BookItem, chapter: BookChapter) {
   router.push({
