@@ -94,6 +94,7 @@ impl AdRemover {
                 || uri_lower.contains("advertisement")
             {
                 is_ad = true;
+                println!("[AdRemove] [Keyword] Removed: {}", seg.uri);
             }
 
             // 2. 路径聚类过滤
@@ -104,6 +105,7 @@ impl AdRemover {
                     let path_count = *path_counts.get(&path).unwrap_or(&0);
                     if path_count < 10 && (path_count as f64 / total_segments as f64) < 0.15 {
                         is_ad = true;
+                        println!("[AdRemove] [PathCluster] Removed (count: {}, path: {}): {}", path_count, path, seg.uri);
                     }
                 }
             }
@@ -120,6 +122,7 @@ impl AdRemover {
                     // 如果它的路径与多数派不一样，那么是实锤的广告
                     if !has_dominant_path || path != main_path {
                         is_ad = true;
+                        println!("[AdRemove] [HeaderAnomaly] Removed (duration: {}s, diff: {}s): {}", seg.duration, duration_diff, seg.uri);
                     }
                 }
             }
@@ -135,6 +138,10 @@ impl AdRemover {
             if is_ad {
                 ad_indices.push(i);
             }
+        }
+
+        if !ad_indices.is_empty() {
+            println!("[AdRemove] Total removed: {} segments.", ad_indices.len());
         }
 
         // 移除被判定为广告的片段
