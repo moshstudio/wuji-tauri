@@ -76,7 +76,7 @@ async function load(pageNo: number) {
     const func = new Function('SongExtension', code);
     const extensionclass = func(SongExtension);
     const cls = new extensionclass() as SongExtension;
-    if (!cls.baseUrl) {
+    if (cls.baseUrl === undefined) {
       throw new Error('初始化中的baseUrl未定义!');
     }
     cls.log = props.log;

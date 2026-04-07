@@ -59,7 +59,7 @@ async function load(pageNo: number) {
       const func = new Function('PhotoExtension', code);
       const extensionclass = func(PhotoExtension);
       cls = new extensionclass() as PhotoExtension;
-      if (!cls.baseUrl) {
+      if (cls.baseUrl === undefined) {
         cls = undefined;
         throw new Error('初始化中的baseUrl未定义!');
       }

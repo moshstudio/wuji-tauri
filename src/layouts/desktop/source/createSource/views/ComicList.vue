@@ -58,7 +58,7 @@ async function load(pageNo?: number, type?: string) {
     const func = new Function('ComicExtension', code);
     const extensionclass = func(ComicExtension);
     const cls = new extensionclass() as ComicExtension;
-    if (!cls.baseUrl) {
+    if (cls.baseUrl === undefined) {
       throw new Error('初始化中的baseUrl未定义!');
     }
     cls.log = props.log;
