@@ -5,13 +5,12 @@ import type {
   BookList,
 } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
-import _, { template } from 'lodash';
+import _ from 'lodash';
 import { storeToRefs } from 'pinia';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 import { showFailToast, showToast, showDialog } from 'vant';
 import {
   computed,
-  nextTick,
   onActivated,
   onDeactivated,
   ref,
@@ -32,6 +31,7 @@ import { useBackStore } from '@/store/backStore';
 import { retryOnFalse } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 import BookReadSwiper from './BookReadSwiper.vue';
+import BookReadScroller from './BookReadScroller.vue';
 
 const {
   chapterId,
@@ -64,7 +64,17 @@ const readingChapter = ref<BookChapter>();
 const readingChapterContent = ref<string>();
 const prevChapterContent = ref<string>();
 const nextChapterContent = ref<string>();
-const showBookShelf = ref(false);
+
+
+const showReadModeSheet = ref(false);
+const readModeActions = [
+  { name: '侧滑翻页', value: 'slide' },
+  { name: '上下滚动', value: 'scroll' },
+];
+function onSelectReadMode(action: any) {
+  bookStore.readMode = action.value;
+  showReadModeSheet.value = false;
+}
 
 const serverStore = useServerStore();
 
@@ -224,6 +234,11 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
     backStore.back();
     return;
   }
+  // 如果当前已经在读这一章，且由于路由参数微调触发（URL 跟随滚动），则静默跳过
+  if (!refresh && !chapter && readingChapter.value?.id === chapterId) {
+    return;
+  }
+
   if (!book.value.chapters?.length) {
     if (!bookSource.value) {
       showFailToast('源不存在或未启用');
@@ -245,7 +260,7 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
   const chapterIndex = book.value.chapters?.findIndex(
     (chapter) => chapter.id === chapterId,
   );
-  shelfStore.updateBookReadInfo(book.value, chapter);
+  // shelfStore.updateBookReadInfo(book.value, chapter);
   const displayStore = useDisplayStore();
   const t = displayStore.showToast();
   chapterList.value = book.value.chapters || [];
@@ -287,6 +302,7 @@ function prevChapter(toLast: boolean = false) {
   if (index > 0) {
     if (!toLast) {
       chapterList.value[index - 1].readingPage = undefined;
+      chapterList.value[index - 1].readingParagraph = undefined;
     }
     ttsStore.resetReadingPage();
     if (route.name === 'BookRead') {
@@ -329,6 +345,7 @@ function nextChapter() {
   if (index < chapterList.value.length - 1) {
     ttsStore.resetReadingPage();
     chapterList.value[index + 1].readingPage = undefined;
+    chapterList.value[index + 1].readingParagraph = undefined;
     const newBookReadParams = {
       chapterId: chapterList.value[index + 1].id,
       bookId: book.value?.id,
@@ -361,8 +378,17 @@ function nextChapter() {
 async function resfreshChapter() {
   await loadChapter(undefined, true);
 }
+
+/**
+ * 按章节加载内容，不做路由跳转，供无限滚动模式使用
+ */
+async function loadChapterContent(chapter: BookChapter): Promise<string> {
+  if (!bookSource.value || !book.value) return '';
+  return (await store.bookRead(bookSource.value, book.value, chapter)) || '';
+}
 function toChapter(chapter: BookChapter) {
   chapter.readingPage = undefined;
+  chapter.readingParagraph = undefined;
 
   router.replace({
     // name: 'BookRead',
@@ -371,14 +397,6 @@ function toChapter(chapter: BookChapter) {
       bookId: book.value?.id,
       sourceId: book.value?.sourceId,
     },
-  });
-}
-function openChapterPopup() {
-  displayStore.showChapters = true;
-  nextTick(() => {
-    document
-      .querySelector('.reading-chapter')
-      ?.scrollIntoView({ block: 'center', behavior: 'instant' });
   });
 }
 
@@ -425,7 +443,8 @@ onDeactivated(() => {
 </script>
 
 <template>
-  <BookReadSwiper
+  <component
+    :is="bookStore.readMode === 'slide' ? BookReadSwiper : BookReadScroller"
     :book="book"
     :book-source="bookSource"
     :chapter-list="chapterList"
@@ -450,6 +469,7 @@ onDeactivated(() => {
     :prev-chapter="prevChapter"
     :next-chapter="nextChapter"
     :refresh-chapter="resfreshChapter"
+    :load-chapter-content="loadChapterContent"
   >
     <BookSwitchSourceDialog
       v-model:show="showSwitchSourceDialog"
@@ -465,6 +485,14 @@ onDeactivated(() => {
       title="选择书架"
       teleport="body"
     />
+    <van-action-sheet
+      v-model:show="showReadModeSheet"
+      :actions="readModeActions"
+      cancel-text="取消"
+      title="选择翻页模式"
+      teleport="body"
+      @select="onSelectReadMode"
+    />
 
     <van-dialog
       v-model:show="displayStore.showSettingDialog"
@@ -474,7 +502,13 @@ onDeactivated(() => {
       class="setting-dialog"
     >
       <div class="flex flex-col gap-2 p-2 text-sm">
-        <van-cell title="全屏点击向下翻页">
+        <van-cell 
+          title="翻页模式" 
+          :value="bookStore.readMode === 'slide' ? '侧滑翻页' : '上下滚动'"
+          is-link
+          @click="showReadModeSheet = true"
+        />
+        <van-cell v-if="bookStore.readMode === 'slide'" title="全屏点击向下翻页" center>
           <template #value>
             <van-switch v-model="bookStore.fullScreenClickToNext" />
           </template>
@@ -608,7 +642,7 @@ onDeactivated(() => {
         </van-cell-group>
       </div>
     </van-dialog>
-  </BookReadSwiper>
+  </component>
 </template>
 
 <style scoped lang="less">

@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
-import {
-  set_screen_orientation,
-  set_status_bar,
-} from 'tauri-plugin-commands-api';
+import { set_screen_orientation } from 'tauri-plugin-commands-api';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
@@ -89,25 +86,6 @@ watch(
     updateActiveKey(newPath);
   },
   { immediate: true },
-);
-
-watch(
-  [() => displayStore.isDark, () => route.path],
-  () => {
-    const pathName = route.name;
-    if (pathName === 'BookRead' || pathName === 'VideoDetail') {
-      set_status_bar('#000000', 'light');
-    } else {
-      if (displayStore.isDark) {
-        set_status_bar('#000000', 'light');
-      } else {
-        set_status_bar('#ffffff', 'dark');
-      }
-    }
-  },
-  {
-    immediate: true,
-  },
 );
 
 // 保持竖屏模式

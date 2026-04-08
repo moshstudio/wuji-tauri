@@ -2,24 +2,14 @@ import type { BookChapter, BookItem } from '@wuji-tauri/source-extension';
 import type { ReadTheme } from '@/types/book';
 import { useStorageAsync } from '@vueuse/core';
 import { defineStore } from 'pinia';
-import { computed, onMounted, ref, watch } from 'vue';
-import { useDisplayStore } from './displayStore';
+import { computed, onMounted, ref } from 'vue';
 import { useServerStore } from './serverStore';
 import { sleep } from '@/utils';
 
 export const useBookStore = defineStore('book', () => {
-  const displayStore = useDisplayStore();
   const serverStore = useServerStore();
 
-  const readMode = ref<'slide' | 'scroll'>(
-    displayStore.isAppView ? 'slide' : 'scroll',
-  );
-  watch(
-    () => displayStore.isAppView,
-    () => {
-      readMode.value = displayStore.isAppView ? 'slide' : 'scroll';
-    },
-  );
+  const readMode = useStorageAsync<'slide' | 'scroll'>('readMode', 'slide');
   const webFonts = ref([
     {
       label: '默认',

@@ -129,8 +129,6 @@ export class EdgeTTSClient {
 
         // 添加消息监听器
         this.ws.addListener((message: Message) => {
-          console.log(message);
-
           if (message.type === 'Binary') {
             const buffer = Buffer.from(message.data);
             this.handleMessage(buffer, metadataBuffer);

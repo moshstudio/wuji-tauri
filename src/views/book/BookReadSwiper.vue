@@ -309,6 +309,26 @@ function playTTS() {
 }
 
 watch(
+  () => ttsStore.slideReadingContent,
+  (newVal) => {
+    if (newVal?.[0]?.pIndex !== undefined && ttsStore.isReading) {
+      const pIndex = newVal[0].pIndex;
+      const pages = chapterPagedContent.value;
+      if (!pages || pages.length === 0) return;
+      
+      const targetPageIndex = pages.findIndex(page => 
+        page.some(line => line.pIndex === pIndex)
+      );
+      
+      if (targetPageIndex !== -1 && targetPageIndex !== chapterPagedIndex.value) {
+        chapterPagedIndex.value = targetPageIndex;
+      }
+    }
+  },
+  { deep: true, immediate: true }
+);
+
+watch(
   () => props.chapter,
   (c) => {
     if (c) {

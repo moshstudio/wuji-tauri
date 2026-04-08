@@ -4,24 +4,19 @@ import type { ComicSource } from '@/types';
 import { storeToRefs } from 'pinia';
 import { showLoadingToast, showToast, showFailToast } from 'vant';
 import { computed, onActivated, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppComicDetail from '@/layouts/app/comic/ComicDetail.vue';
 import DesktopComicDetail from '@/layouts/desktop/comic/ComicDetail.vue';
 import { router } from '@/router';
 import { useComicShelfStore, useStore } from '@/store';
-import { useBackStore } from '@/store/backStore';
-import { retryOnFalse } from '@/utils';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { usePageDataLoader } from '@/hooks/usePageDataLoader';
 
 const { comicId, sourceId } = defineProps({
   comicId: String,
   sourceId: String,
 });
 
-const route = useRoute();
 const store = useStore();
-const backStore = useBackStore();
 const shelfStore = useComicShelfStore();
 const { comicShelf } = storeToRefs(shelfStore);
 
@@ -50,17 +45,12 @@ const addShelfActions = computed(() => {
   }));
 });
 
-const loadData = retryOnFalse({
-  onFailed: () => {
-    if (route.name === 'ComicDetail') {
-      showFailToast('漫画详情加载失败，请重试');
-    }
-  },
-})(
-  createCancellableFunction(async (signal: AbortSignal) => {
-    if (route.name !== 'ComicDetail' || signal.aborted) {
-      return true;
-    }
+const { run: loadPage } = usePageDataLoader({
+  onFailed: () => showFailToast('漫画详情加载失败，请重试'),
+});
+
+async function loadData() {
+  await loadPage(async (signal) => {
     comic.value = undefined;
     comicSource.value = undefined;
     shouldReload.value = false;
@@ -72,9 +62,8 @@ const loadData = retryOnFalse({
 
     comicSource.value = store.getComicSource(sourceId);
     if (!comicSource.value) {
-      showToast('源不存在或未启用');
       shouldReload.value = true;
-      return true;
+      return false;
     }
 
     comic.value = store.getComicItem(comicSource.value, comicId);
@@ -92,9 +81,7 @@ const loadData = retryOnFalse({
     const detail = await store.comicDetail(comicSource.value, comic.value);
     toast.close();
 
-    if (route.name !== 'ComicDetail' || signal.aborted) {
-      return true;
-    }
+    if (signal.aborted) return true;
 
     if (detail) {
       comic.value = detail;
@@ -105,8 +92,8 @@ const loadData = retryOnFalse({
 
     shouldReload.value = !detail || !detail.chapters?.length;
     return !!detail;
-  }),
-);
+  });
+}
 
 
 function toChapter(_comic: ComicItem, chapter: ComicChapter) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch, onMounted, onUnmounted, onActivated } from 'vue';
+import { computed, watch, onMounted, onUnmounted } from 'vue';
 import type { BookChapter, BookItem, BookChapterList as ChapterList } from '@wuji-tauri/source-extension';
 import { useBookStore, useDisplayStore, useBookChapterStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
@@ -8,7 +8,6 @@ import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import MBookTTSButton from '@/components/button/MBookTTSButton.vue';
 import { router } from '@/router';
 import { useBookReadScroll } from '@/hooks/useBookReadScroll';
-import { useStatusBar } from '@/hooks/useStatusBar';
 import BookScrollerContent from '@/components/book/BookScrollerContent.vue';
 import { Icon } from '@iconify/vue';
 import type { BookSource } from '@/types';
@@ -59,7 +58,6 @@ const {
   currentPIndex,
   computedStyle,
   playTTS,
-  ttsActiveChapterId,
 } = useBookReadScroll({
   book: () => props.book,
   chapterList: () => props.chapterList,
@@ -136,17 +134,6 @@ watch(showMenu, (val) => {
   displayStore.showTabBar = val;
 }, { immediate: true });
 
-// 声明式状态栏控制：如果是“默认”主题，则跟随软件全局主题色
-useStatusBar(() => {
-  return bookStore.currTheme.name === '默认'
-    ? undefined
-    : bookStore.currTheme.bgColor;
-});
-
-onActivated(() => {
-  displayStore.showTabBar = showMenu.value;
-});
-
 // ── 键盘快捷键 ──
 function handleKeyDown(e: KeyboardEvent) {
   switch (e.key) {
@@ -184,7 +171,7 @@ const activeChapterProgress = computed(() => {
 <template>
   <div class="fixed box-border flex h-screen w-screen flex-col overflow-hidden" :class="[showMenu ? '' : 'hide_menu']">
 
-    <!-- 顶部菜单 -->
+    <!-- 桌面端顶部菜单 -->
     <transition
       enter-active-class="transition-all duration-100 ease-out"
       enter-from-class="opacity-0 transform -translate-y-full"
@@ -193,10 +180,10 @@ const activeChapterProgress = computed(() => {
       leave-from-class="opacity-100 transform translate-y-0"
       leave-to-class="opacity-0 transform -translate-y-full"
     >
-      <div v-show="showMenu" class="top_menu absolute left-0 top-0 z-[5] flex w-full flex-col gap-2 bg-[var(--van-background)] p-2 shadow transition">
+      <div v-show="showMenu" class="top_menu absolute left-0 top-0 z-[5] flex w-full flex-col gap-2 bg-[var(--van-background)] p-2 shadow transition pr-[58px]">
         <div class="flex flex-nowrap items-center justify-between">
           <div class="flex flex-nowrap items-center">
-            <van-icon name="arrow-left" color="var(--van-text-color)" size="22" class="p-1" @click="backStore.back" />
+            <van-icon name="arrow-left" color="var(--van-text-color)" size="22" class="p-1 cursor-pointer" @click="backStore.back" />
             <span class="ml-2 line-clamp-1 text-sm text-[var(--van-text-color)]">{{ book?.title }}</span>
           </div>
           <div class="flex items-center gap-3 pr-2">
@@ -231,7 +218,6 @@ const activeChapterProgress = computed(() => {
       <BookScrollerContent
         :loaded-chapters="loadedChapters"
         :active-chapter-id="activeChapterId"
-        :tts-active-chapter-id="ttsActiveChapterId"
         :current-p-index="currentPIndex"
       />
 
@@ -243,13 +229,13 @@ const activeChapterProgress = computed(() => {
         已经是最后一章了
       </div>
 
-      <!-- 底部留白 -->
+      <!-- 底部留白（保证最后的内容能被滚动到视口中心阅读） -->
       <div class="h-[30vh]" />
     </div>
 
     <!-- 底部状态栏 -->
     <div
-      class="fixed bottom-0 left-0 w-full flex items-center justify-between text-[11px] opacity-60 transition-opacity"
+      class="fixed bottom-0 left-0 w-full flex items-center justify-between text-[11px] opacity-60 transition-opacity pr-[58px]"
       :class="showMenu ? 'opacity-0' : 'opacity-60'"
       :style="{
         height: `${bookStore.paddingBottom}px`,
@@ -272,7 +258,7 @@ const activeChapterProgress = computed(() => {
       leave-to-class="opacity-0 transform translate-y-full"
     >
       <div v-show="showMenu"
-           class="bottom-menu absolute bottom-0 left-0 z-[6] flex w-full flex-col bg-[var(--van-background)] p-2 text-[var(--van-text-color)] shadow-[0_-2px_10px_rgba(0,0,0,0.05)] transition"
+           class="bottom-menu absolute bottom-0 left-0 z-[6] flex w-full flex-col bg-[var(--van-background)] p-2 text-[var(--van-text-color)] shadow-[0_-2px_10px_rgba(0,0,0,0.05)] transition pr-[58px]"
            :class="displayStore.isAppView ? 'pb-[50px]' : 'pb-safe'">
         <div class="flex items-center gap-2 mb-2">
           <div class="van-haptics-feedback shrink-0 text-nowrap px-2 text-sm cursor-pointer" @click="onPrevChapterClick">
@@ -308,11 +294,11 @@ const activeChapterProgress = computed(() => {
       </div>
     </transition>
 
-    <!-- 章节侧边栏 (App: 从左侧弹出) -->
+    <!-- 桌面端章节侧边栏 -->
     <van-popup
       v-model:show="displayStore.showChapters"
       teleport="body"
-      position="left"
+      position="right"
       :style="{ height: '100%', maxWidth: '70%', backgroundColor: 'var(--van-background)' }"
     >
       <van-list>

@@ -20,8 +20,9 @@ import {
 } from '@/store';
 import { storeToRefs } from 'pinia';
 import { useRoute } from 'vue-router';
-import { retryOnFalse } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { usePageDataLoader } from '@/hooks/usePageDataLoader';
+import { useStatusBar } from '@/hooks/useStatusBar';
 import _ from 'lodash';
 import { showFailToast, showToast } from 'vant';
 import {
@@ -75,19 +76,12 @@ const playingResource = ref<VideoResource>();
 const playingEpisode = ref<VideoEpisode>();
 const videoSrc = ref<VideoUrlMap>();
 
-const loadData = retryOnFalse({
-  onFailed: () => {
-    if (route.name === 'VideoDetail') {
-      showFailToast('视频解析失败，请点击重试或尝试更换线路');
-    }
-  },
-})(
-  createCancellableFunction(async (signal: AbortSignal, pageNo?: number) => {
-    // 如果已经离开了当前页面，直接返回 true 以终止自动重试机制
-    if (route.name !== 'VideoDetail' || signal.aborted) {
-      return true;
-    }
+const { run: runLoader } = usePageDataLoader({
+  onFailed: () => showFailToast('视频解析失败，请点击重试或尝试更换线路'),
+});
 
+async function loadData() {
+  await runLoader(async (signal) => {
     createPlayer();
 
     videoSource.value = undefined;
@@ -104,9 +98,8 @@ const loadData = retryOnFalse({
 
     const source = store.getVideoSource(sourceId);
     if (!source) {
-      showToast('源不存在或未启用');
       shouldReload.value = true;
-      return true; // 源配置错误，不需要重试
+      return false;
     }
 
     videoSource.value = source;
@@ -121,9 +114,7 @@ const loadData = retryOnFalse({
       (await store.videoDetail(source!, videoItem.value)) || undefined;
     displayStore.closeToast(t);
 
-    if (route.name !== 'VideoDetail' || signal.aborted) {
-      return true;
-    }
+    if (signal.aborted) return true;
 
     if (detail?.id != videoItem.value?.id) {
       shouldReload.value = true;
@@ -153,9 +144,7 @@ const loadData = retryOnFalse({
         (episode) => episode.id == videoItem.value?.lastWatchEpisodeId,
       ) || playingResource.value?.episodes?.[0];
 
-    if (route.name !== 'VideoDetail' || signal.aborted) {
-      return true;
-    }
+    if (signal.aborted) return true;
 
     if (playingResource.value && playingEpisode.value) {
       shelfStore.updateVideoPlayInfo(videoItem.value, {
@@ -166,8 +155,8 @@ const loadData = retryOnFalse({
     }
 
     return true;
-  }),
-);
+  });
+}
 
 
 const getPlayUrl = createCancellableFunction(async (signal: AbortSignal) => {
@@ -545,6 +534,9 @@ onMounted(async () => {
   await nextTick();
   await createPlayer();
 });
+
+// 声明式状态栏控制：视频详情页强制全黑背景
+useStatusBar('#000000', 'light');
 
 onMountedOrActivated(() => {
   if (displayStore.isAndroid) {

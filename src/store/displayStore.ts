@@ -6,12 +6,15 @@ import { type as osType } from '@tauri-apps/plugin-os';
 import { useDark, useStorage, useStorageAsync, useToggle } from '@vueuse/core';
 import { defineStore, storeToRefs } from 'pinia';
 
+import { set_status_bar } from 'tauri-plugin-commands-api';
 import * as commands from 'tauri-plugin-commands-api';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import buildTray from '@/utils/tray';
 import { tauriAddPluginListener } from './utils';
 import Player from 'xgplayer';
 import { useSettingStore } from './settingStore';
+import { isColorDark } from '@/utils';
+import tinycolor from 'tinycolor2';
 
 export const useDisplayStore = defineStore('display', () => {
   const showNews = useStorage('showNews', true);
@@ -234,6 +237,59 @@ export const useDisplayStore = defineStore('display', () => {
   const videoVolume = useStorageAsync('videoVolume', 1);
   const videoPlaybackRate = useStorageAsync('videoPlaybackRate', 1);
 
+  const statusBarColor = ref<string>(isDark.value ? '#000000' : '#ffffff');
+  const statusBarStyle = ref<'light' | 'dark'>(isDark.value ? 'light' : 'dark');
+  const statusBarOwner = ref<symbol | null>(null);
+
+  /**
+   * 设置状态栏颜色和样式
+   */
+  const setStatusBar = (
+    color?: string,
+    style?: 'light' | 'dark',
+    owner: symbol | null = null,
+  ) => {
+    // 如果是重置操作（无颜色），校验所有者。只有设置颜色的人能重置它。
+    if (!color && owner && statusBarOwner.value !== owner) {
+      return;
+    }
+
+    if (!color) {
+      statusBarColor.value = isDark.value ? '#000000' : '#ffffff';
+      statusBarStyle.value = isDark.value ? 'light' : 'dark';
+      statusBarOwner.value = null;
+    } else {
+      // 规范化颜色格式，确保 #000 变成 #000000，并处理 CSS 变量
+      const tc = tinycolor(color);
+      if (tc.isValid()) {
+        statusBarColor.value = tc.toHexString();
+      } else {
+        statusBarColor.value = color; // 无法解析的（如变量）保持原样
+      }
+      statusBarStyle.value = style || (isColorDark(color) ? 'light' : 'dark');
+      statusBarOwner.value = owner;
+    }
+  };
+
+  // 内部监听器：增加 statusBarOwner 监听，确保即使颜色值相同也能触发指令同步
+  watch(
+    [statusBarColor, statusBarStyle, statusBarOwner],
+    ([color, style]) => {
+      if (isAndroid.value && color) {
+        set_status_bar(color, style || 'light');
+      }
+    },
+    { immediate: true },
+  );
+
+  // 监听深色模式变化，自动更新默认状态栏
+  watch(isDark, () => {
+    // 只有在没有手动覆盖（无主状态）时，才允许自动根据深色模式切换
+    if (!statusBarOwner.value) {
+      setStatusBar();
+    }
+  });
+
   return {
     showNews,
     fullScreenMode,
@@ -293,5 +349,9 @@ export const useDisplayStore = defineStore('display', () => {
     videoPlayer,
     videoVolume,
     videoPlaybackRate,
+
+    statusBarColor,
+    statusBarStyle,
+    setStatusBar,
   };
 });

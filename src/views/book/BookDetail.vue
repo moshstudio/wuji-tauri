@@ -5,24 +5,19 @@ import { storeToRefs } from 'pinia';
 
 import { showLoadingToast, showToast, showFailToast } from 'vant';
 import { computed, onActivated, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppBookDetail from '@/layouts/app/book/BookDetail.vue';
 import DesktopBookDetail from '@/layouts/desktop/book/BookDetail.vue';
 import { router } from '@/router';
 import { useBookShelfStore, useStore } from '@/store';
-import { useBackStore } from '@/store/backStore';
-import { retryOnFalse } from '@/utils';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { usePageDataLoader } from '@/hooks/usePageDataLoader';
 
 const { bookId, sourceId } = defineProps({
   bookId: String,
   sourceId: String,
 });
 
-const route = useRoute();
 const store = useStore();
-const backStore = useBackStore();
 const shelfStore = useBookShelfStore();
 const { bookShelf } = storeToRefs(shelfStore);
 
@@ -51,23 +46,18 @@ const addShelfActions = computed(() => {
   }));
 });
 
+const { run: loadPage } = usePageDataLoader({
+  onFailed: () => showFailToast('书籍详情加载失败，请重试'),
+});
+
 function clear() {
   book.value = undefined;
   bookSource.value = undefined;
   shouldReload.value = false;
 }
 
-const loadData = retryOnFalse({
-  onFailed: () => {
-    if (route.name === 'BookDetail') {
-      showFailToast('书籍详情加载失败，请重试');
-    }
-  },
-})(
-  createCancellableFunction(async (signal: AbortSignal) => {
-    if (route.name !== 'BookDetail' || signal.aborted) {
-      return true;
-    }
+async function loadData() {
+  await loadPage(async (signal) => {
     clear();
     if (!bookId || !sourceId) {
       shouldReload.value = true;
@@ -76,9 +66,8 @@ const loadData = retryOnFalse({
 
     bookSource.value = store.getBookSource(sourceId!);
     if (!bookSource.value) {
-      showToast('源不存在或未启用');
       shouldReload.value = true;
-      return true;
+      return false;
     }
 
     book.value = store.getBookItem(bookSource.value, bookId);
@@ -96,9 +85,7 @@ const loadData = retryOnFalse({
     const detail = await store.bookDetail(bookSource.value, book.value);
     toast.close();
 
-    if (route.name !== 'BookDetail' || signal.aborted) {
-      return true;
-    }
+    if (signal.aborted) return true;
 
     if (detail) {
       book.value = detail;
@@ -109,8 +96,8 @@ const loadData = retryOnFalse({
 
     shouldReload.value = !detail || !detail.chapters?.length;
     return !!detail;
-  }),
-);
+  });
+}
 
 
 

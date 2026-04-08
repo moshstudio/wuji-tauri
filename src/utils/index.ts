@@ -9,6 +9,7 @@ import { onBeforeUnmount, onMounted } from 'vue';
 import { useDisplayStore } from '@/store';
 import { useClipboard } from '@vueuse/core';
 // import * as dialog from '@tauri-apps/plugin-dialog';
+import tinycolor from 'tinycolor2';
 export * from './extensionUtils';
 
 export function sleep(ms: number) {
@@ -503,4 +504,36 @@ export function copyText(text: string) {
   } else {
     showToast('复制失败');
   }
+}
+
+/**
+ * 判断颜色是否为深色 (使用 tinycolor2)
+ */
+export function isColorDark(color: string): boolean {
+  if (!color) return false;
+
+  let finalColor = color;
+  // 处理 CSS 变量，通过临时节点获取计算后的真实颜色
+  if (color.startsWith('var(')) {
+    try {
+      const tempEl = document.createElement('div');
+      tempEl.style.color = color;
+      tempEl.style.display = 'none';
+      // 必须挂载到 root 附近以确保能拿到全局变量
+      document.documentElement.appendChild(tempEl);
+      const computedColor = getComputedStyle(tempEl).color;
+      document.documentElement.removeChild(tempEl);
+      if (computedColor) finalColor = computedColor;
+    } catch (e) {
+      console.warn('解析 CSS 变量失败:', e);
+    }
+  }
+
+  const c = tinycolor(finalColor);
+  if (!c.isValid()) return false;
+
+  // 使用感知亮度 (Luminance) 判定，0.5 是标准的深浅色分界线
+  // luminance 接近 1 说明是浅色，接近 0 说明是深色
+  const luminance = c.getLuminance();
+  return luminance < 0.5;
 }

@@ -11,23 +11,18 @@ import {
 } from '@wuji-tauri/components/src';
 import { showLoadingToast, showToast, showFailToast } from 'vant';
 import { onActivated, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppPlaylistDetail from '@/layouts/app/song/PlaylistDetail.vue';
 import DesktopPlaylistDetail from '@/layouts/desktop/song/PlaylistDetail.vue';
 import { useSongShelfStore, useStore } from '@/store';
-import { useBackStore } from '@/store/backStore';
-import { retryOnFalse } from '@/utils';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { usePageDataLoader } from '@/hooks/usePageDataLoader';
 
 const { playlistId, sourceId } = defineProps({
   playlistId: String,
   sourceId: String,
 });
 
-const route = useRoute();
 const store = useStore();
-const backStore = useBackStore();
 const shelfStore = useSongShelfStore();
 const songSource = ref<SongSource>();
 const playlist = ref<PlaylistInfo>();
@@ -39,6 +34,10 @@ const moreOptions = ref(false);
 const moreOptionsSong = ref<SongInfo>();
 const showAddToShelfSheet = ref(false);
 
+const { run: loadPage } = usePageDataLoader({
+  onFailed: () => showFailToast('歌单详情加载失败，请重试'),
+});
+
 function clear() {
   songSource.value = undefined;
   playlist.value = undefined;
@@ -46,17 +45,8 @@ function clear() {
   shouldReload.value = false;
 }
 
-const toPage = retryOnFalse({
-  onFailed: () => {
-    if (route.name === 'SongPlaylistDetail') {
-      showFailToast('歌单详情加载失败，请重试');
-    }
-  },
-})(
-  createCancellableFunction(async (signal: AbortSignal, pageNo?: number) => {
-    if (route.name !== 'SongPlaylistDetail' || signal.aborted) {
-      return true;
-    }
+async function toPage(pageNo?: number) {
+  await loadPage(async (signal) => {
     clear();
     currentPage.value = pageNo || 1;
 
@@ -67,9 +57,8 @@ const toPage = retryOnFalse({
 
     songSource.value = store.getSongSource(sourceId);
     if (!songSource.value) {
-      showToast('源不存在或未启用');
       shouldReload.value = true;
-      return true;
+      return false;
     }
 
     playlist.value = store.getPlaylistInfo(songSource.value, playlistId);
@@ -91,17 +80,15 @@ const toPage = retryOnFalse({
     );
     toast.close();
 
-    if (route.name !== 'SongPlaylistDetail' || signal.aborted) {
-      return true;
-    }
+    if (signal.aborted) return true;
 
     playlist.value = detail || undefined;
     currentPage.value = playlist.value?.list?.page || 1;
     shouldReload.value = !playlist.value || !playlist.value.list?.list?.length;
 
     return !!playlist.value;
-  }),
-);
+  });
+}
 
 
 async function playAll() {
@@ -129,7 +116,7 @@ function songAddToShelf(song: SongInfo, shelf: SongShelf) {
   shelfStore.addSongToShelf(song, shelf.playlist.id);
 }
 
-function showMoreOptions(playlist: PlaylistInfo, song: SongInfo) {
+function showMoreOptions(_playlist: PlaylistInfo, song: SongInfo) {
   moreOptionsSong.value = song;
   moreOptions.value = true;
 }

@@ -7,7 +7,13 @@ import { Icon } from '@iconify/vue';
 import { storeToRefs } from 'pinia';
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { showToast } from 'vant';
-import { computed, nextTick, onActivated, ref, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onActivated,
+  ref,
+  watch,
+} from 'vue';
 import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import MBookTTSButton from '@/components/button/MBookTTSButton.vue';
 import { router } from '@/router';
@@ -18,6 +24,7 @@ import {
   useTTSStore,
 } from '@/store';
 import { useBackStore } from '@/store/backStore';
+import { useStatusBar } from '@/hooks/useStatusBar';
 import 'swiper/css';
 
 const props = withDefaults(
@@ -431,6 +438,13 @@ watch(
   },
   { immediate: true },
 );
+// 声明式状态栏控制：如果是“默认”主题，则跟随软件全局主题色
+useStatusBar(() => {
+  return bookStore.currTheme.name === '默认'
+    ? undefined
+    : bookStore.currTheme.bgColor;
+});
+
 onActivated(() => {
   showTabBar.value = showMenu.value;
 });

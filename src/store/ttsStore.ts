@@ -157,7 +157,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
   const _generating = new SimpleLRUCache<string, boolean>(50);
 
   const isReading = ref(false);
-  const scrollReadingContent = ref<{ content: string; index: number }>();
+  const scrollReadingContent = ref<{ content: string; index: number; chapterId?: string }>();
   const slideReadingContent = ref<LineData[]>();
 
   const autoStopOptions = reactive({

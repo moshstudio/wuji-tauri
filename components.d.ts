@@ -9,6 +9,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AddShelfButton: typeof import('./src/components/button/AddShelfButton.vue')['default']
+    BookScrollerContent: typeof import('./src/components/book/BookScrollerContent.vue')['default']
     BookSwitchSource: typeof import('./src/components/dialog/BookSwitchSource.vue')['default']
     ComicSwitchSource: typeof import('./src/components/dialog/ComicSwitchSource.vue')['default']
     DialogAnimate: typeof import('./src/components/animate/DialogAnimate.vue')['default']

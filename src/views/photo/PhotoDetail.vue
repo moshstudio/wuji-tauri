@@ -6,16 +6,15 @@ import type {
 import type { PhotoSource } from '@/types';
 import { BaseDirectory } from '@tauri-apps/plugin-fs';
 import _ from 'lodash';
-import { showFailToast, showSuccessToast, showToast } from 'vant';
+import { showFailToast, showSuccessToast } from 'vant';
 import { computed, onActivated, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppPhotoDetail from '@/layouts/app/photo/PhotoDetail.vue';
 import DesktopPhotoDetail from '@/layouts/desktop/photo/PhotoDetail.vue';
 import { useDisplayStore, usePhotoShelfStore, useStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
-import { downloadFile, retryOnFalse } from '@/utils';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { downloadFile } from '@/utils';
+import { usePageDataLoader } from '@/hooks/usePageDataLoader';
 
 const { id, sourceId } = defineProps({
   id: String,
@@ -27,7 +26,6 @@ const backStore = useBackStore();
 const displayStore = useDisplayStore();
 const shelfStore = usePhotoShelfStore();
 
-const route = useRoute();
 const photoSource = ref<PhotoSource>();
 const photoItem = ref<PhotoItem>();
 const photoDetail = ref<PhotoDetailType>();
@@ -49,8 +47,12 @@ const selectShelfActions = computed(() => {
   });
 });
 
+const { run: loadPage, isActive } = usePageDataLoader({
+  onFailed: () => showFailToast('图集详情加载失败，请重试'),
+});
+
 function back() {
-  if (route.name === 'PhotoDetail') {
+  if (isActive.value) {
     backStore.back();
   }
 }
@@ -63,17 +65,8 @@ function clear() {
   shouldReload.value = false;
 }
 
-const toPage = retryOnFalse({
-  onFailed: () => {
-    if (route.name === 'PhotoDetail') {
-      showFailToast('图集详情加载失败，请重试');
-    }
-  },
-})(
-  createCancellableFunction(async (signal: AbortSignal, pageNo?: number) => {
-    if (route.name !== 'PhotoDetail' || signal.aborted) {
-      return true;
-    }
+async function toPage(pageNo?: number) {
+  await loadPage(async (signal) => {
     clear();
     if (!id || !sourceId) {
       shouldReload.value = true;
@@ -82,9 +75,8 @@ const toPage = retryOnFalse({
 
     photoSource.value = store.getPhotoSource(sourceId!);
     if (!photoSource.value) {
-      showToast('源不存在或未启用');
       shouldReload.value = true;
-      return true;
+      return false;
     }
 
     photoItem.value = store.getPhotoItem(photoSource.value, id!);
@@ -112,18 +104,15 @@ const toPage = retryOnFalse({
       pageNo,
     );
 
-    if (route.name !== 'PhotoDetail' || signal.aborted) {
-      return true;
-    }
+    if (signal.aborted) return true;
 
     photoDetail.value = detail || undefined;
     currentPage.value = detail?.page || 1;
     shouldReload.value = !detail || !detail.photos?.length;
 
     return !!detail;
-  }),
-);
-
+  });
+}
 
 function toShelf() {
   if (!photoItem.value) {

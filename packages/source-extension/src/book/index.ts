@@ -8,6 +8,7 @@ export interface BookChapter {
   title: string;
   url?: string;
   readingPage?: number;
+  readingParagraph?: number;
 }
 
 export type ChapterList = BookChapter[];

@@ -155,27 +155,27 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
   };
   const updateBookReadInfo = (bookItem: BookItem, chapter: BookChapter) => {
     if (!bookShelf.value) return;
+    const clonedChapter = _.cloneDeep(chapter);
     for (const shelf of bookShelf.value) {
       for (const book of shelf.books) {
         if (book.book.id === bookItem.id) {
-          if (book.book.chapters?.find((item) => item.id === chapter.id)) {
-            book.lastReadChapter = chapter;
-            book.lastReadTime = Date.now();
-          }
+          book.lastReadChapter = clonedChapter;
+          book.lastReadTime = Date.now();
         }
       }
     }
-    updateBookHistoryInfo(bookItem, chapter);
+    updateBookHistoryInfo(bookItem, clonedChapter);
   };
 
   const updateBookHistoryInfo = (bookItem: BookItem, chapter?: BookChapter) => {
+    const clonedChapter = chapter ? _.cloneDeep(chapter) : undefined;
     const book = bookHistory.value.find((item) => item.book.id === bookItem.id);
     if (book) {
       book.lastReadTime = Date.now();
-      if (!chapter) {
+      if (!clonedChapter) {
         book.lastReadChapter = undefined;
-      } else if (book.book.chapters?.find((item) => item.id === chapter.id)) {
-        book.lastReadChapter = chapter;
+      } else {
+        book.lastReadChapter = clonedChapter;
       }
       bookHistory.value = [...bookHistory.value].sort(
         (a, b) => b.lastReadTime - a.lastReadTime,
