@@ -55,11 +55,12 @@ function changePage(params: PickerConfirmEventParams) {
     :glassTintOpacity="20"
     :innerShadowBlur="1"
     class="select-none text-[var(--van-text-color)]"
-    :class="useGlass ? '' : 'bg-[var(--van-background)]/50 h-[40px] w-[120px]'"
+    :class="[useGlass ? 'use-glass' : 'bg-[var(--van-background)]/50 h-[40px] w-[120px]']"
   >
     <div class="flex h-full w-full items-center justify-around">
       <div
-        class="van-haptics-feedback z-[10] flex h-full w-full flex-1 items-center justify-center p-2"
+        class="van-haptics-feedback pagination-btn z-[10] flex h-full w-full flex-1 items-center justify-center p-2 rounded-l-[6px]"
+        :class="{ disabled: pageNo <= 1 }"
         @click="
           () => {
             if (pageNo > 1) {
@@ -71,18 +72,19 @@ function changePage(params: PickerConfirmEventParams) {
         <van-icon
           name="arrow-left"
           size="14"
-          :color="useGlass ? 'white' : '--van-text-color'"
+          :color="useGlass ? 'white' : 'var(--van-text-color)'"
         />
       </div>
       <div
-        class="z-[10] flex h-full w-full flex-1 cursor-pointer items-center justify-center p-2 text-xs"
+        class="pagination-btn z-[10] flex h-full w-full flex-1 items-center justify-center p-2 text-xs"
         :class="useGlass ? 'text-white' : 'text-[var(--van-text-color)]'"
         @click="showPicker = true"
       >
         {{ pageNo }}/{{ pageCount }}
       </div>
       <div
-        class="van-haptics-feedback z-[10] flex h-full w-full flex-1 items-center justify-center p-2"
+        class="van-haptics-feedback pagination-btn z-[10] flex h-full w-full flex-1 items-center justify-center p-2 rounded-r-[6px]"
+        :class="{ disabled: pageNo >= Number(pageCount) }"
         @click="
           () => {
             if (pageNo < Number(pageCount)) {
@@ -94,7 +96,7 @@ function changePage(params: PickerConfirmEventParams) {
         <van-icon
           name="arrow"
           size="14"
-          :color="useGlass ? 'white' : '--van-text-color'"
+          :color="useGlass ? 'white' : 'var(--van-text-color)'"
         />
       </div>
       <!-- <van-button
@@ -137,6 +139,37 @@ function changePage(params: PickerConfirmEventParams) {
 </template>
 
 <style scoped lang="less">
+.pagination-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  &:active {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+
+  &.disabled {
+    opacity: 0.2;
+    pointer-events: none;
+  }
+}
+
+.use-glass {
+  .pagination-btn {
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    &:active {
+      background-color: rgba(255, 255, 255, 0.15);
+    }
+  }
+}
+
 :deep(.van-pagination__items) {
   gap: 6px;
 }

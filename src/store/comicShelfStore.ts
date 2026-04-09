@@ -211,7 +211,10 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
           shelf.comics.map(async (comic) => {
             const source = store.getComicSource(comic.comic.sourceId);
             if (source) {
-              await store.comicDetail(source, comic.comic);
+              const detail = await store.comicDetail(source, comic.comic);
+              if (detail) {
+                comic.comic = detail;
+              }
             }
           }),
         );

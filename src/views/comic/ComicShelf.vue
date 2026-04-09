@@ -61,7 +61,7 @@ async function toComic(comic: ComicItemInShelf, chapterId?: string) {
     comic.comic = detail;
   }
 
-  chapterId ||= comic.comic.chapters![0].id;
+  chapterId ||= comic.lastReadChapter?.id || comic.comic.chapters![0].id;
   router.push({
     name: 'ComicRead',
     params: {

@@ -210,7 +210,10 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
           shelf.books.map(async (book) => {
             const source = store.getBookSource(book.book.sourceId);
             if (source) {
-              await store.bookDetail(source, book.book);
+              const detail = await store.bookDetail(source, book.book);
+              if (detail) {
+                book.book = detail;
+              }
             }
           }),
         );

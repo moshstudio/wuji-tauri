@@ -58,7 +58,7 @@ async function toBook(book: BookItemInShelf, chapterId?: string) {
     book.book = detail;
   }
 
-  chapterId ||= book.book.chapters![0].id;
+  chapterId ||= book.lastReadChapter?.id || book.book.chapters![0].id;
   router.push({
     name: 'BookRead',
     params: {
