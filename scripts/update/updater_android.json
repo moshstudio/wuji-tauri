@@ -1,6 +1,6 @@
 {
-  "version": "0.1.26",
-  "notes": "支持更多影视",
+  "version": "0.1.27",
+  "notes": "小说阅读支持滚动阅读模式",
   "pub_date": "2026-03-16T08:00:00+08:00",
   "platforms": {
     "cloudpan": {

@@ -99,12 +99,14 @@ if ($LASTEXITCODE -eq 0) {
                 }
                 Write-Host "  已更新 updater_win.json (所有平台)" -ForegroundColor Green
 
-                # 保存 JSON (保持 UTF8, 无 BOM)
+                # 保存 JSON (2 空格缩进)
                 $jsonOptions = @{
                     Depth = 10
                     Compress = $false
                 }
                 $newJson = $jsonContent | ConvertTo-Json @jsonOptions
+                # 将 PowerShell 默认的 4 空格缩进替换为 2 空格
+                $newJson = $newJson -replace '(?m)^((?:  )*)  ', '$1'
                 
                 # 使用无 BOM 的 UTF-8 编码
                 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
