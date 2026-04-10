@@ -7,9 +7,13 @@ import { ref, watch } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppSongPlayView from '@/layouts/app/song/SongPlayView.vue';
 import DesktopSongPlayView from '@/layouts/desktop/song/SongPlayView.vue';
-import { useDisplayStore, useSongStore } from '@/store';
+import { useDisplayStore, useSongStore, useDownloadStore, useStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
 import { getLyric, parseLyric } from '@/utils/lyric';
+import { showToast, showLoadingToast, showFailToast } from 'vant';
+
+const downloadStore = useDownloadStore();
+const store = useStore();
 
 const backStore = useBackStore();
 const displayStore = useDisplayStore();
@@ -192,6 +196,26 @@ async function analyzeImageColor(
     callback(avgColor);
   };
 }
+async function onDownload() {
+  if (playingSong.value) {
+    const t = showLoadingToast({ message: '正在解析音乐地址', duration: 0 });
+    try {
+      const url = await songStore.getSongPlayUrl(playingSong.value);
+      t.close();
+      if (url) {
+        await downloadStore.startMusicDownload(
+          { title: playingSong.value.name, id: playingSong.value.id },
+          store.getSongSource(playingSong.value.sourceId),
+          url
+        );
+        showToast('已加入下载队列');
+      }
+    } catch (e) {
+      t.close();
+      showFailToast('解析失败');
+    }
+  }
+}
 </script>
 
 <template>
@@ -204,6 +228,7 @@ async function analyzeImageColor(
         :transform-style="transformStyle"
         :active-lyric-color="activeLyricColor"
         :back="backStore.back"
+        :on-download="onDownload"
       />
     </template>
     <template #desktop>
@@ -214,6 +239,7 @@ async function analyzeImageColor(
         :transform-style="transformStyle"
         :active-lyric-color="activeLyricColor"
         :back="backStore.back"
+        :on-download="onDownload"
       />
     </template>
   </PlatformSwitch>

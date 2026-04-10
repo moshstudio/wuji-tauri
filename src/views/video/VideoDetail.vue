@@ -17,12 +17,15 @@ import {
   useBackStore,
   useDisplayStore,
   useVideoShelfStore,
+  useDownloadStore,
 } from '@/store';
 import { storeToRefs } from 'pinia';
 import { useRoute } from 'vue-router';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 import { usePageDataLoader } from '@/hooks/usePageDataLoader';
 import { useStatusBar } from '@/hooks/useStatusBar';
+
+const downloadStore = useDownloadStore();
 import _ from 'lodash';
 import { showFailToast, showToast } from 'vant';
 import {
@@ -592,6 +595,26 @@ onDeactivated(() => {
 onUnmounted(() => {
   videoPlayer.value?.destroy();
 });
+async function onDownload(resource: VideoResource, episode: VideoEpisode) {
+  if (!videoSource.value || !videoItem.value) return;
+  const t = showLoadingToast({ message: '正在解析地址', duration: 0 });
+  try {
+    const urlMap = await store.videoPlay(videoSource.value, videoItem.value, resource, episode);
+    t.close();
+    if (urlMap?.url) {
+      await downloadStore.startVideoDownload(
+        { title: `${videoItem.value.title} - ${episode.title}`, id: `${videoItem.value.id}_${episode.id}` },
+        videoSource.value,
+        urlMap.url,
+        urlMap.headers
+      );
+      showToast('已加入下载队列');
+    }
+  } catch (e) {
+    t.close();
+    showFailToast('解析地址失败');
+  }
+}
 </script>
 
 <template>
@@ -609,6 +632,7 @@ onUnmounted(() => {
         :in-shelf="inShelf"
         :add-to-shelf="onAddToShelf"
         :show-search="() => (showSearchDialog = true)"
+        :on-download="onDownload"
       >
         <VideoSwiper
           :prev-episode="prevEpisode"
@@ -644,6 +668,7 @@ onUnmounted(() => {
         :in-shelf="inShelf"
         :add-to-shelf="onAddToShelf"
         :show-search="() => (showSearchDialog = true)"
+        :on-download="onDownload"
       >
         <VideoSwiper
           :prev-episode="prevEpisode"

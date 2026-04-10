@@ -30,6 +30,7 @@ export enum MembershipPlanLevel {
 
 export enum MembershipPlanBillingCycle {
   Monthly = 'monthly',
+  Quarterly = 'quarterly',
   Yearly = 'yearly',
   Lifetime = 'lifetime',
 }

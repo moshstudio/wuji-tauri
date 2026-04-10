@@ -144,7 +144,7 @@ watch(
       class="flex-grow overflow-auto"
     >
       <van-tab title="VIP会员">
-        <div class="p-4">
+        <div v-if="vipPlans.length > 0" class="p-4">
           <HorizonList class="mb-6 gap-3">
             <div
               v-for="plan in vipPlans"
@@ -166,7 +166,9 @@ watch(
                     ? '永久'
                     : plan.billingCycle === MembershipPlanBillingCycle.Yearly
                       ? '年费'
-                      : '月费'
+                      : plan.billingCycle === MembershipPlanBillingCycle.Quarterly
+                        ? '季费'
+                        : '月费'
                 }}
               </p>
               <div
@@ -183,7 +185,9 @@ watch(
                     ? '一次购买永久有效'
                     : plan.billingCycle === MembershipPlanBillingCycle.Yearly
                       ? `平均每月¥${(plan.price / 12).toFixed(2)}`
-                      : '灵活选择'
+                      : plan.billingCycle === MembershipPlanBillingCycle.Quarterly
+                        ? `平均每月¥${(plan.price / 3).toFixed(2)}`
+                        : '灵活选择'
                 }}
               </p>
             </div>
@@ -228,10 +232,13 @@ watch(
             </div>
           </div>
         </div>
+        <div v-else class="flex flex-col items-center justify-center pt-20">
+          <van-empty description="暂未开放该会员方案" />
+        </div>
       </van-tab>
 
       <van-tab title="SVIP会员">
-        <div class="p-4">
+        <div v-if="sVipPlans.length > 0" class="p-4">
           <HorizonList class="mb-6 gap-3">
             <div
               v-for="plan in sVipPlans"
@@ -253,7 +260,9 @@ watch(
                     ? '永久'
                     : plan.billingCycle === MembershipPlanBillingCycle.Yearly
                       ? '年费'
-                      : '月费'
+                      : plan.billingCycle === MembershipPlanBillingCycle.Quarterly
+                        ? '季费'
+                        : '月费'
                 }}
               </p>
               <div
@@ -270,7 +279,9 @@ watch(
                     ? '一次购买永久有效'
                     : plan.billingCycle === MembershipPlanBillingCycle.Yearly
                       ? `平均每月¥${(plan.price / 12).toFixed(2)}`
-                      : '尊享体验'
+                      : plan.billingCycle === MembershipPlanBillingCycle.Quarterly
+                        ? `平均每月¥${(plan.price / 3).toFixed(2)}`
+                        : '尊享体验'
                 }}
               </p>
             </div>
@@ -314,6 +325,9 @@ watch(
               客服支持qq: 3976424284
             </div>
           </div>
+        </div>
+        <div v-else class="flex flex-col items-center justify-center pt-20">
+          <van-empty description="暂未开放该会员方案" />
         </div>
       </van-tab>
     </van-tabs>

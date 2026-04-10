@@ -8,8 +8,10 @@ import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppComicDetail from '@/layouts/app/comic/ComicDetail.vue';
 import DesktopComicDetail from '@/layouts/desktop/comic/ComicDetail.vue';
 import { router } from '@/router';
-import { useComicShelfStore, useStore } from '@/store';
+import { useComicShelfStore, useStore, useDownloadStore } from '@/store';
 import { usePageDataLoader } from '@/hooks/usePageDataLoader';
+
+const downloadStore = useDownloadStore();
 
 const { comicId, sourceId } = defineProps({
   comicId: String,
@@ -115,6 +117,17 @@ watch(
   { immediate: true },
 );
 
+async function onDownload() {
+  if (comic.value && comicSource.value) {
+    if (!comic.value.chapters?.length) {
+      showToast('章节列表加载中，请稍后');
+      return;
+    }
+    await downloadStore.startComicDownload(comic.value, comicSource.value);
+    showToast('已加入下载队列');
+  }
+}
+
 onActivated(() => {
   if (shouldReload.value) {
     loadData();
@@ -131,6 +144,7 @@ onActivated(() => {
         :in-shelf="inShelf"
         :add-to-shelf="() => (showAddShelfSheet = true)"
         :to-chapter="toChapter"
+        :on-download="onDownload"
       />
     </template>
     <template #desktop>
@@ -140,6 +154,7 @@ onActivated(() => {
         :in-shelf="inShelf"
         :add-to-shelf="() => (showAddShelfSheet = true)"
         :to-chapter="toChapter"
+        :on-download="onDownload"
       />
     </template>
     <van-action-sheet

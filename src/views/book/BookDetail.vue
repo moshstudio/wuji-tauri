@@ -9,8 +9,10 @@ import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppBookDetail from '@/layouts/app/book/BookDetail.vue';
 import DesktopBookDetail from '@/layouts/desktop/book/BookDetail.vue';
 import { router } from '@/router';
-import { useBookShelfStore, useStore } from '@/store';
+import { useBookShelfStore, useStore, useDownloadStore } from '@/store';
 import { usePageDataLoader } from '@/hooks/usePageDataLoader';
+
+const downloadStore = useDownloadStore();
 
 const { bookId, sourceId } = defineProps({
   bookId: String,
@@ -120,6 +122,17 @@ watch(
   { immediate: true },
 );
 
+async function onDownload() {
+  if (book.value && bookSource.value) {
+    if (!book.value.chapters?.length) {
+      showToast('章节列表加载中，请稍后');
+      return;
+    }
+    await downloadStore.startBookDownload(book.value, bookSource.value);
+    showToast('已加入下载队列');
+  }
+}
+
 onActivated(() => {
   if (shouldReload.value) {
     loadData();
@@ -136,6 +149,7 @@ onActivated(() => {
         :in-shelf="inShelf"
         :add-to-shelf="() => (showAddShelfSheet = true)"
         :to-chapter="toChapter"
+        :on-download="onDownload"
       />
     </template>
     <template #desktop>
@@ -145,6 +159,7 @@ onActivated(() => {
         :in-shelf="inShelf"
         :add-to-shelf="() => (showAddShelfSheet = true)"
         :to-chapter="toChapter"
+        :on-download="onDownload"
       />
     </template>
     <van-action-sheet

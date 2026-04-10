@@ -73,6 +73,12 @@ const showSettingPopover = ref(false);
 const showSourcePopover = ref(false);
 const settingActions = [
   {
+    text: '下载管理',
+    onClick: () => {
+      router.push({ name: 'DownloadManager' });
+    },
+  },
+  {
     text: '设置',
     onClick: () => {
       router.push({ name: 'Setting' });

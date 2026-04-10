@@ -11,10 +11,12 @@ import { computed, onActivated, ref, watch } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppPhotoDetail from '@/layouts/app/photo/PhotoDetail.vue';
 import DesktopPhotoDetail from '@/layouts/desktop/photo/PhotoDetail.vue';
-import { useDisplayStore, usePhotoShelfStore, useStore } from '@/store';
+import { useDisplayStore, usePhotoShelfStore, useStore, useDownloadStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
 import { downloadFile } from '@/utils';
 import { usePageDataLoader } from '@/hooks/usePageDataLoader';
+
+const downloadStore = useDownloadStore();
 
 const { id, sourceId } = defineProps({
   id: String,
@@ -155,6 +157,28 @@ watch(
   { immediate: true },
 );
 
+async function onDownload() {
+  if (photoItem.value && photoSource.value) {
+    await downloadStore.startPhotoAlbumDownload(
+      photoItem.value,
+      photoSource.value,
+    );
+    showSuccessToast('已加入下载任务');
+  }
+}
+
+async function onDownloadSingle(url: string, headers?: Record<string, string>) {
+  if (photoItem.value && photoSource.value) {
+    await downloadStore.startPhotoDownload(
+      photoItem.value,
+      photoSource.value,
+      url,
+      headers,
+    );
+    showSuccessToast('已加入下载任务');
+  }
+}
+
 onActivated(() => {
   if (shouldReload.value) {
     toPage(currentPage.value || 1);
@@ -173,6 +197,7 @@ onActivated(() => {
         :to-page="toPage"
         :to-shelf="toShelf"
         :save-pic="savePic"
+        :on-download="onDownload"
       />
     </template>
     <template #desktop>
@@ -184,6 +209,7 @@ onActivated(() => {
         :to-page="toPage"
         :to-shelf="toShelf"
         :save-pic="savePic"
+        :on-download="onDownload"
       />
     </template>
     <van-action-sheet

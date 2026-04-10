@@ -157,6 +157,11 @@ export const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/download',
+    name: 'DownloadManager',
+    component: () => import('@/views/download/DownloadManager.vue'),
+  },
+  {
     path: '/source',
     children: [
       {

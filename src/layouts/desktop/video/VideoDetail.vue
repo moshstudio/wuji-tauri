@@ -25,6 +25,7 @@ const props = defineProps<{
   inShelf?: boolean;
   play: (resource: VideoResource, episode: VideoEpisode) => Promise<void>;
   addToShelf: (video: VideoItem) => void;
+  onDownload?: (resource: VideoResource, episode: VideoEpisode) => void;
   showSearch: () => void;
 }>();
 
@@ -80,6 +81,18 @@ const activeTabName = ref('');
             () => {
               if (videoItem) {
                 addToShelf(videoItem);
+              }
+            }
+          "
+        />
+        <van-icon
+          name="down"
+          size="22"
+          class="van-haptics-feedback p-2"
+          @click="
+            () => {
+              if (playingResource && playingEpisode) {
+                onDownload?.(playingResource, playingEpisode);
               }
             }
           "

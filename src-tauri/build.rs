@@ -18,6 +18,19 @@ fn main() {
             .plugin(
                 "websocket-plugin",
                 tauri_build::InlinedPlugin::new().commands(&["connect", "send"]),
+            )
+            .plugin(
+                "download-manager",
+                tauri_build::InlinedPlugin::new().commands(&[
+                    "get_tasks",
+                    "add_task",
+                    "append_collection_chunk",
+                    "download_remote_chunk",
+                    "finalize_collection_download",
+                    "pause_task",
+                    "resume_task",
+                    "remove_task",
+                ]),
             ),
     )
     .expect("failed to run tauri-build");

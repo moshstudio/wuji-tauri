@@ -3,6 +3,7 @@ use tauri::Manager;
 mod fetch_plugin;
 mod proxy_plugin;
 mod websocket_plugin;
+mod download_manager;
 use log::LevelFilter;
 use tauri_plugin_log::{Target, TargetKind};
 
@@ -37,6 +38,7 @@ pub fn run() {
             Ok(())
         })
         .plugin(tauri_plugin_mywebview::init())
+        .plugin(download_manager::init())
         .plugin(tauri_plugin_commands::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_mediasession::init())

@@ -62,6 +62,8 @@ tauri-plugin-fs = "2"
 tauri-plugin-opener = "2.5.0"
 futures-util = "0.3"
 tokio-tungstenite = { version = "0.27", features = ["rustls-tls-webpki-roots"] }
+strum = "0.26"
+strum_macros = "0.26"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2"

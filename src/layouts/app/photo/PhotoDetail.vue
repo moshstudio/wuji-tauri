@@ -14,6 +14,7 @@ const props = withDefaults(
     toPage: (pageNo?: number) => void;
     toShelf: (item: PhotoItem) => void;
     savePic: (url: string, headers?: Record<string, string>) => void;
+    onDownload?: () => void;
   }>(),
   { pageNo: 1 },
 );
@@ -37,6 +38,24 @@ watch(bubbleOffset, (offset) => {
   }
 });
 
+const showNavbarOptions = ref(false);
+const navbarActions = computed(() => [
+  {
+    name: '收藏',
+    callback: () => {
+      if (props.photoItem) {
+        props.toShelf(props.photoItem);
+      }
+    },
+  },
+  {
+    name: '下载全集',
+    callback: () => {
+      props.onDownload?.();
+    },
+  },
+]);
+
 const showClickImageOptions = ref(false);
 const clickedItem = ref<string>();
 watch(
@@ -49,17 +68,11 @@ watch(
 
 <template>
   <div class="relative flex h-full flex-col overflow-hidden">
-    <MNavBar
-      :title="photoItem?.title || '图片详情'"
-      right-text="收藏"
-      :click-right="
-        () => {
-          if (photoItem) {
-            toShelf(photoItem);
-          }
-        }
-      "
-    />
+    <MNavBar :title="photoItem?.title || '图片详情'">
+      <template #right>
+        <van-icon name="ellipsis" size="20" @click="showNavbarOptions = true" />
+      </template>
+    </MNavBar>
 
     <main
       v-remember-scroll
@@ -108,10 +121,15 @@ watch(
     </main>
   </div>
   <MoreOptionsSheet
+    v-model="showNavbarOptions"
+    :actions="navbarActions"
+    @select="showNavbarOptions = false"
+  />
+  <MoreOptionsSheet
     v-model="showClickImageOptions"
     :actions="[
       {
-        name: '保存图片',
+        name: '保存到相册',
         color: '#1989fa',
         callback: async () => {
           if (!clickedItem) return;

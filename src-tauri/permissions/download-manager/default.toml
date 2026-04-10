@@ -1,0 +1,28 @@
+[default]
+description = "Default permissions for the download manager plugin"
+permissions = [
+    "allow-get-tasks",
+    "allow-add-task",
+    "allow-append-collection-chunk",
+    "allow-download-remote-chunk",
+    "allow-finalize-collection-download",
+    "allow-pause-task",
+    "allow-resume-task",
+    "allow-remove-task",
+    "allow-get-download-dir",
+    "allow-set-download-dir",
+]
+
+[[permission]]
+identifier = "allow-get-download-dir"
+description = "Allows getting the current download directory"
+commands.allow = ["get_download_dir"]
+
+[[permission]]
+identifier = "allow-set-download-dir"
+description = "Allows setting the current download directory"
+commands.allow = ["set_download_dir"]
+
+[allow]
+http = ['http://*']
+https = ['https://*']

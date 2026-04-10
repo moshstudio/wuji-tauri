@@ -9,6 +9,13 @@ const serverStore = useServerStore();
 
 const options = [
   {
+    text: '下载管理',
+    color: '#1989fa',
+    onClick: () => {
+      router.push({ name: 'DownloadManager' });
+    },
+  },
+  {
     text: '管理订阅源',
     color: '#1989fa',
     onClick: () => {

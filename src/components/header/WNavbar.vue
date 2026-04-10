@@ -28,11 +28,11 @@ withDefaults(
     <template v-if="$slots.title" #title>
       <slot name="title" />
     </template>
-    <template v-if="$slots.left" #right>
-      <slot name="right" />
-    </template>
-    <template v-if="$slots.right" #left>
+    <template v-if="$slots.left" #left>
       <slot name="left" />
+    </template>
+    <template v-if="$slots.right" #right>
+      <slot name="right" />
     </template>
   </MNavBar>
 </template>

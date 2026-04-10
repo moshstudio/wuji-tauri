@@ -16,3 +16,4 @@ export * from './subscribeSourceStore';
 export * from './ttsStore';
 export * from './utils';
 export * from './videoShelfStore';
+export * from './downloadStore';

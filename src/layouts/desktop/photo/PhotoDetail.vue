@@ -1,8 +1,29 @@
 <script setup lang="ts">
 import type { PhotoDetail, PhotoItem } from '@wuji-tauri/source-extension';
 import { LoadImage } from '@wuji-tauri/components/src';
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import WNavbar from '@/components/header/WNavbar.vue';
+
+const showClickImageOptions = ref(false);
+const clickedItem = ref<string>();
+
+const showNavbarOptions = ref(false);
+const navbarActions = computed(() => [
+  {
+    name: '收藏',
+    callback: () => {
+      if (props.photoItem) {
+        props.toShelf(props.photoItem);
+      }
+    },
+  },
+  {
+    name: '下载全集',
+    callback: () => {
+      props.onDownload?.();
+    },
+  },
+]);
 
 const props = withDefaults(
   defineProps<{
@@ -13,6 +34,7 @@ const props = withDefaults(
     toPage: (pageNo?: number) => void;
     toShelf: (item: PhotoItem) => void;
     savePic: (url: string, headers?: Record<string, string>) => void;
+    onDownload?: () => void;
   }>(),
   { pageNo: 1 },
 );
@@ -34,17 +56,11 @@ watch(
 
 <template>
   <div class="relative flex h-full flex-col overflow-hidden">
-    <WNavbar
-      :title="photoItem?.title || '图片详情'"
-      right-text="收藏"
-      :click-right="
-        () => {
-          if (photoItem) {
-            toShelf(photoItem);
-          }
-        }
-      "
-    />
+    <WNavbar :title="photoItem?.title || '图片详情'">
+      <template #right>
+        <van-icon name="ellipsis" size="20" @click="showNavbarOptions = true" />
+      </template>
+    </WNavbar>
     <main
       v-if="photoItem && photoDetail"
       v-remember-scroll
@@ -61,6 +77,12 @@ watch(
           fit="contain"
           :lazy-load="true"
           :compress="false"
+          @click="
+            () => {
+              clickedItem = item;
+              showClickImageOptions = true;
+            }
+          "
         />
       </div>
     </main>
@@ -80,6 +102,29 @@ watch(
       />
     </van-row>
   </div>
+  <van-action-sheet
+    v-model:show="showNavbarOptions"
+    :actions="navbarActions"
+    cancel-text="取消"
+    teleport="body"
+    @select="showNavbarOptions = false"
+  />
+  <van-action-sheet
+    v-model:show="showClickImageOptions"
+    :actions="[
+      {
+        name: '保存到本地',
+        color: '#1989fa',
+        callback: async () => {
+          if (!clickedItem) return;
+          showClickImageOptions = false;
+          savePic(clickedItem, photoDetail?.photosHeaders || undefined);
+        },
+      },
+    ]"
+    cancel-text="取消"
+    teleport="body"
+  />
 </template>
 
 <style scoped lang="less"></style>

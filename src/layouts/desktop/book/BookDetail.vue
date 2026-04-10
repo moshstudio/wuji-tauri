@@ -10,6 +10,7 @@ withDefaults(
     inShelf: boolean;
     toChapter?: (book: BookItem, chapter: BookChapter) => void;
     addToShelf?: (book: BookItem) => void;
+    onDownload?: () => void;
   }>(),
   {},
 );
@@ -22,6 +23,7 @@ withDefaults(
     :in-shelf="inShelf"
     :to-chapter="toChapter"
     :add-to-shelf="addToShelf"
+    :on-download="onDownload"
   />
 </template>
 

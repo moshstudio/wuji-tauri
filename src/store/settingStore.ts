@@ -32,6 +32,9 @@ export const useSettingStore = defineStore('setting', () => {
     'close',
   );
 
+  // 下载保存路径
+  const downloadPath = useStorageAsync('downloadPath', '');
+
   // 初始化开机自启状态（仅 Windows）
   const isWindows = osType() === 'windows';
 
@@ -68,5 +71,6 @@ export const useSettingStore = defineStore('setting', () => {
     paginationPosition,
     enableAutostart,
     closeAction,
+    downloadPath,
   };
 });

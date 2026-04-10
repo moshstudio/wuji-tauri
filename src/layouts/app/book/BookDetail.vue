@@ -17,6 +17,7 @@ withDefaults(
     inShelf: boolean;
     toChapter?: (book: BookItem, chapter: BookChapter) => void;
     addToShelf?: (book: BookItem) => void;
+    onDownload?: () => void;
   }>(),
   {},
 );
@@ -84,23 +85,34 @@ const joinTags = (tags: string | string[] | undefined) =>
       <div v-if="book?.chapters" class="mt-4 w-full text-[--van-text-color]">
         <div class="flex w-full items-center justify-between">
           <p class="font-bold">共有{{ book.chapters.length }} 章</p>
-          <AddShelfButton
-            :is-added="inShelf"
-            add-text="加入书架"
-            added-text="已加书架"
-            :add-click="
-              () => {
-                if (book) {
-                  addToShelf?.(book);
+          <div class="flex items-center gap-2">
+            <van-button
+              icon="down"
+              size="small"
+              round
+              plain
+              @click="() => onDownload?.()"
+            >
+              下载
+            </van-button>
+            <AddShelfButton
+              :is-added="inShelf"
+              add-text="加入书架"
+              added-text="已加书架"
+              :add-click="
+                () => {
+                  if (book) {
+                    addToShelf?.(book);
+                  }
                 }
-              }
-            "
-            :added-click="
-              () => {
-                router.push({ name: 'BookShelf' });
-              }
-            "
-          />
+              "
+              :added-click="
+                () => {
+                  router.push({ name: 'BookShelf' });
+                }
+              "
+            />
+          </div>
         </div>
         <van-tabs shrink animated>
           <van-tab

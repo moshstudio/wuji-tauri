@@ -457,6 +457,17 @@ export function sanitizePathName(
   // 去除首尾空格和点（某些操作系统不允许文件夹以点开头或结尾）
   sanitizedName = sanitizedName.replace(/^[\s.]+|[\s.]+$/g, '');
 
+  // 检查 Windows 保留名称
+  const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+  if (reservedNames.test(sanitizedName)) {
+    sanitizedName = `_${sanitizedName}`;
+  }
+
+  // 如果清洗后为空，给一个默认名称
+  if (!sanitizedName) {
+    sanitizedName = 'unnamed_item';
+  }
+
   // 确保文件夹名称长度不超过最大长度限制
   if (sanitizedName.length > maxLength) {
     sanitizedName = sanitizedName.substring(0, maxLength);

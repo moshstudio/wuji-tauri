@@ -23,6 +23,7 @@ withDefaults(
     transformStyle: string;
     activeLyricColor: string;
     back: () => void;
+    onDownload?: () => void;
   }>(),
   {
     lyric: () => [
@@ -168,6 +169,14 @@ const actions = computed(() => {
                   name="like-o"
                   :size="20"
                   @click="() => shelfStore.addSongToShelf(playingSong)"
+                />
+              </div>
+              <div class="van-haptics-feedback">
+                <van-icon
+                  name="down"
+                  class="text-gray-200"
+                  :size="20"
+                  @click="() => onDownload?.()"
                 />
               </div>
               <div class="van-haptics-feedback">
