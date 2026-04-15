@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { ComicContent, ComicItem } from '@wuji-tauri/source-extension';
-import LoadImage from '@wuji-tauri/components/src/components/LoadImage.vue';
+import type { FormItem } from '@/store/sourceCreateStore';
+import { LoadImage } from '@wuji-tauri/components';
 import { ComicExtension } from '@wuji-tauri/source-extension';
 import { showDialog } from 'vant';
 import { ref } from 'vue';
 import COMIC_TEMPLATE from '@/components/codeEditor/templates/comicTemplate.txt?raw';
-import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
   content: FormItem<ComicItem>;
@@ -61,18 +61,15 @@ async function load() {
     '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
   )
-    .replace(
-      '// @METHOD_LIST',
-      findPage('list')!.code,
-    )
+    .replace('// @METHOD_LIST', findPage('list')!.code)
     .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
     .replace('// @METHOD_DETAIL', findPage('detail')!.code)
     .replace('// @METHOD_CONTENT', findPage('content')!.code);
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('ComicExtension', code);
-    const extensionclass = func(ComicExtension);
-    const cls = new extensionclass() as ComicExtension;
+    const ExtensionClass = func(ComicExtension);
+    const cls = new ExtensionClass() as ComicExtension;
     if (cls.baseUrl === undefined) {
       throw new Error('初始化中的baseUrl未定义!');
     }
@@ -88,7 +85,8 @@ async function load() {
     result.value = res;
     props.updateResult('comic', 'content', result.value, true);
     runStatus.value = RunStatus.success;
-  } catch (error) {
+  }
+  catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
     props.updateResult('comic', 'content', result.value, false);
@@ -96,7 +94,7 @@ async function load() {
 }
 
 function findPage(name: string) {
-  return props.content.pages.find((page) => page.type === name);
+  return props.content.pages.find(page => page.type === name);
 }
 
 defineExpose({
@@ -106,7 +104,9 @@ defineExpose({
 
 <template>
   <div>
-    <div v-if="runStatus === RunStatus.not_running">未运行</div>
+    <div v-if="runStatus === RunStatus.not_running">
+      未运行
+    </div>
     <div
       v-else-if="runStatus === RunStatus.running"
       class="flex items-center justify-center"

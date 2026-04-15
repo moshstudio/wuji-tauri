@@ -3,7 +3,6 @@ import { storeToRefs } from 'pinia';
 import { set_screen_orientation } from 'tauri-plugin-commands-api';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
 import { useDisplayStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
 
@@ -13,8 +12,8 @@ const displayStore = useDisplayStore();
 const activeKey = ref(0);
 const route = useRoute();
 
-const { photoPath, songPath, bookPath, comicPath, videoPath, tabBarPages } =
-  storeToRefs(displayStore);
+const { photoPath, songPath, bookPath, comicPath, videoPath, tabBarPages }
+  = storeToRefs(displayStore);
 const _pages = reactive({
   Photo: {
     name: 'Photo',
@@ -49,34 +48,38 @@ const _pages = reactive({
 });
 const pages = computed(() => {
   return tabBarPages.value
-    .filter((page) => page.enable && page.name !== 'Home')
-    .map((page) => _pages[page.name as keyof typeof _pages]);
+    .filter(page => page.enable && page.name !== 'Home')
+    .map(page => _pages[page.name as keyof typeof _pages]);
 });
 
 function updateActiveKey(newPath?: string) {
   newPath ||= route.path;
   displayStore.routerCurrPath = newPath;
   const pathName = route.name;
-  if (typeof pathName !== 'string') return;
+  if (typeof pathName !== 'string')
+    return;
   if (pathName !== 'BookRead' && pathName !== 'ComicRead') {
     displayStore.showTabBar = true;
   }
   if (pathName.startsWith('Photo')) {
     photoPath.value = newPath;
-    activeKey.value = pages.value.findIndex((page) => page.name === 'Photo');
-  } else if (pathName.startsWith('Song')) {
+    activeKey.value = pages.value.findIndex(page => page.name === 'Photo');
+  }
+  else if (pathName.startsWith('Song')) {
     songPath.value = newPath;
-    activeKey.value = pages.value.findIndex((page) => page.name === 'Song');
-  } else if (pathName.startsWith('Book')) {
+    activeKey.value = pages.value.findIndex(page => page.name === 'Song');
+  }
+  else if (pathName.startsWith('Book')) {
     bookPath.value = newPath;
-    activeKey.value = pages.value.findIndex((page) => page.name === 'Book');
-  } else if (pathName.startsWith('Comic')) {
+    activeKey.value = pages.value.findIndex(page => page.name === 'Book');
+  }
+  else if (pathName.startsWith('Comic')) {
     comicPath.value = newPath;
-    activeKey.value = pages.value.findIndex((page) => page.name === 'Comic');
-  } else if (pathName.startsWith('Video')) {
+    activeKey.value = pages.value.findIndex(page => page.name === 'Comic');
+  }
+  else if (pathName.startsWith('Video')) {
     videoPath.value = newPath;
-    activeKey.value = pages.value.findIndex((page) => page.name === 'Video');
-  } else {
+    activeKey.value = pages.value.findIndex(page => page.name === 'Video');
   }
 }
 
@@ -131,7 +134,7 @@ window.androidBackCallback = async () => {
         >
           <template #icon>
             <van-icon
-              v-if="activeKey == index"
+              v-if="activeKey === index"
               :name="page.selectedIcon"
               class="mtabbar-icon mtabbar-icon--active"
             />

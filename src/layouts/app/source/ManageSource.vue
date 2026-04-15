@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SubscribeItem, SubscribeSource } from '@/types';
 import { Icon } from '@iconify/vue';
-import { SubscribeSourceCard } from '@wuji-tauri/components/src';
+import { SubscribeSourceCard } from '@wuji-tauri/components';
 import { ref } from 'vue';
 import MNavBar from '@/components/header/MNavBar.vue';
 import { router } from '@/router';
@@ -36,7 +36,7 @@ function toggleGroup(id: string) {
 
 function getSourceStats(source: SubscribeSource) {
   const total = source.detail.urls.length;
-  const disabled = source.detail.urls.filter((item) => item.disable).length;
+  const disabled = source.detail.urls.filter(item => item.disable).length;
   return {
     total,
     disabled,

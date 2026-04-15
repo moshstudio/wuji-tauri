@@ -16,12 +16,12 @@ const subscribeStore = useSubscribeSourceStore();
 
 const subscribeSource = computed(() => {
   return subscribeStore.subscribeSources.find(
-    (item) => item.detail.id === props.sourceId,
+    item => item.detail.id === props.sourceId,
   );
 });
 const sourceContent = computed(() => {
   return subscribeSource.value?.detail.urls?.find(
-    (item) => item.id === props.sourceContentId,
+    item => item.id === props.sourceContentId,
   );
 });
 

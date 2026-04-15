@@ -3,14 +3,15 @@ import { useRoute } from 'vue-router';
 
 const route = useRoute();
 
-const shouldExclude = () => {
+function shouldExclude() {
   // 如果当前路由的 meta.keepAlive 为 false，则排除
   if (route.meta?.keepAlive === false) {
     return [route.name!.toString()];
-  } else {
+  }
+  else {
     return [];
   }
-};
+}
 </script>
 
 <template>

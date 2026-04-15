@@ -12,11 +12,11 @@ const form = reactive({
   password: '',
 });
 
-const get = async () => {
+async function get() {
   console.log('获取免费试用');
 
   await serverStore.taichiFreeTrail(form.username, form.password);
-};
+}
 </script>
 
 <template>
@@ -25,14 +25,14 @@ const get = async () => {
       <AppFreeTrail
         v-model:username="form.username"
         v-model:password="form.password"
-        :onGet="get"
+        :on-get="get"
       />
     </template>
     <template #desktop>
       <DesktopFreeTrail
         v-model:username="form.username"
         v-model:password="form.password"
-        :onGet="get"
+        :on-get="get"
       />
     </template>
   </PlatformSwitch>

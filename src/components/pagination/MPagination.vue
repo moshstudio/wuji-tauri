@@ -6,7 +6,7 @@ import { computed, ref } from 'vue';
 const props = withDefaults(
   defineProps<{
     pageNo?: number;
-    pageCount: number | string;
+    pageCount?: number | string;
     toPage: (page: number) => void;
     useGlass?: boolean;
   }>(),
@@ -51,15 +51,19 @@ function changePage(params: PickerConfirmEventParams) {
     :width="120"
     :height="40"
     :border-radius="6"
-    :glassTintColor="'#000000'"
-    :glassTintOpacity="20"
-    :innerShadowBlur="1"
+    glass-tint-color="#000000"
+    :glass-tint-opacity="20"
+    :inner-shadow-blur="1"
     class="select-none text-[var(--van-text-color)]"
-    :class="[useGlass ? 'use-glass' : 'bg-[var(--van-background)]/50 h-[40px] w-[120px]']"
+    :class="[
+      useGlass
+        ? 'use-glass'
+        : 'bg-[var(--van-background)]/50 h-[40px] w-[120px]',
+    ]"
   >
     <div class="flex h-full w-full items-center justify-around">
       <div
-        class="van-haptics-feedback pagination-btn z-[10] flex h-full w-full flex-1 items-center justify-center p-2 rounded-l-[6px]"
+        class="van-haptics-feedback pagination-btn z-[10] flex h-full w-full flex-1 items-center justify-center rounded-l-[6px] p-2"
         :class="{ disabled: pageNo <= 1 }"
         @click="
           () => {
@@ -83,7 +87,7 @@ function changePage(params: PickerConfirmEventParams) {
         {{ pageNo }}/{{ pageCount }}
       </div>
       <div
-        class="van-haptics-feedback pagination-btn z-[10] flex h-full w-full flex-1 items-center justify-center p-2 rounded-r-[6px]"
+        class="van-haptics-feedback pagination-btn z-[10] flex h-full w-full flex-1 items-center justify-center rounded-r-[6px] p-2"
         :class="{ disabled: pageNo >= Number(pageCount) }"
         @click="
           () => {

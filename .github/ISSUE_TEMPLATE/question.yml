@@ -1,7 +1,7 @@
 name: ❓ 问题咨询
 description: 提出使用相关的问题或寻求帮助
 title: '[Question]: '
-labels: ['question', '待回复']
+labels: [question, 待回复]
 assignees: []
 
 body:
@@ -40,7 +40,7 @@ body:
     attributes:
       label: 应用版本
       description: 你使用的应用版本号
-      placeholder: '例如：1.0.0'
+      placeholder: 例如：1.0.0
 
   - type: dropdown
     id: platform
@@ -57,7 +57,7 @@ body:
     attributes:
       label: 问题描述
       description: 详细描述你的问题
-      placeholder: '我想了解...'
+      placeholder: 我想了解...
     validations:
       required: true
 
@@ -66,14 +66,14 @@ body:
     attributes:
       label: 已尝试的解决方法
       description: 描述你已经尝试过的解决方法
-      placeholder: '我已经尝试过...'
+      placeholder: 我已经尝试过...
 
   - type: textarea
     id: screenshots
     attributes:
       label: 截图
       description: 如果有助于说明问题，请添加截图
-      placeholder: '拖拽图片到此处或粘贴链接'
+      placeholder: 拖拽图片到此处或粘贴链接
 
   - type: textarea
     id: additional-context

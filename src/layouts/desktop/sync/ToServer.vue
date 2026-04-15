@@ -1,16 +1,17 @@
 <script setup lang="ts">
+import type { SyncOption } from '@/types/sync';
 import AppToServer from '@/layouts/app/sync/ToServer.vue';
-import { SyncOption } from '@/types/sync';
-const syncOptions = defineModel<SyncOption[]>('syncOptions', {
-  required: true,
-});
+
 defineProps<{
   onSync: () => Promise<void>;
 }>();
+const syncOptions = defineModel<SyncOption[]>('syncOptions', {
+  required: true,
+});
 </script>
 
 <template>
-  <AppToServer v-bind:sync-options="syncOptions" :onSync="onSync" />
+  <AppToServer :sync-options="syncOptions" :on-sync="onSync" />
 </template>
 
 <style scoped lang="less"></style>

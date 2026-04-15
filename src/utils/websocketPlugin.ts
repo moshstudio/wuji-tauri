@@ -2,19 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-import { invoke, Channel } from '@tauri-apps/api/core';
+import { Channel, invoke } from '@tauri-apps/api/core';
 
 export interface ConnectionConfig {
   /**
    * Read buffer capacity. The default value is 128 KiB.
    */
   readBufferSize?: number;
-  /** The target minimum size of the write buffer to reach before writing the data to the underlying stream. The default value is 128 KiB.
+  /**
+   * The target minimum size of the write buffer to reach before writing the data to the underlying stream. The default value is 128 KiB.
    *
    * If set to 0 each message will be eagerly written to the underlying stream. It is often more optimal to allow them to buffer a little, hence the default value.
    */
   writeBufferSize?: number;
-  /** The max size of the write buffer in bytes. Setting this can provide backpressure in the case the write buffer is filling up due to write errors. The default value is unlimited.
+  /**
+   * The max size of the write buffer in bytes. Setting this can provide backpressure in the case the write buffer is filling up due to write errors. The default value is unlimited.
    *
    * Note: The write buffer only builds up past write_buffer_size when writes to the underlying stream are failing. So the write buffer can not fill up if you are not observing write errors.
    *
@@ -49,12 +51,12 @@ export interface CloseFrame {
   reason: string;
 }
 
-export type Message =
-  | MessageKind<'Text', string>
-  | MessageKind<'Binary', number[]>
-  | MessageKind<'Ping', number[]>
-  | MessageKind<'Pong', number[]>
-  | MessageKind<'Close', CloseFrame | null>;
+export type Message
+  = | MessageKind<'Text', string>
+    | MessageKind<'Binary', number[]>
+    | MessageKind<'Ping', number[]>
+    | MessageKind<'Pong', number[]>
+    | MessageKind<'Close', CloseFrame | null>;
 
 export default class WebSocket {
   id: number;
@@ -86,7 +88,7 @@ export default class WebSocket {
       url,
       onMessage,
       config,
-    }).then((id) => new WebSocket(id, listeners));
+    }).then(id => new WebSocket(id, listeners));
   }
 
   addListener(cb: (arg: Message) => void): () => void {
@@ -101,12 +103,15 @@ export default class WebSocket {
     let m: Message;
     if (typeof message === 'string') {
       m = { type: 'Text', data: message };
-    } else if (typeof message === 'object' && 'type' in message) {
+    }
+    else if (typeof message === 'object' && 'type' in message) {
       m = message;
-    } else if (Array.isArray(message)) {
+    }
+    else if (Array.isArray(message)) {
       m = { type: 'Binary', data: message };
-    } else {
-      throw new Error(
+    }
+    else {
+      throw new TypeError(
         'invalid `message` type, expected a `{ type: string, data: any }` object, a string or a numeric array',
       );
     }
@@ -125,6 +130,7 @@ export default class WebSocket {
           reason: 'Disconnected by client',
         },
       });
-    } catch (error) {}
+    }
+    catch (error) {}
   }
 }

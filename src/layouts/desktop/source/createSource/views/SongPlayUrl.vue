@@ -4,14 +4,13 @@ import type {
   SongList,
   SongUrlMap,
 } from '@wuji-tauri/source-extension';
-import { LoadImage } from '@wuji-tauri/components/src';
-import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
+import type { FormItem } from '@/store/sourceCreateStore';
+import { joinSongArtists, LoadImage } from '@wuji-tauri/components';
 import fetch from '@wuji-tauri/fetch';
 import { SongExtension } from '@wuji-tauri/source-extension';
 import { showDialog, showFailToast } from 'vant';
 import { nextTick, ref } from 'vue';
 import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
-import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
   content: FormItem<SongList>;
@@ -74,16 +73,13 @@ async function load(pageNo: number) {
     findPage('constructor')!.code,
   )
     .replace('// @METHOD_SONG_LIST', findPage('songList')!.code)
-    .replace(
-      '// @METHOD_SEARCH_SONG_LIST',
-      findPage('searchSongList')!.code,
-    )
+    .replace('// @METHOD_SEARCH_SONG_LIST', findPage('searchSongList')!.code)
     .replace('// @METHOD_PLAY_URL', findPage('playUrl')!.code);
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('SongExtension', code);
-    const extensionclass = func(SongExtension);
-    const cls = new extensionclass() as SongExtension;
+    const ExtensionClass = func(SongExtension);
+    const cls = new ExtensionClass() as SongExtension;
     if (cls.baseUrl === undefined) {
       throw new Error('初始化中的baseUrl未定义!');
     }
@@ -92,11 +88,13 @@ async function load(pageNo: number) {
     const bPage = findPage('searchSongList');
     if (!aPage?.result?.list.length) {
       item.value = bPage?.result?.list?.[0];
-    } else if (!bPage?.result?.list.length) {
+    }
+    else if (!bPage?.result?.list.length) {
       item.value = aPage?.result?.list?.[0];
-    } else {
-      item.value =
-        (aPage.ts || 0) > (bPage.ts || 0)
+    }
+    else {
+      item.value
+        = (aPage.ts || 0) > (bPage.ts || 0)
           ? aPage.result?.list?.[0]
           : bPage.result?.list?.[0];
     }
@@ -119,7 +117,8 @@ async function load(pageNo: number) {
         audioRef.value.src = await parseUrl(res);
       }
     });
-  } catch (error) {
+  }
+  catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
     props.updateResult('song', 'playUrl', result.value, false);
@@ -129,22 +128,24 @@ async function load(pageNo: number) {
 async function parseUrl(src: SongUrlMap | string): Promise<string> {
   if (typeof src === 'string') {
     return src;
-  } else {
-    const url =
-      src['128k'] || src['128'] || src['320k'] || src['320'] || src.flac || '';
+  }
+  else {
+    const url
+      = src['128k'] || src['128'] || src['320k'] || src['320'] || src.flac || '';
     if (src.headers) {
       const response = await fetch(url, {
         headers: src.headers,
       });
       return URL.createObjectURL(await response.blob());
-    } else {
+    }
+    else {
       return url;
     }
   }
 }
 
 function findPage(name: string) {
-  return props.content.pages.find((page) => page.type === name);
+  return props.content.pages.find(page => page.type === name);
 }
 
 defineExpose({
@@ -154,7 +155,9 @@ defineExpose({
 
 <template>
   <div>
-    <div v-if="runStatus === RunStatus.not_running">未运行</div>
+    <div v-if="runStatus === RunStatus.not_running">
+      未运行
+    </div>
     <div
       v-else-if="runStatus === RunStatus.running"
       class="flex items-center justify-center"

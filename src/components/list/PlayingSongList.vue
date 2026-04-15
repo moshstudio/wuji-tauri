@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SongInfo } from '@wuji-tauri/source-extension';
 import { Icon } from '@iconify/vue';
-import { MSongCard } from '@wuji-tauri/components/src';
+import { MSongCard } from '@wuji-tauri/components';
 import { SongPlayMode } from '@wuji-tauri/source-extension';
 import { nextTick, watch } from 'vue';
 import { useSongStore } from '@/store';
@@ -49,7 +49,9 @@ watch(
             @click="songStore.playMode = SongPlayMode.single"
           >
             <Icon icon="fluent-mdl2:repeat-all" width="14px" height="14px" />
-            <div class="text-xs text-[var(--van-text-color-2)]">列表循环</div>
+            <div class="text-xs text-[var(--van-text-color-2)]">
+              列表循环
+            </div>
           </div>
           <div
             v-else-if="songStore.playMode === SongPlayMode.single"
@@ -57,7 +59,9 @@ watch(
             @click="songStore.playMode = SongPlayMode.random"
           >
             <Icon icon="fluent-mdl2:repeat-one" width="14px" height="14px" />
-            <div class="text-xs text-[var(--van-text-color-2)]">单曲循环</div>
+            <div class="text-xs text-[var(--van-text-color-2)]">
+              单曲循环
+            </div>
           </div>
           <div
             v-else
@@ -69,7 +73,9 @@ watch(
               width="14px"
               height="14px"
             />
-            <div class="text-xs text-[var(--van-text-color-2)]">随机播放</div>
+            <div class="text-xs text-[var(--van-text-color-2)]">
+              随机播放
+            </div>
           </div>
         </div>
       </div>

@@ -1,9 +1,22 @@
 <script setup lang="ts">
 import type { PhotoDetail, PhotoItem } from '@wuji-tauri/source-extension';
-import { LoadImage } from '@wuji-tauri/components/src';
+import { LoadImage } from '@wuji-tauri/components';
 import { computed, ref, watch } from 'vue';
 import WNavbar from '@/components/header/WNavbar.vue';
 
+const props = withDefaults(
+  defineProps<{
+    photoItem?: PhotoItem;
+    photoDetail?: PhotoDetail;
+    pageNo?: number;
+    back: () => void;
+    toPage: (pageNo?: number) => void;
+    toShelf: (item: PhotoItem) => void;
+    savePic: (url: string, headers?: Record<string, string>) => void;
+    onDownload?: () => void;
+  }>(),
+  { pageNo: 1 },
+);
 const showClickImageOptions = ref(false);
 const clickedItem = ref<string>();
 
@@ -25,19 +38,6 @@ const navbarActions = computed(() => [
   },
 ]);
 
-const props = withDefaults(
-  defineProps<{
-    photoItem?: PhotoItem;
-    photoDetail?: PhotoDetail;
-    pageNo?: number;
-    back: () => void;
-    toPage: (pageNo?: number) => void;
-    toShelf: (item: PhotoItem) => void;
-    savePic: (url: string, headers?: Record<string, string>) => void;
-    onDownload?: () => void;
-  }>(),
-  { pageNo: 1 },
-);
 const pageNo = computed({
   get() {
     return props.pageNo;

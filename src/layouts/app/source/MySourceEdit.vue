@@ -9,7 +9,7 @@ import { Icon } from '@iconify/vue';
 import {
   MarketSourceContentCard,
   MoreOptionsSheet,
-} from '@wuji-tauri/components/src';
+} from '@wuji-tauri/components';
 import _ from 'lodash';
 import { showToast } from 'vant';
 import { computed, reactive, ref, watch } from 'vue';
@@ -78,12 +78,14 @@ watch(
 );
 
 const isModified = computed(() => {
-  if (!props.source) return false;
+  if (!props.source)
+    return false;
   return JSON.stringify(props.source) !== JSON.stringify(formData);
 });
 
 async function save() {
-  if (!props.source) return;
+  if (!props.source)
+    return;
   try {
     // 验证表单
     await formRef.value?.validate();
@@ -99,7 +101,8 @@ async function save() {
     };
 
     props.save(data);
-  } catch (error) {
+  }
+  catch (error) {
     showToast('请检查输入内容');
     return false;
   }
@@ -153,7 +156,7 @@ async function save() {
       <van-list v-if="source" class="p-2">
         <MarketSourceContentCard
           v-for="sourceContent in source.sourceContents"
-          :key="source._id"
+          :key="sourceContent._id"
           :source="source"
           :item="sourceContent"
           :on-click="() => clickSourceContent(source!, sourceContent)"

@@ -355,11 +355,13 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
     deep: true,
     serializer: {
       read: async (raw: string) => {
-        if (!raw) return undefined;
+        if (!raw)
+          return undefined;
         return JSON.parse(raw);
       },
       write: async (value: Form | undefined) => {
-        if (!value) return '';
+        if (!value)
+          return '';
         const cloneForm = _.cloneDeep(value);
         Object.values(cloneForm).forEach((item) => {
           item.pages.forEach((page) => {
@@ -389,7 +391,8 @@ export const useSourceCreateStore = defineStore('sourceCreateStore', () => {
         if (type in defaultForm) {
           page.chineseName = defaultForm[type as Type].chineseName;
           // CMS 模式下不重置 defaultCode（使用 CMS 的默认代码）
-          if (type === 'video' && page.mode === 'cms') return;
+          if (type === 'video' && page.mode === 'cms')
+            return;
           page.pages.forEach((p, index) => {
             p.defaultCode = defaultForm[type as Type].pages[index].defaultCode;
           });

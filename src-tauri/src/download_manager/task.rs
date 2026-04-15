@@ -6,11 +6,11 @@ use strum_macros::{Display, EnumString};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum TaskStatus {
-    Pending,     // 等待中
-    Downloading, // 下载中
-    Paused,      // 已暂停
+    Pending,       // 等待中
+    Downloading,   // 下载中
+    Paused,        // 已暂停
     Error(String), // 错误
-    Completed,   // 已完成
+    Completed,     // 已完成
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Display, EnumString)]
@@ -37,8 +37,10 @@ pub struct DownloadTask {
     pub downloaded_size: u64,
     pub total_chunks: u32,
     pub completed_chunks: HashSet<u32>,
+    pub chunk_progress: std::collections::HashMap<u32, f64>,
     pub created_at: u128,
     pub headers: std::collections::HashMap<String, String>,
+    pub extra: std::collections::HashMap<String, String>,
 }
 
 impl DownloadTask {
@@ -50,6 +52,7 @@ impl DownloadTask {
         save_path: PathBuf,
         category: Category,
         headers: std::collections::HashMap<String, String>,
+        extra: std::collections::HashMap<String, String>,
     ) -> Self {
         Self {
             id,
@@ -63,11 +66,13 @@ impl DownloadTask {
             downloaded_size: 0,
             total_chunks: 0,
             completed_chunks: HashSet::new(),
+            chunk_progress: std::collections::HashMap::new(),
             created_at: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_millis(),
             headers,
+            extra,
         }
     }
 }

@@ -51,12 +51,12 @@ export const permissionRules: {
 ];
 
 export function permissionText(source: MarketSource) {
-  return permissionRules.find((rule) =>
+  return permissionRules.find(rule =>
     _.isEqual(rule.permissions, source.permissions),
   )?.name;
 }
 export function permissionStyle(source: MarketSource) {
-  return permissionRules.find((rule) =>
+  return permissionRules.find(rule =>
     _.isEqual(rule.permissions, source.permissions),
   )?.style;
 }

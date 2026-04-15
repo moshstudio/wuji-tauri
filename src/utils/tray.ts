@@ -8,8 +8,8 @@ import ico from '@/assets/icon.ico';
 
 async function open() {
   const windows = await Window.getAll();
-  const window =
-    windows.find((window) => window.label === 'main') || windows[0];
+  const window
+    = windows.find(window => window.label === 'main') || windows[0];
   window?.show();
   window?.setFocus();
 }
@@ -48,7 +48,8 @@ export default async function buildTray() {
   if (trayId) {
     try {
       await TrayIcon.removeById(trayId);
-    } catch (error) {}
+    }
+    catch (error) {}
   }
   const tray = await TrayIcon.new(options);
   localStorage.setItem('trayId', tray.id);

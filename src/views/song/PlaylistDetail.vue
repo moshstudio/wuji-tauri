@@ -8,14 +8,14 @@ import type { SongSource } from '@/types';
 import {
   MoreOptionsSheet,
   SongSelectShelfSheet,
-} from '@wuji-tauri/components/src';
-import { showLoadingToast, showToast, showFailToast } from 'vant';
+} from '@wuji-tauri/components';
+import { showFailToast, showLoadingToast, showToast } from 'vant';
 import { onActivated, ref, watch } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+import { usePageDataLoader } from '@/hooks/usePageDataLoader';
 import AppPlaylistDetail from '@/layouts/app/song/PlaylistDetail.vue';
 import DesktopPlaylistDetail from '@/layouts/desktop/song/PlaylistDetail.vue';
-import { useSongShelfStore, useStore } from '@/store';
-import { usePageDataLoader } from '@/hooks/usePageDataLoader';
+import { useDownloadStore, useSongShelfStore, useStore } from '@/store';
 
 const { playlistId, sourceId } = defineProps({
   playlistId: String,
@@ -80,7 +80,8 @@ async function toPage(pageNo?: number) {
     );
     toast.close();
 
-    if (signal.aborted) return true;
+    if (signal.aborted)
+      return true;
 
     playlist.value = detail || undefined;
     currentPage.value = playlist.value?.list?.page || 1;
@@ -89,7 +90,6 @@ async function toPage(pageNo?: number) {
     return !!playlist.value;
   });
 }
-
 
 async function playAll() {
   if (!playlist.value) {
@@ -104,12 +104,21 @@ async function playAll() {
   await store.songPlaylistPlayAll(playlist.value);
   t.close();
 }
+
 function addToShelf() {
-  if (!playlist.value) return;
+  if (!playlist.value)
+    return;
   const res = shelfStore.addPlaylistToShelf(playlist.value);
   if (res) {
     showToast('收藏成功');
   }
+}
+
+async function downloadAll() {
+  if (!playlist.value || !songSource.value)
+    return;
+  const downloadStore = useDownloadStore();
+  await downloadStore.startMusicPlaylistDownload(playlist.value, songSource.value);
 }
 
 function songAddToShelf(song: SongInfo, shelf: SongShelf) {
@@ -146,6 +155,7 @@ onActivated(() => {
         :to-page="(_playlist, pageNo) => toPage(pageNo)"
         :play-all="playAll"
         :add-to-shelf="addToShelf"
+        :download-all="downloadAll"
       />
     </template>
     <template #desktop>
@@ -156,6 +166,7 @@ onActivated(() => {
         :to-page="(_playlist, pageNo) => toPage(pageNo)"
         :play-all="playAll"
         :add-to-shelf="addToShelf"
+        :download-all="downloadAll"
         :show-more-options="showMoreOptions"
       />
     </template>

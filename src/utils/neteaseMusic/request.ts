@@ -17,24 +17,28 @@ export enum OSType {
   iphone = 'iphone',
 }
 function toBoolean(val: any) {
-  if (typeof val === 'boolean') return val;
-  if (val === '') return val;
-  return val === 'true' || val == '1';
+  if (typeof val === 'boolean')
+    return val;
+  if (val === '')
+    return val;
+  return val === 'true' || val === '1';
 }
 function cookieObjToString(cookie: Record<string, string>) {
   return Object.keys(cookie)
     .map(
-      (key) => `${encodeURIComponent(key)}=${encodeURIComponent(cookie[key])}`,
+      key => `${encodeURIComponent(key)}=${encodeURIComponent(cookie[key])}`,
     )
     .join('; ');
 }
 function cookieToJson(cookie: string) {
-  if (!cookie) return {};
+  if (!cookie)
+    return {};
   const cookieArr = cookie.split(';');
   const obj: Record<string, string> = {};
   cookieArr.forEach((i) => {
     const arr = i.split('=');
-    if (arr.length == 2) obj[arr[0].trim()] = arr[1].trim();
+    if (arr.length === 2)
+      obj[arr[0].trim()] = arr[1].trim();
   });
   return obj;
 }
@@ -93,7 +97,7 @@ function chooseUserAgent(crypto: CryptoType, uaType = 'pc') {
     },
     linuxapi: {
       linux:
-        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML,开 Gecko) Chrome/60.0.3112.90 Safari/537.36',
     },
     api: {
       pc: 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Safari/537.36 Chrome/91.0.4472.164 NeteaseMusicDesktop/3.0.18.203152',
@@ -146,7 +150,6 @@ async function createRequest(
     }
     if (!cookie.MUSIC_U) {
       // 游客
-      cookie.MUSIC_A = cookie.MUSIC_A;
     }
     headers.set('Cookie', cookieObjToString(cookie));
   }
@@ -182,7 +185,7 @@ async function createRequest(
       url = `${APP_CONF.domain}/api/linux/forward`;
       break;
     case 'eapi':
-    case 'api':
+    case 'api': {
       // 两种加密方式，都应生成客户端的cookie
       const header = new Headers({
         osver: cookie.osver, // 系统版本
@@ -199,13 +202,15 @@ async function createRequest(
           .toString()
           .padStart(4, '0')}`,
       });
-      if (cookie.MUSIC_U) header.set('MUSIC_U', cookie.MUSIC_U);
-      if (cookie.MUSIC_A) header.set('MUSIC_A', cookie.MUSIC_A);
+      if (cookie.MUSIC_U)
+        header.set('MUSIC_U', cookie.MUSIC_U);
+      if (cookie.MUSIC_A)
+        header.set('MUSIC_A', cookie.MUSIC_A);
       headers.set(
         'Cookie',
         Array.from(header.keys())
           .map(
-            (key) =>
+            key =>
               `${encodeURIComponent(key)}=${encodeURIComponent(
                 header.get(key)!,
               )}`,
@@ -220,16 +225,17 @@ async function createRequest(
       if (crypto === 'eapi') {
         // 使用eapi加密
         data.header = Object.fromEntries(header.entries());
-        data.e_r =
-          options?.e_r != undefined
+        data.e_r
+          = options?.e_r !== undefined
             ? options.e_r
-            : data.e_r != undefined
+            : data.e_r !== undefined
               ? data.e_r
               : APP_CONF.encryptResponse.toString(); // 用于加密接口返回值
         // data.e_r = toBoolean(data.e_r);
         encryptData = encrypt.eapi(uri, data);
         url = `${APP_CONF.apiDomain}/eapi/${uri.substring(5)}`;
-      } else if (crypto === 'api') {
+      }
+      else if (crypto === 'api') {
         // 不使用任何加密
         url = APP_CONF.apiDomain + uri;
         encryptData = Object.fromEntries(
@@ -237,6 +243,7 @@ async function createRequest(
         );
       }
       break;
+    }
     default:
       // 未知的加密方式
       console.log('[ERR]', 'Unknown Crypto:', crypto);

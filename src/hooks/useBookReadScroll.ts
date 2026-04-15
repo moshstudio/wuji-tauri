@@ -1,9 +1,23 @@
-import { ref, computed, watch, nextTick, onMounted, onUnmounted, onBeforeUnmount, onActivated, onDeactivated } from 'vue';
-import type { BookChapter, BookItem, BookChapterList as ChapterList } from '@wuji-tauri/source-extension';
-import { useBookStore, useTTSStore, useBookShelfStore } from '@/store';
-import { router } from '@/router';
-import { useBookTTS } from '@/hooks/useBookTTS';
+import type {
+  BookChapter,
+  BookItem,
+  BookChapterList as ChapterList,
+} from '@wuji-tauri/source-extension';
 import _ from 'lodash';
+import {
+  computed,
+  nextTick,
+  onActivated,
+  onBeforeUnmount,
+  onDeactivated,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+} from 'vue';
+import { useBookTTS } from '@/hooks/useBookTTS';
+import { router } from '@/router';
+import { useBookShelfStore, useBookStore, useTTSStore } from '@/store';
 
 export interface LoadedChapter {
   chapter: BookChapter;
@@ -11,8 +25,12 @@ export interface LoadedChapter {
   paragraphs: string[];
 }
 
-export function buildParagraphs(title: string | undefined, content: string): string[] {
-  if (!content) return [];
+export function buildParagraphs(
+  title: string | undefined,
+  content: string,
+): string[] {
+  if (!content)
+    return [];
   let hasTitle = false;
   const pList = content
     .split(/\n|\r\n/)
@@ -24,7 +42,7 @@ export function buildParagraphs(title: string | undefined, content: string): str
       }
       return p.replace(/\s+/g, '');
     })
-    .filter((p) => p !== '');
+    .filter(p => p !== '');
 
   if (!hasTitle && title) {
     pList.unshift(title);
@@ -65,18 +83,20 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
 
   // ── 章节索引辅助 ──
   function getChapterIndex(chapter: BookChapter): number {
-    return options.chapterList()?.findIndex((c) => c.id === chapter.id) ?? -1;
+    return options.chapterList()?.findIndex(c => c.id === chapter.id) ?? -1;
   }
 
   function getNextChapterMeta(chapter: BookChapter): BookChapter | undefined {
     const idx = getChapterIndex(chapter);
-    if (idx < 0 || !options.chapterList()) return undefined;
+    if (idx < 0 || !options.chapterList())
+      return undefined;
     return options.chapterList()![idx + 1];
   }
 
   function getPrevChapterMeta(chapter: BookChapter): BookChapter | undefined {
     const idx = getChapterIndex(chapter);
-    if (idx <= 0 || !options.chapterList()) return undefined;
+    if (idx <= 0 || !options.chapterList())
+      return undefined;
     return options.chapterList()![idx - 1];
   }
 
@@ -86,7 +106,7 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
   const ttsChapter = computed(() => {
     // 优先使用听书活动章节，如果没设置则跟随当前活动的可见章节
     const id = ttsActiveChapterId.value || activeChapterId.value;
-    return loadedChapters.value.find((c) => c.chapter.id === id);
+    return loadedChapters.value.find(c => c.chapter.id === id);
   });
 
   const { currentPIndex, playTTS: originalPlayTTS } = useBookTTS({
@@ -94,10 +114,13 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
     chapterContent: () => ttsChapter.value?.content,
     chapterId: () => ttsChapter.value?.chapter.id,
     nextChapter: () => {
-      if (!ttsChapter.value) return;
+      if (!ttsChapter.value)
+        return;
       const nextMeta = getNextChapterMeta(ttsChapter.value.chapter);
       if (nextMeta) {
-        const isLoaded = loadedChapters.value.find((c) => c.chapter.id === nextMeta.id);
+        const isLoaded = loadedChapters.value.find(
+          c => c.chapter.id === nextMeta.id,
+        );
         if (isLoaded) {
           // 如果下一章已经加载了，直接切换追踪 ID，useBookTTS 会因为 chapterContent 变化而自动开始读新章
           ttsActiveChapterId.value = nextMeta.id;
@@ -108,6 +131,30 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
       options.nextChapter();
     },
   });
+
+  const getCurrentParagraphIndex = (chapterId: string): number => {
+    const container = scrollContainer.value;
+    if (!container)
+      return -1;
+    const chapterWrapper = container.querySelector(
+      `[data-chapter-id="${chapterId}"]`,
+    );
+    if (!chapterWrapper)
+      return -1;
+
+    const paragraphs = chapterWrapper.querySelectorAll('p');
+    const containerRect = container.getBoundingClientRect();
+    if (containerRect.height === 0 || containerRect.width === 0)
+      return -1;
+
+    for (let i = 0; i < paragraphs.length; i++) {
+      const p = paragraphs[i];
+      const rect = p.getBoundingClientRect();
+      if (rect.bottom > containerRect.top)
+        return i;
+    }
+    return 0;
+  };
 
   const playTTS = () => {
     if (!ttsActiveChapterId.value && activeChapterId.value) {
@@ -125,7 +172,9 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
     if (ttsStore.isReading) {
       const chId = ttsActiveChapterId.value || activeChapterId.value;
       // 使用属性选择器以安全处理包含特殊字符（如 / 或 .）的章节 ID
-      const el = document.querySelector(`[data-chapter-id="${chId}"] [data-p-index="${newIndex}"]`);
+      const el = document.querySelector(
+        `[data-chapter-id="${chId}"] [data-p-index="${newIndex}"]`,
+      );
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
@@ -143,33 +192,20 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
   );
 
   const activeChapterTitle = computed(() => {
-    const lc = loadedChapters.value.find((c) => c.chapter.id === activeChapterId.value);
+    const lc = loadedChapters.value.find(
+      c => c.chapter.id === activeChapterId.value,
+    );
     return lc?.chapter.title || options.chapter()?.title;
   });
 
-  const getCurrentParagraphIndex = (chapterId: string): number => {
-    const container = scrollContainer.value;
-    if (!container) return -1;
-    const chapterWrapper = container.querySelector(`[data-chapter-id="${chapterId}"]`);
-    if (!chapterWrapper) return -1;
-
-    const paragraphs = chapterWrapper.querySelectorAll('p');
-    const containerRect = container.getBoundingClientRect();
-    if (containerRect.height === 0 || containerRect.width === 0) return -1;
-
-    for (let i = 0; i < paragraphs.length; i++) {
-      const p = paragraphs[i];
-      const rect = p.getBoundingClientRect();
-      if (rect.bottom > containerRect.top) return i;
-    }
-    return 0;
-  };
-
   const forceSaveProgress = () => {
-    if (isRecovering.value) return;
+    if (isRecovering.value)
+      return;
     const currentBook = options.book();
     if (activeChapterId.value && currentBook) {
-      const chapter = options.chapterList()?.find((c) => c.id === activeChapterId.value);
+      const chapter = options
+        .chapterList()
+        ?.find(c => c.id === activeChapterId.value);
       if (chapter) {
         const pIndex = getCurrentParagraphIndex(activeChapterId.value);
         if (pIndex !== -1) {
@@ -189,7 +225,7 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
       router.replace({
         params: {
           ...router.currentRoute.value.params,
-          chapterId: chapterId,
+          chapterId,
         },
       });
       forceSaveProgress();
@@ -198,7 +234,8 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
 
   const updateActiveChapter = () => {
     const container = scrollContainer.value;
-    if (!container) return;
+    if (!container)
+      return;
     const containerRect = container.getBoundingClientRect();
     const wrappers = container.querySelectorAll('.chapter-wrapper');
     const targetY = containerRect.top + containerRect.height * 0.3;
@@ -206,11 +243,16 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
     // 听书状态下的特殊逻辑：优先跟随听书进度
     if (ttsStore.isReading && ttsActiveChapterId.value) {
       const ttsId = ttsActiveChapterId.value;
-      const ttsEl = container.querySelector(`[data-chapter-id="${ttsId}"]`) as HTMLElement;
+      const ttsEl = container.querySelector(
+        `[data-chapter-id="${ttsId}"]`,
+      ) as HTMLElement;
       if (ttsEl) {
         const rect = ttsEl.getBoundingClientRect();
         // 只要听书章节在视口内可见，就将其设为活动章节，防止与滚动同步逻辑产生冲突（打架）
-        if (rect.bottom > containerRect.top && rect.top < containerRect.bottom) {
+        if (
+          rect.bottom > containerRect.top
+          && rect.top < containerRect.bottom
+        ) {
           if (ttsId !== activeChapterId.value) {
             activeChapterId.value = ttsId;
             syncRouteToActiveChapter(ttsId);
@@ -236,9 +278,11 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
 
   // ── 加载逻辑 ──
   async function loadNextChapter() {
-    if (isLoadingNext.value || noMoreNext.value) return;
+    if (isLoadingNext.value || noMoreNext.value)
+      return;
     const last = loadedChapters.value[loadedChapters.value.length - 1];
-    if (!last) return;
+    if (!last)
+      return;
     const nextCh = getNextChapterMeta(last.chapter);
     if (!nextCh) {
       noMoreNext.value = true;
@@ -253,13 +297,16 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
         content,
         paragraphs: buildParagraphs(nextCh.title, content),
       });
-      if (!getNextChapterMeta(nextCh)) noMoreNext.value = true;
+      if (!getNextChapterMeta(nextCh))
+        noMoreNext.value = true;
 
       await nextTick();
 
       // 智能修剪：确保不修剪掉当前正在阅读的章节
       if (loadedChapters.value.length > MAX_LOADED_CHAPTERS) {
-        const activeIdx = loadedChapters.value.findIndex(c => c.chapter.id === activeChapterId.value);
+        const activeIdx = loadedChapters.value.findIndex(
+          c => c.chapter.id === activeChapterId.value,
+        );
         const scrollEl = scrollContainer.value;
 
         if (activeIdx < MAX_LOADED_CHAPTERS / 2) {
@@ -268,7 +315,8 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
             loadedChapters.value.pop();
             noMoreNext.value = false;
           }
-        } else if (scrollEl) {
+        }
+        else if (scrollEl) {
           // 从头部修剪，并补偿滚动位置
           const prevScrollHeight = scrollEl.scrollHeight;
           let trimmed = false;
@@ -280,19 +328,22 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
           if (trimmed) {
             await nextTick();
             const newScrollHeight = scrollEl.scrollHeight;
-            scrollEl.scrollTop -= (prevScrollHeight - newScrollHeight);
+            scrollEl.scrollTop -= prevScrollHeight - newScrollHeight;
           }
         }
       }
-    } finally {
+    }
+    finally {
       isLoadingNext.value = false;
     }
   }
 
   async function loadPrevChapter() {
-    if (isLoadingPrev.value || noMorePrev.value) return;
+    if (isLoadingPrev.value || noMorePrev.value)
+      return;
     const first = loadedChapters.value[0];
-    if (!first) return;
+    if (!first)
+      return;
     const prevCh = getPrevChapterMeta(first.chapter);
     if (!prevCh) {
       noMorePrev.value = true;
@@ -311,7 +362,8 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
         paragraphs: buildParagraphs(prevCh.title, content),
       });
 
-      if (!getPrevChapterMeta(prevCh)) noMorePrev.value = true;
+      if (!getPrevChapterMeta(prevCh))
+        noMorePrev.value = true;
 
       // 补偿 scrollTop，在补偿完成前锁定避免 updateActiveChapter 误判
       isRecovering.value = true;
@@ -327,15 +379,20 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
       if (loadedChapters.value.length > MAX_LOADED_CHAPTERS) {
         // 确保 activeChapterId 所在的章节不被修剪
         while (loadedChapters.value.length > MAX_LOADED_CHAPTERS) {
-          if (loadedChapters.value[loadedChapters.value.length - 1].chapter.id !== activeChapterId.value) {
+          if (
+            loadedChapters.value[loadedChapters.value.length - 1].chapter.id
+            !== activeChapterId.value
+          ) {
             loadedChapters.value.pop();
             noMoreNext.value = false;
-          } else {
+          }
+          else {
             break;
           }
         }
       }
-    } finally {
+    }
+    finally {
       isLoadingPrev.value = false;
     }
   }
@@ -345,13 +402,18 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
     [options.chapter, options.chapterContent],
     ([ch, content]) => {
       if (ch && content !== undefined && content !== null) {
-        if (ch.id === lastInternalChapterId) return;
+        if (ch.id === lastInternalChapterId)
+          return;
 
         // 如果目标章节已经在已加载列表中，说明只是正常的滚动同步，不需要销毁缓冲区重置
-        const isAlreadyLoaded = loadedChapters.value.some(lc => lc.chapter.id === ch.id);
-        const needReset = !isAlreadyLoaded || 
-                         loadedChapters.value.length === 0 || 
-                         (loadedChapters.value.length === 1 && loadedChapters.value[0].content !== content);
+        const isAlreadyLoaded = loadedChapters.value.some(
+          lc => lc.chapter.id === ch.id,
+        );
+        const needReset
+          = !isAlreadyLoaded
+            || loadedChapters.value.length === 0
+            || (loadedChapters.value.length === 1
+              && loadedChapters.value[0].content !== content);
 
         if (needReset) {
           forceSaveProgress();
@@ -368,8 +430,10 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
           noMorePrev.value = false;
 
           const idx = getChapterIndex(ch);
-          if (idx === 0) noMorePrev.value = true;
-          if (idx === (options.chapterList()?.length ?? 1) - 1) noMoreNext.value = true;
+          if (idx === 0)
+            noMorePrev.value = true;
+          if (idx === (options.chapterList()?.length ?? 1) - 1)
+            noMoreNext.value = true;
 
           isRecovering.value = true;
           nextTick(() => {
@@ -386,7 +450,8 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
                     return;
                   }
                   scrollContainer.value.scrollTop = p.offsetTop;
-                } else {
+                }
+                else {
                   scrollContainer.value.scrollTop = 0;
                 }
               }
@@ -402,22 +467,27 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
 
   function onScroll() {
     const el = scrollContainer.value;
-    if (!el || isRecovering.value || isLoadingNext.value || isLoadingPrev.value) return;
+    if (!el || isRecovering.value || isLoadingNext.value || isLoadingPrev.value)
+      return;
 
     // 先更新活跃章节和保存进度，再决定是否加载更多
     updateActiveChapter();
     debouncedSaveProgress();
 
     const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    if (distanceToBottom < 500) loadNextChapter();
-    if (el.scrollTop < 50) loadPrevChapter();
+    if (distanceToBottom < 500)
+      loadNextChapter();
+    if (el.scrollTop < 50)
+      loadPrevChapter();
   }
 
   // ── 生命周期 ──
   let savedScrollTop = 0; // keep-alive 场景下保存滚动位置
 
   onMounted(() => {
-    scrollContainer.value?.addEventListener('scroll', onScroll, { passive: true });
+    scrollContainer.value?.addEventListener('scroll', onScroll, {
+      passive: true,
+    });
     // 如果已经正在听书，尝试从 ttsStore 恢复追踪的章节 ID，以确保模式切换后进度依然锁定
     if (ttsStore.isReading && ttsStore.scrollReadingContent?.chapterId) {
       ttsActiveChapterId.value = ttsStore.scrollReadingContent.chapterId;
@@ -460,7 +530,8 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
       paddingBottom: `${bookStore.paddingBottom}px`,
       color: bookStore.currTheme.color || '#333',
       backgroundColor: bookStore.currTheme.bgColor || '#fff',
-      backgroundImage: bookStore.currTheme.bgGradient || bookStore.currTheme.bgImage || '',
+      backgroundImage:
+        bookStore.currTheme.bgGradient || bookStore.currTheme.bgImage || '',
       backgroundRepeat: bookStore.currTheme.bgRepeat || 'repeat',
       backgroundSize: bookStore.currTheme.bgSize || 'auto',
       backgroundAttachment: bookStore.currTheme.bgAttachment,

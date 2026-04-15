@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { ComicItem } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
+import type { ComicHistory } from '@/types/comic';
 import { storeToRefs } from 'pinia';
+import { showConfirmDialog, showLoadingToast, showToast } from 'vant';
 import { ref, triggerRef } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppComicList from '@/layouts/app/comic/ComicList.vue';
@@ -9,8 +11,6 @@ import DesktopComicList from '@/layouts/desktop/comic/ComicList.vue';
 import { router } from '@/router';
 import { useComicShelfStore, useDisplayStore, useStore } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
-import { ComicHistory } from '@/types/comic';
-import { showConfirmDialog, showLoadingToast, showToast } from 'vant';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -25,7 +25,8 @@ const recommend = createCancellableFunction(
     await Promise.all(
       comicSources.value.map(async (source) => {
         if (!source.list || force) {
-          if (signal.aborted) return;
+          if (signal.aborted)
+            return;
           await store.comicRecommendList(source);
         }
       }),
@@ -39,10 +40,12 @@ const search = createCancellableFunction(async (signal: AbortSignal) => {
   if (!keyword) {
     await recommend(true);
     triggerRef(comicSources);
-  } else {
+  }
+  else {
     await Promise.all(
       comicSources.value.map(async (comicSources) => {
-        if (signal.aborted) return;
+        if (signal.aborted)
+          return;
         await store.comicSearch(comicSources, keyword, 1);
       }),
     );
@@ -59,7 +62,8 @@ const toPage = createCancellableFunction(
   ) => {
     if (!searchValue.value) {
       await store.comicRecommendList(source, pageNo, type);
-    } else {
+    }
+    else {
       await store.comicSearch(source, searchValue.value, pageNo);
     }
   },

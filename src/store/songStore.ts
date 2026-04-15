@@ -1,27 +1,32 @@
 import type { PluginListener } from '@tauri-apps/api/core';
-
-import type { SongExtension, SongInfo } from '@wuji-tauri/source-extension';
-import { useStorageAsync } from '@vueuse/core';
-import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
+import type {
+  PlaylistInfo,
+  SongExtension,
+  SongInfo,
+} from '@wuji-tauri/source-extension';
+import type { SongSource } from '@/types';
+import { debounceFilter, useStorageAsync } from '@vueuse/core';
+import { joinSongArtists } from '@wuji-tauri/components';
 import { fetch } from '@wuji-tauri/fetch';
 import { SongPlayMode } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
 import { defineStore } from 'pinia';
 import * as androidMedia from 'tauri-plugin-mediasession-api';
-import { showFailToast, showToast } from 'vant';
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { showFailToast, showLoadingToast, showToast } from 'vant';
+import { onMounted, onUnmounted, ref, triggerRef, watch } from 'vue';
 import { setInterval, setTimeout } from 'worker-timers';
 import { songUrlToString } from '@/utils';
 import { getSongCover } from '@/utils/songCover';
 import { useDisplayStore } from './displayStore';
+import { useExtensionStore } from './extensionStore';
 import { useSongCacheStore } from './songCacheStore';
-import { useStore } from './store';
-
-import { tauriAddPluginListener } from './utils';
+import { createKVStore, tauriAddPluginListener } from './utils';
 
 export const useSongStore = defineStore('song', () => {
   const displayStore = useDisplayStore();
   const songCacheStore = useSongCacheStore();
+  const extensionStore = useExtensionStore();
+  const kvStorage = createKVStore();
 
   const audioRef = ref<HTMLAudioElement>();
   const volumeVisible = ref<boolean>(false); // 设置音量弹窗
@@ -56,27 +61,43 @@ export const useSongStore = defineStore('song', () => {
     },
   ); // 当前播放
 
+  const songSources = useStorageAsync<SongSource[]>(
+    'songSources',
+    [],
+    kvStorage.storage,
+    {
+      eventFilter: debounceFilter(1000),
+    },
+  );
+
   const now = ref(Date.now());
 
   // 每秒更新时间戳
   onMounted(() => {
-    const timer = setInterval(() => {
+    setInterval(() => {
       now.value = Date.now();
     }, 1000);
   });
 
+  const getSongSource = (sourceId: string): SongSource | undefined => {
+    return songSources.value.find(source => source.item.id === sourceId);
+  };
+
   const switchSongSource = async function* (
     song: SongInfo,
   ): AsyncIterableIterator<SongInfo> {
-    const store = useStore();
-    for (const source of store.songSources) {
+    for (const source of songSources.value) {
       const songName = song.name;
-      if (!songName) continue;
+      if (!songName)
+        continue;
       const singer = joinSongArtists(song.artists);
       try {
-        const sc = (await store.sourceClass(source.item)) as SongExtension;
+        const sc = (await extensionStore.getSourceClass(
+          source.item,
+        )) as SongExtension;
         const songList = await sc?.execSearchSongs(songName);
-        if (!songList) continue;
+        if (!songList)
+          continue;
         for (const s of songList.list) {
           if (s.name === songName && joinSongArtists(s.artists) === singer) {
             // 当前歌曲满足条件
@@ -84,7 +105,8 @@ export const useSongStore = defineStore('song', () => {
             break;
           }
         }
-      } catch (error) {
+      }
+      catch (error) {
         console.warn('switchSongSource', error);
       }
     }
@@ -92,12 +114,16 @@ export const useSongStore = defineStore('song', () => {
 
   const getSongPlayUrl = async (
     song: SongInfo,
-    switchSource?: boolean,
+    options?: {
+      switchSource?: boolean;
+      silent?: boolean;
+    },
   ): Promise<string | undefined> => {
+    let { switchSource, silent } = options || {};
     if (switchSource === undefined) {
       switchSource = displayStore.songAutoSwitchSource;
     }
-    const cached_url = await songCacheStore.getSong(song);
+    const cached_url = !silent ? await songCacheStore.getSong(song) : undefined;
     if (cached_url) {
       console.log(`${song.name}返回缓存的播放地址${cached_url}`);
       return cached_url;
@@ -105,39 +131,51 @@ export const useSongStore = defineStore('song', () => {
     let src = null;
     let headers = null;
     let t: string | null = null;
-    t = displayStore.showToast();
+    if (!silent) {
+      t = displayStore.showToast();
+    }
     if (!song.playUrl) {
-      const store = useStore();
-      const source = store.getSongSource(song.sourceId);
-      // if (!source) {
-      //   showToast(`${song.name} 所属源不存在或未启用`);
-      //   return;
-      // }
+      const source = getSongSource(song.sourceId);
       if (source) {
-        const sc = (await store.sourceClass(source.item)) as SongExtension;
+        const sc = (await extensionStore.getSourceClass(
+          source.item,
+        )) as SongExtension;
         const newUrl = await sc?.execGetSongUrl(song);
         if (typeof newUrl === 'string') {
           src = newUrl;
-        } else if (newUrl instanceof Object) {
-          src =
-            newUrl['128k'] ||
-            newUrl['128'] ||
-            newUrl['320k'] ||
-            newUrl['320'] ||
-            newUrl.flac ||
-            '';
+        }
+        else if (newUrl instanceof Object) {
+          src
+            = newUrl['128k']
+              || newUrl['128']
+              || newUrl['320k']
+              || newUrl['320']
+              || newUrl.flac
+              || '';
           headers = newUrl.headers || null;
+          if (headers) {
+            song.playHeaders = headers;
+          }
           if (newUrl.lyric) {
             song.lyric = newUrl.lyric;
           }
         }
       }
-    } else {
+    }
+    else {
       if (typeof song.playUrl === 'string') {
         src = song.playUrl;
-      } else if (song.playUrl instanceof Object) {
+      }
+      else if (song.playUrl instanceof Object) {
         src = songUrlToString(song.playUrl);
         headers = song.playUrl.headers || null;
+        if (headers) {
+          song.playHeaders = headers;
+        }
+      }
+
+      if (src && src.startsWith('blob:') && silent) {
+        src = null;
       }
     }
     if (!src) {
@@ -145,14 +183,15 @@ export const useSongStore = defineStore('song', () => {
       if (switchSource) {
         let newSrc: string | undefined;
         for await (const s of switchSongSource(song)) {
-          if (song.id != playingSong.value.id) {
+          if (song.id !== playingSong.value.id) {
             // 切换了歌曲
             return;
           }
           console.log(`${song.name} 使用其他源播放地址`, JSON.stringify(s));
-          newSrc = await getSongPlayUrl(s, false);
+          newSrc = await getSongPlayUrl(s, { switchSource: false, silent });
 
           if (newSrc) {
+            src = newSrc;
             await songCacheStore.replaceSongSrc(song, s);
             break;
           }
@@ -160,21 +199,29 @@ export const useSongStore = defineStore('song', () => {
       }
     }
     try {
-      if (src) {
+      if (src && !silent) {
         await songCacheStore.saveSongv2(song, src, {
           headers: headers || undefined,
           verify: false,
         });
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.warn(`saveSongv2`, error);
     }
-    if (t) displayStore.closeToast(t);
+    if (t)
+      displayStore.closeToast(t);
+
+    if (silent) {
+      console.log(`${song.name}返回远程地址${src}`);
+      return src || undefined;
+    }
 
     const ret = await songCacheStore.getSong(song);
     console.log(`${song.name}返回播放地址${ret}`);
     return ret;
   };
+
   abstract class BaseHelper {
     constructor() {
       audioRef.value = new Audio();
@@ -191,7 +238,8 @@ export const useSongStore = defineStore('song', () => {
 
     onMounted() {
       onMounted(() => {
-        if (!audioRef.value) return;
+        if (!audioRef.value)
+          return;
         audioRef.value.volume = audioVolume.value;
 
         audioRef.value.addEventListener('play', () => {
@@ -212,7 +260,8 @@ export const useSongStore = defineStore('song', () => {
         audioRef.value.addEventListener('ended', () => {
           if (playMode.value === SongPlayMode.single) {
             this.onPlay();
-          } else {
+          }
+          else {
             this.nextSong();
           }
         });
@@ -225,7 +274,8 @@ export const useSongStore = defineStore('song', () => {
         (__) => {
           if (playMode.value === SongPlayMode.random) {
             playingPlaylist.value = _.shuffle([...playlist.value]);
-          } else {
+          }
+          else {
             playingPlaylist.value = [...playlist.value];
           }
         },
@@ -236,7 +286,8 @@ export const useSongStore = defineStore('song', () => {
       watch(
         audioVolume,
         (newValue) => {
-          if (!audioRef.value) return;
+          if (!audioRef.value)
+            return;
           audioRef.value.volume = newValue;
         },
         {
@@ -250,14 +301,14 @@ export const useSongStore = defineStore('song', () => {
         playlist.value = list;
         if (playMode.value === SongPlayMode.random) {
           playingPlaylist.value = _.shuffle(list);
-        } else {
+        }
+        else {
           playingPlaylist.value = [...list];
         }
       }
 
       if (firstSong.id !== playingSong.value?.id) {
         if (audioRef.value) {
-          // audioRef.value.pause();
           audioRef.value.removeAttribute('src');
           audioRef.value.srcObject = null;
           audioRef.value.currentTime = 0;
@@ -271,7 +322,8 @@ export const useSongStore = defineStore('song', () => {
     }
 
     async onPlay() {
-      if (!audioRef.value) return;
+      if (!audioRef.value)
+        return;
       if (!playingSong.value.picUrl) {
         // 获取封面
         await getSongCover(playingSong.value);
@@ -286,21 +338,21 @@ export const useSongStore = defineStore('song', () => {
         isPlaying.value = false;
         const song = _.cloneDeep(playingSong.value);
         const url = await getSongPlayUrl(song);
-        if (song.id != playingSong.value.id) {
+        if (song.id !== playingSong.value.id) {
           // 切换了歌曲
           return;
         }
         if (!url) {
           showToast(`歌曲 ${song.name} 无法播放`);
           return;
-        } else {
+        }
+        else {
           audioRef.value.src = url;
           const song = playingSong.value;
           if (!song.lyric) {
-            const store = useStore();
-            const source = store.getSongSource(song.sourceId);
+            const source = getSongSource(song.sourceId);
             if (source) {
-              const sc = (await store.sourceClass(
+              const sc = (await extensionStore.getSourceClass(
                 source?.item,
               )) as SongExtension;
               sc?.execGetLyric(song).then((lyric) => {
@@ -314,48 +366,57 @@ export const useSongStore = defineStore('song', () => {
     }
 
     async onPause(): Promise<void> {
-      if (!audioRef.value) return;
+      if (!audioRef.value)
+        return;
       audioRef.value.pause();
     }
 
     async prevSong(): Promise<void> {
-      if (!playingPlaylist.value) return;
+      if (!playingPlaylist.value)
+        return;
       const index = playingPlaylist.value.findIndex(
-        (item) => item.id === playingSong.value?.id,
+        item => item.id === playingSong.value?.id,
       );
-      if (index === -1) return;
+      if (index === -1)
+        return;
       let prevIndex;
       if (index === 0) {
         prevIndex = playingPlaylist.value.length - 1;
-      } else {
+      }
+      else {
         prevIndex = index - 1;
       }
       await this.setPlaylist(playlist.value, playingPlaylist.value[prevIndex]);
     }
 
     async nextSong(): Promise<void> {
-      if (!playingPlaylist.value) return;
+      if (!playingPlaylist.value)
+        return;
       const index = playingPlaylist.value.findIndex(
-        (item) => item.id === playingSong.value?.id,
+        item => item.id === playingSong.value?.id,
       );
-      if (index === -1) return;
+      if (index === -1)
+        return;
       let nextIndex;
       if (index + 1 === playingPlaylist.value.length) {
         nextIndex = 0;
-      } else {
+      }
+      else {
         nextIndex = index + 1;
       }
       await this.setPlaylist(playlist.value, playingPlaylist.value[nextIndex]);
     }
 
     onSetVolume(value: number): Promise<void> | void {
-      if (!audioRef.value) return;
+      if (!audioRef.value)
+        return;
       audioRef.value.volume = value;
       audioVolume.value = value;
     }
 
     seek(value: number): Promise<void> | void {
-      if (!audioRef.value) return;
+      if (!audioRef.value)
+        return;
       audioRef.value.currentTime = value;
     }
   }
@@ -419,7 +480,6 @@ export const useSongStore = defineStore('song', () => {
             const b64: string = await new Promise((resolve, reject) => {
               const reader = new FileReader();
               reader.onloadend = () => {
-                // reader.result 是一个包含 Base64 编码的字符串
                 const base64String = reader.result as string;
                 resolve(base64String);
               };
@@ -430,30 +490,29 @@ export const useSongStore = defineStore('song', () => {
               src: b64,
               type: 'image/png',
             });
-          } else {
+          }
+          else {
             artwork.push({
               src: song.picUrl,
             });
           }
         }
         const metaData = new MediaMetadata({
-          // 媒体标题
           title: song.name,
-          // 媒体类型
           artist: joinSongArtists(song.artists),
-          // 媒体封面
           artwork,
         });
-        // 设置媒体元数据
         navigator.mediaSession.metadata = metaData;
         if (playbackState) {
           navigator.mediaSession.playbackState = playbackState;
         }
-      } catch (error) {
+      }
+      catch (error) {
         console.warn('setMediaSession', error);
       }
     };
   }
+
   class AndroidSongHelper extends BaseHelper {
     constructor() {
       super();
@@ -473,7 +532,6 @@ export const useSongStore = defineStore('song', () => {
           this.androidPlugins.push(listener);
         });
 
-        ////
         tauriAddPluginListener(
           'mediasession',
           'seekto',
@@ -535,7 +593,6 @@ export const useSongStore = defineStore('song', () => {
 
         setTimeout(() => {
           if (playingSong.value) {
-            // android播放初始化
             androidMedia.setMetedata({
               title: playingSong.value.name || '未知歌曲',
               artist: joinSongArtists(playingSong.value.artists),
@@ -544,7 +601,8 @@ export const useSongStore = defineStore('song', () => {
             });
           }
         }, 1000);
-        if (!audioRef.value) return;
+        if (!audioRef.value)
+          return;
         audioRef.value.addEventListener('play', () => {
           androidMedia.setPlaybackState({
             state: 'playing',
@@ -555,12 +613,6 @@ export const useSongStore = defineStore('song', () => {
             state: 'paused',
           });
         });
-        // audioRef.value.addEventListener('loadedmetadata', () => {
-        //   console.log('update duration', audioRef.value!.duration);
-        //   androidMedia.update_duration({
-        //     duration: Math.ceil(audioRef.value!.duration * 1000),
-        //   });
-        // });
         audioRef.value.addEventListener('durationchange', () => {
           androidMedia.setPositionState({
             duration: audioRef.value!.duration,
@@ -569,8 +621,8 @@ export const useSongStore = defineStore('song', () => {
         });
         audioRef.value.addEventListener('timeupdate', () => {
           if (
-            Math.ceil(audioCurrent.value) !==
-            Math.ceil(audioRef.value!.currentTime)
+            Math.ceil(audioCurrent.value)
+            !== Math.ceil(audioRef.value!.currentTime)
           ) {
             androidMedia.setPositionState({
               duration: audioRef.value!.duration,
@@ -600,16 +652,6 @@ export const useSongStore = defineStore('song', () => {
           immediate: true,
         },
       );
-      // watch(
-      //   audioVolume,
-      //   (newValue) => {
-      //     if (!audioRef.value) return;
-      //     audioRef.value.volume = newValue;
-      //   },
-      //   {
-      //     immediate: true,
-      //   },
-      // );
     }
 
     async setPlaylist(list: SongInfo[], firstSong: SongInfo): Promise<void> {
@@ -630,7 +672,6 @@ export const useSongStore = defineStore('song', () => {
 
       await super.onPlay();
       if (playingSong.value) {
-        // 重新设置下封面
         await androidMedia.setMetedata({
           title: playingSong.value.name || '未知歌曲',
           artist: joinSongArtists(playingSong.value.artists),
@@ -644,12 +685,158 @@ export const useSongStore = defineStore('song', () => {
   let helper: BaseHelper;
   if (displayStore.isAndroid) {
     helper = new AndroidSongHelper();
-  } else {
+  }
+  else {
     helper = new WinSongHelper();
   }
 
   helper.onMounted();
   helper.watch();
+
+  const songRecommendPlayist = async (
+    source: SongSource,
+    pageNo: number = 1,
+  ) => {
+    const sc = (await extensionStore.getSourceClass(
+      source.item,
+    )) as SongExtension;
+    const res = await sc?.execGetRecommendPlaylists(pageNo);
+    if (res) {
+      source.playlist = res;
+    }
+    else {
+      source.playlist = undefined;
+    }
+    triggerRef(songSources);
+  };
+
+  const songPlaylistDetail = async (
+    source: SongSource,
+    item: PlaylistInfo,
+    pageNo: number = 1,
+    options?: { silent?: boolean },
+  ) => {
+    const { silent } = options || {};
+    let toast: any;
+    if (!silent) {
+      toast = showLoadingToast({
+        message: '加载中',
+        duration: 0,
+        closeOnClick: true,
+        closeOnClickOverlay: false,
+      });
+    }
+
+    const sc = (await extensionStore.getSourceClass(
+      source.item,
+    )) as SongExtension;
+    const res = await sc?.execGetPlaylistDetail(item, pageNo);
+    toast?.close();
+    if (res) {
+      return res;
+    }
+    else {
+      if (!silent)
+        showFailToast(`${source.item.name} 获取内容失败`);
+      return null;
+    }
+  };
+
+  const songPlaylistPlayAll = async (item: PlaylistInfo) => {
+    const source = getSongSource(item.sourceId);
+    if (!source) {
+      showFailToast(`获取内容失败`);
+      return;
+    }
+    const songs: SongInfo[] = [];
+    let pageNo = 1;
+    while (true) {
+      const sc = (await extensionStore.getSourceClass(
+        source.item,
+      )) as SongExtension;
+      const res = await sc?.execGetPlaylistDetail(
+        _.cloneDeep(item), // 不修改原对象
+        pageNo,
+      );
+
+      if (res && res.list?.list) {
+        songs.push(...res.list.list);
+        pageNo += 1;
+        const totalPage = res.totalPage || res.list.totalPage;
+        if (!totalPage || pageNo > totalPage) {
+          break;
+        }
+      }
+      else {
+        break;
+      }
+    }
+    if (!songs) {
+      showFailToast(`内容为空`);
+    }
+    else {
+      await helper.setPlaylist(songs, songs[0]);
+    }
+  };
+
+  const songRecommendSong = async (source: SongSource, pageNo: number = 1) => {
+    const sc = (await extensionStore.getSourceClass(
+      source.item,
+    )) as SongExtension;
+    const res = await sc?.execGetRecommendSongs(pageNo);
+    if (res) {
+      source.songList = res;
+    }
+    else {
+      source.songList = undefined;
+    }
+    triggerRef(songSources);
+  };
+
+  const songSearchSong = async (
+    source: SongSource,
+    keyword: string,
+    pageNo: number = 1,
+  ) => {
+    const sc = (await extensionStore.getSourceClass(
+      source.item,
+    )) as SongExtension;
+    const res = await sc?.execSearchSongs(keyword, pageNo);
+    if (res) {
+      source.songList = res;
+    }
+    else {
+      source.songList = undefined;
+    }
+    triggerRef(songSources);
+  };
+
+  const songSearchPlaylist = async (
+    source: SongSource,
+    keyword: string,
+    pageNo: number = 1,
+  ) => {
+    const sc = (await extensionStore.getSourceClass(
+      source.item,
+    )) as SongExtension;
+    const res = await sc?.execSearchPlaylists(keyword, pageNo);
+    if (res) {
+      source.playlist = res;
+    }
+    else {
+      source.playlist = undefined;
+    }
+    triggerRef(songSources);
+  };
+
+  const getPlaylistInfo = (
+    source: SongSource,
+    playlistId: string,
+  ): PlaylistInfo | undefined => {
+    return source.playlist?.list.find(
+      (item: PlaylistInfo) => item.id === playlistId,
+    );
+  };
 
   return {
     volumeVisible,
@@ -669,5 +856,15 @@ export const useSongStore = defineStore('song', () => {
     onSetVolume: helper.onSetVolume,
     setPlayingList: helper.setPlaylist,
     seek: helper.seek,
+    songSources,
+    songRecommendPlayist,
+    songPlaylistDetail,
+    songPlaylistPlayAll,
+    songRecommendSong,
+    songSearchSong,
+    songSearchPlaylist,
+    getPlaylistInfo,
+    getSongSource,
+    getSongPlayUrl,
   };
 });

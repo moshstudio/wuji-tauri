@@ -5,9 +5,11 @@ import type {
   MarketSourcePermission,
   PagedMarketSource,
 } from '@wuji-tauri/source-extension';
+import type { SyncTypes } from '@/types/sync';
 import type { MembershipPlan } from '@/types/user';
+import process from 'node:process';
 import * as os from '@tauri-apps/plugin-os';
-import { useNow, useStorageAsync } from '@vueuse/core';
+import { useStorageAsync } from '@vueuse/core';
 import { fetch } from '@wuji-tauri/fetch';
 import { plainToClass } from 'class-transformer';
 import { defineStore } from 'pinia';
@@ -21,19 +23,16 @@ import {
   showNotify,
   showSuccessToast,
 } from 'vant';
-import { computed, onMounted, ref, triggerRef, watch } from 'vue';
+import { computed, onMounted, ref, triggerRef } from 'vue';
+import { router } from '@/router';
 import { isMembershipOrderValid, UserInfo } from '@/types/user';
+import { sleep } from '@/utils';
 import { getDeviceId } from '@/utils/device';
 import { createKVStore, useDisplayStore } from '.';
-import { router } from '@/router';
-import { SyncTypes } from '@/types/sync';
-import { sleep } from '@/utils';
 
 let API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
-// let API_BASE_URL = 'http://127.0.0.1:3000/v1/api/';
 
 if (process.env.NODE_ENV !== 'development') {
-  // 防止忘了改
   API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
 }
 
@@ -42,17 +41,6 @@ export const useServerStore = defineStore('serverStore', () => {
   const storage = kvStorage.storage;
 
   const now = ref(Date.now());
-
-  // 每秒更新时间戳
-  onMounted(() => {
-    const timer = setInterval(() => {
-      now.value = Date.now();
-      // 每5分钟执行一次
-      if (now.value % 300 === 0) {
-        fetchUserInfo();
-      }
-    }, 1000);
-  });
 
   const accessToken = useStorageAsync<string | undefined>(
     'accessToken',
@@ -65,33 +53,19 @@ export const useServerStore = defineStore('serverStore', () => {
     {
       serializer: {
         read: async (raw: string) => {
-          if (!raw) return undefined;
+          if (!raw)
+            return undefined;
           return JSON.parse(raw);
         },
         write: async (value: UserInfo | undefined) => {
-          if (!value) return '';
+          if (!value)
+            return '';
           return JSON.stringify(value);
         },
       },
     },
   );
-  const marketSource = ref<PagedMarketSource>();
-  const myMarketSources = ref<MarketSource[]>([]);
-  const membershipPlans = ref<MembershipPlan[]>();
-  const isVip = computed(() => {
-    return isMembershipOrderValid(userInfo.value?.vipMembershipPlan, now.value);
-  });
-  const isSuperVip = computed(() => {
-    return isMembershipOrderValid(
-      userInfo.value?.superVipMembershipPlan,
-      now.value,
-    );
-  });
-  const isVipOrSuperVip = computed(() => {
-    return isVip.value || isSuperVip.value;
-  });
 
-  // 请求方法
   const _request = async (
     endpoint: string,
     options: RequestInit & ClientOptions = {},
@@ -123,49 +97,12 @@ export const useServerStore = defineStore('serverStore', () => {
       }
 
       return response;
-    } catch (error) {
+    }
+    catch (error) {
       return Response.error();
     }
   };
 
-  // 函数重载签名
-  async function sendRequest<T>(
-    endpoint: string,
-    options: RequestInit & ClientOptions,
-    successHandler: (response: Response) => Promise<T>,
-  ): Promise<T | undefined>;
-
-  async function sendRequest<T>(
-    endpoint: string,
-    options: RequestInit & ClientOptions,
-    successHandler: (response: Response) => Promise<T>,
-    errorHandler: (response?: Response, error?: Error) => Promise<T>,
-  ): Promise<T>;
-
-  // 函数实现
-  async function sendRequest<T>(
-    endpoint: string,
-    options: RequestInit & ClientOptions = {},
-    successHandler: (response: Response) => Promise<T>,
-    errorHandler?: (
-      response?: Response,
-      error?: Error,
-    ) => Promise<T | undefined>,
-  ): Promise<T | undefined> {
-    const response = await _request(endpoint, options);
-    if (response.ok) {
-      return await successHandler(response);
-    } else {
-      handleError(response);
-      if (errorHandler) {
-        return await errorHandler(response);
-      } else {
-        return undefined;
-      }
-    }
-  }
-
-  // 处理错误消息
   const handleError = (response: Response) => {
     if (response.status === 500) {
       showDialog({
@@ -173,7 +110,8 @@ export const useServerStore = defineStore('serverStore', () => {
         message: '服务器发生错误，请稍后再试。',
         showCancelButton: false,
       });
-    } else {
+    }
+    else {
       response.text().then(async (data) => {
         console.warn('server handle error', data);
 
@@ -193,7 +131,8 @@ export const useServerStore = defineStore('serverStore', () => {
             message: String(json.message),
             showCancelButton: false,
           });
-        } catch (error) {
+        }
+        catch (error) {
           showDialog({
             title: '错误',
             message: data,
@@ -204,27 +143,104 @@ export const useServerStore = defineStore('serverStore', () => {
     }
   };
 
+  async function sendRequest<T>(
+    endpoint: string,
+    options: RequestInit & ClientOptions,
+    successHandler: (response: Response) => Promise<T>,
+  ): Promise<T | undefined>;
+
+  async function sendRequest<T>(
+    endpoint: string,
+    options: RequestInit & ClientOptions,
+    successHandler: (response: Response) => Promise<T>,
+    errorHandler: (response?: Response, error?: Error) => Promise<T>,
+  ): Promise<T>;
+
+  async function sendRequest<T>(
+    endpoint: string,
+    options: RequestInit & ClientOptions = {},
+    successHandler: (response: Response) => Promise<T>,
+    errorHandler?: (
+      response?: Response,
+      error?: Error,
+    ) => Promise<T | undefined>,
+  ): Promise<T | undefined> {
+    const response = await _request(endpoint, options);
+    if (response.ok) {
+      return await successHandler(response);
+    }
+    else {
+      handleError(response);
+      if (errorHandler) {
+        return await errorHandler(response);
+      }
+      else {
+        return undefined;
+      }
+    }
+  }
+
+  const fetchUserInfo = async (): Promise<void> => {
+    if (!accessToken.value)
+      return;
+    return await sendRequest<void>(
+      'user/info',
+      {},
+      async (response) => {
+        const json = await response.json();
+        userInfo.value = plainToClass(UserInfo, json);
+        console.log('用户信息:', userInfo.value);
+      },
+      async () => {
+        showFailToast('获取用户信息失败');
+      },
+    );
+  };
+
+  onMounted(() => {
+    setInterval(() => {
+      now.value = Date.now();
+      if (now.value % 300 === 0) {
+        fetchUserInfo();
+      }
+    }, 1000);
+  });
+
+  const marketSource = ref<PagedMarketSource>();
+  const myMarketSources = ref<MarketSource[]>([]);
+  const membershipPlans = ref<MembershipPlan[]>();
+  const isVip = computed(() => {
+    return isMembershipOrderValid(userInfo.value?.vipMembershipPlan, now.value);
+  });
+  const isSuperVip = computed(() => {
+    return isMembershipOrderValid(
+      userInfo.value?.superVipMembershipPlan,
+      now.value,
+    );
+  });
+  const isVipOrSuperVip = computed(() => {
+    return isVip.value || isSuperVip.value;
+  });
+
   const getDeviceInfo = async () => {
     const family = os.family();
     const osType = os.type();
     const arch = os.arch();
-
     const deviceId = await getDeviceId();
-
     const userAgent = navigator.userAgent;
     let browser = 'Unknown';
-
-    // 简单的浏览器检测
     if (userAgent.includes('Firefox')) {
       browser = 'Firefox';
-    } else if (userAgent.includes('Edg')) {
+    }
+    else if (userAgent.includes('Edg')) {
       browser = 'Edg';
-    } else if (userAgent.includes('Chrome')) {
+    }
+    else if (userAgent.includes('Chrome')) {
       browser = 'Chrome';
-    } else if (userAgent.includes('Safari')) {
+    }
+    else if (userAgent.includes('Safari')) {
       browser = 'Safari';
     }
-
     return {
       deviceId,
       deviceType: osType,
@@ -244,8 +260,8 @@ export const useServerStore = defineStore('serverStore', () => {
       return false;
     }
     if (
-      !validator.matches(password, /(?=.*\d)(?=.*[a-z])(?=.*[A-Z])/) ||
-      password.length < 6
+      !validator.matches(password, /(?=.*\d)(?=.*[a-z])(?=.*[A-Z])/)
+      || password.length < 6
     ) {
       showFailToast('密码必须包含大小写字母和数字, 且长度不小于6位');
       return false;
@@ -275,22 +291,19 @@ export const useServerStore = defineStore('serverStore', () => {
     );
   };
 
-  // 登录
   const login = async (email: string, password: string): Promise<boolean> => {
     if (!validator.isEmail(email)) {
       showFailToast('邮箱格式错误');
       return false;
     }
     if (
-      !validator.matches(password, /(?=.*\d)(?=.*[a-z])(?=.*[A-Z])/) ||
-      password.length < 6
+      !validator.matches(password, /(?=.*\d)(?=.*[a-z])(?=.*[A-Z])/)
+      || password.length < 6
     ) {
       showFailToast('密码必须包含大小写字母和数字, 且长度不小于6位');
       return false;
     }
-
     const deviceInfo = await getDeviceInfo();
-
     return await sendRequest<boolean>(
       'auth/login',
       {
@@ -308,6 +321,7 @@ export const useServerStore = defineStore('serverStore', () => {
       },
     );
   };
+
   const forgetPasswordEmail = async (email: string): Promise<boolean> => {
     if (!validator.isEmail(email)) {
       showFailToast('邮箱格式错误');
@@ -365,42 +379,22 @@ export const useServerStore = defineStore('serverStore', () => {
     );
   };
 
-  // 获取用户信息
-  const fetchUserInfo = async (): Promise<void> => {
-    if (!accessToken.value) return;
-    return await sendRequest<void>(
-      'user/info',
-      {},
-      async (response) => {
-        const json = await response.json();
-        userInfo.value = plainToClass(UserInfo, json);
-        console.log('用户信息:', userInfo.value);
-      },
-      async () => {
-        showFailToast('获取用户信息失败');
-      },
-    );
-  };
-
-  // 更新
   const updateUserInfo = async (info: {
     name?: string;
     photo?: string;
     phone?: string;
   }): Promise<void> => {
-    if (!accessToken.value) return;
+    if (!accessToken.value)
+      return;
     return await sendRequest<void>(
       'user/update',
       {
         method: 'POST',
         body: JSON.stringify(info),
       },
-      async (response) => {
+      async () => {
         await sleep(200);
         fetchUserInfo();
-        // const json = await response.json();
-        // userInfo.value = plainToClass(UserInfo, json);
-        // console.log('用户信息:', userInfo.value);
       },
       async () => {
         showFailToast('更新用户信息失败');
@@ -572,7 +566,6 @@ export const useServerStore = defineStore('serverStore', () => {
   };
 
   const updateMarketSourceContent = async (
-    source: MarketSource,
     content: MarketSourceContent,
   ): Promise<MarketSourceContent | undefined> => {
     return await sendRequest<MarketSourceContent>(
@@ -591,10 +584,8 @@ export const useServerStore = defineStore('serverStore', () => {
       },
     );
   };
-  const deleteMarketSourceContent = async (
-    source: MarketSource,
-    content: MarketSourceContent,
-  ) => {
+
+  const deleteMarketSourceContent = async (content: MarketSourceContent) => {
     return await sendRequest(
       `source-content` + `/${content._id}`,
       {
@@ -654,15 +645,14 @@ export const useServerStore = defineStore('serverStore', () => {
       return;
     }
     if (
-      !isMembershipOrderValid(userInfo.value.superVipMembershipPlan) &&
-      !isMembershipOrderValid(userInfo.value.vipMembershipPlan)
+      !isMembershipOrderValid(userInfo.value.superVipMembershipPlan)
+      && !isMembershipOrderValid(userInfo.value.vipMembershipPlan)
     ) {
       showDialog({
         message: '数据同步为会员功能\n请先开通会员',
       }).then(() => {
         router.push({ name: 'VipDetail' });
       });
-
       return;
     }
     showDialog({
@@ -672,7 +662,7 @@ export const useServerStore = defineStore('serverStore', () => {
       showConfirmButton: false,
     });
     return await sendRequest<boolean>(
-      'sync/upload?incremental=' + isIncremental,
+      `sync/upload?incremental=${isIncremental}`,
       {
         method: 'POST',
         body: JSON.stringify(data),
@@ -689,14 +679,15 @@ export const useServerStore = defineStore('serverStore', () => {
       },
     );
   };
+
   const syncFromServer = async (data: SyncTypes[]) => {
     if (!userInfo.value?.email) {
       showFailToast('请先登录');
       return;
     }
     if (
-      !isMembershipOrderValid(userInfo.value.superVipMembershipPlan) &&
-      !isMembershipOrderValid(userInfo.value.vipMembershipPlan)
+      !isMembershipOrderValid(userInfo.value.superVipMembershipPlan)
+      && !isMembershipOrderValid(userInfo.value.vipMembershipPlan)
     ) {
       showDialog({
         title: '提示',
@@ -713,7 +704,7 @@ export const useServerStore = defineStore('serverStore', () => {
       showConfirmButton: false,
     });
     return await sendRequest(
-      'sync/download?types=' + data.join(','),
+      `sync/download?types=${data.join(',')}`,
       {},
       async (response) => {
         closeDialog();
@@ -769,7 +760,6 @@ export const useServerStore = defineStore('serverStore', () => {
     );
   };
 
-  // 登出
   const logout = (): void => {
     accessToken.value = undefined;
     userInfo.value = null;
@@ -780,47 +770,33 @@ export const useServerStore = defineStore('serverStore', () => {
     userInfo.value = null;
     marketSource.value = undefined;
     myMarketSources.value = [];
-    membershipPlans.value = [];
-    await storage.clear();
   };
 
-  watch(
-    userInfo,
-    async () => {
-      if (userInfo.value) {
-        await fetchUserInfo();
-      }
-    },
-    { once: true },
-  );
-
   return {
+    now,
     accessToken,
     userInfo,
     marketSource,
-    myMarketSources,
-    membershipPlans,
     isVip,
     isSuperVip,
     isVipOrSuperVip,
-
-    sendRequest,
-    getDeviceInfo,
+    myMarketSources,
+    membershipPlans,
+    fetchUserInfo,
     updateUserInfo,
+    getDeviceInfo,
     registerEmail,
     login,
     forgetPasswordEmail,
     resendVerifyEmail,
-    logout,
-    fetchUserInfo,
     getMarketSource,
-    likeMarketSource,
     getMarketSourceById,
     getDefaultMarketSource,
     getMyMarketSources,
     createMarketSource,
-    deleteMarketSource,
+    likeMarketSource,
     updateMarketSource,
+    deleteMarketSource,
     addMarketSourceContent,
     getMarketSourceContent,
     updateMarketSourceContent,
@@ -831,6 +807,8 @@ export const useServerStore = defineStore('serverStore', () => {
     syncFromServer,
     checkTaichiFreeTrail,
     taichiFreeTrail,
+    logout,
     clear,
+    sendRequest,
   };
 });

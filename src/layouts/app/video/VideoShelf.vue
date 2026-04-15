@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MVideoShelfCard } from '@wuji-tauri/components/src';
+import { MVideoShelfCard } from '@wuji-tauri/components';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MNavBar from '@/components/header/MNavBar.vue';
 import { router } from '@/router';
@@ -76,10 +76,10 @@ const shelfStore = useVideoShelfStore();
       </van-button>
     </div>
     <van-tabs
+      v-model:active="activeIndex"
       shrink
       animated
       sticky
-      v-model:active="activeIndex"
       class="h-full w-full overflow-y-scroll"
     >
       <van-tab

@@ -9,19 +9,24 @@ import _ from 'lodash';
 import { showFailToast, showSuccessToast } from 'vant';
 import { computed, onActivated, ref, watch } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+import { usePageDataLoader } from '@/hooks/usePageDataLoader';
 import AppPhotoDetail from '@/layouts/app/photo/PhotoDetail.vue';
 import DesktopPhotoDetail from '@/layouts/desktop/photo/PhotoDetail.vue';
-import { useDisplayStore, usePhotoShelfStore, useStore, useDownloadStore } from '@/store';
+import {
+  useDisplayStore,
+  useDownloadStore,
+  usePhotoShelfStore,
+  useStore,
+} from '@/store';
 import { useBackStore } from '@/store/backStore';
 import { downloadFile } from '@/utils';
-import { usePageDataLoader } from '@/hooks/usePageDataLoader';
-
-const downloadStore = useDownloadStore();
 
 const { id, sourceId } = defineProps({
   id: String,
   sourceId: String,
 });
+
+const downloadStore = useDownloadStore();
 
 const store = useStore();
 const backStore = useBackStore();
@@ -106,7 +111,8 @@ async function toPage(pageNo?: number) {
       pageNo,
     );
 
-    if (signal.aborted) return true;
+    if (signal.aborted)
+      return true;
 
     photoDetail.value = detail || undefined;
     currentPage.value = detail?.page || 1;
@@ -122,7 +128,8 @@ function toShelf() {
   }
   if (shelfStore.photoShelf.length === 1) {
     addPhotoToShelf(shelfStore.photoShelf[0].id);
-  } else {
+  }
+  else {
     showSelectShelf.value = true;
   }
 }
@@ -144,7 +151,8 @@ async function savePic(url: string, headers?: Record<string, string>) {
   });
   if (!res) {
     showFailToast('保存失败');
-  } else {
+  }
+  else {
     showSuccessToast('已保存');
   }
 }
@@ -163,7 +171,6 @@ async function onDownload() {
       photoItem.value,
       photoSource.value,
     );
-    showSuccessToast('已加入下载任务');
   }
 }
 
@@ -175,7 +182,6 @@ async function onDownloadSingle(url: string, headers?: Record<string, string>) {
       url,
       headers,
     );
-    showSuccessToast('已加入下载任务');
   }
 }
 

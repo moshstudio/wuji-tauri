@@ -7,8 +7,8 @@ import { nanoid } from 'nanoid';
 import { defineStore } from 'pinia';
 
 import { showToast } from 'vant';
-import { createKVStore } from './utils';
 import { markRaw } from 'vue';
+import { createKVStore } from './utils';
 
 export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
   const kvStorage = createKVStore('photoShelfStore');
@@ -36,14 +36,16 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
     if (shelfId) {
       return (
         photoShelf.value
-          .find((item) => item.id === shelfId)
-          ?.photos.some((item) => item.id === itemId) || false
+          .find(item => item.id === shelfId)
+          ?.photos
+          .some(item => item.id === itemId) || false
       );
-    } else {
+    }
+    else {
       console.log(photoShelf.value);
 
       for (const shelf of photoShelf.value) {
-        if (shelf.photos.find((item) => item.id === itemId)) {
+        if (shelf.photos.find(item => item.id === itemId)) {
           return true;
         }
       }
@@ -52,17 +54,18 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
   };
   const addPhotoToShelf = (item: PhotoItem, shelfId?: string) => {
     const shelf = shelfId
-      ? photoShelf.value.find((item) => item.id === shelfId)
+      ? photoShelf.value.find(item => item.id === shelfId)
       : photoShelf.value[0];
     if (!shelf) {
       showToast('收藏夹不存在');
       return false;
     }
 
-    if (shelf.photos.find((i) => i.id === item.id)) {
+    if (shelf.photos.find(i => i.id === item.id)) {
       showToast('已存在');
       return false;
-    } else {
+    }
+    else {
       item.extra ||= {};
       item.extra.selected ||= false; // 用作从书架中删除
       shelf.photos.push(_.cloneDeep(item));
@@ -72,7 +75,7 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
   };
   const createShelf = (name: string): boolean => {
     // 创建收藏
-    if (photoShelf.value.some((item) => item.name === name)) {
+    if (photoShelf.value.some(item => item.name === name)) {
       showToast('收藏夹已存在');
       return false;
     }
@@ -89,7 +92,7 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
     shelfId?: string,
   ): boolean => {
     const shelf = shelfId
-      ? photoShelf.value.find((item) => item.id === shelfId)
+      ? photoShelf.value.find(item => item.id === shelfId)
       : photoShelf.value[0];
     if (!shelf) {
       showToast('收藏夹不存在');
@@ -108,7 +111,7 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
       showToast('至少需要保留一个收藏夹');
       return false;
     }
-    _.remove(photoShelf.value, (item) => item.id === shelfId);
+    _.remove(photoShelf.value, item => item.id === shelfId);
     return true;
   };
 

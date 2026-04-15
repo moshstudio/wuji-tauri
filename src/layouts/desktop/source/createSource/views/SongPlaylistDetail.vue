@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import type { PlaylistInfo, PlaylistList } from '@wuji-tauri/source-extension';
-import { WSongCard } from '@wuji-tauri/components/src';
-import LoadImage from '@wuji-tauri/components/src/components/LoadImage.vue';
+import type { FormItem } from '@/store/sourceCreateStore';
+import { LoadImage, WSongCard } from '@wuji-tauri/components';
 import { SongExtension } from '@wuji-tauri/source-extension';
 import { showDialog, showFailToast } from 'vant';
 import { ref } from 'vue';
 import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
-import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
   content: FormItem<PlaylistList>;
@@ -74,8 +73,8 @@ async function load(pageNo: number) {
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('SongExtension', code);
-    const extensionclass = func(SongExtension);
-    const cls = new extensionclass() as SongExtension;
+    const ExtensionClass = func(SongExtension);
+    const cls = new ExtensionClass() as SongExtension;
     if (cls.baseUrl === undefined) {
       throw new Error('初始化中的baseUrl未定义!');
     }
@@ -101,7 +100,8 @@ async function load(pageNo: number) {
     result.value = res;
     props.updateResult('song', 'playlistDetail', result.value, true);
     runStatus.value = RunStatus.success;
-  } catch (error) {
+  }
+  catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
     props.updateResult('song', 'playlistDetail', result.value, false);
@@ -109,7 +109,7 @@ async function load(pageNo: number) {
 }
 
 function findPage(name: string) {
-  return props.content.pages.find((page) => page.type === name);
+  return props.content.pages.find(page => page.type === name);
 }
 
 defineExpose({
@@ -119,7 +119,9 @@ defineExpose({
 
 <template>
   <div>
-    <div v-if="runStatus === RunStatus.not_running">未运行</div>
+    <div v-if="runStatus === RunStatus.not_running">
+      未运行
+    </div>
     <div
       v-else-if="runStatus === RunStatus.running"
       class="flex items-center justify-center"

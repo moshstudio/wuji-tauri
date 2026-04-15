@@ -1,7 +1,5 @@
 import type { ClientOptions } from '@wuji-tauri/fetch';
-
 import type { ArtistInfo, SongInfo } from '@wuji-tauri/source-extension';
-
 import * as fsApi from '@tauri-apps/plugin-fs';
 import { fetch, fetchAndSave } from '@wuji-tauri/fetch';
 import _ from 'lodash';
@@ -25,6 +23,204 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
     }[]
   >([]);
   let inited = false;
+
+  const songIdToCoverId = (songId: string) => {
+    return `${songId}.png`;
+  };
+
+  const ensureBase = async () => {
+    if (!(await fsApi.exists(dirName, { baseDir }))) {
+      await fsApi.mkdir(dirName, {
+        baseDir,
+        recursive: true,
+      });
+    }
+    if (
+      !(await fsApi.exists(`${dirName}/${baseFile}`, {
+        baseDir,
+      }))
+    ) {
+      await fsApi.writeFile(
+        `${dirName}/${baseFile}`,
+        new TextEncoder().encode('[]'),
+        {
+          baseDir,
+        },
+      );
+      songs.value = [];
+    }
+    else {
+      songs.value = JSON.parse(
+        new TextDecoder().decode(
+          await fsApi.readFile(`${dirName}/${baseFile}`, {
+            baseDir,
+          }),
+        ),
+      );
+    }
+    inited = true;
+    if (songs.value.length > 200) {
+      const minUpdateTimeSongs = [...songs.value]
+        .sort((a, b) => a.update_time - b.update_time)
+        .slice(0, 20);
+      songs.value = songs.value.filter(
+        song => !minUpdateTimeSongs.includes(song),
+      );
+      for (const song of minUpdateTimeSongs) {
+        if (
+          await fsApi.exists(`${dirName}/${song.cache_song_id}`, {
+            baseDir,
+          })
+        ) {
+          try {
+            await fsApi.remove(`${dirName}/${song.cache_song_id}`, {
+              baseDir,
+              recursive: true,
+            });
+          }
+          catch (error) {
+            console.warn('删除歌曲缓存失败:', JSON.stringify(song));
+          }
+        }
+        const cover_id = songIdToCoverId(song.cache_song_id);
+        if (
+          await fsApi.exists(`${dirName}/${cover_id}`, {
+            baseDir,
+          })
+        ) {
+          try {
+            await fsApi.remove(`${dirName}/${cover_id}`, {
+              baseDir,
+              recursive: true,
+            });
+          }
+          catch (error) {
+            console.warn('删除封面缓存失败:', JSON.stringify(song));
+          }
+        }
+      }
+    }
+  };
+
+  const removeCover = async (song: SongInfo) => {
+    if (!inited) {
+      await ensureBase();
+    }
+    const find = songs.value.find(
+      s => s.song_id === song.id && s.source_id === song.sourceId,
+    );
+    if (find) {
+      const cover_id = songIdToCoverId(find.cache_song_id);
+      if (
+        await fsApi.exists(`${dirName}/${cover_id}`, {
+          baseDir,
+        })
+      ) {
+        try {
+          await fsApi.remove(`${dirName}/${cover_id}`, {
+            baseDir,
+            recursive: true,
+          });
+        }
+        catch (error) {
+          console.warn('removeCover:', error);
+        }
+      }
+    }
+  };
+
+  const removeSong = async (song: SongInfo) => {
+    if (!inited) {
+      await ensureBase();
+    }
+    const find = songs.value.find(
+      s => s.song_id === song.id && s.source_id === song.sourceId,
+    );
+    if (find) {
+      if (
+        await fsApi.exists(`${dirName}/${find.cache_song_id}`, {
+          baseDir,
+        })
+      ) {
+        try {
+          await fsApi.remove(`${dirName}/${find.cache_song_id}`, {
+            baseDir,
+            recursive: true,
+          });
+          songs.value = songs.value.filter(
+            s => s.cache_song_id !== find.cache_song_id,
+          );
+        }
+        catch (error) {
+          console.warn('removeSong:', error);
+        }
+      }
+    }
+    removeCover(song);
+  };
+
+  const saveCover = async (song: SongInfo, cache_song_id: string) => {
+    if (!inited) {
+      await ensureBase();
+    }
+    const cover_id = songIdToCoverId(cache_song_id);
+    if (await fsApi.exists(`${dirName}/${cover_id}`, { baseDir })) {
+      if ((await fsApi.stat(`${dirName}/${cover_id}`, { baseDir })).size > 0) {
+        return;
+      }
+    }
+    if (song.picUrl) {
+      try {
+        const response = await fetch(song.picUrl, { headers: song.picHeaders });
+        const blob = await response.blob();
+        if (blob.size === 0)
+          return;
+        const unit: Uint8Array = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (reader.result instanceof ArrayBuffer) {
+              const arrayBuffer = reader.result;
+              const uint8Array = new Uint8Array(arrayBuffer);
+              resolve(uint8Array);
+            }
+            else {
+              reject(new Error('Failed to read blob as ArrayBuffer'));
+            }
+          };
+          reader.onerror = () => {
+            reject(reader.error);
+          };
+          reader.readAsArrayBuffer(blob);
+        });
+        await fsApi.writeFile(`${dirName}/${cover_id}`, unit, {
+          baseDir,
+        });
+      }
+      catch (error) {
+        console.warn('saveCover:', error);
+      }
+    }
+  };
+
+  const genCacheSongId = (song: SongInfo) => {
+    let a = '';
+    if (song.artists) {
+      if (Array.isArray(song.artists)) {
+        if (typeof song.artists[0] === 'string') {
+          a = `${song.artists.join(',')}`;
+        }
+        else {
+          a = `${song.artists
+            .map(artist => (artist as ArtistInfo).name)
+            .join(',')}`;
+        }
+      }
+    }
+    return `${`${sanitizePathName(song.name || '')}-${a}-${sanitizePathName(
+      song.sourceId,
+    )}`}.mp3`;
+  };
+
   watch(
     songs,
     _.debounce(async (newValue) => {
@@ -47,105 +243,6 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
     },
   );
 
-  const ensureBase = async () => {
-    if (!(await fsApi.exists(dirName, { baseDir }))) {
-      await fsApi.mkdir(dirName, {
-        baseDir,
-        recursive: true,
-      });
-    }
-    if (
-      !(await fsApi.exists(`${dirName}/${baseFile}`, {
-        baseDir,
-      }))
-    ) {
-      await fsApi.writeFile(
-        `${dirName}/${baseFile}`,
-        new TextEncoder().encode('[]'),
-        {
-          baseDir,
-        },
-      );
-      songs.value = [];
-    } else {
-      songs.value = JSON.parse(
-        new TextDecoder().decode(
-          await fsApi.readFile(`${dirName}/${baseFile}`, {
-            baseDir,
-          }),
-        ),
-      );
-    }
-    inited = true;
-    if (songs.value.length > 200) {
-      // 1. 获取update_time最小的20首歌曲
-      const minUpdateTimeSongs = [...songs.value]
-        .sort((a, b) => a.update_time - b.update_time)
-        .slice(0, 20);
-      // 2. 更新books.value
-      songs.value = songs.value.filter(
-        (song) => !minUpdateTimeSongs.includes(song),
-      );
-      // 3. 根据cache_song_id删除文件
-      for (const song of minUpdateTimeSongs) {
-        if (
-          await fsApi.exists(`${dirName}/${song.cache_song_id}`, {
-            baseDir,
-          })
-        ) {
-          try {
-            await fsApi.remove(`${dirName}/${song.cache_song_id}`, {
-              baseDir,
-              recursive: true,
-            });
-          } catch (error) {
-            console.warn('删除歌曲缓存失败:', JSON.stringify(song));
-          }
-        }
-        const cover_id = songIdToCoverId(song.cache_song_id);
-        if (
-          await fsApi.exists(`${dirName}/${cover_id}`, {
-            baseDir,
-          })
-        ) {
-          try {
-            await fsApi.remove(`${dirName}/${cover_id}`, {
-              baseDir,
-              recursive: true,
-            });
-          } catch (error) {
-            console.warn('删除封面缓存失败:', JSON.stringify(song));
-          }
-        }
-      }
-    }
-  };
-  const genCacheSongId = (song: SongInfo) => {
-    let a = '';
-    if (song.artists) {
-      if (Array.isArray(song.artists)) {
-        if (typeof song.artists[0] === 'string') {
-          // 处理 string[] 类型
-          a = `${song.artists.join(',')}`;
-        } else {
-          // 处理 ArtistInfo[] 类型
-          a = `${song.artists
-            .map((artist) => (artist as ArtistInfo).name)
-            .join(',')}`;
-        }
-      }
-    }
-    return `${
-      sanitizePathName(song.name || '') +
-      '-' +
-      a +
-      '-' +
-      sanitizePathName(song.sourceId)
-    }.mp3`;
-  };
-  const songIdToCoverId = (songId: string) => {
-    return `${songId}.png`;
-  };
   const saveSong = async (
     song: SongInfo,
     url: string,
@@ -155,12 +252,10 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
       await ensureBase();
     }
     const cache_song_id = genCacheSongId(song);
-
     const find = songs.value.find(
-      (s) => s.song_id === song.id && s.source_id === song.sourceId,
+      s => s.song_id === song.id && s.source_id === song.sourceId,
     );
     if (find && !force) {
-      // 已经有了，不需要重复保存
       return true;
     }
     let blob: Blob;
@@ -168,24 +263,24 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
     try {
       if (url.startsWith('blob')) {
         blob = await (await window.fetch(url)).blob();
-      } else {
+      }
+      else {
         blob = await (await fetch(url)).blob();
       }
-      if (blob.size === 0) return false; // 获取失败
-
+      if (blob.size === 0)
+        return false;
       const unit: Uint8Array = await new Promise((resolve, reject) => {
         const reader = new FileReader();
-
         reader.onload = () => {
           if (reader.result instanceof ArrayBuffer) {
             const arrayBuffer = reader.result;
             const uint8Array = new Uint8Array(arrayBuffer);
             resolve(uint8Array);
-          } else {
+          }
+          else {
             reject(new Error('Failed to read blob as ArrayBuffer'));
           }
         };
-
         reader.onerror = () => {
           reject(reader.error);
         };
@@ -202,10 +297,12 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
           update_time: Date.now(),
           cache_song_id,
         });
-      } else {
+      }
+      else {
         find.update_time = Date.now();
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.warn('saveSong:', error);
     }
     await saveCover(song, cache_song_id);
@@ -223,12 +320,10 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
       await ensureBase();
     }
     const cache_song_id = genCacheSongId(song);
-
     const find = songs.value.find(
-      (s) => s.song_id === song.id && s.source_id === song.sourceId,
+      s => s.song_id === song.id && s.source_id === song.sourceId,
     );
     if (find && !force) {
-      // 已经有了，不需要重复保存
       return true;
     }
     const t = displayStore.showToast();
@@ -242,7 +337,6 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
       if (!ret) {
         throw new Error('fetchAndSave 失败');
       }
-
       if (!find) {
         songs.value.unshift({
           song_id: song.id,
@@ -251,10 +345,12 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
           update_time: Date.now(),
           cache_song_id,
         });
-      } else {
+      }
+      else {
         find.update_time = Date.now();
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.warn('saveSongv2:', error);
     }
     await saveCover(song, cache_song_id);
@@ -263,24 +359,13 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
   };
 
   const replaceSongSrc = async (song: SongInfo, goodSong: SongInfo) => {
-    // 使用goodSong的播放地址覆盖song的播放地址
     if (!inited) {
       await ensureBase();
     }
     const find = songs.value.find(
-      (s) => s.song_id === song.id && s.source_id === song.sourceId,
+      s => s.song_id === song.id && s.source_id === song.sourceId,
     );
-
-    const cache_song_id = genCacheSongId(song);
     const good_cache_song_id = genCacheSongId(goodSong);
-    // await fsApi.copyFile(
-    //   `${dirName}/${good_cache_song_id}`,
-    //   `${dirName}/${cache_song_id}`,
-    //   {
-    //     fromPathBaseDir: baseDir,
-    //     toPathBaseDir: baseDir,
-    //   },
-    // );
     if (!find) {
       songs.value.unshift({
         song_id: song.id,
@@ -289,73 +374,29 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
         update_time: Date.now(),
         cache_song_id: good_cache_song_id,
       });
-    } else {
+    }
+    else {
       find.update_time = Date.now();
       find.cache_song_id = good_cache_song_id;
     }
   };
 
-  const saveCover = async (song: SongInfo, cache_song_id: string) => {
+  const getSongBuffer = async (
+    song: SongInfo,
+  ): Promise<Uint8Array | undefined> => {
     if (!inited) {
       await ensureBase();
     }
-    const cover_id = songIdToCoverId(cache_song_id);
-    if (await fsApi.exists(`${dirName}/${cover_id}`, { baseDir })) {
-      if ((await fsApi.stat(`${dirName}/${cover_id}`, { baseDir })).size > 0) {
-        return;
-      }
-    }
-    if (song.picUrl) {
-      try {
-        const response = await fetch(song.picUrl, { headers: song.picHeaders });
-        const blob = await response.blob();
-        if (blob.size === 0) return;
-        const unit: Uint8Array = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-
-          reader.onload = () => {
-            if (reader.result instanceof ArrayBuffer) {
-              const arrayBuffer = reader.result;
-              const uint8Array = new Uint8Array(arrayBuffer);
-              resolve(uint8Array);
-            } else {
-              reject(new Error('Failed to read blob as ArrayBuffer'));
-            }
-          };
-
-          reader.onerror = () => {
-            reject(reader.error);
-          };
-
-          reader.readAsArrayBuffer(blob);
-        });
-        await fsApi.writeFile(`${dirName}/${cover_id}`, unit, {
-          baseDir,
-        });
-      } catch (error) {
-        console.warn('saveCover:', error);
-      }
-    }
-  };
-  const getSong = async (song: SongInfo): Promise<string | undefined> => {
-    if (!inited) {
-      await ensureBase();
-    }
-
     const find = songs.value.find(
-      (s) => s.song_id === song.id && s.source_id === song.sourceId,
+      s => s.song_id === song.id && s.source_id === song.sourceId,
     );
     if (
-      find &&
-      (await fsApi.exists(`${dirName}/${find.cache_song_id}`, {
+      find
+      && (await fsApi.exists(`${dirName}/${find.cache_song_id}`, {
         baseDir,
       }))
     ) {
       try {
-        // if (displayStore.isAndroid) {
-        //   return `file://${dirName}/${find.cache_song_id}`;
-        // }
-
         const buffer = await fsApi.readFile(
           `${dirName}/${find.cache_song_id}`,
           {
@@ -366,21 +407,29 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
           await removeSong(song);
           return undefined;
         }
-        const blobUrl = URL.createObjectURL(
-          new Blob([new Uint8Array(buffer)], { type: 'audio/mpeg' }),
-        );
-        return blobUrl;
-      } catch (error) {
-        console.warn('getSong:', error);
+        return buffer;
+      }
+      catch (error) {
+        console.warn('getSongBuffer:', error);
       }
     }
   };
+
+  const getSong = async (song: SongInfo): Promise<string | undefined> => {
+    const buffer = await getSongBuffer(song);
+    if (buffer) {
+      return URL.createObjectURL(
+        new Blob([new Uint8Array(buffer)], { type: 'audio/mpeg' }),
+      );
+    }
+  };
+
   const getCover = async (song: SongInfo): Promise<string | undefined> => {
     if (!inited) {
       await ensureBase();
     }
     const find = songs.value.find(
-      (s) => s.song_id === song.id && s.source_id === song.sourceId,
+      s => s.song_id === song.id && s.source_id === song.sourceId,
     );
     if (find) {
       const cover_id = songIdToCoverId(find.cache_song_id);
@@ -393,7 +442,6 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
           if (displayStore.isAndroid) {
             return `file://${dirName}/${cover_id}`;
           }
-
           const buffer = await fsApi.readFile(`${dirName}/${cover_id}`, {
             baseDir,
           });
@@ -401,66 +449,12 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
             await removeCover(song);
             return undefined;
           }
-          const blobUrl = URL.createObjectURL(
+          return URL.createObjectURL(
             new Blob([new Uint8Array(buffer)], { type: 'image/png' }),
           );
-          return blobUrl;
-        } catch (error) {
+        }
+        catch (error) {
           console.warn('getCover:', error);
-        }
-      }
-    }
-  };
-  const removeSong = async (song: SongInfo) => {
-    if (!inited) {
-      await ensureBase();
-    }
-    const find = songs.value.find(
-      (s) => s.song_id === song.id && s.source_id === song.sourceId,
-    );
-    if (find) {
-      if (
-        await fsApi.exists(`${dirName}/${find.cache_song_id}`, {
-          baseDir,
-        })
-      ) {
-        try {
-          await fsApi.remove(`${dirName}/${find.cache_song_id}`, {
-            baseDir,
-            recursive: true,
-          });
-          songs.value = songs.value.filter(
-            (s) => s.cache_song_id !== find.cache_song_id,
-          );
-        } catch (error) {
-          console.warn('removeSong:', error);
-        }
-      }
-    }
-    removeCover(song);
-  };
-
-  const removeCover = async (song: SongInfo) => {
-    if (!inited) {
-      await ensureBase();
-    }
-    const find = songs.value.find(
-      (s) => s.song_id === song.id && s.source_id === song.sourceId,
-    );
-    if (find) {
-      const cover_id = songIdToCoverId(find.cache_song_id);
-      if (
-        await fsApi.exists(`${dirName}/${cover_id}`, {
-          baseDir,
-        })
-      ) {
-        try {
-          await fsApi.remove(`${dirName}/${cover_id}`, {
-            baseDir,
-            recursive: true,
-          });
-        } catch (error) {
-          console.warn('removeCover:', error);
         }
       }
     }
@@ -475,42 +469,14 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
         baseDir,
         recursive: true,
       });
-    } catch (error) {
+    }
+    catch (error) {
       console.warn('clear song cache:', error);
     }
-
     songs.value = [];
     inited = false;
-    // [...songs.value.map((song) => song.cache_song_id)].forEach(
-    //   async (cache_song_id) => {
-    //     if (
-    //       await fsApi.exists(`${dirName}/${cache_song_id}`, {
-    //         baseDir: baseDir,
-    //       })
-    //     ) {
-    //       try {
-    //         await fsApi.remove(`${dirName}/${cache_song_id}`, {
-    //           baseDir: baseDir,
-    //           recursive: true,
-    //         });
-    //       } catch (error) {}
-    //     }
-    //     const cover_id = songIdToCoverId(cache_song_id);
-    //     if (
-    //       await fsApi.exists(`${dirName}/${cover_id}`, {
-    //         baseDir: baseDir,
-    //       })
-    //     ) {
-    //       try {
-    //         await fsApi.remove(`${dirName}/${cover_id}`, {
-    //           baseDir: baseDir,
-    //           recursive: true,
-    //         });
-    //       } catch (error) {}
-    //     }
-    //   }
-    // );
   };
+
   return {
     songs,
     saveSong,
@@ -522,5 +488,6 @@ export const useSongCacheStore = defineStore('songCacheStore', () => {
     removeCover,
     clear,
     replaceSongSrc,
+    getSongBuffer,
   };
 });

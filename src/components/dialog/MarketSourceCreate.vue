@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { FormInstance } from 'vant';
-import { MoreOptionsSheet } from '@wuji-tauri/components/src';
+import { MoreOptionsSheet } from '@wuji-tauri/components';
 import { MarketSourcePermission } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
 import { showToast } from 'vant';
@@ -65,7 +65,8 @@ async function beforeClose(action: string): Promise<boolean> {
       await formRef.value?.validate();
       props.create(formData.name, formData.permissions, formData.isPublic);
       return true;
-    } catch (error) {
+    }
+    catch (error) {
       showToast('请检查输入内容');
       return false;
     }

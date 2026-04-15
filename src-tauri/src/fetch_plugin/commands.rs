@@ -4,7 +4,7 @@
 
 use std::{future::Future, path::PathBuf, pin::Pin, str::FromStr, sync::Arc, time::Duration};
 
-use http::{header, HeaderMap, HeaderName, HeaderValue, Method, StatusCode};
+use http::{header, HeaderMap, HeaderName, HeaderValue, Method};
 use rand::{seq::SliceRandom, thread_rng};
 use reqwest::{redirect::Policy, NoProxy};
 use serde::{Deserialize, Serialize};
@@ -16,10 +16,7 @@ use tauri::{
 };
 use tokio::sync::oneshot::{channel, Receiver, Sender};
 
-use crate::fetch_plugin::{
-    scope::Entry,
-    Error, Http, Result,
-};
+use crate::fetch_plugin::{scope::Entry, Error, Http, Result};
 
 const HTTP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 pub const STATIC_CHROME_AGENTS: &'static [&'static str; 20] = &[

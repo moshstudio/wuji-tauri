@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SongInfo } from '@wuji-tauri/source-extension';
 import type { SongSource } from '@/types';
-import { WPlaylistCard, WSongCard } from '@wuji-tauri/components/src';
+import { WPlaylistCard, WSongCard } from '@wuji-tauri/components';
 import { storeToRefs } from 'pinia';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import WHeader from '@/components/header/WHeader.vue';

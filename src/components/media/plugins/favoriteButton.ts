@@ -48,7 +48,8 @@ export default class FavoriteButtonPlugin extends Plugin {
         ? this.getFavoritedSvg()
         : this.getUnfavoritedSvg();
       this.root.innerHTML = newHTML;
-    } else {
+    }
+    else {
       console.error('[FavoriteButton] root 元素不存在');
     }
   }

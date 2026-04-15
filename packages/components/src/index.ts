@@ -38,6 +38,8 @@ import LoadImage from './components/LoadImage.vue';
 import PlayPauseButton from './components/media/PlayPauseButton.vue';
 import MoreOptionsSheet from './components/MoreOptionsSheet.vue';
 
+export { joinSongArtists } from './components/cards/song/index';
+
 export {
   LoadImage,
   MarketSourceCard,

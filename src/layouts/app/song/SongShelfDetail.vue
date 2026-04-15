@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
-import { MSongShelfCard } from '@wuji-tauri/components/src';
+import { MSongShelfCard } from '@wuji-tauri/components';
 import MNavBar from '@/components/header/MNavBar.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
 import MSongBar from '@/components/songbar/MSongBar.vue';
@@ -11,6 +11,8 @@ withDefaults(
     shelf?: SongShelf;
     toPage: (shelf: SongShelf, pageNo: number) => void;
     playAll: (shelf: SongShelf) => void;
+    downloadAll: (shelf: SongShelf) => void;
+    downloadSong: (song: SongInfo) => void;
     removeSong?: (shelf: SongShelf, song: SongInfo) => void;
     removeShelf: (shelf: SongShelf) => void;
     showMoreOptions: (shelf: SongShelf, song: SongInfo) => void;
@@ -28,6 +30,7 @@ const shelfStore = useSongShelfStore();
       <div v-if="shelf" class="flex gap-2">
         <van-button
           size="small"
+          icon="play-circle-o"
           @click="
             () => {
               if (shelf) {
@@ -37,6 +40,19 @@ const shelfStore = useSongShelfStore();
           "
         >
           播放全部
+        </van-button>
+        <van-button
+          size="small"
+          icon="download"
+          @click="
+            () => {
+              if (shelf) {
+                downloadAll(shelf);
+              }
+            }
+          "
+        >
+          下载全部
         </van-button>
         <MPagination
           v-if="shelf.playlist.list?.totalPage"

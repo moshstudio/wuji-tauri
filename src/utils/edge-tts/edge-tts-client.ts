@@ -1,5 +1,7 @@
 import type { PITCH, RATE, VOLUME } from './constants.ts';
+import type { Message } from '@/utils/websocketPlugin';
 import { Buffer } from 'node:buffer';
+import TauriWebSocket from '@/utils/websocketPlugin';
 import {
   OUTPUT_FORMAT,
   SEC_MS_GEC_VERSION,
@@ -7,22 +9,14 @@ import {
   VOICES_URL,
   WSS_HEADERS,
 } from './constants.ts';
-import { generateSecMsGecToken, dateToString } from './drm.ts';
-import TauriWebSocket from '@/utils/websocketPlugin';
-import type { Message } from '@/utils/websocketPlugin';
-
-// Ensure Buffer is globally available for browser-like environments
-if (typeof globalThis.Buffer === 'undefined') {
-  globalThis.Buffer = Buffer;
-}
+import { dateToString, generateSecMsGecToken } from './drm.ts';
 
 // Generates a random hex string of the specified length
 function generateRandomHex(length: number): string {
   const randomValues = new Uint8Array(length);
   window.crypto.getRandomValues(randomValues);
-  return Array.from(randomValues, (byte) =>
-    `0${byte.toString(16)}`.slice(-2),
-  ).join('');
+  return Array.from(randomValues, byte =>
+    `0${byte.toString(16)}`.slice(-2)).join('');
 }
 
 type EventType = 'data' | 'close' | 'end';
@@ -39,7 +33,7 @@ class EventEmitter {
   }
 
   emit(event: EventType, data: any) {
-    this.eventListeners[event].forEach((callback) => callback(data));
+    this.eventListeners[event].forEach(callback => callback(data));
   }
 }
 
@@ -81,8 +75,8 @@ export class EdgeTTSClient {
   private closeOnFinish: boolean;
   private ws: TauriWebSocket | null = null;
   private wsConnected: boolean = false;
-  private outputFormat: OUTPUT_FORMAT | null =
-    OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3;
+  private outputFormat: OUTPUT_FORMAT | null
+    = OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3;
 
   private requestQueue: Record<string, EventEmitter> = {};
   private connectionStartTime = 0;
@@ -93,12 +87,14 @@ export class EdgeTTSClient {
   }
 
   private log(...args: any[]) {
-    if (this.enableLogging) console.log(...args);
+    if (this.enableLogging)
+      console.log(...args);
   }
 
   private async sendMessage(message: string) {
     for (let attempt = 1; attempt <= 3 && !this.wsConnected; attempt++) {
-      if (attempt === 1) this.connectionStartTime = Date.now();
+      if (attempt === 1)
+        this.connectionStartTime = Date.now();
       this.log(`Connecting... attempt ${attempt}`);
       await this.initWebSocket();
     }
@@ -107,55 +103,61 @@ export class EdgeTTSClient {
     }
   }
 
-  private async initWebSocket() {
+  private initWebSocket() {
     const metadataBuffer: Metadata = [];
 
-    return new Promise<void>(async (resolve, reject) => {
-      try {
-        const url =
-          `${SYNTH_URL}&Sec-MS-GEC=${generateSecMsGecToken()}` +
-          `&Sec-MS-GEC-Version=${SEC_MS_GEC_VERSION}` +
-          `&ConnectionId=${generateRandomHex(16)}`;
-        this.ws = await TauriWebSocket.connect(url, {
-          headers: WSS_HEADERS,
-        });
-        this.wsConnected = true;
+    return new Promise<void>((resolve, reject) => {
+      (async () => {
+        try {
+          const url
+            = `${SYNTH_URL}&Sec-MS-GEC=${generateSecMsGecToken()}`
+              + `&Sec-MS-GEC-Version=${SEC_MS_GEC_VERSION}`
+              + `&ConnectionId=${generateRandomHex(16)}`;
+          this.ws = await TauriWebSocket.connect(url, {
+            headers: WSS_HEADERS,
+          });
+          this.wsConnected = true;
 
-        this.log(
-          'Connected in',
-          (Date.now() - this.connectionStartTime) / 1000,
-          'seconds',
-        );
+          this.log(
+            'Connected in',
+            (Date.now() - this.connectionStartTime) / 1000,
+            'seconds',
+          );
 
-        // 添加消息监听器
-        this.ws.addListener((message: Message) => {
-          if (message.type === 'Binary') {
-            const buffer = Buffer.from(message.data);
-            this.handleMessage(buffer, metadataBuffer);
-          } else if (message.type === 'Close') {
-            this.handleClose();
-          } else if (message.type === 'Text') {
-            if (message.data.includes('Path:turn.end')) {
-              const data = message.data.toString();
-              const requestIdMatch = /X-RequestId:(.*)\r\n/.exec(data);
-              const requestId = requestIdMatch ? requestIdMatch[1] : '';
-              this.requestQueue[requestId]?.emit('end', metadataBuffer);
-              if (this.closeOnFinish) {
-                this.ws?.disconnect();
-                this.wsConnected = false;
+          // 添加消息监听器
+          this.ws.addListener((message: Message) => {
+            if (message.type === 'Binary') {
+              const buffer = Buffer.from(message.data);
+              this.handleMessage(buffer, metadataBuffer);
+            }
+            else if (message.type === 'Close') {
+              this.handleClose();
+            }
+            else if (message.type === 'Text') {
+              if (message.data.includes('Path:turn.end')) {
+                const data = message.data.toString();
+                const requestIdMatch = /X-RequestId:(.*)\r\n/.exec(data);
+                const requestId = requestIdMatch ? requestIdMatch[1] : '';
+                this.requestQueue[requestId]?.emit('end', metadataBuffer);
+                if (this.closeOnFinish) {
+                  this.ws?.disconnect();
+                  this.wsConnected = false;
+                }
               }
             }
-          } else {
-            this.log('Unknown message type:', message.type);
-          }
-        });
+            else {
+              this.log('Unknown message type:', message.type);
+            }
+          });
 
-        await this.sendMessage(this.getConfigMessage());
-        resolve();
-      } catch (error) {
-        this.log('Connection Error:', error);
-        reject(`Connection Error: ${error}`);
-      }
+          await this.sendMessage(this.getConfigMessage());
+          resolve();
+        }
+        catch (error) {
+          this.log('Connection Error:', error);
+          reject(error instanceof Error ? error : new Error(String(error)));
+        }
+      })();
     });
   }
 
@@ -166,18 +168,22 @@ export class EdgeTTSClient {
 
     if (message.includes('Path:turn.start')) {
       metadataBuffer.length = 0;
-    } else if (message.includes('Path:turn.end')) {
+    }
+    else if (message.includes('Path:turn.end')) {
       this.requestQueue[requestId]?.emit('end', metadataBuffer);
       if (this.closeOnFinish) {
         this.ws?.disconnect();
         this.wsConnected = false;
       }
-    } else if (message.includes('Path:audio')) {
+    }
+    else if (message.includes('Path:audio')) {
       this.cacheAudioData(buffer, requestId);
-    } else if (message.includes('Path:audio.metadata')) {
+    }
+    else if (message.includes('Path:audio.metadata')) {
       const startIndex = message.indexOf('{');
       metadataBuffer.push(JSON.parse(message.slice(startIndex)).Metadata[0]);
-    } else {
+    }
+    else {
       this.log('Unknown Message', message);
     }
   }
@@ -229,7 +235,8 @@ export class EdgeTTSClient {
           break;
         }
       }
-      if (match) return i;
+      if (match)
+        return i;
     }
     return -1;
   }

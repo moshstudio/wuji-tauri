@@ -1,4 +1,4 @@
-import { BookChapter, BookItem } from '@wuji-tauri/source-extension';
+import type { BookChapter, BookItem } from '@wuji-tauri/source-extension';
 
 export interface ReadTheme {
   name: string;

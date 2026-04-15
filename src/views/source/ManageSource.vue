@@ -19,7 +19,7 @@ const sourceStore = useSubscribeSourceStore();
 const showImportSubscribeDialog = ref(false);
 
 function sourceDisabled(source: SubscribeSource) {
-  return source.detail?.urls.every((url) => url.disable === true) || false;
+  return source.detail?.urls.every(url => url.disable === true) || false;
 }
 function enableSource(source: SubscribeSource, enable: boolean) {
   if (enable) {
@@ -27,7 +27,8 @@ function enableSource(source: SubscribeSource, enable: boolean) {
     source.detail?.urls.forEach((url) => {
       url.disable = true;
     });
-  } else {
+  }
+  else {
     // 启用此source
     source.detail?.urls.forEach((url) => {
       url.disable = false;
@@ -42,10 +43,11 @@ function enableItem(
   if (enable) {
     // 禁用此url
     item.disable = true;
-    if (source.detail?.urls.every((url) => url.disable)) {
+    if (source.detail?.urls.every(url => url.disable)) {
       source.disable = true;
     }
-  } else {
+  }
+  else {
     // 启用此url
     item.disable = false;
     source.disable = false;

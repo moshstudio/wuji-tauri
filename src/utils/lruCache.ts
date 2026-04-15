@@ -12,7 +12,8 @@ class SimpleLRUCache<K, V> {
   }
 
   get(key: K): V | undefined {
-    if (!this.cache.has(key)) return undefined;
+    if (!this.cache.has(key))
+      return undefined;
     const value = this.cache.get(key)!;
     // LRU 逻辑：访问后重新插入，保持最近使用
     this.cache.delete(key);

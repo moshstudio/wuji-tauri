@@ -70,12 +70,14 @@ async function toBook(book: BookItemInShelf, chapterId?: string) {
 }
 
 function unreadCount(book: BookItemInShelf): number | undefined {
-  if (!book.lastReadChapter || !book.book.chapters?.length) return undefined;
+  if (!book.lastReadChapter || !book.book.chapters?.length)
+    return undefined;
   const index = book.book.chapters.findIndex(
-    (chapter) => chapter.id === book.lastReadChapter!.id,
+    chapter => chapter.id === book.lastReadChapter!.id,
   );
   const num = book.book.chapters.length - index - 1;
-  if (num <= 0) return undefined;
+  if (num <= 0)
+    return undefined;
   return num;
 }
 

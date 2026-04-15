@@ -10,6 +10,7 @@ withDefaults(
     removeable?: boolean;
     click: (shelf: SongShelf) => void;
     removeFromShelf?: (shelf: SongShelf) => void;
+    downloadPlaylist?: (shelf: SongShelf) => void;
   }>(),
   {
     removeable: false,
@@ -43,24 +44,39 @@ const showMoreOptions = ref(false);
       {{ shelf.playlist.name }}
     </div>
     <van-icon
-      v-if="removeable"
+      v-if="removeable || downloadPlaylist"
       name="ellipsis"
       class="clickable p-2 text-[var(--van-text-color)]"
       @click.stop="showMoreOptions = !showMoreOptions"
     />
     <MoreOptionsSheet
-      v-if="removeable"
+      v-if="removeable || downloadPlaylist"
       v-model="showMoreOptions"
       :actions="[
-        {
-          name: '删除歌单',
-          color: '#E74C3C',
-          subname: shelf.playlist.name,
-          callback: () => {
-            showMoreOptions = false;
-            removeFromShelf?.(shelf);
-          },
-        },
+        ...(downloadPlaylist
+          ? [
+            {
+              name: '下载歌单',
+              callback: () => {
+                showMoreOptions = false;
+                downloadPlaylist?.(shelf);
+              },
+            },
+          ]
+          : []),
+        ...(removeable
+          ? [
+            {
+              name: '删除歌单',
+              color: '#E74C3C',
+              subname: shelf.playlist.name,
+              callback: () => {
+                showMoreOptions = false;
+                removeFromShelf?.(shelf);
+              },
+            },
+          ]
+          : []),
       ]"
     />
   </div>

@@ -61,8 +61,8 @@ const _pages: any = reactive({
 });
 const pages = computed(() => {
   return tabBarPages.value
-    .filter((page) => page.enable)
-    .map((page) => _pages[page.name as keyof typeof _pages]);
+    .filter(page => page.enable)
+    .map(page => _pages[page.name as keyof typeof _pages]);
 });
 
 const activeKey = ref('0');
@@ -113,7 +113,7 @@ const sourceActions = [
     },
   },
 ];
-function onClickAction(action: { text: string; onClick: Function }) {
+function onClickAction(action: { text: string; onClick: () => void }) {
   action.onClick();
 }
 
@@ -121,40 +121,45 @@ function updateActiveKey(newPath?: string) {
   newPath ||= route.path;
   displayStore.routerCurrPath = newPath;
   const pathName = route.name;
-  if (typeof pathName !== 'string') return;
+  if (typeof pathName !== 'string')
+    return;
   if (pathName !== 'BookRead' && pathName !== 'ComicRead') {
     displayStore.showTabBar = true;
   }
   if (pathName.startsWith('Home')) {
     activeKey.value = String(
-      pages.value.findIndex((page) => page.name === 'Home'),
+      pages.value.findIndex(page => page.name === 'Home'),
     );
-  } else if (pathName.startsWith('Photo')) {
+  }
+  else if (pathName.startsWith('Photo')) {
     photoPath.value = newPath;
     activeKey.value = String(
-      pages.value.findIndex((page) => page.name === 'Photo'),
+      pages.value.findIndex(page => page.name === 'Photo'),
     );
-  } else if (pathName.startsWith('Song')) {
+  }
+  else if (pathName.startsWith('Song')) {
     songPath.value = newPath;
     activeKey.value = String(
-      pages.value.findIndex((page) => page.name === 'Song'),
+      pages.value.findIndex(page => page.name === 'Song'),
     );
-  } else if (pathName.startsWith('Book')) {
+  }
+  else if (pathName.startsWith('Book')) {
     bookPath.value = newPath;
     activeKey.value = String(
-      pages.value.findIndex((page) => page.name === 'Book'),
+      pages.value.findIndex(page => page.name === 'Book'),
     );
-  } else if (pathName.startsWith('Comic')) {
+  }
+  else if (pathName.startsWith('Comic')) {
     comicPath.value = newPath;
     activeKey.value = String(
-      pages.value.findIndex((page) => page.name === 'Comic'),
+      pages.value.findIndex(page => page.name === 'Comic'),
     );
-  } else if (pathName.startsWith('Video')) {
+  }
+  else if (pathName.startsWith('Video')) {
     videoPath.value = newPath;
     activeKey.value = String(
-      pages.value.findIndex((page) => page.name === 'Video'),
+      pages.value.findIndex(page => page.name === 'Video'),
     );
-  } else {
   }
 }
 
@@ -189,10 +194,10 @@ watch(
           >
             <template #title>
               <van-icon
-                :name="activeKey == `${index}` ? page.selectedIcon : page.icon"
+                :name="activeKey === `${index}` ? page.selectedIcon : page.icon"
+                class="wtabbar-icon"
                 :class="[
-                  'wtabbar-icon',
-                  activeKey == `${index}`
+                  activeKey === `${index}`
                     ? 'wtabbar-icon--active'
                     : 'wtabbar-icon--inactive',
                 ]"

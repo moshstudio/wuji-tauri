@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { computed, watch, onMounted, onUnmounted, onActivated } from 'vue';
 import type { BookChapter, BookItem, BookChapterList as ChapterList } from '@wuji-tauri/source-extension';
-import { useBookStore, useDisplayStore, useBookChapterStore } from '@/store';
-import { useBackStore } from '@/store/backStore';
+import type { BookSource } from '@/types';
+import { Icon } from '@iconify/vue';
 import { showToast } from 'vant';
+import { computed, onActivated, onMounted, onUnmounted, watch } from 'vue';
+import BookScrollerContent from '@/components/book/BookScrollerContent.vue';
 import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import MBookTTSButton from '@/components/button/MBookTTSButton.vue';
-import { router } from '@/router';
 import { useBookReadScroll } from '@/hooks/useBookReadScroll';
 import { useStatusBar } from '@/hooks/useStatusBar';
-import BookScrollerContent from '@/components/book/BookScrollerContent.vue';
-import { Icon } from '@iconify/vue';
-import type { BookSource } from '@/types';
+import { router } from '@/router';
+import { useBookChapterStore, useBookStore, useDisplayStore } from '@/store';
+import { useBackStore } from '@/store/backStore';
 
 const props = withDefaults(
   defineProps<{
@@ -35,6 +35,7 @@ const props = withDefaults(
     nextChapter: () => void;
     refreshChapter: () => Promise<void>;
     loadChapterContent: (chapter: BookChapter) => Promise<string>;
+    onDownload?: () => void;
   }>(),
   {
     isPrev: false,
@@ -73,7 +74,7 @@ const {
 const sliderToChapterValue = computed({
   get() {
     const id = activeChapterId.value || props.chapter?.id;
-    return (props.chapterList?.findIndex((c) => c.id === id) || 0) + 1;
+    return (props.chapterList?.findIndex(c => c.id === id) || 0) + 1;
   },
   set(v) {
     if (v > 0 && props.chapterList) {
@@ -89,7 +90,8 @@ function jumpToChapter(chapter: BookChapter) {
 // ── 菜单主动翻章 ──
 function onPrevChapterClick() {
   const currentId = activeChapterId.value || props.chapter?.id;
-  if (!currentId || !props.chapterList) return;
+  if (!currentId || !props.chapterList)
+    return;
   const idx = props.chapterList.findIndex(c => c.id === currentId);
   if (idx <= 0) {
     showToast('已经是第一章了');
@@ -100,7 +102,8 @@ function onPrevChapterClick() {
 
 function onNextChapterClick() {
   const currentId = activeChapterId.value || props.chapter?.id;
-  if (!currentId || !props.chapterList) return;
+  if (!currentId || !props.chapterList)
+    return;
   const idx = props.chapterList.findIndex(c => c.id === currentId);
   if (idx === -1 || idx >= props.chapterList.length - 1) {
     showToast('已经是最后一章了');
@@ -115,7 +118,8 @@ function onClickContent(e: MouseEvent | TouchEvent) {
     showMenu.value = false;
     return;
   }
-  if (!scrollContainer.value) return;
+  if (!scrollContainer.value)
+    return;
   const rect = scrollContainer.value.getBoundingClientRect();
   const y = e instanceof TouchEvent ? (e.touches[0]?.clientY || 0) : e.clientY;
 
@@ -125,9 +129,11 @@ function onClickContent(e: MouseEvent | TouchEvent) {
   if (Math.abs(y - midY) < threshold) {
     showMenu.value = true;
     displayStore.showTabBar = true;
-  } else if (y >= midY) {
+  }
+  else if (y >= midY) {
     scrollContainer.value.scrollBy({ top: rect.height - 100, behavior: 'smooth' });
-  } else {
+  }
+  else {
     scrollContainer.value.scrollBy({ top: -(rect.height - 100), behavior: 'smooth' });
   }
 }
@@ -174,16 +180,17 @@ onUnmounted(() => {
 // ── 底部状态栏 ──
 const activeChapterProgress = computed(() => {
   const id = activeChapterId.value;
-  if (!id || !props.chapterList) return '0.0';
-  const idx = props.chapterList.findIndex((c) => c.id === id);
-  if (idx < 0) return '0.0';
+  if (!id || !props.chapterList)
+    return '0.0';
+  const idx = props.chapterList.findIndex(c => c.id === id);
+  if (idx < 0)
+    return '0.0';
   return ((idx / (props.chapterList.length || 1)) * 100).toFixed(1);
 });
 </script>
 
 <template>
   <div class="fixed box-border flex h-screen w-screen flex-col overflow-hidden" :class="[showMenu ? '' : 'hide_menu']">
-
     <!-- 顶部菜单 -->
     <transition
       enter-active-class="transition-all duration-100 ease-out"
@@ -200,6 +207,7 @@ const activeChapterProgress = computed(() => {
             <span class="ml-2 line-clamp-1 text-sm text-[var(--van-text-color)]">{{ book?.title }}</span>
           </div>
           <div class="flex items-center gap-3 pr-2">
+            <van-icon name="down" class="text-[var(--van-text-color)] cursor-pointer" @click="onDownload" />
             <van-icon name="replay" class="text-[var(--van-text-color)] cursor-pointer" @click="refreshChapter" />
             <van-icon name="exchange" class="text-[var(--van-text-color)] cursor-pointer" @click="showSwitchSource" />
             <AddShelfButton size="mini" :is-added="inShelf" :add-click="addToShelf" :added-click="() => router.push({ name: 'BookShelf' })" />
@@ -207,7 +215,9 @@ const activeChapterProgress = computed(() => {
         </div>
         <div class="flex items-center justify-between text-xs text-[var(--van-text-color)]">
           <span>{{ activeChapterTitle }}</span>
-          <div v-if="bookSource" class="mr-2 rounded p-1 text-[var(--van-primary-color)]">{{ bookSource?.item.name }}</div>
+          <div v-if="bookSource" class="mr-2 rounded p-1 text-[var(--van-primary-color)]">
+            {{ bookSource?.item.name }}
+          </div>
         </div>
       </div>
     </transition>
@@ -271,9 +281,11 @@ const activeChapterProgress = computed(() => {
       leave-from-class="opacity-100 transform translate-y-0"
       leave-to-class="opacity-0 transform translate-y-full"
     >
-      <div v-show="showMenu"
-           class="bottom-menu absolute bottom-0 left-0 z-[6] flex w-full flex-col bg-[var(--van-background)] p-2 text-[var(--van-text-color)] shadow-[0_-2px_10px_rgba(0,0,0,0.05)] transition"
-           :class="displayStore.isAppView ? 'pb-[50px]' : 'pb-safe'">
+      <div
+        v-show="showMenu"
+        class="bottom-menu absolute bottom-0 left-0 z-[6] flex w-full flex-col bg-[var(--van-background)] p-2 text-[var(--van-text-color)] shadow-[0_-2px_10px_rgba(0,0,0,0.05)] transition"
+        :class="displayStore.isAppView ? 'pb-[50px]' : 'pb-safe'"
+      >
         <div class="flex items-center gap-2 mb-2">
           <div class="van-haptics-feedback shrink-0 text-nowrap px-2 text-sm cursor-pointer" @click="onPrevChapterClick">
             上一章
@@ -330,7 +342,6 @@ const activeChapterProgress = computed(() => {
         </template>
       </van-list>
     </van-popup>
-
   </div>
 </template>
 

@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import { SyncOption } from '@/types/sync';
-import { bytesToSize } from '@/utils';
+import type { SyncOption } from '@/types/sync';
 import { ref } from 'vue';
+import { bytesToSize } from '@/utils';
 
-const syncOptions = defineModel<SyncOption[]>('syncOptions', {
-  required: true,
-});
 defineProps<{
   onSync: () => Promise<void>;
 }>();
-
+const syncOptions = defineModel<SyncOption[]>('syncOptions', {
+  required: true,
+});
 const syncMode = ref<'overwrite' | 'incremental'>('incremental');
 const showSyncModeSheet = ref(false);
 
@@ -26,18 +25,18 @@ const syncModeActions = [
   },
 ];
 
-const onSelectSyncMode = (action: any) => {
+function onSelectSyncMode(action: any) {
   syncMode.value = action.value;
   showSyncModeSheet.value = false;
   const isIncremental = action.value === 'incremental';
   syncOptions.value.forEach((option) => {
     option.isIncremental = isIncremental;
   });
-};
+}
 
-const getSyncModeText = () => {
+function getSyncModeText() {
   return syncMode.value === 'overwrite' ? '覆盖模式' : '增量模式';
-};
+}
 </script>
 
 <template>
@@ -59,16 +58,16 @@ const getSyncModeText = () => {
           </template>
           <template #value>
             <van-switch
-              size="18"
               v-model="option.sync"
+              size="18"
               @click.stop
-            ></van-switch>
+            />
           </template>
           <template #label>
             <div v-if="option.size !== undefined">
               {{ bytesToSize(option.size) }}
             </div>
-            <van-loading size="14" v-else></van-loading>
+            <van-loading v-else size="14" />
           </template>
         </van-cell>
       </van-cell-group>

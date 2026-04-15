@@ -73,9 +73,9 @@ abstract class ComicExtension extends Extension {
         comicList.id = String(comicList.id || comicList.type || nanoid());
         comicList.list.forEach((comicItem) => {
           comicItem.id = String(
-            comicItem.id ||
-              comicItem.url ||
-              comicItem.title + comicItem.sourceId,
+            comicItem.id
+            || comicItem.url
+            || comicItem.title + comicItem.sourceId,
           );
         });
       });
@@ -107,9 +107,9 @@ abstract class ComicExtension extends Extension {
         comicList.id = String(comicList.id || comicList.type || nanoid());
         comicList.list.forEach((comicItem) => {
           comicItem.id = String(
-            comicItem.id ||
-              comicItem.url ||
-              comicItem.title + comicItem.sourceId,
+            comicItem.id
+            || comicItem.url
+            || comicItem.title + comicItem.sourceId,
           );
         });
       });
@@ -176,11 +176,13 @@ function loadComicExtensionString(
 ): ComicExtension | undefined {
   try {
     const func = new Function('ComicExtension', codeString);
-    const extensionclass = func(ComicExtension);
-    return new extensionclass();
-  } catch (error) {
+    const ExtensionClass = func(ComicExtension);
+    return new ExtensionClass();
+  }
+  catch (error) {
     console.error('Error executing code:\n', error);
-    if (raise) throw error;
+    if (raise)
+      throw error;
   }
 }
 

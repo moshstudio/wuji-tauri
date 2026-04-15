@@ -92,13 +92,14 @@ export async function fetchHotApi(): Promise<HotItem[]> {
           });
         }
         return data;
-      } catch (error) {
+      }
+      catch (error) {
         console.log(`hot api error: ${url}`);
         return null;
       }
     }),
   );
-  return result.filter((item) => item !== null);
+  return result.filter(item => item !== null);
 }
 
 export default fetchHotApi;

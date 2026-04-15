@@ -1,4 +1,5 @@
 import path, { resolve } from 'node:path';
+import process from 'node:process';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 
@@ -9,8 +10,10 @@ export default defineConfig({
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'WujiTauriFetch',
       fileName: (format) => {
-        if (format === 'es') return 'fetch.js';
-        if (format === 'umd') return 'fetch.umd.cjs';
+        if (format === 'es')
+          return 'fetch.js';
+        if (format === 'umd')
+          return 'fetch.umd.cjs';
         return `fetch.${format}.js`;
       },
       formats: ['es', 'umd'],

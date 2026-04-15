@@ -6,16 +6,16 @@ import type {
   VideoShelf,
 } from '@wuji-tauri/source-extension';
 
-import { debounceFilter, useStorage, useStorageAsync } from '@vueuse/core';
+import type { VideoHistory } from '@/types/video';
 
+import { debounceFilter, useStorage, useStorageAsync } from '@vueuse/core';
 import _ from 'lodash';
+
 import { nanoid } from 'nanoid';
 
 import { defineStore } from 'pinia';
-
 import { showToast } from 'vant';
 import { createKVStore } from './utils';
-import { VideoHistory } from '@/types/video';
 
 export const useVideoShelfStore = defineStore('videoShelfStore', () => {
   const kvStorage = createKVStore('videoShelfStore');
@@ -54,9 +54,10 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
   );
 
   const createVideoShelf = (name: string) => {
-    if (videoShelf.value.some((item) => item.name === name)) {
+    if (videoShelf.value.some(item => item.name === name)) {
       // 收藏已存在
-    } else {
+    }
+    else {
       videoShelf.value.push({
         id: nanoid(),
         name,
@@ -70,7 +71,7 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
       showToast('至少需要保留一个收藏夹');
       return false;
     }
-    _.remove(videoShelf.value, (item) => item.id === shelfId);
+    _.remove(videoShelf.value, item => item.id === shelfId);
     return true;
   };
   const isVideoInShelf = (
@@ -80,16 +81,19 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
     let id: string;
     if (typeof video === 'string') {
       id = video;
-    } else {
+    }
+    else {
       id = video.id;
     }
     if (shelfId) {
       return !!videoShelf.value
-        .find((shelf) => shelf.id === shelfId)
-        ?.videos.find((b) => b.video.id === id);
-    } else {
+        .find(shelf => shelf.id === shelfId)
+        ?.videos
+        .find(b => b.video.id === id);
+    }
+    else {
       for (const shelf of videoShelf.value) {
-        const find = shelf.videos.find((b) => b.video.id === id);
+        const find = shelf.videos.find(b => b.video.id === id);
         if (find) {
           return true;
         }
@@ -102,10 +106,11 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
     let id: string;
     if (typeof video === 'string') {
       id = video;
-    } else {
+    }
+    else {
       id = video.id;
     }
-    return !!videoHistory.value.find((item) => item.video.id === id);
+    return !!videoHistory.value.find(item => item.video.id === id);
   };
 
   const addToViseoSelf = (videoItem: VideoItem, shelfId?: string): boolean => {
@@ -114,13 +119,13 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
       return false;
     }
     const shelf = shelfId
-      ? videoShelf.value.find((item) => item.id === shelfId)
+      ? videoShelf.value.find(item => item.id === shelfId)
       : videoShelf.value[0];
     if (!shelf) {
       showToast('收藏夹不存在');
       return false;
     }
-    if (shelf.videos.find((item) => item.video.id === videoItem.id)) {
+    if (shelf.videos.find(item => item.video.id === videoItem.id)) {
       showToast('收藏中已存在此视频');
       return false;
     }
@@ -139,12 +144,14 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
   ): VideoItemInShelf | undefined => {
     if (shelfId) {
       return videoShelf.value
-        .find((item) => item.id === shelfId)
-        ?.videos.find((b) => b.video.id === videoItem.id);
-    } else {
+        .find(item => item.id === shelfId)
+        ?.videos
+        .find(b => b.video.id === videoItem.id);
+    }
+    else {
       // 遍历所有videoShelf.value， 获取第一个
       for (const shelf of videoShelf.value) {
-        const find = shelf.videos.find((b) => b.video.id === videoItem.id);
+        const find = shelf.videos.find(b => b.video.id === videoItem.id);
         if (find) {
           return find;
         }
@@ -159,8 +166,9 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
       showToast('收藏为空');
       return;
     }
-    if (!shelfId) shelfId = videoShelf.value[0].id;
-    const shelf = videoShelf.value.find((item) => item.id === shelfId);
+    if (!shelfId)
+      shelfId = videoShelf.value[0].id;
+    const shelf = videoShelf.value.find(item => item.id === shelfId);
     if (!shelf) {
       showToast('收藏不存在');
       return;
@@ -168,42 +176,12 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
     shelf.videos = shelf.videos.filter((i) => {
       if (_.isArray(videoItem)) {
         return !_.some(videoItem, { id: i.video.id });
-      } else {
+      }
+      else {
         return i.video.id !== videoItem.id;
       }
     });
   };
-  const updateVideoPlayInfo = (
-    videoItem: VideoItem,
-    options: {
-      episode: VideoEpisode;
-      resource: VideoResource;
-      position?: number;
-    },
-  ) => {
-    if (!videoShelf.value) return;
-    for (const shelf of videoShelf.value) {
-      for (const video of shelf.videos) {
-        if (video.video.id === videoItem.id) {
-          video.video.lastWatchEpisodeId = options.episode.id;
-          video.video.lastWatchResourceId = options.resource.id;
-          if (options.position) {
-            const r = video.video.resources?.find(
-              (item) => item.id === video.video.lastWatchResourceId,
-            );
-            const e = r?.episodes?.find(
-              (item) => item.id === video.video.lastWatchEpisodeId,
-            );
-            if (e) {
-              e.lastWatchPosition = options.position;
-            }
-          }
-        }
-      }
-    }
-    updateVideoHistoryInfo(videoItem, options);
-  };
-
   const updateVideoHistoryInfo = (
     videoItem: VideoItem,
     options: {
@@ -213,7 +191,7 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
     },
   ) => {
     const video = videoHistory.value.find(
-      (item) => item.video.id === videoItem.id,
+      item => item.video.id === videoItem.id,
     );
     if (video) {
       video.lastReadTime = Date.now();
@@ -221,10 +199,10 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
       video.video.lastWatchResourceId = options.resource.id;
       if (options.position) {
         const r = video.video.resources?.find(
-          (item) => item.id === video.video.lastWatchResourceId,
+          item => item.id === video.video.lastWatchResourceId,
         );
         const e = r?.episodes?.find(
-          (item) => item.id === video.video.lastWatchEpisodeId,
+          item => item.id === video.video.lastWatchEpisodeId,
         );
         if (e) {
           e.lastWatchPosition = options.position;
@@ -234,7 +212,8 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
       videoHistory.value = [...videoHistory.value].sort(
         (a, b) => b.lastReadTime - a.lastReadTime,
       );
-    } else {
+    }
+    else {
       const newVideo: VideoHistory = {
         video: videoItem,
         lastReadTime: Date.now(),
@@ -243,10 +222,10 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
       newVideo.video.lastWatchResourceId = options.resource.id;
       if (options.position) {
         const r = newVideo.video.resources?.find(
-          (item) => item.id === newVideo.video.lastWatchResourceId,
+          item => item.id === newVideo.video.lastWatchResourceId,
         );
         const e = r?.episodes?.find(
-          (item) => item.id === newVideo.video.lastWatchEpisodeId,
+          item => item.id === newVideo.video.lastWatchEpisodeId,
         );
         if (e) {
           e.lastWatchPosition = options.position;
@@ -258,13 +237,46 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
     }
   };
 
+  const updateVideoPlayInfo = (
+    videoItem: VideoItem,
+    options: {
+      episode: VideoEpisode;
+      resource: VideoResource;
+      position?: number;
+    },
+  ) => {
+    if (!videoShelf.value)
+      return;
+    for (const shelf of videoShelf.value) {
+      for (const video of shelf.videos) {
+        if (video.video.id === videoItem.id) {
+          video.video.lastWatchEpisodeId = options.episode.id;
+          video.video.lastWatchResourceId = options.resource.id;
+          if (options.position) {
+            const r = video.video.resources?.find(
+              item => item.id === video.video.lastWatchResourceId,
+            );
+            const e = r?.episodes?.find(
+              item => item.id === video.video.lastWatchEpisodeId,
+            );
+            if (e) {
+              e.lastWatchPosition = options.position;
+            }
+          }
+        }
+      }
+    }
+    updateVideoHistoryInfo(videoItem, options);
+  };
+
   const clearVideoHistory = () => {
     videoHistory.value = [];
   };
   const deleteVideoFromShelf = (videoItem: VideoItem, shelfId: string) => {
-    const shelf = videoShelf.value.find((item) => item.id === shelfId);
-    if (!shelf) return;
-    _.remove(shelf.videos, (item) => item.video.id === videoItem.id);
+    const shelf = videoShelf.value.find(item => item.id === shelfId);
+    if (!shelf)
+      return;
+    _.remove(shelf.videos, item => item.video.id === videoItem.id);
   };
   const syncData = () => {
     const clone = _.cloneDeep(videoShelf.value);
@@ -281,10 +293,10 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
       for (const video of shelf.videos) {
         if (isVideoInHistory(video.video)) {
           const resource = video.video.resources?.find(
-            (item) => item.id === video.video.lastWatchResourceId,
+            item => item.id === video.video.lastWatchResourceId,
           );
           const episode = resource?.episodes?.find(
-            (item) => item.id === video.video.lastWatchEpisodeId,
+            item => item.id === video.video.lastWatchEpisodeId,
           );
           if (resource && episode) {
             updateVideoHistoryInfo(video.video, {

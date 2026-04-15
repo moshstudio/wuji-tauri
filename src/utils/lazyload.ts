@@ -1,5 +1,5 @@
+import type { LazyloadOptions } from 'vant/lib/lazyload/vue-lazyload';
 import { cachedFetch } from '@wuji-tauri/fetch';
-import { LazyloadOptions } from 'vant/lib/lazyload/vue-lazyload';
 
 async function getImageSrc(
   src: string,
@@ -16,7 +16,8 @@ async function getImageSrc(
         const response = await fetch(dataURL);
         const blob = await response.blob();
         return URL.createObjectURL(blob);
-      } catch (error) {
+      }
+      catch (error) {
         console.error('image 转换失败:', error);
         throw error;
       }
@@ -40,7 +41,8 @@ async function getImageSrc(
     if (!response.ok) {
       throw new Error('maxRedirections == 0 failed');
     }
-  } catch (error) {
+  }
+  catch (error) {
     response = await cachedFetch(
       src,
       {

@@ -11,7 +11,8 @@ const displayStore = useDisplayStore();
 const value = ref('');
 
 function addSubscribe() {
-  if (!value.value) return;
+  if (!value.value)
+    return;
   store.addSubscribeSource(value.value);
 }
 
@@ -29,7 +30,8 @@ async function selectLocalFile() {
     multiple: false,
     directory: false,
   });
-  if (!file) return;
+  if (!file)
+    return;
   store.addLocalSubscribeSource(file);
   show.value = false;
 }

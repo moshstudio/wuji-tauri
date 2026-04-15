@@ -1,19 +1,19 @@
 <script setup lang="ts">
-const show = defineModel<boolean>('show', { required: true });
-const searchText = defineModel<string>('searchText', { required: true });
 defineProps<{
   playingResourceId: string | undefined;
   playingEpisodeId: string | undefined;
   filterVideoItems:
     | {
-        resourceTitle: string;
-        resourceId: string;
-        episodeTitle: string;
-        episodeId: string;
-      }[]
+      resourceTitle: string;
+      resourceId: string;
+      episodeTitle: string;
+      episodeId: string;
+    }[]
     | undefined;
   onPlaySearchedVideo: (resourceId: string, episodeId: string) => void;
 }>();
+const show = defineModel<boolean>('show', { required: true });
+const searchText = defineModel<string>('searchText', { required: true });
 </script>
 
 <template>
@@ -47,8 +47,8 @@ defineProps<{
           v-for="item in filterVideoItems"
           :key="item.resourceId + item.episodeId"
           :type="
-            item.resourceId === playingResourceId &&
-            item.episodeId === playingEpisodeId
+            item.resourceId === playingResourceId
+              && item.episodeId === playingEpisodeId
               ? 'primary'
               : 'default'
           "
@@ -61,8 +61,12 @@ defineProps<{
             }
           "
         >
-          <p class="truncate">{{ item.resourceTitle }}</p>
-          <p class="truncate">{{ item.episodeTitle }}</p>
+          <p class="truncate">
+            {{ item.resourceTitle }}
+          </p>
+          <p class="truncate">
+            {{ item.episodeTitle }}
+          </p>
         </van-button>
 
         <!-- 无结果提示 -->

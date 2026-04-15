@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { PhotoSource } from '@/types';
-import { MPhotoCard } from '@wuji-tauri/components/src';
-import { ref } from 'vue';
-import { storeToRefs } from 'pinia';
 import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
+import { MPhotoCard } from '@wuji-tauri/components';
+import { storeToRefs } from 'pinia';
+import { ref } from 'vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MHeader from '@/components/header/MHeader.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
@@ -61,10 +61,10 @@ async function onRefresh() {
           >
             <div
               v-if="
-                (paginationPosition === 'top' ||
-                  paginationPosition === 'both') &&
-                item.list &&
-                item.list.totalPage
+                (paginationPosition === 'top'
+                  || paginationPosition === 'both')
+                  && item.list
+                  && item.list.totalPage
               "
               class="flex flex-nowrap px-2"
             >
@@ -94,10 +94,10 @@ async function onRefresh() {
             </ResponsiveGrid2>
             <div
               v-if="
-                (paginationPosition === 'bottom' ||
-                  paginationPosition === 'both') &&
-                item.list &&
-                item.list.totalPage
+                (paginationPosition === 'bottom'
+                  || paginationPosition === 'both')
+                  && item.list
+                  && item.list.totalPage
               "
               class="flex flex-nowrap px-2"
             >
@@ -114,12 +114,12 @@ async function onRefresh() {
         <LiquidGlassContainer
           :width="40"
           :height="40"
-          :borderRadius="20"
-          :glassTintColor="'#000000'"
-          :glassTintOpacity="20"
-          :frostBlurRadius="1"
+          :border-radius="20"
+          glass-tint-color="#000000"
+          :glass-tint-opacity="20"
+          :frost-blur-radius="1"
         >
-          <van-icon name="arrow-up"></van-icon>
+          <van-icon name="arrow-up" />
         </LiquidGlassContainer>
       </van-back-top>
     </van-pull-refresh>

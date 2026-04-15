@@ -16,7 +16,7 @@ const searchInput = ref<HTMLInputElement>();
 function onSearch() {
   const newValue = value.value.trim();
   const histories = [...searchHistories.value];
-  const filtered = histories.filter((item) => item !== newValue);
+  const filtered = histories.filter(item => item !== newValue);
   filtered.unshift(newValue);
   showHistory.value = false;
   if (newValue) {
@@ -41,7 +41,7 @@ function selectHistory(item: string) {
 
 function deleteHistory(e: Event, item: string) {
   e.preventDefault();
-  _.remove(searchHistories.value, (i) => i === item);
+  _.remove(searchHistories.value, i => i === item);
   if (!searchHistories.value.length) {
     showHistory.value = false;
     searchInput.value?.focus();

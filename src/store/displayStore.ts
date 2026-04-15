@@ -1,20 +1,20 @@
 import type { PluginListener } from '@tauri-apps/api/core';
 
 import type { TrayIcon } from '@tauri-apps/api/tray';
+import type Player from 'xgplayer';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { useDark, useStorage, useStorageAsync, useToggle } from '@vueuse/core';
-import { defineStore, storeToRefs } from 'pinia';
 
+import { defineStore, storeToRefs } from 'pinia';
 import { set_status_bar } from 'tauri-plugin-commands-api';
 import * as commands from 'tauri-plugin-commands-api';
-import { onMounted, onUnmounted, ref, watch } from 'vue';
-import buildTray from '@/utils/tray';
-import { tauriAddPluginListener } from './utils';
-import Player from 'xgplayer';
-import { useSettingStore } from './settingStore';
-import { isColorDark } from '@/utils';
 import tinycolor from 'tinycolor2';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { isColorDark } from '@/utils';
+import buildTray from '@/utils/tray';
+import { useSettingStore } from './settingStore';
+import { tauriAddPluginListener } from './utils';
 
 export const useDisplayStore = defineStore('display', () => {
   const showNews = useStorage('showNews', true);
@@ -26,15 +26,16 @@ export const useDisplayStore = defineStore('display', () => {
   // 检测是否为横屏
   const landscapeMediaQuery = window.matchMedia('(orientation: landscape)');
 
-  const isAppView = ref(osType() == 'android' || mobileMediaQuery.matches);
-  const isWindows = ref(osType() == 'windows');
-  const isAndroid = ref(osType() == 'android');
+  const isAppView = ref(osType() === 'android' || mobileMediaQuery.matches);
+  const isWindows = ref(osType() === 'windows');
+  const isAndroid = ref(osType() === 'android');
   const isLandscape = ref(landscapeMediaQuery.matches);
 
   const checkMobile = (event: MediaQueryListEvent) => {
     // 全屏状态下就不刷新`isMobile`了
-    if (fullScreenMode.value) return;
-    isAppView.value = osType() == 'android' || event.matches;
+    if (fullScreenMode.value)
+      return;
+    isAppView.value = osType() === 'android' || event.matches;
   };
   const checklanscape = (event: MediaQueryListEvent) => {
     isLandscape.value = event.matches;
@@ -49,14 +50,17 @@ export const useDisplayStore = defineStore('display', () => {
         if (isAndroid.value) {
           // 横屏
           await commands.set_screen_orientation('landscape');
-        } else if (isWindows.value) {
+        }
+        else if (isWindows.value) {
           await getCurrentWindow().setFullscreen(true);
         }
-      } else {
+      }
+      else {
         showTabBar.value = true;
         if (isAndroid.value) {
           await commands.set_screen_orientation('portrait');
-        } else if (isWindows.value) {
+        }
+        else if (isWindows.value) {
           await getCurrentWindow().setFullscreen(false);
         }
       }
@@ -258,12 +262,14 @@ export const useDisplayStore = defineStore('display', () => {
       statusBarColor.value = isDark.value ? '#000000' : '#ffffff';
       statusBarStyle.value = isDark.value ? 'light' : 'dark';
       statusBarOwner.value = null;
-    } else {
+    }
+    else {
       // 规范化颜色格式，确保 #000 变成 #000000，并处理 CSS 变量
       const tc = tinycolor(color);
       if (tc.isValid()) {
         statusBarColor.value = tc.toHexString();
-      } else {
+      }
+      else {
         statusBarColor.value = color; // 无法解析的（如变量）保持原样
       }
       statusBarStyle.value = style || (isColorDark(color) ? 'light' : 'dark');

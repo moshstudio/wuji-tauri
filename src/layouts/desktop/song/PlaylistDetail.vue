@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PlaylistInfo, SongInfo } from '@wuji-tauri/source-extension';
-import { LoadImage, WSongCard } from '@wuji-tauri/components/src';
+import { LoadImage, WSongCard } from '@wuji-tauri/components';
 import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MNavBar from '@/components/header/MNavBar.vue';
@@ -17,6 +17,7 @@ withDefaults(
     toPage: (playlist: PlaylistInfo, pageNo: number) => void;
     playAll: (playlist: PlaylistInfo) => void;
     addToShelf: (playlist: PlaylistInfo) => void;
+    downloadAll: (playlist: PlaylistInfo) => void;
     showMoreOptions: (playlist: PlaylistInfo, song: SongInfo) => void;
   }>(),
   { inShelf: false },
@@ -92,6 +93,21 @@ const shelfStore = useSongShelfStore();
             "
           >
             播放全部
+          </van-button>
+
+          <van-button
+            size="small"
+            type="primary"
+            plain
+            @click="
+              () => {
+                if (playlist) {
+                  downloadAll(playlist);
+                }
+              }
+            "
+          >
+            下载全部
           </van-button>
         </div>
 

@@ -28,9 +28,9 @@ export function showPromptDialog(
       title: options.title || '输入',
       message: () =>
         h(PromptDialog, {
-          modelValue: inputRef.value,
+          'modelValue': inputRef.value,
           'onUpdate:modelValue': (val: string) => (inputRef.value = val),
-          onEnter: () => {
+          'onEnter': () => {
             if (!inputRef.value.trim()) {
               showToast('请输入内容');
               return false;
@@ -38,9 +38,9 @@ export function showPromptDialog(
             closeDialog();
             resolve(inputRef.value.trim());
           },
-          placeholder: options.placeholder,
-          inputType: options.inputType || 'text',
-          formatter: options.formatter,
+          'placeholder': options.placeholder,
+          'inputType': options.inputType || 'text',
+          'formatter': options.formatter,
         }),
       closeOnClickOverlay: true,
       destroyOnClose: true,
@@ -63,7 +63,8 @@ export function showPromptDialog(
             return false;
           }
           resolve(inputRef.value.trim());
-        } else {
+        }
+        else {
           resolve(null);
         }
         return true; // 关闭对话框

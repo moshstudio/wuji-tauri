@@ -1,10 +1,10 @@
-import semver from 'semver';
-import { useDisplayStore } from '@/store';
 import { getVersion } from '@tauri-apps/api/app';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { check } from '@tauri-apps/plugin-updater';
-import { showConfirmDialog, showDialog, showToast } from 'vant';
 import { fetch } from '@wuji-tauri/fetch';
+import semver from 'semver';
+import { showConfirmDialog, showDialog, showToast } from 'vant';
+import { useDisplayStore } from '@/store';
 
 function calculateProgress(currentBytes: number) {
   // 假设文件大小为20M, 越接近越到100%
@@ -22,7 +22,8 @@ function calculateProgress(currentBytes: number) {
  * @returns {string} 格式化后的字符串
  */
 function formatFileSize(bytes: number) {
-  if (bytes === 0) return '0 B';
+  if (bytes === 0)
+    return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -83,26 +84,29 @@ async function windowsCheckAndUpdate() {
             case 'Started':
               downloadedBytes = event.data.contentLength || 0;
               break;
-            case 'Progress':
+            case 'Progress': {
               downloadedBytes += event.data.chunkLength;
               progress = calculateProgress(downloadedBytes);
               const progressBar = document.getElementById('updateProgressBar');
-              const progressText =
-                document.getElementById('updateProgressText');
+              const progressText
+                = document.getElementById('updateProgressText');
               if (progressBar && progressText) {
                 progressBar.style.width = `${progress}%`;
                 progressText.textContent = `${Math.round(progress)}% · 已下载 ${formatFileSize(downloadedBytes)}`;
               }
               break;
+            }
             case 'Finished':
               break;
           }
         });
         await relaunch();
       }
-    } catch (error) {}
+    }
+    catch (error) {}
     return true;
-  } else {
+  }
+  else {
     return false;
   }
 }
@@ -142,7 +146,8 @@ function copyToClipboard(text: string) {
       console.log('复制成功');
       return true;
     }
-  } catch (err) {
+  }
+  catch (err) {
     console.error('复制失败:', err);
     document.body.removeChild(textarea);
   }
@@ -178,7 +183,8 @@ async function androidCheckAndUpdate() {
       console.log(newInfo.platforms.cloudpan.url);
       if (!copyToClipboard(newInfo.platforms.cloudpan.url)) {
         showToast('下载链接已复制到剪贴板,请手动在浏览器打开');
-      } else {
+      }
+      else {
         showConfirmDialog({
           title: '请手动复制访问',
           message: newInfo.platforms.cloudpan.url,
@@ -188,7 +194,8 @@ async function androidCheckAndUpdate() {
       }
     }
     return true;
-  } else {
+  }
+  else {
     return false;
   }
 }
@@ -197,7 +204,8 @@ export async function checkAndUpdate() {
   const displayStore = useDisplayStore();
   if (displayStore.isWindows) {
     return await windowsCheckAndUpdate();
-  } else if (displayStore.isAndroid) {
+  }
+  else if (displayStore.isAndroid) {
     return await androidCheckAndUpdate();
   }
 }

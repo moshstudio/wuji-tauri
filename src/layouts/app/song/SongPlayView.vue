@@ -1,20 +1,20 @@
 <script lang="ts" setup>
 import type { Lyric } from '@/utils/lyric';
 import { Icon } from '@iconify/vue';
+import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
+import { useWindowSize } from '@vueuse/core';
 import {
+  joinSongArtists,
   LoadImage,
   MoreOptionsSheet,
   PlayPauseButton,
-} from '@wuji-tauri/components/src';
-import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
+} from '@wuji-tauri/components';
 import { SongPlayMode } from '@wuji-tauri/source-extension';
 import { storeToRefs } from 'pinia';
 import { computed, ref } from 'vue';
-import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
 import PlayingSongList from '@/components/list/PlayingSongList.vue';
 import { useDisplayStore, useSongShelfStore, useSongStore } from '@/store';
 import { transTime } from '@/utils';
-import { useWindowSize } from '@vueuse/core';
 
 withDefaults(
   defineProps<{
@@ -51,7 +51,7 @@ const { width: windowWidth, height: WindowHeight } = useWindowSize();
 const actions = computed(() => {
   return shelfStore.songCreateShelf.map((item) => {
     const existed = item.playlist.list?.list.some(
-      (s) => s.id === playingSong.value.id,
+      s => s.id === playingSong.value.id,
     );
     return {
       name: item.playlist.name,
@@ -78,10 +78,10 @@ const actions = computed(() => {
         class="h-full w-full"
       >
         <template #loading>
-          <img src="@/assets/song-bg.jpg" alt="" />
+          <img src="@/assets/song-bg.jpg" alt="">
         </template>
         <template #error>
-          <img src="@/assets/song-bg.jpg" alt="" />
+          <img src="@/assets/song-bg.jpg" alt="">
         </template>
       </LoadImage>
     </div>
@@ -91,10 +91,10 @@ const actions = computed(() => {
       <LiquidGlassContainer
         :width="windowWidth"
         :height="40"
-        :borderRadius="0"
-        :frostBlurRadius="3"
-        :glassTintColor="'#000000'"
-        :glassTintOpacity="20"
+        :border-radius="0"
+        :frost-blur-radius="3"
+        glass-tint-color="#000000"
+        :glass-tint-opacity="20"
         class="z-[12] flex-1 flex-col items-start justify-start"
       >
         <div class="z-10 flex h-full w-full items-center justify-start px-4">
@@ -131,17 +131,19 @@ const actions = computed(() => {
               </li>
             </ul>
           </div>
-          <div v-else class="text-sm text-white">没有歌词</div>
+          <div v-else class="text-sm text-white">
+            没有歌词
+          </div>
         </div>
       </div>
       <!-- 控制区域 -->
       <LiquidGlassContainer
         :width="windowWidth"
         :height="170"
-        :borderRadius="0"
-        :frostBlurRadius="3"
-        :glassTintColor="'#000000'"
-        :glassTintOpacity="20"
+        :border-radius="0"
+        :frost-blur-radius="3"
+        glass-tint-color="#000000"
+        :glass-tint-opacity="20"
         class="z-[12] flex-1 flex-col items-center justify-end"
       >
         <div class="z-10 flex h-full w-full flex-col gap-2 px-4 py-2">
@@ -154,7 +156,7 @@ const actions = computed(() => {
                 {{ joinSongArtists(playingSong.artists) || '' }}
               </p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-4">
               <div class="van-haptics-feedback">
                 <van-icon
                   v-if="shelfStore.songInLikeShelf(playingSong)"

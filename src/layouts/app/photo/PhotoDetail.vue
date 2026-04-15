@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PhotoDetail, PhotoItem } from '@wuji-tauri/source-extension';
-import { LoadImage, MoreOptionsSheet } from '@wuji-tauri/components/src';
+import { LoadImage, MoreOptionsSheet } from '@wuji-tauri/components';
 import { computed, ref, watch } from 'vue';
 import MNavBar from '@/components/header/MNavBar.vue';
 import MPagination from '@/components/pagination/MPagination.vue';

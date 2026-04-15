@@ -3,7 +3,7 @@ import validator from 'validator';
 import { showDialog, showFailToast } from 'vant';
 import { reactive, ref } from 'vue';
 import MNavBar from '@/components/header/MNavBar.vue';
-import { useDisplayStore, useServerStore } from '@/store';
+import { useServerStore } from '@/store';
 
 const props = defineProps<{
   register: (params: {
@@ -16,7 +16,6 @@ const props = defineProps<{
   resendVerifyEmail: (params: { email: string }) => Promise<boolean>;
 }>();
 
-const displayStore = useDisplayStore();
 const serverStore = useServerStore();
 
 // 登录/注册模式切换
@@ -40,17 +39,9 @@ const passwordRules = [
   { required: true, message: '请填写密码' },
   {
     validator: (value: string) =>
-      value.length >= 6 &&
-      validator.matches(value, /(?=.*\d)(?=.*[a-z])(?=.*[A-Z])/),
+      value.length >= 6
+      && validator.matches(value, /(?=.*\d)(?=.*[a-z])(?=.*[A-Z])/),
     message: '密码必须包含大小写字母和数字, 且长度不小于6位',
-  },
-];
-
-const confirmPasswordRules = [
-  { required: true, message: '请确认密码' },
-  {
-    validator: (value: string) => value === form.password,
-    message: '两次密码输入不一致',
   },
 ];
 
@@ -60,6 +51,14 @@ const form = reactive({
   password: '',
   confirmPassword: '',
 });
+
+const confirmPasswordRules = [
+  { required: true, message: '请确认密码' },
+  {
+    validator: (value: string) => value === form.password,
+    message: '两次密码输入不一致',
+  },
+];
 
 // 提交表单
 const isSubmitting = ref(false);
@@ -73,7 +72,8 @@ async function handleSubmit() {
         email: form.email,
         password: form.password,
       });
-    } else {
+    }
+    else {
       // 注册
       await props.register({
         email: form.email,
@@ -81,9 +81,11 @@ async function handleSubmit() {
         passwordConfirm: form.confirmPassword,
       });
     }
-  } catch (error) {
+  }
+  catch (error) {
     showFailToast(String(error) || '操作失败，请重试');
-  } finally {
+  }
+  finally {
     isSubmitting.value = false;
   }
 }
@@ -96,13 +98,15 @@ function handleForgotPassword() {
       message: '请填写邮箱地址, 我们将为您发送一条重置密码邮件',
       showCancelButton: false,
     });
-  } else if (!validator.isEmail(form.email)) {
+  }
+  else if (!validator.isEmail(form.email)) {
     showDialog({
       title: '提示',
       message: '请输入有效的邮箱地址',
       showCancelButton: false,
     });
-  } else {
+  }
+  else {
     showDialog({
       title: '提示',
       message: `确认向 ${form.email} 发送重置密码邮件吗?`,
@@ -124,13 +128,15 @@ function resendVerifyEmail() {
       message: '请填写邮箱地址, 我们将重新为您发送一条验证邮件',
       showCancelButton: false,
     });
-  } else if (!validator.isEmail(form.email)) {
+  }
+  else if (!validator.isEmail(form.email)) {
     showDialog({
       title: '提示',
       message: '请输入有效的邮箱地址',
       showCancelButton: false,
     });
-  } else {
+  }
+  else {
     showDialog({
       title: '提示',
       message: `确认向 ${form.email} 重新发送验证邮件吗?\n(密码不会重置)`,

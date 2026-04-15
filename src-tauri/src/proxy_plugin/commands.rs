@@ -132,6 +132,14 @@ fn get_m3u8_content_with_redirect(
         }
 
         // Process normal response
+        if !response_status.is_success() {
+            let error_content = response.text().await.unwrap_or_default();
+            return Ok(warp::http::Response::builder()
+                .status(response_status.as_u16())
+                .body(error_content)
+                .unwrap());
+        }
+
         let m3u8_content = match response.text().await {
             Ok(content) => process_m3u8(&url, &content, &headers_part),
             Err(e) => {
@@ -216,7 +224,9 @@ fn process_m3u8(m3u8_path: &str, content: &str, headers_part: &str) -> String {
 
     // 调用新的广告过滤机制
     let ad_remover = crate::proxy_plugin::ad_remove::AdRemover::new();
-    let clean_content = ad_remover.run(content).unwrap_or_else(|_| content.to_string());
+    let clean_content = ad_remover
+        .run(content)
+        .unwrap_or_else(|_| content.to_string());
 
     let mut modified_content = clean_content.clone();
     let base_url = Url::parse(m3u8_path).ok();
@@ -339,7 +349,6 @@ fn process_m3u8(m3u8_path: &str, content: &str, headers_part: &str) -> String {
     modified_content
 }
 
-
 /// Proxy TS segments
 async fn get_ts_content_async(
     headers_part: String,
@@ -359,7 +368,7 @@ async fn get_ts_content_async(
     let reqwest_headers = convert_to_reqwest_headers(headers);
     merge_headers(&mut header_map, reqwest_headers, &excluded_headers);
     let client = get_m3u8_http_client(&url, &header_map);
-    
+
     let response = match client.get(&url).send().await {
         Ok(res) => res,
         Err(e) => {
@@ -379,7 +388,7 @@ async fn get_ts_content_async(
     let response_body = response.bytes_stream();
     let body = warp::hyper::Body::wrap_stream(response_body);
     let mut reply = warp::http::Response::new(body);
-    
+
     *reply.status_mut() = response_status;
     *reply.headers_mut() = remove_hop_headers(&convert_to_wrap_headers(response_headers));
 
@@ -817,7 +826,14 @@ pub(crate) fn start_proxy_server() -> std::io::Result<()> {
     let cors = warp::cors()
         .allow_any_origin()
         .allow_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-        .allow_headers(vec!["Content-Type", "Range", "User-Agent", "Referer", "Origin", "Accept"])
+        .allow_headers(vec![
+            "Content-Type",
+            "Range",
+            "User-Agent",
+            "Referer",
+            "Origin",
+            "Accept",
+        ])
         .expose_headers(vec!["Content-Length", "Content-Range", "Accept-Ranges"]);
 
     // M3U8 proxy route

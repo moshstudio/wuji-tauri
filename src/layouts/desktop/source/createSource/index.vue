@@ -1,25 +1,34 @@
 <script setup lang="ts">
 import type { SourceType } from '@wuji-tauri/source-extension';
+import { Icon } from '@iconify/vue';
 import { save as saveToDialog } from '@tauri-apps/plugin-dialog';
 import * as fsApi from '@tauri-apps/plugin-fs';
-import { MoreOptionsSheet } from '@wuji-tauri/components/src';
 
+import { MoreOptionsSheet } from '@wuji-tauri/components';
 import { format } from 'date-fns';
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
 import { storeToRefs } from 'pinia';
 import { showConfirmDialog, showLoadingToast, showToast } from 'vant';
-import { Icon } from '@iconify/vue';
 import { computed, nextTick, ref, watch } from 'vue';
 import LocalSaveDialog from '@/components/codeEditor/dialogs/LocalSave.vue';
 import Guide from '@/components/codeEditor/Guide.vue';
 import { guideExamplesMD } from '@/components/codeEditor/guides';
 import IEditor from '@/components/codeEditor/IEditor.vue';
 
+import {
+  VIDEO_CONSTRUCTOR,
+  VIDEO_DETAIL,
+  VIDEO_LIST,
+  VIDEO_PLAY_URL,
+  VIDEO_SEARCH,
+} from '@/components/codeEditor/templates';
 import WNavbar from '@/components/header/WNavbar.vue';
 import { router } from '@/router';
 import { useServerStore, useStore } from '@/store';
 import { useSourceCreateStore } from '@/store/sourceCreateStore';
+import { copyText } from '@/utils';
+import { generateCode } from './utils';
 import BookContent from './views/BookContent.vue';
 import BookDetail from './views/BookDetail.vue';
 import BookList from './views/BookList.vue';
@@ -39,19 +48,10 @@ import SongPlayUrl from './views/SongPlayUrl.vue';
 import SongSearchList from './views/SongSearchList.vue';
 import SongSearchPlaylist from './views/SongSearchPlaylist.vue';
 import VideoDetail from './views/VideoDetail.vue';
+
 import VideoList from './views/VideoList.vue';
 import VideoPlayUrl from './views/VideoPlayUrl.vue';
 import VideoSearchList from './views/VideoSearchList.vue';
-
-import { generateCode } from './utils';
-import { copyText } from '@/utils';
-import {
-  VIDEO_CONSTRUCTOR,
-  VIDEO_LIST,
-  VIDEO_SEARCH,
-  VIDEO_DETAIL,
-  VIDEO_PLAY_URL,
-} from '@/components/codeEditor/templates';
 
 type Type = 'photo' | 'song' | 'book' | 'comic' | 'video';
 
@@ -180,13 +180,18 @@ function deepToString(
   isJsonLike = true, // 新增参数，标记是否按 JSON 风格格式化
   indent = '  ', // 缩进字符串
 ): string {
-  if (depth > maxDepth) return '[Max Depth Reached]';
+  if (depth > maxDepth)
+    return '[Max Depth Reached]';
 
-  if (obj === null) return 'null';
-  if (obj === undefined) return 'undefined';
+  if (obj === null)
+    return 'null';
+  if (obj === undefined)
+    return 'undefined';
 
-  if (typeof obj === 'string') return `"${obj}"`;
-  if (typeof obj !== 'object') return String(obj);
+  if (typeof obj === 'string')
+    return `"${obj}"`;
+  if (typeof obj !== 'object')
+    return String(obj);
 
   // 处理 DOM 节点
   if (obj instanceof Node) {
@@ -198,36 +203,38 @@ function deepToString(
 
   // 如果是数组
   if (Array.isArray(obj)) {
-    if (obj.length === 0) return '[]';
+    if (obj.length === 0)
+      return '[]';
 
     // 如果是 JSON 风格且不是深层嵌套，进行多行格式化
     if (isJsonLike && depth < 2) {
       const items = obj.map(
-        (item) =>
+        item =>
           `${indent.repeat(depth + 1)}${deepToString(item, depth + 1, maxDepth, isJsonLike, indent)}`,
       );
       return `[\n${items.join(',\n')}\n${indent.repeat(depth)}]`;
     }
-    return `[${obj.map((item) => deepToString(item, depth + 1, maxDepth, isJsonLike, indent)).join(', ')}]`;
+    return `[${obj.map(item => deepToString(item, depth + 1, maxDepth, isJsonLike, indent)).join(', ')}]`;
   }
 
   // 如果是普通对象
   const entries = Object.entries(obj);
-  if (entries.length === 0) return '{}';
+  if (entries.length === 0)
+    return '{}';
 
   // 检查是否是纯 JSON 对象（没有方法、DOM 节点等）
-  const isPureJson =
-    isJsonLike &&
-    entries.every(([_, value]) => {
-      const type = typeof value;
-      return (
-        value === null ||
-        type === 'string' ||
-        type === 'number' ||
-        type === 'boolean' ||
-        (type === 'object' && !(value instanceof Node))
-      );
-    });
+  const isPureJson
+    = isJsonLike
+      && entries.every(([_, value]) => {
+        const type = typeof value;
+        return (
+          value === null
+          || type === 'string'
+          || type === 'number'
+          || type === 'boolean'
+          || (type === 'object' && !(value instanceof Node))
+        );
+      });
 
   // 如果是纯 JSON 对象且不是深层嵌套，进行多行格式化
   if (isPureJson && depth < 2) {
@@ -262,12 +269,12 @@ const selectedPage = ref<string>('constructor');
 const showingCode = computed({
   get() {
     return form.value[showingType.value].pages.find(
-      (p) => p.type === selectedPage.value,
+      p => p.type === selectedPage.value,
     )?.code;
   },
   set(newValue) {
     const page = form.value[showingType.value].pages.find(
-      (p) => p.type === selectedPage.value,
+      p => p.type === selectedPage.value,
     );
     if (page !== undefined) {
       page.code = newValue || '';
@@ -307,7 +314,8 @@ async getPlayUrl(item, resource, episode) {
 
 function toggleVideoMode(mode: 'custom' | 'cms') {
   const video = form.value.video;
-  if (video.mode === mode) return;
+  if (video.mode === mode)
+    return;
   video.mode = mode;
   // 自定义模式的原始默认代码
   const CUSTOM_DEFAULTS: Record<string, string> = {
@@ -376,7 +384,7 @@ function updatePreviewResult(
   result: any,
   passed: boolean,
 ) {
-  const f = form.value[type].pages.find((p) => p.type === page);
+  const f = form.value[type].pages.find(p => p.type === page);
   if (f) {
     f.passed = passed;
     f.result = result;
@@ -402,7 +410,7 @@ function onSelectType(typeName: Type) {
 
 function backDefaultCode() {
   const page = form.value[showingType.value].pages.find(
-    (p) => p.type === selectedPage.value,
+    p => p.type === selectedPage.value,
   );
   if (page) {
     page.code = page.defaultCode;
@@ -430,7 +438,8 @@ async function generateSaveCode(data: {
 function showLocalSave() {
   if (allPassed.value) {
     showLocalSaveDialog.value = true;
-  } else {
+  }
+  else {
     showConfirmDialog({
       title: '保存失败',
       message: '请先运行通过所有接口',
@@ -440,7 +449,8 @@ function showLocalSave() {
 
 async function handleSaveLocal(data: { id: string; name: string }) {
   const code = await generateSaveCode(data);
-  if (!code) return;
+  if (!code)
+    return;
   const path = await saveToDialog({
     filters: [
       {
@@ -450,10 +460,12 @@ async function handleSaveLocal(data: { id: string; name: string }) {
     ],
   });
 
-  if (!path || !code) return;
+  if (!path || !code)
+    return;
   try {
     await fsApi.writeTextFile(path, code);
-  } catch (error) {
+  }
+  catch (error) {
     console.log(error);
     showConfirmDialog({
       title: '保存失败',
@@ -483,7 +495,7 @@ const showAddSourceDialog = ref(false);
 const addSourceDialogActions = computed(() => {
   return myMarketSources.value.map((item) => {
     const exist = item.sourceContents?.find(
-      (content) => content._id === form.value[showingType.value].id,
+      content => content._id === form.value[showingType.value].id,
     );
     return {
       name: item.name,
@@ -498,7 +510,8 @@ const addSourceDialogActions = computed(() => {
           id: data.id,
           name: data.name,
         });
-        if (!code) return;
+        if (!code)
+          return;
         serverStore.addMarketSourceContent({
           _id: data.id,
           name: data.name,
@@ -516,7 +529,8 @@ const addSourceDialogActions = computed(() => {
 function showMarketSave() {
   if (allPassed.value) {
     showMarketSaveDialog.value = true;
-  } else {
+  }
+  else {
     showConfirmDialog({
       title: '失败',
       message: '请先运行通过所有接口',
@@ -526,7 +540,8 @@ function showMarketSave() {
 
 async function handleSaveMarket(data: { id: string; name: string }) {
   const code = await generateSaveCode(data);
-  if (!code) return;
+  if (!code)
+    return;
   const toast = showLoadingToast('获取中');
   await serverStore.getMyMarketSources();
   toast.close();
@@ -541,7 +556,8 @@ async function handleSaveMarket(data: { id: string; name: string }) {
         router.push({ name: 'SourceMy' });
       }
     });
-  } else {
+  }
+  else {
     form.value[showingType.value].id = data.id;
     form.value[showingType.value].name = data.name;
     showAddSourceDialog.value = true;
@@ -623,7 +639,9 @@ async function handleSaveMarket(data: { id: string; name: string }) {
           <van-button size="small" type="success" plain @click="showMarketSave">
             添加到订阅源
           </van-button>
-          <van-button size="small" @click="showGuide = true">教程</van-button>
+          <van-button size="small" @click="showGuide = true">
+            教程
+          </van-button>
           <van-button
             size="small"
             @click="() => (showButtonMoreOptions = true)"
@@ -647,7 +665,9 @@ async function handleSaveMarket(data: { id: string; name: string }) {
         <div
           class="flex h-[40px] flex-shrink-0 items-center justify-between border-b border-gray-200 px-2 text-[--van-text-color]"
         >
-          <div class="text-base font-semibold">运行结果</div>
+          <div class="text-base font-semibold">
+            运行结果
+          </div>
           <van-icon
             name="cross"
             class="van-haptics-feedback p-2"

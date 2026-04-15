@@ -1,6 +1,7 @@
+import type { SniffedResource } from 'tauri-plugin-mywebview-api';
 import {
   fetchWebview as _fetchWebview,
-  type SniffedResource,
+
 } from 'tauri-plugin-mywebview-api';
 
 export type { SniffedResource };
@@ -8,8 +9,8 @@ export type { SniffedResource };
 // 信号量类，用于控制并发数量
 class Semaphore {
   private permits: number;
-  private waiting: Array<{ resolve: () => void; timeoutId: NodeJS.Timeout }> =
-    [];
+  private waiting: Array<{ resolve: () => void; timeoutId: NodeJS.Timeout }>
+    = [];
 
   constructor(permits: number) {
     this.permits = permits;
@@ -24,7 +25,7 @@ class Semaphore {
     return new Promise<boolean>((resolve) => {
       const timeoutId = setTimeout(() => {
         const index = this.waiting.findIndex(
-          (item) => item.timeoutId === timeoutId,
+          item => item.timeoutId === timeoutId,
         );
         if (index !== -1) {
           this.waiting.splice(index, 1);
@@ -119,11 +120,12 @@ export async function fetchWebview(
         if (prop === 'location' && (target as any)._customUrl) {
           try {
             return new URL((target as any)._customUrl);
-          } catch (e) {
+          }
+          catch (e) {
             console.error(e);
             return {
               href: (target as any)._customUrl,
-              toString: function () {
+              toString() {
                 return this.href;
               },
             };
@@ -141,8 +143,8 @@ export async function fetchWebview(
           return true;
         }
         if (
-          (prop === 'URL' || prop === 'location') &&
-          (target as any)._customUrl
+          (prop === 'URL' || prop === 'location')
+          && (target as any)._customUrl
         ) {
           (target as any)._customUrl = value;
           return true;
@@ -152,7 +154,8 @@ export async function fetchWebview(
     });
 
     return proxy;
-  } finally {
+  }
+  finally {
     // 无论成功还是失败，都要释放信号量
     semaphore.release();
   }

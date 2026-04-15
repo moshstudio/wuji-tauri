@@ -39,7 +39,8 @@ const editorProps: EditorProps = {
 watch(
   () => props.value,
   (newVal) => {
-    if (!monaco.value) return;
+    if (!monaco.value)
+      return;
     const currentVal = monaco.value.getValue();
     const normalizedNew = newVal?.replace(/\r\n/g, '\n') || '';
     if (normalizedNew !== currentVal) {
@@ -48,10 +49,10 @@ watch(
   },
 );
 
-const handleEditorChange = (value: string | undefined) => {
+function handleEditorChange(value: string | undefined) {
   editorValue.value = value;
   props.editorChange(value || '');
-};
+}
 
 // 编辑器初始化
 function editorInit(editorInstance: any, monacoInstance: MonacoEditor) {

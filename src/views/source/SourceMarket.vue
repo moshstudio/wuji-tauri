@@ -52,14 +52,15 @@ function toggleSortType() {
 
 function isImported(source: MarketSource) {
   return !!subscribeStore.subscribeSources.find(
-    (s) => s.detail.id === source._id,
+    s => s.detail.id === source._id,
   );
 }
 
 async function onImport(source: MarketSource) {
   if (isImported(source)) {
     router.push({ name: 'SourceManage' });
-  } else {
+  }
+  else {
     await store.addMarketSource(source);
   }
 }

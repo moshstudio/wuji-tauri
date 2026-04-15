@@ -16,10 +16,12 @@ const props = withDefaults(
 
 function parseDimension(value: string | number): string {
   // If it's a number, just add 'px'
-  if (typeof value === 'number') return `${value}px`;
+  if (typeof value === 'number')
+    return `${value}px`;
 
   // If it's a string that can be converted to a number, treat it as px value
-  if (!isNaN(Number(value))) return `${value}px`;
+  if (!Number.isNaN(Number(value)))
+    return `${value}px`;
 
   // Otherwise, assume it's a valid CSS dimension (like '10rem', '50%', etc.)
   return value;

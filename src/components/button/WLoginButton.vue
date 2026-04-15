@@ -27,7 +27,8 @@ withDefaults(
         () => {
           if (userInfo) {
             toUserPage();
-          } else {
+          }
+          else {
             toLoginPage();
           }
         }
@@ -41,7 +42,9 @@ withDefaults(
           :icon="userInfo?.photo || 'user-o'"
         />
       </div>
-      <div v-else>登录</div>
+      <div v-else>
+        登录
+      </div>
     </div>
   </div>
 </template>

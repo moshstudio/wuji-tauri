@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import type { SyncOption } from '@/types/sync';
+import { showSuccessToast } from 'vant';
+import { ref } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppFromServer from '@/layouts/app/sync/FromServer.vue';
 import DesktopFromServer from '@/layouts/desktop/sync/FromServer.vue';
@@ -11,10 +14,7 @@ import {
   useSubscribeSourceStore,
   useVideoShelfStore,
 } from '@/store';
-import { SyncOption, SyncTypes } from '@/types/sync';
-import _ from 'lodash';
-import { showFailToast, showSuccessToast } from 'vant';
-import { ref } from 'vue';
+import { SyncTypes } from '@/types/sync';
 
 const subscribeStore = useSubscribeSourceStore();
 const photoShelfStore = usePhotoShelfStore();
@@ -68,13 +68,13 @@ const syncOptions = ref<SyncOption[]>([
   },
 ]);
 
-const onDownload = async () => {
+async function onDownload() {
   const data = syncOptions.value
-    .filter((item) => item.sync)
-    .map((item) => item.type);
+    .filter(item => item.sync)
+    .map(item => item.type);
   // 获取第一个选中项的增量设置，所有项使用相同设置
-  const isIncremental =
-    syncOptions.value.find((item) => item.sync)?.isIncremental ?? false;
+  const isIncremental
+    = syncOptions.value.find(item => item.sync)?.isIncremental ?? false;
 
   const records = await serverStore.syncFromServer(data);
   if (!records) {
@@ -91,7 +91,8 @@ const onDownload = async () => {
           const currentData = subscribeStore.syncData();
           const mergedData = mergeSubscribeSourceData(currentData, serverData);
           await subscribeStore.loadSyncData(mergedData);
-        } else {
+        }
+        else {
           // 覆盖模式：直接使用服务器数据
           await subscribeStore.loadSyncData(serverData);
         }
@@ -101,7 +102,8 @@ const onDownload = async () => {
           const currentData = bookShelfStore.syncData();
           const mergedData = mergeShelfData(currentData, serverData, 'books');
           await bookShelfStore.loadSyncData(mergedData);
-        } else {
+        }
+        else {
           await bookShelfStore.loadSyncData(serverData);
         }
         break;
@@ -110,7 +112,8 @@ const onDownload = async () => {
           const currentData = comicShelfStore.syncData();
           const mergedData = mergeShelfData(currentData, serverData, 'comics');
           await comicShelfStore.loadSyncData(mergedData);
-        } else {
+        }
+        else {
           await comicShelfStore.loadSyncData(serverData);
         }
         break;
@@ -119,7 +122,8 @@ const onDownload = async () => {
           const currentData = photoShelfStore.syncData();
           const mergedData = mergePhotoShelfData(currentData, serverData);
           await photoShelfStore.loadSyncData(mergedData);
-        } else {
+        }
+        else {
           await photoShelfStore.loadSyncData(serverData);
         }
         break;
@@ -128,7 +132,8 @@ const onDownload = async () => {
           const currentData = songShelfStore.syncData();
           const mergedData = mergeSongShelfData(currentData, serverData);
           await songShelfStore.loadSyncData(mergedData);
-        } else {
+        }
+        else {
           await songShelfStore.loadSyncData(serverData);
         }
         break;
@@ -137,17 +142,18 @@ const onDownload = async () => {
           const currentData = videoShelfStore.syncData();
           const mergedData = mergeShelfData(currentData, serverData, 'videos');
           await videoShelfStore.loadSyncData(mergedData);
-        } else {
+        }
+        else {
           await videoShelfStore.loadSyncData(serverData);
         }
         break;
     }
   }
   showSuccessToast('下载同步成功');
-};
+}
 
 // 合并订阅源数据
-const mergeSubscribeSourceData = (localData: any[], serverData: any[]) => {
+function mergeSubscribeSourceData(localData: any[], serverData: any[]) {
   const mergedMap = new Map();
 
   // 先添加本地数据
@@ -173,14 +179,10 @@ const mergeSubscribeSourceData = (localData: any[], serverData: any[]) => {
   });
 
   return Array.from(mergedMap.values());
-};
+}
 
 // 合并书架/漫画架/影视收藏数据
-const mergeShelfData = (
-  localData: any[],
-  serverData: any[],
-  itemKey: string,
-) => {
+function mergeShelfData(localData: any[], serverData: any[], itemKey: string) {
   const mergedMap = new Map();
 
   // 先添加本地数据
@@ -196,11 +198,13 @@ const mergeShelfData = (
       const itemsMap = new Map();
       localShelf[itemKey]?.forEach((item: any) => {
         const id = item.book?.id || item.comic?.id || item.video?.id;
-        if (id) itemsMap.set(id, item);
+        if (id)
+          itemsMap.set(id, item);
       });
       serverShelf[itemKey]?.forEach((item: any) => {
         const id = item.book?.id || item.comic?.id || item.video?.id;
-        if (id) itemsMap.set(id, item);
+        if (id)
+          itemsMap.set(id, item);
       });
       serverShelf[itemKey] = Array.from(itemsMap.values());
     }
@@ -208,10 +212,10 @@ const mergeShelfData = (
   });
 
   return Array.from(mergedMap.values());
-};
+}
 
 // 合并图片收藏数据
-const mergePhotoShelfData = (localData: any[], serverData: any[]) => {
+function mergePhotoShelfData(localData: any[], serverData: any[]) {
   const mergedMap = new Map();
 
   // 先添加本地数据
@@ -237,12 +241,13 @@ const mergePhotoShelfData = (localData: any[], serverData: any[]) => {
   });
 
   return Array.from(mergedMap.values());
-};
+}
 
 // 合并音乐收藏数据
-const mergeSongShelfData = (localData: any, serverData: any) => {
+function mergeSongShelfData(localData: any, serverData: any) {
   const mergeSongList = (localShelf: any, serverShelf: any) => {
-    if (!localShelf || !serverShelf) return serverShelf;
+    if (!localShelf || !serverShelf)
+      return serverShelf;
     const songsMap = new Map();
     localShelf.playlist?.list?.list?.forEach((song: any) => {
       songsMap.set(song.id, song);
@@ -290,21 +295,21 @@ const mergeSongShelfData = (localData: any, serverData: any) => {
       serverData.songLikeShelf,
     ),
   };
-};
+}
 </script>
 
 <template>
   <PlatformSwitch>
     <template #app>
       <AppFromServer
-        v-bind:sync-options="syncOptions"
-        :onDownload="onDownload"
+        :sync-options="syncOptions"
+        :on-download="onDownload"
       />
     </template>
     <template #desktop>
       <DesktopFromServer
-        v-bind:sync-options="syncOptions"
-        :onDownload="onDownload"
+        :sync-options="syncOptions"
+        :on-download="onDownload"
       />
     </template>
   </PlatformSwitch>

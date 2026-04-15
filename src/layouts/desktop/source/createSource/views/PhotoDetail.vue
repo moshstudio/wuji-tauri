@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { PhotoDetail, PhotoList } from '@wuji-tauri/source-extension';
-import { LoadImage } from '@wuji-tauri/components/src';
+import type { FormItem } from '@/store/sourceCreateStore';
+import { LoadImage } from '@wuji-tauri/components';
 import { PhotoExtension } from '@wuji-tauri/source-extension';
 import { showDialog } from 'vant';
 import { ref } from 'vue';
 import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
 import MPagination from '@/components/pagination/MPagination.vue';
-import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
   content: FormItem<PhotoList>;
@@ -75,15 +75,15 @@ async function load(pageNo: number) {
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('PhotoExtension', code);
-    const extensionclass = func(PhotoExtension);
-    const cls = new extensionclass() as PhotoExtension;
+    const ExtensionClass = func(PhotoExtension);
+    const cls = new ExtensionClass() as PhotoExtension;
     if (cls.baseUrl === undefined) {
       throw new Error('初始化中的baseUrl未定义!');
     }
     cls.log = props.log;
-    const item =
-      findPage('list')?.result?.list?.[0] ||
-      findPage('searchList')?.result?.list?.[0];
+    const item
+      = findPage('list')?.result?.list?.[0]
+        || findPage('searchList')?.result?.list?.[0];
     if (!item) {
       throw new Error('请先保证《推荐图片》或《搜索图片》执行不为空');
     }
@@ -94,7 +94,8 @@ async function load(pageNo: number) {
     result.value = res;
     props.updateResult('photo', 'detail', result.value, true);
     runStatus.value = RunStatus.success;
-  } catch (error) {
+  }
+  catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
     props.updateResult('photo', 'detail', result.value, false);
@@ -102,7 +103,7 @@ async function load(pageNo: number) {
 }
 
 function findPage(name: string) {
-  return props.content.pages.find((page) => page.type === name);
+  return props.content.pages.find(page => page.type === name);
 }
 
 defineExpose({
@@ -112,7 +113,9 @@ defineExpose({
 
 <template>
   <div>
-    <div v-if="runStatus === RunStatus.not_running">未运行</div>
+    <div v-if="runStatus === RunStatus.not_running">
+      未运行
+    </div>
     <div
       v-else-if="runStatus === RunStatus.running"
       class="flex items-center justify-center"

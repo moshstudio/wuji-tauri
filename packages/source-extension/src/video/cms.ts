@@ -101,7 +101,8 @@ abstract class CmsVideoExtension extends VideoExtension {
    */
   sensitiveTypeKeywords: string[] = ['伦理', '福利', '情色', '成人'];
 
-  /**cd
+  /**
+   * cd
    * 可选的代理请求 headers
    *
    * 在 getPlayUrl 中，调用 getM3u8ProxyUrl / getProxyUrl 时会携带这些 headers。
@@ -138,21 +139,24 @@ abstract class CmsVideoExtension extends VideoExtension {
    */
   protected cmsDetailItemToVideoItem(item: CmsVodDetailItem): VideoItem {
     // 解析简介：优先 vod_blurb，其次 vod_content（去除 HTML 标签）
-    const intro =
-      item.vod_blurb?.trim() ||
-      item.vod_content?.replace(/<[^>]+>/g, '').trim() ||
-      undefined;
+    const intro
+      = item.vod_blurb?.trim()
+        || item.vod_content?.replace(/<[^>]+>/g, '').trim()
+        || undefined;
 
     // 解析分类标签
     let tags: string[] | string | undefined;
     if (item.vod_class) {
       tags = item.vod_class
         .split(/[,，]/)
-        .map((t) => t.trim())
+        .map(t => t.trim())
         .filter(Boolean);
-      if (tags.length === 1) tags = tags[0];
-      if ((tags as string[]).length === 0) tags = item.type_name || undefined;
-    } else {
+      if (tags.length === 1)
+        tags = tags[0];
+      if ((tags as string[]).length === 0)
+        tags = item.type_name || undefined;
+    }
+    else {
       tags = item.type_name || undefined;
     }
 
@@ -191,7 +195,8 @@ abstract class CmsVideoExtension extends VideoExtension {
     playFrom: string,
     playUrl: string,
   ): VideoResource[] {
-    if (!playUrl) return [];
+    if (!playUrl)
+      return [];
 
     const sources = playFrom ? playFrom.split('$$$') : ['默认'];
     const urlGroups = playUrl.split('$$$');
@@ -200,19 +205,23 @@ abstract class CmsVideoExtension extends VideoExtension {
     for (let i = 0; i < urlGroups.length; i++) {
       const sourceName = sources[i] || `播放源${i + 1}`;
       const episodeStr = urlGroups[i];
-      if (!episodeStr?.trim()) continue;
+      if (!episodeStr?.trim())
+        continue;
 
       const episodes: VideoEpisode[] = [];
       const episodeParts = episodeStr.split('#');
 
       for (const part of episodeParts) {
-        if (!part.trim()) continue;
+        if (!part.trim())
+          continue;
         const dollarIndex = part.indexOf('$');
-        if (dollarIndex === -1) continue;
+        if (dollarIndex === -1)
+          continue;
 
         const title = part.substring(0, dollarIndex).trim();
         const url = part.substring(dollarIndex + 1).trim();
-        if (!title || !url) continue;
+        if (!title || !url)
+          continue;
 
         episodes.push({
           id: url,
@@ -260,7 +269,8 @@ abstract class CmsVideoExtension extends VideoExtension {
         return null;
       }
       return (await response.json()) as CmsApiResponse;
-    } catch (error) {
+    }
+    catch (error) {
       this.log(`CMS API request error: ${String(error)}`);
       return null;
     }
@@ -280,11 +290,13 @@ abstract class CmsVideoExtension extends VideoExtension {
         const today = new Date().toDateString();
         if (data.date === today && Array.isArray(data.classes)) {
           return data.classes;
-        } else {
+        }
+        else {
           localStorage.removeItem(this._validClassesStorageKey);
         }
       }
-    } catch {
+    }
+    catch {
       // ignore
     }
     return null;
@@ -297,7 +309,8 @@ abstract class CmsVideoExtension extends VideoExtension {
         this._validClassesStorageKey,
         JSON.stringify({ date: today, classes }),
       );
-    } catch {
+    }
+    catch {
       // ignore
     }
   }
@@ -316,7 +329,8 @@ abstract class CmsVideoExtension extends VideoExtension {
     try {
       const raw = localStorage.getItem(this._classMapStorageKey);
       return raw ? JSON.parse(raw) : {};
-    } catch {
+    }
+    catch {
       return {};
     }
   }
@@ -324,7 +338,8 @@ abstract class CmsVideoExtension extends VideoExtension {
   private set _classMap(value: Record<string, number>) {
     try {
       localStorage.setItem(this._classMapStorageKey, JSON.stringify(value));
-    } catch (e) {
+    }
+    catch (e) {
       this.log(`Failed to persist classMap to localStorage: ${String(e)}`);
     }
   }
@@ -382,12 +397,13 @@ abstract class CmsVideoExtension extends VideoExtension {
                 return {
                   cls,
                   isValid: !!(
-                    probeData &&
-                    (probeData.total > 0 ||
-                      (probeData.list && probeData.list.length > 0))
+                    probeData
+                    && (probeData.total > 0
+                      || (probeData.list && probeData.list.length > 0))
                   ),
                 };
-              } catch {
+              }
+              catch {
                 return { cls, isValid: false };
               }
             }),
@@ -406,8 +422,8 @@ abstract class CmsVideoExtension extends VideoExtension {
       // 过滤敏感/不适当的分类
       if (this.filterSensitiveTypes) {
         displayClasses = displayClasses.filter(
-          (cls) =>
-            !this.sensitiveTypeKeywords.some((keyword) =>
+          cls =>
+            !this.sensitiveTypeKeywords.some(keyword =>
               cls.type_name.includes(keyword),
             ),
         );
@@ -418,12 +434,13 @@ abstract class CmsVideoExtension extends VideoExtension {
       }
 
       // 返回所有分类，list 为空，等待 Tab 渲染时懒加载
-      return displayClasses.map((cls) => ({
+      return displayClasses.map(cls => ({
         type: cls.type_name,
         list: [],
         page: pageNo,
       }));
-    } else {
+    }
+    else {
       const typeId = this._classMap[type];
 
       if (!typeId) {
@@ -456,9 +473,10 @@ abstract class CmsVideoExtension extends VideoExtension {
     }
 
     const data = await this.fetchCmsApi(params);
-    if (!data || !data.list) return null;
+    if (!data || !data.list)
+      return null;
 
-    const list: VideoItem[] = (data.list as CmsVodDetailItem[]).map((item) =>
+    const list: VideoItem[] = (data.list as CmsVodDetailItem[]).map(item =>
       this.cmsDetailItemToVideoItem(item),
     );
 
@@ -480,9 +498,10 @@ abstract class CmsVideoExtension extends VideoExtension {
       wd: keyword,
       pg: pageNo || 1,
     });
-    if (!data || !data.list) return null;
+    if (!data || !data.list)
+      return null;
 
-    const list: VideoItem[] = (data.list as CmsVodDetailItem[]).map((item) =>
+    const list: VideoItem[] = (data.list as CmsVodDetailItem[]).map(item =>
       this.cmsDetailItemToVideoItem(item),
     );
 
@@ -499,14 +518,16 @@ abstract class CmsVideoExtension extends VideoExtension {
    */
   async getVideoDetail(item: VideoItem): Promise<VideoItem | null> {
     const vodId = item.id || item.url;
-    if (!vodId) return null;
+    if (!vodId)
+      return null;
 
     const data = await this.fetchCmsApi({
       ac: 'detail',
       ids: vodId,
     });
 
-    if (!data || !data.list || data.list.length === 0) return null;
+    if (!data || !data.list || data.list.length === 0)
+      return null;
 
     const detail = data.list[0] as CmsVodDetailItem;
     return this.cmsDetailItemToVideoItem(detail);
@@ -522,23 +543,25 @@ abstract class CmsVideoExtension extends VideoExtension {
     _resource: VideoResource,
     episode: VideoEpisode,
   ): Promise<VideoUrlMap | null> {
-
     let url = episode.url;
-    if (!url) return null;
+    if (!url)
+      return null;
 
     // 自动判断播放类型
-    let type: VideoUrlMap['type'] = undefined;
+    let type: VideoUrlMap['type'];
     if (url.includes('.m3u8')) {
       type = 'm3u8';
       if (this.proxyHeaders) {
         url = (await this.getM3u8ProxyUrl(url, this.proxyHeaders)) || url;
       }
-    } else if (url.includes('.mp4')) {
+    }
+    else if (url.includes('.mp4')) {
       type = 'mp4';
       if (this.proxyHeaders) {
         url = (await this.getProxyUrl(url, this.proxyHeaders)) || url;
       }
-    } else {
+    }
+    else {
       if (this.proxyHeaders) {
         url = (await this.getProxyUrl(url, this.proxyHeaders)) || url;
       }
@@ -569,11 +592,13 @@ function loadCmsVideoExtensionString(
 ): CmsVideoExtension | undefined {
   try {
     const func = new Function('CmsVideoExtension', codeString);
-    const extensionclass = func(CmsVideoExtension);
-    return new extensionclass();
-  } catch (error) {
+    const ExtensionClass = func(CmsVideoExtension);
+    return new ExtensionClass();
+  }
+  catch (error) {
     console.error('Error executing code:\n', error);
-    if (raise) throw error;
+    if (raise)
+      throw error;
   }
 }
 

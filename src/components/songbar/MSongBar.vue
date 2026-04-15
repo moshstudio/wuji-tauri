@@ -14,7 +14,8 @@ const { showSongPlayingList } = storeToRefs(displayStore);
 function togglePlay() {
   if (songStore.isPlaying) {
     songStore.onPause();
-  } else {
+  }
+  else {
     songStore.onPlay();
   }
 }
@@ -48,18 +49,24 @@ function togglePlay() {
           <div class="right-buttons flex gap-3 px-2">
             <transition name="transform" mode="out-in">
               <div
+                v-if="songStore.isPlaying"
+                key="pause"
                 label="playButton"
                 class="van-haptics-feedback cursor-pointer text-[#1989fa] hover:scale-105"
                 style="touch-action: manipulation"
                 @click.stop="togglePlay"
               >
-                <Icon
-                  :icon="
-                    songStore.isPlaying ? 'ion:pause-circle' : 'ion:play-circle'
-                  "
-                  width="24px"
-                  height="24px"
-                />
+                <Icon icon="ion:pause-circle" width="24px" height="24px" />
+              </div>
+              <div
+                v-else
+                key="play"
+                label="playButton"
+                class="van-haptics-feedback cursor-pointer text-[#1989fa] hover:scale-105"
+                style="touch-action: manipulation"
+                @click.stop="togglePlay"
+              >
+                <Icon icon="ion:play-circle" width="24px" height="24px" />
               </div>
             </transition>
             <Icon

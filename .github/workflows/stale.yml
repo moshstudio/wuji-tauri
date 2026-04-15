@@ -29,7 +29,7 @@ jobs:
             🔒 这个 Issue 因为长时间没有活动已被自动关闭。
 
             如果问题仍然存在，欢迎重新打开或创建新的 Issue。谢谢！
-          stale-issue-label: 'stale'
+          stale-issue-label: stale
           days-before-issue-stale: 30
           days-before-issue-close: 7
           exempt-issue-labels: 'pinned,help wanted,good first issue,bug,enhancement,待处理'
@@ -47,7 +47,7 @@ jobs:
             🔒 这个 Pull Request 因为长时间没有活动已被自动关闭。
 
             如果你想继续这个工作，欢迎重新打开。谢谢！
-          stale-pr-label: 'stale'
+          stale-pr-label: stale
           days-before-pr-stale: 14
           days-before-pr-close: 7
           exempt-pr-labels: 'pinned,work in progress,待审核'

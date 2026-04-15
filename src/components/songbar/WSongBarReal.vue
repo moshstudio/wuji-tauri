@@ -1,13 +1,7 @@
 <script setup lang="ts">
 import type { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
 import { Icon } from '@iconify/vue';
-import {
-  LoadImage,
-  MoreOptionsSheet,
-  SongSelectShelfSheet,
-  WSongCard,
-} from '@wuji-tauri/components/src';
-import { joinSongArtists } from '@wuji-tauri/components/src/components/cards/song';
+import { joinSongArtists, LoadImage, MoreOptionsSheet, SongSelectShelfSheet, WSongCard } from '@wuji-tauri/components';
 import { SongPlayMode } from '@wuji-tauri/source-extension';
 import { storeToRefs } from 'pinia';
 import { ref } from 'vue';

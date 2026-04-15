@@ -10,9 +10,9 @@ import * as iconv from 'iconv-lite';
 import _ from 'lodash';
 import * as m3u8Parser from 'm3u8-parser';
 import { nanoid } from 'nanoid';
-import * as uuid from 'uuid';
 import forge from 'node-forge';
 import pLimit from 'p-limit';
+import * as uuid from 'uuid';
 import {
   maxPageNoFromElements,
   urlJoin as myUrlJoin,
@@ -30,10 +30,12 @@ export function transformResult<T>(func: (result: T) => T) {
         // 调用原始方法
         const result: T = await originalMethod.apply(this, args);
         return func(result);
-      } catch (error) {
+      }
+      catch (error) {
         if (typeof (this as any).log === 'function') {
           (this as any).log(`function ${key} failed: ${String(error)}`);
-        } else {
+        }
+        else {
           // 回退到 console.warn
           console.warn(`[transformResult] function ${key} failed`, error);
         }
@@ -214,12 +216,14 @@ abstract class Extension {
           maxRetry -= 1;
           if (maxRetry > 0) {
             continue;
-          } else {
+          }
+          else {
             const text = await response.text();
             console.log(`fetch error: ${response.status} ${text}`);
             throw new Error(`fetch error: ${response.status} ${text}`);
           }
-        } else {
+        }
+        else {
           const buffer = await response.arrayBuffer();
           const text = new TextDecoder(encoding || 'utf8').decode(buffer);
           return new DOMParser().parseFromString(text, domType || 'text/html');
@@ -256,31 +260,34 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(cover);
-        let coverE =
-          img?.getAttribute('data-original') ||
-          img?.getAttribute('data-lazy-src') ||
-          img?.getAttribute('data-img') ||
-          img?.getAttribute('data-src') ||
-          img?.getAttribute('src') ||
-          img?.getAttribute('data-setbg') ||
-          (img as HTMLElement)?.style.backgroundImage?.replace(
-            /url\(["']?(.*?)["']?\)/,
-            '$1',
-          );
+        let coverE
+          = img?.getAttribute('data-original')
+            || img?.getAttribute('data-lazy-src')
+            || img?.getAttribute('data-img')
+            || img?.getAttribute('data-src')
+            || img?.getAttribute('src')
+            || img?.getAttribute('data-setbg')
+            || (img as HTMLElement)?.style.backgroundImage?.replace(
+              /url\(["']?(.*?)["']?\)/,
+              '$1',
+            );
 
         if (coverE) {
           if (!coverE.startsWith('http')) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
-            } else if (coverE.startsWith('data:')) {
+            }
+            else if (coverE.startsWith('data:')) {
               try {
                 const response = await window.fetch(coverE);
                 const blob = await response.blob();
                 coverE = URL.createObjectURL(blob);
-              } catch (error) {
+              }
+              catch (error) {
                 console.log('parse b64 cover failed:', coverE);
               }
-            } else {
+            }
+            else {
               coverE = this.urlJoin(coverDomain ?? this.baseUrl, coverE);
             }
           }
@@ -290,11 +297,11 @@ abstract class Extension {
         const introE = element.querySelector(intro)?.textContent;
         const authorE = element.querySelector(author)?.textContent;
         const tagsE = Array.from(element.querySelectorAll(tags).values())
-          .map((item) => item.textContent)
+          .map(item => item.textContent)
           .filter((item): item is string => !!item);
         const statusE = element.querySelector(status)?.textContent;
-        const latestChapterE =
-          element.querySelector(latestChapter)?.textContent;
+        const latestChapterE
+          = element.querySelector(latestChapter)?.textContent;
         const latestUpdateE = element.querySelector(latestUpdate)?.textContent;
 
         const _urlE = url ? element.querySelector(url) : element;
@@ -350,31 +357,34 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(cover);
-        let coverE =
-          img?.getAttribute('data-original') ||
-          img?.getAttribute('data-lazy-src') ||
-          img?.getAttribute('data-img') ||
-          img?.getAttribute('data-src') ||
-          img?.getAttribute('src') ||
-          img?.getAttribute('data-setbg') ||
-          (img as HTMLElement)?.style.backgroundImage?.replace(
-            /url\(["']?(.*?)["']?\)/,
-            '$1',
-          );
+        let coverE
+          = img?.getAttribute('data-original')
+            || img?.getAttribute('data-lazy-src')
+            || img?.getAttribute('data-img')
+            || img?.getAttribute('data-src')
+            || img?.getAttribute('src')
+            || img?.getAttribute('data-setbg')
+            || (img as HTMLElement)?.style.backgroundImage?.replace(
+              /url\(["']?(.*?)["']?\)/,
+              '$1',
+            );
 
         if (coverE) {
           if (!coverE.startsWith('http')) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
-            } else if (coverE.startsWith('data:')) {
+            }
+            else if (coverE.startsWith('data:')) {
               try {
                 const response = await window.fetch(coverE);
                 const blob = await response.blob();
                 coverE = URL.createObjectURL(blob);
-              } catch (error) {
+              }
+              catch (error) {
                 console.log('parse b64 cover failed:', coverE);
               }
-            } else {
+            }
+            else {
               coverE = this.urlJoin(
                 coverDomain ?? baseUrl ?? this.baseUrl,
                 coverE,
@@ -391,7 +401,7 @@ abstract class Extension {
         const directorE = element.querySelector(director)?.textContent;
         const castE = element.querySelector(cast)?.textContent;
         const tagsE = Array.from(element.querySelectorAll(tags).values())
-          .map((item) => item.textContent)
+          .map(item => item.textContent)
           .filter((item): item is string => !!item);
         const statusE = element.querySelector(status)?.textContent;
         const latestUpdateE = element.querySelector(latestUpdate)?.textContent;
@@ -447,30 +457,33 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(cover);
-        let coverE =
-          img?.getAttribute('data-original') ||
-          img?.getAttribute('data-lazy-src') ||
-          img?.getAttribute('data-img') ||
-          img?.getAttribute('data-src') ||
-          img?.getAttribute('src') ||
-          img?.getAttribute('data-setbg') ||
-          (img as HTMLElement)?.style.backgroundImage?.replace(
-            /url\(["']?(.*?)["']?\)/,
-            '$1',
-          );
+        let coverE
+          = img?.getAttribute('data-original')
+            || img?.getAttribute('data-lazy-src')
+            || img?.getAttribute('data-img')
+            || img?.getAttribute('data-src')
+            || img?.getAttribute('src')
+            || img?.getAttribute('data-setbg')
+            || (img as HTMLElement)?.style.backgroundImage?.replace(
+              /url\(["']?(.*?)["']?\)/,
+              '$1',
+            );
         if (coverE) {
           if (!coverE.startsWith('http')) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
-            } else if (coverE.startsWith('data:')) {
+            }
+            else if (coverE.startsWith('data:')) {
               try {
                 const response = await window.fetch(coverE);
                 const blob = await response.blob();
                 coverE = URL.createObjectURL(blob);
-              } catch (error) {
+              }
+              catch (error) {
                 console.log('parse b64 cover failed:', coverE);
               }
-            } else {
+            }
+            else {
               coverE = this.urlJoin(
                 coverDomain ?? this.baseUrl ?? this.baseUrl,
                 coverE,
@@ -479,10 +492,10 @@ abstract class Extension {
           }
         }
         const _titleE = title ? element.querySelector(title) : element;
-        const titleE =
-          _titleE?.textContent ||
-          _titleE?.getAttribute('title') ||
-          _titleE?.getAttribute('alt');
+        const titleE
+          = _titleE?.textContent
+            || _titleE?.getAttribute('title')
+            || _titleE?.getAttribute('alt');
         const descE = element.querySelector(desc)?.textContent;
         const authorE = element.querySelector(author)?.textContent;
         const datetimeE = element.querySelector(datetime)?.textContent;
@@ -530,30 +543,33 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(picUrl);
-        let coverE =
-          img?.getAttribute('data-original') ||
-          img?.getAttribute('data-lazy-src') ||
-          img?.getAttribute('data-img') ||
-          img?.getAttribute('data-src') ||
-          img?.getAttribute('src') ||
-          img?.getAttribute('data-setbg') ||
-          (img as HTMLElement)?.style.backgroundImage?.replace(
-            /url\(["']?(.*?)["']?\)/,
-            '$1',
-          );
+        let coverE
+          = img?.getAttribute('data-original')
+            || img?.getAttribute('data-lazy-src')
+            || img?.getAttribute('data-img')
+            || img?.getAttribute('data-src')
+            || img?.getAttribute('src')
+            || img?.getAttribute('data-setbg')
+            || (img as HTMLElement)?.style.backgroundImage?.replace(
+              /url\(["']?(.*?)["']?\)/,
+              '$1',
+            );
         if (coverE) {
           if (!coverE.startsWith('http')) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
-            } else if (coverE.startsWith('data:')) {
+            }
+            else if (coverE.startsWith('data:')) {
               try {
                 const response = await window.fetch(coverE);
                 const blob = await response.blob();
                 coverE = URL.createObjectURL(blob);
-              } catch (error) {
+              }
+              catch (error) {
                 console.log('parse b64 cover failed:', coverE);
               }
-            } else {
+            }
+            else {
               coverE = this.urlJoin(
                 coverDomain ?? this.baseUrl ?? this.baseUrl,
                 coverE,
@@ -562,10 +578,10 @@ abstract class Extension {
           }
         }
         const _titleE = name ? element.querySelector(name) : element;
-        const titleE =
-          _titleE?.textContent ||
-          _titleE?.getAttribute('title') ||
-          _titleE?.getAttribute('alt');
+        const titleE
+          = _titleE?.textContent
+            || _titleE?.getAttribute('title')
+            || _titleE?.getAttribute('alt');
         const descE = element.querySelector(desc)?.textContent;
         const authorE = element.querySelector(creator)?.textContent;
         const datetimeE = element.querySelector(createTime)?.textContent;
@@ -611,30 +627,33 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const img = element.querySelector(picUrl);
-        let coverE =
-          img?.getAttribute('data-original') ||
-          img?.getAttribute('data-lazy-src') ||
-          img?.getAttribute('data-img') ||
-          img?.getAttribute('data-src') ||
-          img?.getAttribute('src') ||
-          img?.getAttribute('data-setbg') ||
-          (img as HTMLElement)?.style.backgroundImage?.replace(
-            /url\(["']?(.*?)["']?\)/,
-            '$1',
-          );
+        let coverE
+          = img?.getAttribute('data-original')
+            || img?.getAttribute('data-lazy-src')
+            || img?.getAttribute('data-img')
+            || img?.getAttribute('data-src')
+            || img?.getAttribute('src')
+            || img?.getAttribute('data-setbg')
+            || (img as HTMLElement)?.style.backgroundImage?.replace(
+              /url\(["']?(.*?)["']?\)/,
+              '$1',
+            );
         if (coverE) {
           if (!coverE.startsWith('http')) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
-            } else if (coverE.startsWith('data:')) {
+            }
+            else if (coverE.startsWith('data:')) {
               try {
                 const response = await window.fetch(coverE);
                 const blob = await response.blob();
                 coverE = URL.createObjectURL(blob);
-              } catch (error) {
+              }
+              catch (error) {
                 console.log('parse b64 cover failed:', coverE);
               }
-            } else {
+            }
+            else {
               coverE = this.urlJoin(
                 coverDomain ?? this.baseUrl ?? this.baseUrl,
                 coverE,
@@ -643,10 +662,10 @@ abstract class Extension {
           }
         }
         const _titleE = name ? element.querySelector(name) : element;
-        const titleE =
-          _titleE?.textContent ||
-          _titleE?.getAttribute('title') ||
-          _titleE?.getAttribute('alt');
+        const titleE
+          = _titleE?.textContent
+            || _titleE?.getAttribute('title')
+            || _titleE?.getAttribute('alt');
         const authorE = Array.from(element.querySelectorAll(artists).values());
         const durationE = element.querySelector(duration)?.textContent;
         const lyricE = element.querySelector(lyric)?.textContent;
@@ -667,7 +686,7 @@ abstract class Extension {
             : '',
           picHeaders,
           artists: authorE
-            ? authorE.map((a) => a.textContent || '')
+            ? authorE.map(a => a.textContent || '')
             : undefined,
           duration: durationE?.trim() ? Number(durationE.trim()) : undefined,
           lyric: lyricE?.trim() || undefined,
@@ -686,8 +705,8 @@ abstract class Extension {
       const list = [];
       for (const element of elements) {
         const href = element.getAttribute('href');
-        const title =
-          element.textContent?.trim() || element.getAttribute('title');
+        const title
+          = element.textContent?.trim() || element.getAttribute('title');
         if (href && title) {
           list.push({
             id: this.urlJoin(this.baseUrl, href),
@@ -699,20 +718,22 @@ abstract class Extension {
       return list;
     };
     this.getContentText = (element?: HTMLElement) => {
-      if (!element) return '';
+      if (!element)
+        return '';
       let text = '';
       for (const child of element.childNodes) {
         // 跳过 script 元素
         if (
-          child.nodeType === Node.ELEMENT_NODE &&
-          (child as HTMLElement).tagName?.toLowerCase() === 'script'
+          child.nodeType === Node.ELEMENT_NODE
+          && (child as HTMLElement).tagName?.toLowerCase() === 'script'
         ) {
           continue;
         }
 
         if (child.nodeType === Node.TEXT_NODE) {
           text += `${child.textContent}\n`;
-        } else if (child.nodeType === Node.ELEMENT_NODE) {
+        }
+        else if (child.nodeType === Node.ELEMENT_NODE) {
           text += `${this.getContentText(child as HTMLElement)}\n`;
         }
       }

@@ -1,8 +1,8 @@
+import { type as osType } from '@tauri-apps/plugin-os';
 import { useStorage, useStorageAsync } from '@vueuse/core';
 import { defineStore } from 'pinia';
 import { onMounted, watch } from 'vue';
-import { setAutostartEnabled, checkAutostartEnabled } from '@/utils/autostart';
-import { type as osType } from '@tauri-apps/plugin-os';
+import { checkAutostartEnabled, setAutostartEnabled } from '@/utils/autostart';
 
 export const useSettingStore = defineStore('setting', () => {
   // 音乐自动切换源
@@ -45,7 +45,8 @@ export const useSettingStore = defineStore('setting', () => {
         if (enableAutostart.value !== isEnabled) {
           enableAutostart.value = isEnabled;
         }
-      } catch (error) {
+      }
+      catch (error) {
         console.error('检查开机自启状态失败:', error);
       }
     });
@@ -53,10 +54,12 @@ export const useSettingStore = defineStore('setting', () => {
     // 监听开机自启开关变化
     watch(enableAutostart, async (newVal, oldVal) => {
       // 避免初始化时触发
-      if (oldVal === undefined) return;
+      if (oldVal === undefined)
+        return;
       try {
         await setAutostartEnabled(newVal);
-      } catch (error) {
+      }
+      catch (error) {
         console.error('设置开机自启失败:', error);
         // 回滚状态
         enableAutostart.value = oldVal;

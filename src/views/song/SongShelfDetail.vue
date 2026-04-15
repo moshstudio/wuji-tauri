@@ -3,14 +3,14 @@ import type { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
 import {
   MoreOptionsSheet,
   SongSelectShelfSheet,
-} from '@wuji-tauri/components/src';
+} from '@wuji-tauri/components';
 import { SongShelfType } from '@wuji-tauri/source-extension';
 import { showLoadingToast, showToast } from 'vant';
 import { ref, watch } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppSongShelfDetail from '@/layouts/app/song/SongShelfDetail.vue';
 import DesktopSongShelfDetail from '@/layouts/desktop/song/SongShelfDetail.vue';
-import { useSongShelfStore, useSongStore, useStore } from '@/store';
+import { useDownloadStore, useSongShelfStore, useSongStore, useStore } from '@/store';
 
 const props = defineProps({
   shelfId: String,
@@ -19,6 +19,7 @@ const props = defineProps({
 const store = useStore();
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
+const downloadStore = useDownloadStore();
 
 const shelf = ref<SongShelf>();
 const moreOptions = ref(false);
@@ -45,14 +46,15 @@ async function playAll(shelf: SongShelf) {
     return;
   }
   if (
-    shelf.type === SongShelfType.like ||
-    shelf.type === SongShelfType.create
+    shelf.type === SongShelfType.like
+    || shelf.type === SongShelfType.create
   ) {
     if (shelf.playlist.list?.list.length) {
       const list = shelf.playlist.list!.list;
       await songStore.setPlayingList(list, list[0]);
     }
-  } else {
+  }
+  else {
     const t = showLoadingToast({
       message: '加载中',
       duration: 0,
@@ -62,6 +64,11 @@ async function playAll(shelf: SongShelf) {
     await store.songPlaylistPlayAll(shelf.playlist);
     t.close();
   }
+}
+
+async function downloadAll(shelf: SongShelf) {
+  const source = store.getSongSource(shelf.playlist.sourceId);
+  downloadStore.startMusicPlaylistDownload(shelf.playlist, source);
 }
 
 function removeShelf(shelf: SongShelf) {
@@ -89,13 +96,14 @@ watch(
   () => {
     if (shelfStore.songLikeShelf.playlist.id === props.shelfId) {
       shelf.value = shelfStore.songLikeShelf;
-    } else {
+    }
+    else {
       shelf.value = shelfStore.songCreateShelf.find(
-        (s) => s.playlist.id === props.shelfId,
+        s => s.playlist.id === props.shelfId,
       );
       if (!shelf.value) {
         shelf.value = shelfStore.songPlaylistShelf.find(
-          (s) => s.playlist.id === props.shelfId,
+          s => s.playlist.id === props.shelfId,
         );
       }
     }
@@ -111,6 +119,7 @@ watch(
         :shelf="shelf"
         :to-page="toPage"
         :play-all="playAll"
+        :download-all="downloadAll"
         :remove-shelf="removeShelf"
         :show-more-options="showMoreOptions"
       />
@@ -120,6 +129,7 @@ watch(
         :shelf="shelf"
         :to-page="toPage"
         :play-all="playAll"
+        :download-all="downloadAll"
         :remove-shelf="removeShelf"
         :show-more-options="showMoreOptions"
       />

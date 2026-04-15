@@ -1,5 +1,5 @@
 export async function loadFont(url: string) {
-  var link = document.createElement('link');
+  const link = document.createElement('link');
   link.rel = 'stylesheet';
   link.href = url;
   document.head.appendChild(link);

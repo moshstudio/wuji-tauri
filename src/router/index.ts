@@ -29,7 +29,7 @@ export const routes: RouteRecordRaw[] = [
             component: () => import('@/views/photo/PhotoShelf.vue'),
           },
           {
-            path: ':sourceId/:id',
+            path: ':sourceId/:id(.*)',
             name: 'PhotoDetail',
             component: () => import('@/views/photo/PhotoDetail.vue'),
             props: true,
@@ -92,13 +92,13 @@ export const routes: RouteRecordRaw[] = [
             component: () => import('@/views/book/BookShelf.vue'),
           },
           {
-            path: ':sourceId/:bookId',
+            path: ':sourceId/:bookId(.*)',
             name: 'BookDetail',
             component: () => import('@/views/book/BookDetail.vue'),
             props: true,
           },
           {
-            path: ':sourceId/:bookId/:chapterId/:isPrev?',
+            path: ':sourceId/:bookId/:chapterId(.*)/:isPrev?',
             name: 'BookRead',
             component: () => import('@/views/book/BookRead.vue'),
             props: true,
@@ -120,13 +120,13 @@ export const routes: RouteRecordRaw[] = [
             component: () => import('@/views/comic/ComicShelf.vue'),
           },
           {
-            path: ':sourceId/:comicId',
+            path: ':sourceId/:comicId(.*)',
             name: 'ComicDetail',
             component: () => import('@/views/comic/ComicDetail.vue'),
             props: true,
           },
           {
-            path: ':sourceId/:comicId/:chapterId',
+            path: ':sourceId/:comicId/:chapterId(.*)',
             name: 'ComicRead',
             component: () => import('@/views/comic/ComicRead.vue'),
             props: true,
@@ -147,7 +147,7 @@ export const routes: RouteRecordRaw[] = [
             component: () => import('@/views/video/VideoShelf.vue'),
           },
           {
-            path: ':sourceId/:videoId',
+            path: ':sourceId/:videoId(.*)',
             name: 'VideoDetail',
             component: () => import('@/views/video/VideoDetail.vue'),
             props: true,
@@ -283,18 +283,21 @@ export const router = createRouter({
 router.beforeEach((to, from, next) => {
   if (to.query.transition) {
     to.meta.transition = to.query.transition;
-  } else if (to.params.transition) {
+  }
+  else if (to.params.transition) {
     to.meta.transition = to.params.transition;
-  } else if (isSameType(to, from)) {
+  }
+  else if (isSameType(to, from)) {
     const toDepth = getDepth(to);
     const fromDepth = getDepth(from);
-    to.meta.transition =
-      toDepth < fromDepth
+    to.meta.transition
+      = toDepth < fromDepth
         ? 'slide-right'
         : toDepth > fromDepth
           ? 'slide-left'
           : 'fade';
-  } else {
+  }
+  else {
     to.meta.transition = 'fade';
   }
 
@@ -346,18 +349,6 @@ function isSameType(
     // 如果某一段相同，说明有共同前缀，可以返回 true
     // 例如：只要第一段相同就算同类型
     if (i === 0) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function isSourcePage(route: RouteLocationNormalizedGeneric): boolean {
-  const name = route.name?.toString();
-  if (!name) return false;
-  const types = ['Home', 'Photo', 'Song', 'Book', 'Comic', 'Video', 'Source'];
-  for (const type of types) {
-    if (name?.startsWith(type)) {
       return true;
     }
   }

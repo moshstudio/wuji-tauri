@@ -125,11 +125,13 @@ function loadPhotoExtensionString(
 ): PhotoExtension | undefined {
   try {
     const func = new Function('PhotoExtension', codeString);
-    const extensionclass = func(PhotoExtension);
-    return new extensionclass();
-  } catch (error) {
+    const ExtensionClass = func(PhotoExtension);
+    return new ExtensionClass();
+  }
+  catch (error) {
     console.error('Error executing code:\n', error);
-    if (raise) throw error;
+    if (raise)
+      throw error;
     // showNotify({
     //   type: 'danger',
     //   message: String(error),

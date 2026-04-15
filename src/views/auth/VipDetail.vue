@@ -5,13 +5,13 @@ import type {
   MembershipPlanLevel,
 } from '@/types/user';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { onMountedOrActivated } from '@vant/use';
 import { storeToRefs } from 'pinia';
 import { showDialog } from 'vant';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppVipDetail from '@/layouts/app/auth/VipDetail.vue';
 import DesktopVipDetail from '@/layouts/desktop/auth/VipDetail.vue';
 import { useServerStore } from '@/store';
-import { onMountedOrActivated } from '@vant/use';
 
 const serverStore = useServerStore();
 const { membershipPlans, userInfo } = storeToRefs(serverStore);
@@ -22,7 +22,7 @@ function isExist(
 ) {
   return (
     membershipPlans.value?.some(
-      (plan) => plan.level === level && plan.billingCycle === cycle,
+      plan => plan.level === level && plan.billingCycle === cycle,
     ) || false
   );
 }
@@ -34,7 +34,8 @@ async function genPayUrl(plan: MembershipPlan) {
       title: '提示',
       message: '支付失败，请稍后再试',
     });
-  } else {
+  }
+  else {
     openUrl(url);
     showDialog({
       title: '提示',

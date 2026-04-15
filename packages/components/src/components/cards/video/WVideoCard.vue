@@ -9,7 +9,7 @@ defineProps<{
 </script>
 
 <template>
-  <MVideoCard :video="video" :click="click"></MVideoCard>
+  <MVideoCard :video="video" :click="click" />
 </template>
 
 <style scoped lang="less">

@@ -4,17 +4,17 @@ import type {
   VideoResource,
   VideosList,
 } from '@wuji-tauri/source-extension';
+import type { FormItem } from '@/store/sourceCreateStore';
 import {
-  VideoExtension,
   CmsVideoExtension,
+  VideoExtension,
 } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
 import { showDialog } from 'vant';
 import { ref } from 'vue';
-import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 import CMS_VIDEO_TEMPLATE from '@/components/codeEditor/templates/cmsVideoTemplate.txt?raw';
+import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
   content: FormItem<VideosList>;
@@ -74,8 +74,8 @@ async function load() {
     });
     return;
   }
-  const template =
-    props.content.mode === 'cms' ? CMS_VIDEO_TEMPLATE : VIDEO_TEMPLATE;
+  const template
+    = props.content.mode === 'cms' ? CMS_VIDEO_TEMPLATE : VIDEO_TEMPLATE;
   const code = template
     .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
     .replace('// @METHOD_LIST', findPage('list')!.code)
@@ -84,8 +84,8 @@ async function load() {
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('VideoExtension', 'CmsVideoExtension', code);
-    const extensionclass = func(VideoExtension, CmsVideoExtension);
-    const cls = new extensionclass() as VideoExtension;
+    const ExtensionClass = func(VideoExtension, CmsVideoExtension);
+    const cls = new ExtensionClass() as VideoExtension;
     if (cls.baseUrl === undefined) {
       throw new Error('初始化中的baseUrl未定义!');
     }
@@ -94,8 +94,9 @@ async function load() {
       let item: VideoItem | undefined;
       if (p?.result) {
         if (_.isArray(p.result)) {
-          item = _.findLast(p.result, (item) => !!item.list?.length)?.list?.[0];
-        } else {
+          item = _.findLast(p.result, item => !!item.list?.length)?.list?.[0];
+        }
+        else {
           item = p.result.list?.[0];
         }
       }
@@ -105,8 +106,8 @@ async function load() {
     const listItem = getItem(listPage);
     const searchPage = findPage('searchList');
     const searchItem = getItem(searchPage);
-    const item =
-      (searchPage?.ts || 0) > (listPage?.ts || 0) && searchItem
+    const item
+      = (searchPage?.ts || 0) > (listPage?.ts || 0) && searchItem
         ? searchItem
         : listItem;
 
@@ -120,14 +121,15 @@ async function load() {
     if (!res.resources?.length) {
       throw new Error('获取详情失败! 获取的剧集列表为空');
     }
-    if (!res.resources?.find((item) => !!item.episodes?.length)) {
+    if (!res.resources?.find(item => !!item.episodes?.length)) {
       throw new Error('获取详情失败! 获取的播放列表为空');
     }
     result.value = res;
     selectedResource.value = res.resources[0];
     props.updateResult('video', 'detail', result.value, true);
     runStatus.value = RunStatus.success;
-  } catch (error) {
+  }
+  catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
     props.updateResult('video', 'detail', result.value, false);
@@ -135,7 +137,7 @@ async function load() {
 }
 
 function findPage(name: string) {
-  return props.content.pages.find((page) => page.type === name);
+  return props.content.pages.find(page => page.type === name);
 }
 
 defineExpose({
@@ -145,7 +147,9 @@ defineExpose({
 
 <template>
   <div>
-    <div v-if="runStatus === RunStatus.not_running">未运行</div>
+    <div v-if="runStatus === RunStatus.not_running">
+      未运行
+    </div>
     <div
       v-else-if="runStatus === RunStatus.running"
       class="flex items-center justify-center"
@@ -170,7 +174,8 @@ defineExpose({
               </h2>
               <div class="flex gap-1 overflow-x-auto">
                 <van-tag
-                  v-for="tag in _.castArray(result?.tags)"
+                  v-for="(tag, index) in _.castArray(result?.tags)"
+                  :key="index"
                   plain
                   color="rgba(100,100,100,0.3)"
                   text-color="var(--van-text-color-2)"

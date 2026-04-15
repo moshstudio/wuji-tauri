@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import type { SyncOption } from '@/types/sync';
+import { onMountedOrActivated } from '@vant/use';
+import _ from 'lodash';
+import { showDialog } from 'vant';
+import { ref } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppToServer from '@/layouts/app/sync/ToServer.vue';
 import DesktopToServer from '@/layouts/desktop/sync/ToServer.vue';
@@ -8,16 +13,11 @@ import {
   usePhotoShelfStore,
   useServerStore,
   useSongShelfStore,
-  useStore,
   useSubscribeSourceStore,
   useVideoShelfStore,
 } from '@/store';
-import { SyncOption, SyncTypes } from '@/types/sync';
-import { bytesToSize, estimateJsonSize, sleep } from '@/utils';
-import { onMountedOrActivated } from '@vant/use';
-import _ from 'lodash';
-import { closeDialog, showDialog, showFailToast, showSuccessToast } from 'vant';
-import { onMounted, ref } from 'vue';
+import { SyncTypes } from '@/types/sync';
+import { estimateJsonSize, sleep } from '@/utils';
 
 const subscribeStore = useSubscribeSourceStore();
 const photoShelfStore = usePhotoShelfStore();
@@ -71,10 +71,10 @@ const syncOptions = ref<SyncOption[]>([
   },
 ]);
 
-const onSync = async () => {
+async function onSync() {
   if (
-    _.sum(syncOptions.value.map((item) => item.size ?? 0)) >=
-    1024 * 1024 * 10
+    _.sum(syncOptions.value.map(item => item.size ?? 0))
+    >= 1024 * 1024 * 10
   ) {
     showDialog({
       title: '同步失败',
@@ -86,8 +86,8 @@ const onSync = async () => {
   }
   const data = [];
   // 获取第一个选中项的增量设置，所有项使用相同设置
-  const isIncremental =
-    syncOptions.value.find((item) => item.sync)?.isIncremental ?? false;
+  const isIncremental
+    = syncOptions.value.find(item => item.sync)?.isIncremental ?? false;
 
   if (syncOptions.value[0].sync) {
     data.push({
@@ -126,7 +126,7 @@ const onSync = async () => {
     });
   }
   await serverStore.syncToServer(data, isIncremental);
-};
+}
 
 onMountedOrActivated(async () => {
   if (!subscribeStore.subscribeSources.length) {
@@ -144,10 +144,10 @@ onMountedOrActivated(async () => {
 <template>
   <PlatformSwitch>
     <template #app>
-      <AppToServer v-bind:sync-options="syncOptions" :onSync="onSync" />
+      <AppToServer :sync-options="syncOptions" :on-sync="onSync" />
     </template>
     <template #desktop>
-      <DesktopToServer v-bind:sync-options="syncOptions" :onSync="onSync" />
+      <DesktopToServer :sync-options="syncOptions" :on-sync="onSync" />
     </template>
   </PlatformSwitch>
 </template>

@@ -1,10 +1,11 @@
+import type { MaybeRefOrGetter } from 'vue';
 import {
-  watch,
-  onUnmounted,
+
   onActivated,
   onDeactivated,
+  onUnmounted,
   toValue,
-  type MaybeRefOrGetter,
+  watch,
 } from 'vue';
 import { useDisplayStore } from '@/store';
 

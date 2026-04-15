@@ -2,21 +2,21 @@
 import type { ComicChapter, ComicItem } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
 import { storeToRefs } from 'pinia';
-import { showLoadingToast, showToast, showFailToast } from 'vant';
+import { showFailToast, showLoadingToast, showToast } from 'vant';
 import { computed, onActivated, ref, watch } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+import { usePageDataLoader } from '@/hooks/usePageDataLoader';
 import AppComicDetail from '@/layouts/app/comic/ComicDetail.vue';
 import DesktopComicDetail from '@/layouts/desktop/comic/ComicDetail.vue';
 import { router } from '@/router';
-import { useComicShelfStore, useStore, useDownloadStore } from '@/store';
-import { usePageDataLoader } from '@/hooks/usePageDataLoader';
-
-const downloadStore = useDownloadStore();
+import { useComicShelfStore, useDownloadStore, useStore } from '@/store';
 
 const { comicId, sourceId } = defineProps({
   comicId: String,
   sourceId: String,
 });
+
+const downloadStore = useDownloadStore();
 
 const store = useStore();
 const shelfStore = useComicShelfStore();
@@ -27,7 +27,7 @@ const comicSource = ref<ComicSource>();
 const shouldReload = ref(false);
 const inShelf = computed(() => {
   for (const shelf of comicShelf.value) {
-    if (shelf.comics.some((comic) => comic.comic.id === comicId)) {
+    if (shelf.comics.some(comic => comic.comic.id === comicId)) {
       return true;
     }
   }
@@ -35,7 +35,7 @@ const inShelf = computed(() => {
 });
 const showAddShelfSheet = ref(false);
 const addShelfActions = computed(() => {
-  return comicShelf.value.map((shelf) => ({
+  return comicShelf.value.map(shelf => ({
     name: shelf.name,
     subname: `共 ${shelf.comics.length || 0} 本漫画`,
     callback: () => {
@@ -83,7 +83,8 @@ async function loadData() {
     const detail = await store.comicDetail(comicSource.value, comic.value);
     toast.close();
 
-    if (signal.aborted) return true;
+    if (signal.aborted)
+      return true;
 
     if (detail) {
       comic.value = detail;
@@ -96,7 +97,6 @@ async function loadData() {
     return !!detail;
   });
 }
-
 
 function toChapter(_comic: ComicItem, chapter: ComicChapter) {
   router.push({
@@ -124,7 +124,6 @@ async function onDownload() {
       return;
     }
     await downloadStore.startComicDownload(comic.value, comicSource.value);
-    showToast('已加入下载队列');
   }
 }
 

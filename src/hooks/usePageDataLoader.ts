@@ -1,4 +1,4 @@
-import { ref, onActivated, onDeactivated, onUnmounted } from 'vue';
+import { onActivated, onDeactivated, onUnmounted, ref } from 'vue';
 
 interface UsePageDataLoaderOptions {
   /** 最大重试次数，默认 3 */
@@ -86,14 +86,19 @@ export function usePageDataLoader(options: UsePageDataLoaderOptions = {}) {
 
     let retries = 0;
     while (retries < maxRetries) {
-      if (signal.aborted || !isActive.value) return false;
+      if (signal.aborted || !isActive.value)
+        return false;
 
       try {
         const result = await fn(signal);
-        if (signal.aborted || !isActive.value) return false;
-        if (result) return true;
-      } catch (error) {
-        if (signal.aborted || !isActive.value) return false;
+        if (signal.aborted || !isActive.value)
+          return false;
+        if (result)
+          return true;
+      }
+      catch (error) {
+        if (signal.aborted || !isActive.value)
+          return false;
         console.error('[PageDataLoader] 加载出错:', error);
       }
 

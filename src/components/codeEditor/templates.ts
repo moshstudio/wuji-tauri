@@ -3,7 +3,7 @@ constructor() {
   super();
   this.baseUrl = 'https://v2.jk.rs/';
 }
-`;
+`
 export const PHOTO_LIST = `
 async getRecommendList(pageNo) {
   pageNo ||= 1;
@@ -22,7 +22,7 @@ async getRecommendList(pageNo) {
     page: pageNo,
     totalPage: this.maxPageNoFromElements(pageElements),
   };
-}`;
+}`
 
 export const PHOTO_SEARCH = `
 async search(keyword, pageNo) {
@@ -42,7 +42,7 @@ async search(keyword, pageNo) {
     page: pageNo,
     totalPage: this.maxPageNoFromElements(pageElements),
   };
-}`;
+}`
 
 export const PHOTO_DETAIL = `
 async getPhotoDetail(item, pageNo) {
@@ -57,14 +57,14 @@ async getPhotoDetail(item, pageNo) {
       page: 1,
       totalPage: 1,
     };
-}`;
+}`
 
 export const SONG_CONSTRUCTOR = `
 constructor() {
   super();
   this.baseUrl = 'https://music.migu.cn/';
 }
-`;
+`
 
 export const SONG_PLAYLIST = `
 async getRecommendPlaylists(pageNo) {
@@ -95,7 +95,7 @@ async getRecommendPlaylists(pageNo) {
     totalPage: Math.ceil(Number(data.retMsg.countSize) / 10),
   };
 }
-`;
+`
 
 export const SONG_SEARCH_PLAYLIST = `
 async searchPlaylists(keyword, pageNo) {
@@ -122,7 +122,7 @@ async searchPlaylists(keyword, pageNo) {
     totalPage: response.pgt,
   };
 }
-`;
+`
 
 export const SONG_LIST = `
 async getRecommendSongs(pageNo) {
@@ -163,7 +163,7 @@ async getRecommendSongs(pageNo) {
     ),
   };
 }
-`;
+`
 
 export const SONG_SEARCH_LIST = `
 async searchSongs(keyword, pageNo) {
@@ -196,7 +196,7 @@ async searchSongs(keyword, pageNo) {
     totalPage: response.pgt,
   };
 }
-`;
+`
 
 export const SONG_PLAYLIST_DETAIL = `
 async getPlaylistDetail(item, pageNo) {
@@ -246,7 +246,7 @@ async getPlaylistDetail(item, pageNo) {
 
   return item;
 }
-`;
+`
 
 export const SONG_PLAY_URL = `
 async getSongUrl(item, size) {
@@ -277,7 +277,7 @@ async getSongUrl(item, size) {
   }
   return null;
 }
-`;
+`
 
 export const SONG_LYRIC = `
 async getLyric(item) {
@@ -291,7 +291,7 @@ async getLyric(item) {
   const response = await this.fetch(url);
   return response.lyric;
 }
-`;
+`
 
 export const BOOK_CONSTRUCTOR = `
 constructor() {
@@ -303,7 +303,7 @@ constructor() {
         "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 8.0.0; LND-AL40 Build/HONORLND-AL40)",
     }
 }
-`;
+`
 
 export const BOOK_LIST = `
 async getRecommendBooks(pageNo, type) {
@@ -331,7 +331,7 @@ async getRecommendBooks(pageNo, type) {
     page: pageNo,
     totalPage: Math.ceil(json.paging.count / 30),
   };
-}`;
+}`
 
 export const BOOK_SEARCH = `
 async search(keyword, pageNo) {
@@ -359,7 +359,7 @@ async search(keyword, pageNo) {
     page: pageNo,
     totalPage: Math.ceil(json.paging.count / 30),
   };
-}`;
+}`
 
 export const BOOK_DETAIL = `
 async getBookDetail(item, pageNo) {
@@ -388,7 +388,7 @@ async getBookDetail(item, pageNo) {
 
   return item;
 }
-`;
+`
 
 export const BOOK_CONTENT = `
 async getContent(item, chapter) {
@@ -413,14 +413,14 @@ async getContent(item, chapter) {
   }
   return content;
 }
-`;
+`
 
 export const COMIC_CONSTRUCTOR = `
 constructor() {
   super();
   this.baseUrl = 'https://manhuafree.com/';
 }
-`;
+`
 
 export const COMIC_LIST = `
 async getRecommendComics(pageNo, type) {
@@ -465,14 +465,14 @@ async getRecommendComics(pageNo, type) {
     totalPage: this.maxPageNoFromElements(pageElements),
     type
   }
-}`;
+}`
 
 export const COMIC_SEARCH = `
 async search(keyword, pageNo) {
   pageNo = pageNo || 1;
   const url = this.urlJoin(this.baseUrl, \`s/\${keyword}\`);
   
-}`;
+}`
 
 export const COMIC_DETAIL = `
 async getComicDetail(item, pageNo) {
@@ -501,7 +501,7 @@ async getComicDetail(item, pageNo) {
 
   return item;
 }
-`;
+`
 
 export const COMIC_CONTENT = `
 async getContent(item, chapter) {
@@ -526,7 +526,7 @@ async getContent(item, chapter) {
   }
   return content;
 }
-`;
+`
 
 export const VIDEO_CONSTRUCTOR = `
 constructor() {
@@ -542,7 +542,7 @@ constructor() {
   };
   this.searchIds = {};
 }
-`;
+`
 
 export const VIDEO_LIST = `
 async getRecommendVideos(pageNo, type) {
@@ -588,7 +588,7 @@ async getRecommendVideos(pageNo, type) {
     page: pageNo,
     totalPage: this.maxPageNoFromElements(pageElements),
   };
-}`;
+}`
 
 export const VIDEO_SEARCH = `
 async search(keyword, pageNo) {
@@ -627,7 +627,7 @@ async search(keyword, pageNo) {
     totalPage: this.maxPageNoFromElements(pageElements),
   };
   
-}`;
+}`
 
 export const VIDEO_DETAIL = `
 async getVideoDetail(item, pageNo) {
@@ -707,7 +707,7 @@ async getVideoDetail(item, pageNo) {
   item.resources = resources;
   return item;
 }
-`;
+`
 
 export const VIDEO_PLAY_URL = `
 async getPlayUrl(item, resource, episode) {
@@ -743,4 +743,4 @@ async getPlayUrl(item, resource, episode) {
   }
   return { url: domExtractedUrl };
 }
-`;
+`

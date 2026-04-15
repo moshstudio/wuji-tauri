@@ -5,17 +5,14 @@ import type {
   VideosList,
 } from '@wuji-tauri/source-extension';
 import type { VideoSource } from '@/types';
-import { MVideoCard } from '@wuji-tauri/components/src';
+import { MVideoCard } from '@wuji-tauri/components';
 import { debounce } from 'lodash';
 import { nanoid } from 'nanoid';
-import { ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
+import { ref, watch } from 'vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
 import { useDisplayStore } from '@/store';
-
-const displayStore = useDisplayStore();
-const { paginationPosition } = storeToRefs(displayStore);
 
 const props = defineProps<{
   source: VideoSource;
@@ -26,34 +23,43 @@ const props = defineProps<{
   ) => Promise<any> | void;
   toDetail: (source: VideoSource, item: VideoItem) => void;
 }>();
+const displayStore = useDisplayStore();
+const { paginationPosition } = storeToRefs(displayStore);
 
 const active = ref(0);
 const tabKey = ref(nanoid()); // 修改此值来重新渲染组件
 
 const loadingMap = new Set<number>();
 async function load(i: number | string) {
-  if (!props.source.list || !Array.isArray(props.source.list)) return;
+  if (!props.source.list || !Array.isArray(props.source.list))
+    return;
   const index = Number(i);
-  if (isNaN(index)) return;
+  if (Number.isNaN(index))
+    return;
 
   const t = props.source.list[index];
-  if (t.list && t.list.length) return;
-  if (loadingMap.has(index)) return;
+  if (t.list && t.list.length)
+    return;
+  if (loadingMap.has(index))
+    return;
 
   loadingMap.add(index);
   try {
     await props.toPage(props.source, 1, t.type);
-  } finally {
+  }
+  finally {
     loadingMap.delete(index);
   }
 }
 
 function changePage(index: number, pageNo?: number) {
-  if (!props.source.list) return;
+  if (!props.source.list)
+    return;
   let t: VideoList;
   if (Array.isArray(props.source.list)) {
     t = props.source.list[index];
-  } else {
+  }
+  else {
     t = props.source.list;
   }
   props.toPage(props.source, pageNo, t.type);
@@ -92,10 +98,10 @@ watch(
     >
       <van-row
         v-if="
-          (paginationPosition === 'top' || paginationPosition === 'both') &&
-          item.page &&
-          item.totalPage &&
-          item.totalPage > 1
+          (paginationPosition === 'top' || paginationPosition === 'both')
+            && item.page
+            && item.totalPage
+            && item.totalPage > 1
         "
         class="px-2 py-1"
       >
@@ -108,18 +114,18 @@ watch(
       <van-loading v-if="!item.list?.length" class="p-2" size="24px" />
       <ResponsiveGrid2 v-else min-width="80" max-width="100">
         <template
-          v-for="(video, index) in item.list"
-          :key="source.item.id + index.toString() + video.id"
+          v-for="(video, videoIndex) in item.list"
+          :key="source.item.id + videoIndex.toString() + video.id"
         >
           <MVideoCard :video="video" :click="toDetail" />
         </template>
       </ResponsiveGrid2>
       <van-row
         v-if="
-          (paginationPosition === 'bottom' || paginationPosition === 'both') &&
-          item.page &&
-          item.totalPage &&
-          item.totalPage > 1
+          (paginationPosition === 'bottom' || paginationPosition === 'both')
+            && item.page
+            && item.totalPage
+            && item.totalPage > 1
         "
         class="px-2 py-1"
       >
@@ -135,10 +141,10 @@ watch(
   <template v-else>
     <van-row
       v-if="
-        (paginationPosition === 'top' || paginationPosition === 'both') &&
-        source.list.page &&
-        source.list.totalPage &&
-        source.list.totalPage > 1
+        (paginationPosition === 'top' || paginationPosition === 'both')
+          && source.list.page
+          && source.list.totalPage
+          && source.list.totalPage > 1
       "
     >
       <MPagination
@@ -150,18 +156,18 @@ watch(
     <van-loading v-if="!source.list.list?.length" class="p-2" size="24px" />
     <ResponsiveGrid2 v-else min-width="80" max-width="100">
       <template
-        v-for="(video, index) in source.list.list"
-        :key="source.item.id + index.toString() + video.id"
+        v-for="(video, videoIndex) in source.list.list"
+        :key="source.item.id + videoIndex.toString() + video.id"
       >
         <MVideoCard :video="video" :click="toDetail" />
       </template>
     </ResponsiveGrid2>
     <van-row
       v-if="
-        (paginationPosition === 'bottom' || paginationPosition === 'both') &&
-        source.list.page &&
-        source.list.totalPage &&
-        source.list.totalPage > 1
+        (paginationPosition === 'bottom' || paginationPosition === 'both')
+          && source.list.page
+          && source.list.totalPage
+          && source.list.totalPage > 1
       "
     >
       <MPagination

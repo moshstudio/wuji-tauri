@@ -22,11 +22,11 @@ const serverStore = useServerStore();
 const { myMarketSources } = storeToRefs(serverStore);
 
 const source = computed(() => {
-  return myMarketSources.value.find((item) => item._id === props.sourceId);
+  return myMarketSources.value.find(item => item._id === props.sourceId);
 });
 const sourceContent = computed(() => {
   return source.value?.sourceContents?.find(
-    (item) => item._id === props.sourceContentId,
+    item => item._id === props.sourceContentId,
   );
 });
 

@@ -3,7 +3,7 @@ import type {
   MarketSource,
   PagedMarketSource,
 } from '@wuji-tauri/source-extension';
-import { MarketSourceCard } from '@wuji-tauri/components/src';
+import { MarketSourceCard } from '@wuji-tauri/components';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import WNavbar from '@/components/header/WNavbar.vue';
 import MPagination from '@/components/pagination/MPagination.vue';

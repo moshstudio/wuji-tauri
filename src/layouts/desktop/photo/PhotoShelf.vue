@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { WPhotoShelfCard } from '@wuji-tauri/components/src';
+import { WPhotoShelfCard } from '@wuji-tauri/components';
 import { storeToRefs } from 'pinia';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import WNavbar from '@/components/header/WNavbar.vue';
@@ -80,11 +80,11 @@ const { photoShelf } = storeToRefs(shelfStore);
       </van-button>
     </div>
     <van-tabs
+      v-model:active="activeIndex"
       shrink
       animated
       sticky
       :offset-top="90"
-      v-model:active="activeIndex"
       class="h-full w-full overflow-y-scroll"
     >
       <van-tab v-for="shelf in photoShelf" :key="shelf.id" :title="shelf.name">

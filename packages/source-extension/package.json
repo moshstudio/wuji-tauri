@@ -3,18 +3,25 @@
   "type": "module",
   "version": "1.0.0",
   "private": true,
-  "main": "./dist/source-extension.umd.cjs",
-  "module": "./dist/source-extension.js",
-  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./*": "./src/*"
+  },
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build && tsc",
     "prepublishOnly": "pnpm build"
   },
-  "dependencies": {
-    "@wuji-tauri/source-extension": "link:"
-  }
+  "dependencies": {}
 }

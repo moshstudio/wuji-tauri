@@ -8,14 +8,8 @@ import type { BookSource } from '@/types';
 import _ from 'lodash';
 import { storeToRefs } from 'pinia';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
-import { showFailToast, showToast, showDialog } from 'vant';
-import {
-  computed,
-  onActivated,
-  onDeactivated,
-  ref,
-  watch,
-} from 'vue';
+import { showDialog, showFailToast, showToast } from 'vant';
+import { computed, onActivated, onDeactivated, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import BookSwitchSourceDialog from '@/components/dialog/BookSwitchSource.vue';
 import { router } from '@/router';
@@ -23,6 +17,7 @@ import {
   useBookShelfStore,
   useBookStore,
   useDisplayStore,
+  useDownloadStore,
   useServerStore,
   useStore,
   useTTSStore,
@@ -30,8 +25,8 @@ import {
 import { useBackStore } from '@/store/backStore';
 import { retryOnFalse } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
-import BookReadSwiper from './BookReadSwiper.vue';
 import BookReadScroller from './BookReadScroller.vue';
+import BookReadSwiper from './BookReadSwiper.vue';
 
 const {
   chapterId,
@@ -53,6 +48,7 @@ const displayStore = useDisplayStore();
 const bookStore = useBookStore();
 const shelfStore = useBookShelfStore();
 const ttsStore = useTTSStore();
+const downloadStore = useDownloadStore();
 const { webFonts } = storeToRefs(bookStore);
 const { bookShelf } = storeToRefs(shelfStore);
 const route = useRoute();
@@ -64,7 +60,6 @@ const readingChapter = ref<BookChapter>();
 const readingChapterContent = ref<string>();
 const prevChapterContent = ref<string>();
 const nextChapterContent = ref<string>();
-
 
 const showReadModeSheet = ref(false);
 const readModeActions = [
@@ -78,7 +73,10 @@ function onSelectReadMode(action: any) {
 
 const serverStore = useServerStore();
 
-type FontOption = { label: string; family: string };
+interface FontOption {
+  label: string;
+  family: string;
+}
 
 function selectFont(font: FontOption) {
   if (!serverStore.isVipOrSuperVip) {
@@ -95,7 +93,8 @@ function selectFont(font: FontOption) {
 }
 
 const bookInShelf = computed(() => {
-  if (!book.value) return false;
+  if (!book.value)
+    return false;
   for (const item of bookShelf.value) {
     for (const book of item.books) {
       if (book.book.id === bookId) {
@@ -114,7 +113,7 @@ const selectShelfActions = computed(() => {
       subname: `${shelf.books.length || 0} 本书`,
       callback: () => {
         if (book.value) {
-          shelfStore.addToBookSelf(book.value, shelf.id);
+          shelfStore.addToBookShelf(book.value, shelf.id);
           showSelectShelf.value = false;
         }
       },
@@ -127,8 +126,9 @@ function addToShelf() {
     return;
   }
   if (shelfStore.bookShelf.length === 1) {
-    shelfStore.addToBookSelf(book.value);
-  } else {
+    shelfStore.addToBookShelf(book.value);
+  }
+  else {
     showSelectShelf.value = true;
   }
 }
@@ -142,15 +142,18 @@ const allSourceResults = ref<BookItem[]>([]);
 const searchAllSources = createCancellableFunction(
   async (signal: AbortSignal, targetBook?: BookItem) => {
     allSourceResults.value = [];
-    if (!targetBook) return;
+    if (!targetBook)
+      return;
     await Promise.all(
       store.bookSources.map(async (bookSource) => {
         await store.bookSearch(bookSource, targetBook.title);
-        if (signal.aborted) return;
+        if (signal.aborted)
+          return;
         if (bookSource.list) {
           for (const b of _.castArray<BookList>(bookSource.list)[0].list) {
             if (b.title === targetBook.title) {
-              if (signal.aborted) return;
+              if (signal.aborted)
+                return;
               const detailedBook = await store.bookDetail(bookSource, b);
               if (detailedBook) {
                 allSourceResults.value.push(detailedBook);
@@ -173,15 +176,15 @@ async function switchSource(newBookItem: BookItem) {
     showToast('章节为空');
     return;
   }
-  const chapter =
-    newBookItem.chapters?.find((chapter) => chapter.id === chapterId) ||
-    newBookItem.chapters?.find(
-      (chapter) => chapter.title === readingChapter.value?.title,
-    ) ||
-    newBookItem.chapters?.[
-      book.value?.chapters?.findIndex((chapter) => chapter.id === chapterId) ||
-        0
-    ];
+  const chapter
+    = newBookItem.chapters?.find(chapter => chapter.id === chapterId)
+      || newBookItem.chapters?.find(
+        chapter => chapter.title === readingChapter.value?.title,
+      )
+      || newBookItem.chapters?.[
+        book.value?.chapters?.findIndex(chapter => chapter.id === chapterId)
+        || 0
+      ];
 
   if (!chapter) {
     showToast('章节不存在');
@@ -250,7 +253,7 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
     }
   }
   if (!chapter) {
-    chapter = book.value.chapters?.find((chapter) => chapter.id === chapterId);
+    chapter = book.value.chapters?.find(chapter => chapter.id === chapterId);
   }
   if (!chapter) {
     showToast('章节不存在');
@@ -258,15 +261,15 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
     return;
   }
   const chapterIndex = book.value.chapters?.findIndex(
-    (chapter) => chapter.id === chapterId,
+    chapter => chapter.id === chapterId,
   );
   // shelfStore.updateBookReadInfo(book.value, chapter);
   const displayStore = useDisplayStore();
   const t = displayStore.showToast();
   chapterList.value = book.value.chapters || [];
   readingChapter.value = chapter;
-  const content =
-    (await store.bookRead(bookSource.value!, book.value, chapter, {
+  const content
+    = (await store.bookRead(bookSource.value!, book.value, chapter, {
       refresh,
     })) || '';
   readingChapterContent.value = content;
@@ -278,23 +281,25 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
   // 载入上一章和下一章
   if (chapterIndex && chapterIndex > 0) {
     const prevChapter = book.value.chapters![chapterIndex - 1];
-    prevChapterContent.value =
-      (await store.bookRead(bookSource.value!, book.value, prevChapter)) || '';
-  } else {
+    prevChapterContent.value
+      = (await store.bookRead(bookSource.value!, book.value, prevChapter)) || '';
+  }
+  else {
     prevChapterContent.value = '';
   }
   if (chapterIndex && chapterIndex < book.value.chapters!.length - 1) {
     const nextChapter = book.value.chapters![chapterIndex + 1];
-    nextChapterContent.value =
-      (await store.bookRead(bookSource.value!, book.value, nextChapter)) || '';
-  } else {
+    nextChapterContent.value
+      = (await store.bookRead(bookSource.value!, book.value, nextChapter)) || '';
+  }
+  else {
     nextChapterContent.value = '';
   }
 }
 
 function prevChapter(toLast: boolean = false) {
   const index = chapterList.value.findIndex(
-    (chapter) => chapter.id === readingChapter.value?.id,
+    chapter => chapter.id === readingChapter.value?.id,
   );
   if (index === -1) {
     return;
@@ -314,7 +319,8 @@ function prevChapter(toLast: boolean = false) {
           isPrev: toLast ? 'true' : '',
         },
       });
-    } else {
+    }
+    else {
       const currPath = route.path;
       router
         .replace({
@@ -330,14 +336,15 @@ function prevChapter(toLast: boolean = false) {
           router.replace(currPath);
         });
     }
-  } else {
+  }
+  else {
     showToast('没有上一章了');
   }
 }
 
 function nextChapter() {
   const index = chapterList.value.findIndex(
-    (chapter) => chapter.id === readingChapter.value?.id,
+    chapter => chapter.id === readingChapter.value?.id,
   );
   if (index === -1) {
     return;
@@ -356,7 +363,8 @@ function nextChapter() {
       router.replace({
         params: newBookReadParams,
       });
-    } else {
+    }
+    else {
       const currPath = {
         name: route.name,
         params: route.params,
@@ -370,7 +378,8 @@ function nextChapter() {
           router.replace(currPath);
         });
     }
-  } else {
+  }
+  else {
     showToast('没有下一章了');
   }
 }
@@ -383,7 +392,8 @@ async function resfreshChapter() {
  * 按章节加载内容，不做路由跳转，供无限滚动模式使用
  */
 async function loadChapterContent(chapter: BookChapter): Promise<string> {
-  if (!bookSource.value || !book.value) return '';
+  if (!bookSource.value || !book.value)
+    return '';
   return (await store.bookRead(bookSource.value, book.value, chapter)) || '';
 }
 function toChapter(chapter: BookChapter) {
@@ -398,6 +408,16 @@ function toChapter(chapter: BookChapter) {
       sourceId: book.value?.sourceId,
     },
   });
+}
+
+async function onDownload() {
+  if (book.value && bookSource.value) {
+    if (!book.value.chapters?.length) {
+      showToast('章节列表加载中，请稍后');
+      return;
+    }
+    await downloadStore.startBookDownload(book.value, bookSource.value);
+  }
 }
 
 watch(
@@ -417,7 +437,7 @@ watch(
   },
   { immediate: true },
 );
-watch(readingChapter, (c) => (bookStore.readingChapter = c), {
+watch(readingChapter, c => (bookStore.readingChapter = c), {
   immediate: true,
 });
 
@@ -470,6 +490,7 @@ onDeactivated(() => {
     :next-chapter="nextChapter"
     :refresh-chapter="resfreshChapter"
     :load-chapter-content="loadChapterContent"
+    :on-download="onDownload"
   >
     <BookSwitchSourceDialog
       v-model:show="showSwitchSourceDialog"
@@ -502,13 +523,17 @@ onDeactivated(() => {
       class="setting-dialog"
     >
       <div class="flex flex-col gap-2 p-2 text-sm">
-        <van-cell 
-          title="翻页模式" 
+        <van-cell
+          title="翻页模式"
           :value="bookStore.readMode === 'slide' ? '侧滑翻页' : '上下滚动'"
           is-link
           @click="showReadModeSheet = true"
         />
-        <van-cell v-if="bookStore.readMode === 'slide'" title="全屏点击向下翻页" center>
+        <van-cell
+          v-if="bookStore.readMode === 'slide'"
+          title="全屏点击向下翻页"
+          center
+        >
           <template #value>
             <van-switch v-model="bookStore.fullScreenClickToNext" />
           </template>
@@ -522,7 +547,8 @@ onDeactivated(() => {
                   displayStore.bookKeepScreenOn = v;
                   if (v) {
                     keepScreenOn(true);
-                  } else {
+                  }
+                  else {
                     keepScreenOn(false);
                   }
                 }
@@ -541,7 +567,9 @@ onDeactivated(() => {
       class="setting-dialog"
     >
       <div class="flex max-h-[80vh] flex-col overflow-y-auto p-2 text-sm">
-        <div class="pb-1 text-gray-400">文字颜色和背景</div>
+        <div class="pb-1 text-gray-400">
+          文字颜色和背景
+        </div>
         <div
           class="grid grid-cols-[repeat(auto-fill,minmax(46px,1fr))] gap-1 p-2"
         >
@@ -558,8 +586,8 @@ onDeactivated(() => {
               color: theme.color || '#333',
               backgroundColor: theme.bgColor || '#fff',
               backgroundImage:
-                theme.bgGradient ||
-                (theme.bgImage ? `url(${theme.bgImage})` : ''),
+                theme.bgGradient
+                || (theme.bgImage ? `url(${theme.bgImage})` : ''),
               backgroundRepeat: theme.bgRepeat || 'repeat',
               backgroundSize: theme.bgSize || 'auto',
               backgroundPosition: theme.bgPosition || 'center',
@@ -572,13 +600,15 @@ onDeactivated(() => {
             <span class="font-medium">{{ theme.name }}</span>
           </div>
         </div>
-        <div class="pb-1 text-gray-400">字体</div>
+        <div class="pb-1 text-gray-400">
+          字体
+        </div>
         <div
           class="grid grid-cols-[repeat(auto-fill,minmax(46px,1fr))] gap-1 p-1"
         >
           <template v-for="font in webFonts" :key="font.family">
             <van-badge color="#1989fa" :offset="[-8, 0]">
-              <template #content v-if="font.isVip">
+              <template v-if="font.isVip" #content>
                 <van-icon name="diamond" class="badge-icon" />
               </template>
               <div
@@ -596,7 +626,9 @@ onDeactivated(() => {
             </van-badge>
           </template>
         </div>
-        <div class="pb-1 pt-4 text-gray-400">字体和样式</div>
+        <div class="pb-1 pt-4 text-gray-400">
+          字体和样式
+        </div>
         <van-cell-group>
           <van-cell title="字体大小" center>
             <template #value>

@@ -4,7 +4,8 @@ export function maxPageNoFromElements(
   elements?: NodeListOf<Element> | null,
   onlyKeepNumbers = true,
 ): number | null {
-  if (!elements) return null;
+  if (!elements)
+    return null;
 
   function keepOnlyNumbers(input: string): string {
     // 保留数字、小数点、负号、加号、科学计数法符号
@@ -13,16 +14,17 @@ export function maxPageNoFromElements(
 
   const res = Math.max(
     ...Array.from(elements.values())
-      .map((el) =>
+      .map(el =>
         Number(
           onlyKeepNumbers
             ? keepOnlyNumbers(el.textContent || '')
             : el.textContent,
         ),
       )
-      .filter((v) => !isNaN(v)),
+      .filter(v => !Number.isNaN(v)),
   );
-  if (res === Infinity || res === -Infinity) return null;
+  if (res === Infinity || res === -Infinity)
+    return null;
   return res;
 }
 
@@ -30,27 +32,32 @@ export function urlJoin(
   parts: (string | null | undefined)[],
   option?: { baseUrl: string },
 ): string {
-  const filter = parts.filter((part) => part != null && part !== undefined);
-  if (!filter.length) return '';
+  const filter = parts.filter(part => part != null && part !== undefined);
+  if (!filter.length)
+    return '';
   if (filter.length === 1) {
     if (filter[0].startsWith('//')) {
       return `http:${filter[0]}`;
-    } else if (
-      !filter[0].startsWith('http://') &&
-      !filter[0].startsWith('https://')
+    }
+    else if (
+      !filter[0].startsWith('http://')
+      && !filter[0].startsWith('https://')
     ) {
       if (option?.baseUrl) {
         return urlJoin([option.baseUrl, filter[0]], {
           baseUrl: option.baseUrl,
         });
-      } else {
+      }
+      else {
         return `http://${filter[0]}`;
       }
-    } else {
+    }
+    else {
       return filter[0];
     }
   }
-  if (filter[1].startsWith('http')) return urlJoin(filter.slice(1));
+  if (filter[1].startsWith('http'))
+    return urlJoin(filter.slice(1));
   if (filter[1].startsWith('../')) {
     // 适配，返回一级
     filter[0] = filter[0].split('/').slice(0, -1).join('/');
@@ -74,7 +81,7 @@ export function purifyText(text: string): string {
     '&amp;': '&',
     '&lt;': '<',
     '&gt;': '>',
-    '&apos;': "'",
+    '&apos;': '\'',
     '&nbsp;': ' ',
     // 可以根据需要添加更多 HTML 实体
   };
@@ -101,7 +108,7 @@ export function purifyText(text: string): string {
   ];
   const lines = text.split('\n');
   const cleanedLines = lines.filter(
-    (line) => !uselessPatterns.some((pattern) => pattern.test(line)),
+    line => !uselessPatterns.some(pattern => pattern.test(line)),
   );
   text = cleanedLines.join('\n');
 
@@ -111,7 +118,7 @@ export function purifyText(text: string): string {
   // 6. 去除每行开头和结尾的多余空格
   text = text
     .split('\n')
-    .map((line) => line.trim())
+    .map(line => line.trim())
     .join('\n');
 
   return text;

@@ -11,3 +11,5 @@ declare class TestComicExtension extends ComicExtension {
 }
 
 export default TestComicExtension;
+
+

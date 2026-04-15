@@ -1,11 +1,11 @@
 import type { LocationQuery, RouteParamsGeneric } from 'vue-router';
+import type Fullscreen from 'xgplayer/es/plugins/fullscreen';
 import _ from 'lodash';
 import { defineStore } from 'pinia';
 import { onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { router } from '@/router';
 import { useDisplayStore } from './displayStore';
-import Fullscreen from 'xgplayer/es/plugins/fullscreen';
 
 type CatelogName = 'book' | 'photo' | 'song' | 'comic' | 'video';
 interface RoutePath {
@@ -27,12 +27,12 @@ export const useBackStore = defineStore('back', () => {
     video: [],
   };
   const savePath = (route: RoutePath) => {
-    _.remove(_paths, (item) => item.name === route.name);
+    _.remove(_paths, item => item.name === route.name);
     _paths.push(route);
 
     for (const name of names) {
       if (route.name.toLowerCase().startsWith(name)) {
-        _.remove(_catelogPaths[name], (item) => item.name === route.name);
+        _.remove(_catelogPaths[name], item => item.name === route.name);
         _catelogPaths[name].push(route);
       }
     }
@@ -46,7 +46,8 @@ export const useBackStore = defineStore('back', () => {
         if (pathName.toLowerCase() === name) {
           // 主路径可以返回桌面
           return null;
-        } else if (pathName.toLowerCase().startsWith(name)) {
+        }
+        else if (pathName.toLowerCase().startsWith(name)) {
           // 子路径返回上一级
           while (_catelogPaths[name].length) {
             const ret = _catelogPaths[name].pop();
@@ -107,7 +108,8 @@ export const useBackStore = defineStore('back', () => {
       if (!buttonClick && displayStore.showVideoPlaylist) {
         displayStore.showVideoPlaylist = false;
         return;
-      } else {
+      }
+      else {
         if (displayStore.fullScreenMode) {
           if (displayStore.videoPlayer) {
             if (displayStore.isAndroid) {
@@ -116,10 +118,12 @@ export const useBackStore = defineStore('back', () => {
                 'fullscreen',
               ) as Fullscreen;
               plugin.animate(false);
-            } else {
+            }
+            else {
               displayStore.videoPlayer.exitFullscreen();
             }
-          } else {
+          }
+          else {
             displayStore.fullScreenMode = false;
           }
           return;
@@ -159,8 +163,8 @@ export const useBackStore = defineStore('back', () => {
     // }
 
     if (
-      route.name?.toString().startsWith('Song') &&
-      displayStore.showSongPlayingList
+      route.name?.toString().startsWith('Song')
+      && displayStore.showSongPlayingList
     ) {
       displayStore.showSongPlayingList = false;
       return;
@@ -172,16 +176,19 @@ export const useBackStore = defineStore('back', () => {
     if (prevPath === undefined) {
       if (_paths.length === 0) {
         await router.push('/');
-      } else {
+      }
+      else {
         _paths.pop();
         router.back();
       }
-    } else if (prevPath === null) {
+    }
+    else if (prevPath === null) {
       const displayStore = useDisplayStore();
       if (displayStore.isAndroid) {
         await displayStore.exitApp();
       }
-    } else {
+    }
+    else {
       await router.push({
         name: prevPath.name,
         params: prevPath.params,

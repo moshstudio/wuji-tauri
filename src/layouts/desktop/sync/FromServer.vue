@@ -1,16 +1,17 @@
 <script setup lang="ts">
+import type { SyncOption } from '@/types/sync';
 import AppFromServer from '@/layouts/app/sync/FromServer.vue';
-import { SyncOption } from '@/types/sync';
-const syncOptions = defineModel<SyncOption[]>('syncOptions', {
-  required: true,
-});
+
 defineProps<{
   onDownload: () => Promise<void>;
 }>();
+const syncOptions = defineModel<SyncOption[]>('syncOptions', {
+  required: true,
+});
 </script>
 
 <template>
-  <AppFromServer v-bind:sync-options="syncOptions" :onDownload="onDownload" />
+  <AppFromServer :sync-options="syncOptions" :on-download="onDownload" />
 </template>
 
 <style scoped lang="less"></style>

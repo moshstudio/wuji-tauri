@@ -37,8 +37,9 @@ watch(
   async (sourceContent) => {
     if (sourceContent) {
       // 如果 ID 没变且已经拉取过代码，则不再重新拉取
-      if (sourceContentWithCode.value?._id === sourceContent._id) return;
-      
+      if (sourceContentWithCode.value?._id === sourceContent._id)
+        return;
+
       const res = await serverStore.getMarketSourceContent(sourceContent);
       if (res) {
         sourceContentWithCode.value = res;
@@ -51,15 +52,17 @@ watch(
 );
 
 const isModified = computed(() => {
-  if (!props.sourceContent) return false;
+  if (!props.sourceContent)
+    return false;
   return (
-    sourceContentName.value != sourceContentWithCode.value?.name ||
-    sourceContentCode.value != sourceContentWithCode.value?.code
+    sourceContentName.value !== sourceContentWithCode.value?.name
+    || sourceContentCode.value !== sourceContentWithCode.value?.code
   );
 });
 
 async function save() {
-  if (!sourceContentWithCode.value || !props.source) return;
+  if (!sourceContentWithCode.value || !props.source)
+    return;
   try {
     // 验证表单
     await formRef.value?.validate();
@@ -70,7 +73,8 @@ async function save() {
     sourceContentWithCode.value.name = sourceContentName.value;
     sourceContentWithCode.value.code = sourceContentCode.value;
     props.save(props.source, sourceContentWithCode.value);
-  } catch (error) {
+  }
+  catch (error) {
     showToast('请检查输入内容');
     return false;
   }

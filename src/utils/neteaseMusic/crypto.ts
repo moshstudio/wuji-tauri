@@ -45,7 +45,8 @@ function aesDecrypt(
       mode: CryptoJS.mode.ECB,
       padding: CryptoJS.pad.Pkcs7,
     });
-  } else {
+  }
+  else {
     bytes = CryptoJS.AES.decrypt(ciphertext, CryptoJS.enc.Utf8.parse(key), {
       iv: CryptoJS.enc.Utf8.parse(iv),
       mode: CryptoJS.mode.ECB,

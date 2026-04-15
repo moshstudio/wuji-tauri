@@ -4,7 +4,7 @@ import type {
   ComicShelf,
   ComicSource,
 } from '@wuji-tauri/source-extension';
-import { WComicShelfCard } from '@wuji-tauri/components/src';
+import { WComicShelfCard } from '@wuji-tauri/components';
 import _ from 'lodash';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import WNavbar from '@/components/header/WNavbar.vue';
@@ -74,10 +74,10 @@ const activeIndex = defineModel<number>('activeIndex', {
     </div>
 
     <van-tabs
+      v-model:active="activeIndex"
       shrink
       animated
       sticky
-      v-model:active="activeIndex"
       class="h-full w-full flex-1 overflow-y-scroll"
     >
       <van-tab v-for="shelf in comicShelfs" :key="shelf.id" :title="shelf.name">

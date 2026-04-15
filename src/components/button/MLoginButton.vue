@@ -27,7 +27,8 @@ withDefaults(
         () => {
           if (userInfo) {
             toUserPage();
-          } else {
+          }
+          else {
             toLoginPage();
           }
         }

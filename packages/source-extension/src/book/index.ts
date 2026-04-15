@@ -100,10 +100,10 @@ abstract class BookExtension extends Extension {
         bookList.id = String(bookList.id || bookList.type || nanoid());
         bookList.list.forEach((bookItem) => {
           bookItem.id = String(
-            bookItem.id ||
-              bookItem.url ||
-              bookItem.title + bookItem.sourceId ||
-              nanoid(),
+            bookItem.id
+            || bookItem.url
+            || bookItem.title + bookItem.sourceId
+            || nanoid(),
           );
         });
       });
@@ -149,7 +149,7 @@ abstract class BookExtension extends Extension {
         // 同步 readingPage
         ret.chapters ||= [];
         ret.chapters.forEach((c) => {
-          const originC = origin.chapters?.find((c2) => c2.id === c.id);
+          const originC = origin.chapters?.find(c2 => c2.id === c.id);
           if (originC && originC.readingPage) {
             c.readingPage = originC.readingPage;
           }
@@ -181,11 +181,13 @@ function loadBookExtensionString(
 ): BookExtension | undefined {
   try {
     const func = new Function('BookExtension', codeString);
-    const extensionclass = func(BookExtension);
-    return new extensionclass();
-  } catch (error) {
+    const ExtensionClass = func(BookExtension);
+    return new ExtensionClass();
+  }
+  catch (error) {
     console.error('Error executing code:\n', error);
-    if (raise) throw error;
+    if (raise)
+      throw error;
   }
 }
 

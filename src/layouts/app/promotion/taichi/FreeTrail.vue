@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import MNavBar from '@/components/header/MNavBar.vue';
-const username = defineModel<string>('username', { required: true });
-const password = defineModel<string>('password', { required: true });
+
 defineProps<{
   onGet: (username: string, password: string) => Promise<any>;
 }>();
+const username = defineModel<string>('username', { required: true });
+const password = defineModel<string>('password', { required: true });
 </script>
 
 <template>

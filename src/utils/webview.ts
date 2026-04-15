@@ -1,6 +1,7 @@
+import type { FetchWebviewResult } from 'tauri-plugin-mywebview-api';
 import {
   fetchWebview as _fetchWebview,
-  type FetchWebviewResult,
+
 } from 'tauri-plugin-mywebview-api';
 
 export type { FetchWebviewResult };
@@ -8,8 +9,8 @@ export type { FetchWebviewResult };
 // 信号量类，用于控制并发数量
 class Semaphore {
   private permits: number;
-  private waiting: Array<{ resolve: () => void; timeoutId: NodeJS.Timeout }> =
-    [];
+  private waiting: Array<{ resolve: () => void; timeoutId: NodeJS.Timeout }>
+    = [];
 
   constructor(permits: number) {
     this.permits = permits;
@@ -24,7 +25,7 @@ class Semaphore {
     return new Promise<boolean>((resolve) => {
       const timeoutId = setTimeout(() => {
         const index = this.waiting.findIndex(
-          (item) => item.timeoutId === timeoutId,
+          item => item.timeoutId === timeoutId,
         );
         if (index !== -1) {
           this.waiting.splice(index, 1);
@@ -81,7 +82,8 @@ export async function fetWebview(
   try {
     const ret = await _fetchWebview(url, options);
     return ret;
-  } finally {
+  }
+  finally {
     // 无论成功还是失败，都要释放信号量
     semaphore.release();
   }

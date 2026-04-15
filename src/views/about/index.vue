@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { showSuccessToast } from 'vant';
 import { onMounted, ref } from 'vue';
 import wujipng from '@/assets/wuji.png';
 import WNavbar from '@/components/header/WNavbar.vue';
 import { checkAndUpdate } from '@/utils/update';
-import { showSuccessToast } from 'vant';
 
 const version = ref('');
 const checking = ref(false);
@@ -15,14 +15,16 @@ function openHomepage() {
 }
 
 async function handleCheckUpdate() {
-  if (checking.value) return;
+  if (checking.value)
+    return;
   checking.value = true;
   try {
     const haveUpdate = await checkAndUpdate();
     if (!haveUpdate) {
       showSuccessToast('当前已是最新版本');
     }
-  } finally {
+  }
+  finally {
     checking.value = false;
   }
 }
@@ -52,7 +54,9 @@ onMounted(async () => {
             <h1 class="text-lg font-semibold text-[var(--van-primary-color)]">
               无极
             </h1>
-            <p class="mt-1 text-xs text-gray-500">轻巧的多媒体阅读与播放工具</p>
+            <p class="mt-1 text-xs text-gray-500">
+              轻巧的多媒体阅读与播放工具
+            </p>
           </div>
           <p
             class="mt-1 inline-flex items-center rounded-full bg-[--van-background-3] px-3 py-1 text-xs text-gray-500"

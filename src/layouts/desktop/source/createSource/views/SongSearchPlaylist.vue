@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { PlaylistList } from '@wuji-tauri/source-extension';
-import { MPlaylistCard } from '@wuji-tauri/components/src';
+import type { FormItem } from '@/store/sourceCreateStore';
+import { MPlaylistCard } from '@wuji-tauri/components';
 import { SongExtension } from '@wuji-tauri/source-extension';
 import { showFailToast } from 'vant';
 import { ref } from 'vue';
@@ -8,7 +9,6 @@ import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?ra
 import HorizonList from '@/components/list/HorizonList.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
 import SearchField from '@/components/search/SearchField.vue';
-import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
   content: FormItem<PlaylistList>;
@@ -52,15 +52,12 @@ async function load(pageNo: number) {
   const code = SONG_TEMPLATE.replace(
     '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
-  ).replace(
-    '// @METHOD_SEARCH_PLAYLIST',
-    findPage('searchPlaylist')!.code,
-  );
+  ).replace('// @METHOD_SEARCH_PLAYLIST', findPage('searchPlaylist')!.code);
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('SongExtension', code);
-    const extensionclass = func(SongExtension);
-    const cls = new extensionclass() as SongExtension;
+    const ExtensionClass = func(SongExtension);
+    const cls = new ExtensionClass() as SongExtension;
     if (cls.baseUrl === undefined) {
       throw new Error('初始化中的baseUrl未定义!');
     }
@@ -72,7 +69,8 @@ async function load(pageNo: number) {
     result.value = res;
     props.updateResult('song', 'searchPlaylist', result.value, true);
     runStatus.value = RunStatus.success;
-  } catch (error) {
+  }
+  catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
     props.updateResult('song', 'searchPlaylist', result.value, false);
@@ -80,7 +78,7 @@ async function load(pageNo: number) {
 }
 
 function findPage(name: string) {
-  return props.content.pages.find((page) => page.type === name);
+  return props.content.pages.find(page => page.type === name);
 }
 
 defineExpose({
@@ -90,7 +88,9 @@ defineExpose({
 
 <template>
   <div>
-    <div v-if="runStatus === RunStatus.not_running">未运行</div>
+    <div v-if="runStatus === RunStatus.not_running">
+      未运行
+    </div>
     <div
       v-else-if="runStatus === RunStatus.running"
       class="flex items-center justify-center"

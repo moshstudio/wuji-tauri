@@ -49,8 +49,8 @@
         font-weight: 500;
         opacity: 0.9;
         font-family:
-          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
-          Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
+          'Helvetica Neue', sans-serif;
       }
 
       @keyframes pulse {
@@ -83,56 +83,53 @@
 
     <script>
       function transitionToEnd() {
-        const splash = document.getElementById('splash');
-        splash.style.opacity = '0';
-        splash.style.transform = 'scale(1.2)';
+        const splash = document.getElementById('splash')
+        splash.style.opacity = '0'
+        splash.style.transform = 'scale(1.2)'
 
         // 动画结束后移除元素
         splash.addEventListener('transitionend', () => {
-          splash.style.display = 'none';
-        });
+          splash.style.display = 'none'
+        })
       }
 
       // 初始化
       function init() {
         // 记录加载开始时间
-        const loadStartTime = Date.now();
+        const loadStartTime = Date.now()
 
         document.addEventListener('DOMContentLoaded', () => {
-          const MIN_DISPLAY_TIME = 0; // 最少显示0.5秒
+          const MIN_DISPLAY_TIME = 0 // 最少显示0.5秒
 
           // 监听app加载完成
           function checkAppLoaded() {
             return new Promise((resolve) => {
               if (document.getElementById('app').children.length > 0) {
-                const elapsed = Date.now() - loadStartTime;
-                const remainingTime = Math.max(0, MIN_DISPLAY_TIME - elapsed);
-                setTimeout(resolve, remainingTime);
+                const elapsed = Date.now() - loadStartTime
+                const remainingTime = Math.max(0, MIN_DISPLAY_TIME - elapsed)
+                setTimeout(resolve, remainingTime)
               } else {
                 const observer = new MutationObserver(() => {
                   if (document.getElementById('app').children.length > 0) {
-                    observer.disconnect();
-                    const elapsed = Date.now() - loadStartTime;
-                    const remainingTime = Math.max(
-                      0,
-                      MIN_DISPLAY_TIME - elapsed,
-                    );
-                    setTimeout(resolve, remainingTime);
+                    observer.disconnect()
+                    const elapsed = Date.now() - loadStartTime
+                    const remainingTime = Math.max(0, MIN_DISPLAY_TIME - elapsed)
+                    setTimeout(resolve, remainingTime)
                   }
-                });
+                })
                 observer.observe(document.getElementById('app'), {
                   childList: true,
                   subtree: true,
-                });
+                })
               }
-            });
+            })
           }
 
-          checkAppLoaded().then(transitionToEnd);
-        });
+          checkAppLoaded().then(transitionToEnd)
+        })
       }
 
-      init();
+      init()
     </script>
     <script type="module" src="/src/main.ts"></script>
   </body>

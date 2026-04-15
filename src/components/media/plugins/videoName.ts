@@ -1,4 +1,5 @@
-import { IBasePluginOptions, Plugin } from 'xgplayer';
+import type { IBasePluginOptions } from 'xgplayer';
+import { Plugin } from 'xgplayer';
 
 const { POSITIONS } = Plugin;
 

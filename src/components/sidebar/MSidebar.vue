@@ -63,7 +63,9 @@ const options = [
         <!-- Logo 和软件名 -->
         <div class="my-5 flex flex-col items-center justify-center">
           <!-- <van-image width="50" height="50" radius="4" :src="logo" /> -->
-          <div class="text-lg font-bold text-[--van-text-color]">无极</div>
+          <div class="text-lg font-bold text-[--van-text-color]">
+            无极
+          </div>
         </div>
         <MLoginButton :user-info="serverStore.userInfo" />
 

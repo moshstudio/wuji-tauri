@@ -47,6 +47,7 @@ const props = withDefaults(
     nextChapter: () => void;
     refreshChapter: () => void;
     playTts: () => void;
+    onDownload?: () => void;
   }>(),
   {},
 );
@@ -58,8 +59,8 @@ const displayStore = useDisplayStore();
 const bookStore = useBookStore();
 const bookCacheStore = useBookChapterStore();
 const ttsStore = useTTSStore();
-const { showTabBar, showChapters: isShowChapterList } =
-  storeToRefs(displayStore);
+const { showTabBar, showChapters: isShowChapterList }
+  = storeToRefs(displayStore);
 
 const element = ref<HTMLElement>();
 const swiperElement = ref<SwiperType>();
@@ -72,7 +73,7 @@ const chapterCount = computed(() => props.chapterList?.length || 0);
 const readingChapterIndex = computed(
   () =>
     props.chapterList?.findIndex(
-      (item) => item.id === props.readingChapter?.id,
+      item => item.id === props.readingChapter?.id,
     ) || 0,
 );
 
@@ -96,7 +97,8 @@ const prevPageContent = computed<LineData[]>(() => {
     if (readingChapterIndex.value > 0) {
       if (props.prevChapterContent?.length) {
         return props.prevChapterContent[props.prevChapterContent.length - 1];
-      } else {
+      }
+      else {
         return [
           {
             isTitle: true,
@@ -111,7 +113,8 @@ const prevPageContent = computed<LineData[]>(() => {
           },
         ];
       }
-    } else {
+    }
+    else {
       return [
         {
           isTitle: false,
@@ -125,16 +128,17 @@ const prevPageContent = computed<LineData[]>(() => {
         },
       ];
     }
-  } else {
+  }
+  else {
     return props.readingContent?.[readingPageIndex.value - 1] || [];
   }
 });
 const currPageContent = computed<LineData[]>(() => {
   nextTick(() => {
     if (
-      props.readingContent &&
-      readingPageIndex.value >= props.readingContent.length &&
-      props.readingContent.length > 0
+      props.readingContent
+      && readingPageIndex.value >= props.readingContent.length
+      && props.readingContent.length > 0
     ) {
       readingPageIndex.value = props.readingContent.length - 1;
     }
@@ -161,7 +165,8 @@ const nextPageContent = computed<LineData[]>(() => {
     if (readingChapterIndex.value < chapterCount.value - 1) {
       if (props.nextChapterContent?.length) {
         return props.nextChapterContent[0];
-      } else {
+      }
+      else {
         return [
           {
             isTitle: true,
@@ -176,7 +181,8 @@ const nextPageContent = computed<LineData[]>(() => {
           },
         ];
       }
-    } else {
+    }
+    else {
       return [
         {
           isTitle: false,
@@ -190,7 +196,8 @@ const nextPageContent = computed<LineData[]>(() => {
         },
       ];
     }
-  } else {
+  }
+  else {
     return props.readingContent?.[readingPageIndex.value + 1] || [];
   }
 });
@@ -216,8 +223,8 @@ const pages = computed(() => {
       pageNo: readingPageIndex.value + 1,
       totalPage: props.readingContent?.length || '',
     },
-    props.readingContent &&
-    readingPageIndex.value < props.readingContent.length - 1
+    props.readingContent
+    && readingPageIndex.value < props.readingContent.length - 1
       ? {
           content: nextPageContent.value,
           title: props.readingChapter?.title,
@@ -240,9 +247,9 @@ const isFirstPage = computed(
 /** 是否为最后一页 */
 const isLastPage = computed(
   () =>
-    (readingChapterIndex.value === chapterCount.value - 1 &&
-      readingPageIndex.value === (props.readingContent?.length || 0) - 1) ||
-    false,
+    (readingChapterIndex.value === chapterCount.value - 1
+      && readingPageIndex.value === (props.readingContent?.length || 0) - 1)
+    || false,
 );
 const sliderToPageValue = computed({
   get() {
@@ -300,17 +307,18 @@ function onClickPage(
     showMenu.value = false;
     return;
   }
-  if (!element.value) return;
+  if (!element.value)
+    return;
   const rect = element.value.getBoundingClientRect();
   const width = rect.width;
   const height = rect.height;
   // 计算点击位置相对于元素的坐标
-  const x =
-    e instanceof TouchEvent
+  const x
+    = e instanceof TouchEvent
       ? (e.touches[0]?.clientX || e.changedTouches[0]?.clientX || 0) - rect.left
       : e.clientX - rect.left;
-  const y =
-    e instanceof TouchEvent
+  const y
+    = e instanceof TouchEvent
       ? (e.touches[0]?.clientY || e.changedTouches[0]?.clientY || 0) - rect.top
       : e.clientY - rect.top;
 
@@ -324,11 +332,14 @@ function onClickPage(
   // 判断点击区域
   if (x < xThreshold) {
     zone = 'left';
-  } else if (x > width - xThreshold) {
+  }
+  else if (x > width - xThreshold) {
     zone = 'right';
-  } else if (y < yThreshold) {
+  }
+  else if (y < yThreshold) {
     zone = 'top';
-  } else if (y > height - yThreshold) {
+  }
+  else if (y > height - yThreshold) {
     zone = 'bottom';
   }
   switch (zone) {
@@ -336,7 +347,8 @@ function onClickPage(
     case 'top':
       if (props.fullScreenClickToNext) {
         pageNext();
-      } else {
+      }
+      else {
         pagePrev();
       }
       break;
@@ -352,16 +364,19 @@ function onClickPage(
 function handlePageChange(swiper: SwiperType) {
   if (swiper.activeIndex === 2) {
     // 下一页
-    if (!props.readingContent) return;
+    if (!props.readingContent)
+      return;
     if (readingPageIndex.value >= props.readingContent.length - 1) {
       if (isLastPage.value) {
         showToast('没有更多内容了');
         swiperElement.value?.slideTo(1, 200, false);
-      } else {
+      }
+      else {
         props.nextChapter();
         swiperElement.value?.slideTo(1, 0, false);
       }
-    } else {
+    }
+    else {
       readingPageIndex.value++;
       swiperElement.value?.slideTo(1, 0, false);
       if (ttsStore.isReading) {
@@ -370,17 +385,20 @@ function handlePageChange(swiper: SwiperType) {
         props.playTts();
       }
     }
-  } else if (swiper.activeIndex === 0) {
+  }
+  else if (swiper.activeIndex === 0) {
     // 上一页
     if (readingPageIndex.value === 0) {
       if (isFirstPage.value) {
         showToast('已经是第一页了');
         swiperElement.value?.slideTo(1, 200, false);
-      } else {
+      }
+      else {
         props.prevChapter(true);
         swiperElement.value?.slideTo(1, 0, false);
       }
-    } else {
+    }
+    else {
       readingPageIndex.value--;
       swiperElement.value?.slideTo(1, 0, false);
       if (ttsStore.isReading) {
@@ -482,6 +500,11 @@ onDeactivated(() => {
           </div>
           <div class="options flex items-center gap-3 pr-2">
             <van-icon
+              name="down"
+              class="van-haptics-feedback text-[var(--van-text-color)]"
+              @click="onDownload"
+            />
+            <van-icon
               name="replay"
               class="van-haptics-feedback text-[var(--van-text-color)]"
               @click="() => refreshChapter()"
@@ -569,17 +592,17 @@ onDeactivated(() => {
                   line.isTitle && line.pLast
                     ? `${bookStore.readPGap * 1.3}px`
                     : '0px',
-                borderRadius:
-                  ttsStore.isReading &&
-                  ttsStore.slideReadingContent?.[0].pIndex === line.pIndex
+                'borderRadius':
+                  ttsStore.isReading
+                  && ttsStore.slideReadingContent?.[0].pIndex === line.pIndex
                     ? '0px'
                     : '',
-                backgroundColor:
-                  ttsStore.isReading &&
-                  ttsStore.slideReadingContent?.[0].pIndex === line.pIndex
+                'backgroundColor':
+                  ttsStore.isReading
+                  && ttsStore.slideReadingContent?.[0].pIndex === line.pIndex
                     ? 'rgba(255, 165, 0, 0.3)'
                     : '',
-                whiteSpace: 'nowrap',
+                'whiteSpace': 'nowrap',
               }"
             >
               {{ line.text }}
@@ -601,9 +624,9 @@ onDeactivated(() => {
                   (
                     ((chapterList?.findIndex(
                       (chapter) => chapter.id === readingChapter?.id,
-                    ) || 0) /
-                      (chapterList?.length || 1)) *
-                    100
+                    ) || 0)
+                      / (chapterList?.length || 1))
+                    * 100
                   ).toFixed(1)
                 }}%
               </span>

@@ -12,11 +12,10 @@ import _ from 'lodash';
 import { nanoid } from 'nanoid';
 import { defineStore } from 'pinia';
 import { showToast } from 'vant';
-import HeartSVG from '@/assets/heart-fill.svg';
-
-import { createKVStore } from './utils';
-import { estimateJsonSize } from '@/utils';
 import { markRaw } from 'vue';
+
+import HeartSVG from '@/assets/heart-fill.svg';
+import { createKVStore } from './utils';
 
 export const useSongShelfStore = defineStore('songShelfStore', () => {
   const kvStorage = createKVStore('songShelfStore');
@@ -61,23 +60,25 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     },
   );
   const songInLikeShelf = (song: SongInfo) => {
-    if (!song) return false;
+    if (!song)
+      return false;
     return (
       songLikeShelf.value?.playlist.list?.list.some(
-        (item) => item.id === song.id,
+        item => item.id === song.id,
       ) || false
     );
   };
   const playlistInShelf = (playlist?: PlaylistInfo) => {
-    if (!playlist) return false;
+    if (!playlist)
+      return false;
     return songPlaylistShelf.value.some(
-      (item) => item.playlist.id === playlist.id,
+      item => item.playlist.id === playlist.id,
     );
   };
 
   const createShelf = (name: string): SongShelf | null => {
     // 创建收藏
-    if (songCreateShelf.value.some((item) => item.playlist.name === name)) {
+    if (songCreateShelf.value.some(item => item.playlist.name === name)) {
       showToast('收藏夹已存在');
       return null;
     }
@@ -98,9 +99,10 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     let shelf: SongShelf | undefined;
     if (!shelfId || shelfId === songLikeShelf.value?.playlist.id) {
       shelf = songLikeShelf.value;
-    } else {
+    }
+    else {
       shelf = songCreateShelf.value.find(
-        (item) => item.playlist.id === shelfId,
+        item => item.playlist.id === shelfId,
       );
     }
     if (!shelf) {
@@ -112,10 +114,11 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
       page: 1,
       totalPage: 1,
     };
-    if (shelf.playlist.list.list.find((item) => item.id === song.id)) {
+    if (shelf.playlist.list.list.find(item => item.id === song.id)) {
       showToast('已存在');
       return false;
-    } else {
+    }
+    else {
       shelf.playlist.list.list.push(song);
       showToast(`已添加到${shelf.playlist.name}`);
       return true;
@@ -125,22 +128,23 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     let shelf: SongShelf | undefined;
     if (!shelfId || shelfId === songLikeShelf.value?.playlist.id) {
       shelf = songLikeShelf.value;
-    } else {
+    }
+    else {
       shelf = songCreateShelf.value.find(
-        (item) => item.playlist.id === shelfId,
+        item => item.playlist.id === shelfId,
       );
     }
     if (!shelf) {
       showToast('收藏夹不存在');
       return false;
     }
-    _.remove(shelf?.playlist.list?.list || [], (item) => item.id === song.id);
+    _.remove(shelf?.playlist.list?.list || [], item => item.id === song.id);
     showToast(`已从 ${shelf.playlist.name} 移除`);
     return true;
   };
   const addPlaylistToShelf = (playlist: PlaylistInfo): boolean => {
     const find = songPlaylistShelf.value.find(
-      (item) => item.playlist.id === playlist.id,
+      item => item.playlist.id === playlist.id,
     );
     if (find) {
       showToast('已存在');
@@ -156,7 +160,7 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
   const removeSongShelf = (songShelfId: string): boolean => {
     const removed = _.remove(
       songCreateShelf.value,
-      (item) => item.playlist.id === songShelfId,
+      item => item.playlist.id === songShelfId,
     );
     if (removed.length) {
       showToast('删除成功');
@@ -164,7 +168,7 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     }
     const removed2 = _.remove(
       songPlaylistShelf.value,
-      (item) => item.playlist.id === songShelfId,
+      item => item.playlist.id === songShelfId,
     );
     if (removed2.length) {
       showToast('删除成功');

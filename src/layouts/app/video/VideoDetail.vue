@@ -1,21 +1,18 @@
 <script setup lang="ts">
-import { castArray } from 'lodash';
-import {
-  VideoSource,
+import type {
+  VideoEpisode,
   VideoItem,
   VideoResource,
-  VideoEpisode,
+  VideoSource,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
-import { ref, computed, watch } from 'vue';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import Player from 'xgplayer';
-import { useDisplayStore } from '@/store';
+import type Player from 'xgplayer';
 import { useResizeObserver, useWindowSize } from '@vueuse/core';
+import { castArray } from 'lodash';
+import { computed, ref, watch } from 'vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import { useDisplayStore } from '@/store';
 
-const showPlaylist = defineModel<boolean>('showPlaylist', {
-  default: false,
-});
 const props = defineProps<{
   player?: Player;
   videoItem?: VideoItem;
@@ -29,14 +26,17 @@ const props = defineProps<{
   onDownload?: (resource: VideoResource, episode: VideoEpisode) => void;
   showSearch: () => void;
 }>();
-
+const showPlaylist = defineModel<boolean>('showPlaylist', {
+  default: false,
+});
 const displayStore = useDisplayStore();
 const _selectedResource = ref<VideoResource>();
 const selectedResource = computed({
   get() {
     if (_selectedResource.value) {
       return _selectedResource.value;
-    } else {
+    }
+    else {
       return props.playingResource;
     }
   },
@@ -58,7 +58,8 @@ const activeTabName = ref('');
 const tabOffsetTop = computed(() => {
   if (displayStore.fullScreenMode) {
     return '50px';
-  } else {
+  }
+  else {
     return windowHeight.value - videoListElementHeight.value - 50 + 38;
   }
 });
@@ -81,7 +82,7 @@ useResizeObserver(videoListElement, (entries) => {
           : 'grid-rows-[1fr_0fr]'
     "
   >
-    <slot></slot>
+    <slot />
 
     <div
       ref="videoListElement"
@@ -140,6 +141,7 @@ useResizeObserver(videoListElement, (entries) => {
             <div class="flex gap-1 overflow-x-auto">
               <van-tag
                 v-for="tag in castArray(videoItem?.tags)"
+                :key="tag"
                 plain
                 color="rgba(100,100,100,0.3)"
                 text-color="var(--van-text-color-2)"
@@ -208,8 +210,8 @@ useResizeObserver(videoListElement, (entries) => {
               class="episode-show-list flex w-full flex-col overflow-y-auto overflow-x-hidden"
             >
               <van-button
-                v-for="(episode, index) in resource?.episodes"
-                :key="`${resource.id}${episode.id}${index}`"
+                v-for="(episode, episodeIndex) in resource?.episodes"
+                :key="`${resource.id}${episode.id}${episodeIndex}`"
                 class="flex-shrink-0"
                 size="small"
                 :type="

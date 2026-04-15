@@ -1,11 +1,10 @@
-import { MonacoEditor } from '@guolao/vue-monaco-editor';
-import domTypes from '@/components/codeEditor/monaco-types/monaco-dom/index.d.ts.txt?raw';
+import type { MonacoEditor } from '@guolao/vue-monaco-editor';
 import cryptoJsTypes from '@/components/codeEditor/monaco-types/monaco-crypto/index.d.ts.txt?raw';
+import domTypes from '@/components/codeEditor/monaco-types/monaco-dom/index.d.ts.txt?raw';
 import fetchDomTypes from '@/components/codeEditor/monaco-types/monaco-fetch-dom/index.d.ts.txt?raw';
 import fetchWebviewTypes from '@/components/codeEditor/monaco-types/monaco-fetch-webview/index.d.ts.txt?raw';
 import fetchTypes from '@/components/codeEditor/monaco-types/monaco-fetch/index.d.ts.txt?raw';
 import iconvTypes from '@/components/codeEditor/monaco-types/monaco-iconv/index.d.ts.txt?raw';
-import plimitTypes from '@/components/codeEditor/monaco-types/monaco-plimit/index.d.ts.txt?raw';
 import lodashCommonArrayTypes from '@/components/codeEditor/monaco-types/monaco-lodash/common/array.d.ts.txt?raw';
 import lodashCommonCollectionTypes from '@/components/codeEditor/monaco-types/monaco-lodash/common/collection.d.ts.txt?raw';
 import lodashCommonCommonTypes from '@/components/codeEditor/monaco-types/monaco-lodash/common/common.d.ts.txt?raw';
@@ -21,14 +20,15 @@ import lodashCommonUtilTypes from '@/components/codeEditor/monaco-types/monaco-l
 import lodashTypes from '@/components/codeEditor/monaco-types/monaco-lodash/index.d.ts.txt?raw';
 import m3u8ParserTypes from '@/components/codeEditor/monaco-types/monaco-m3u8-parser/index.d.ts.txt?raw';
 import forgeTypes from '@/components/codeEditor/monaco-types/monaco-node-forge/index.d.ts.txt?raw';
+import plimitTypes from '@/components/codeEditor/monaco-types/monaco-plimit/index.d.ts.txt?raw';
 import proxyTypes from '@/components/codeEditor/monaco-types/monaco-proxy/index.d.ts.txt?raw';
 import queryBookElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-book/index.d.ts.txt?raw';
 import queryComicElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-comic/index.d.ts.txt?raw';
 import queryPhotoElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-photo/index.d.ts.txt?raw';
 import querySongElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-song/index.d.ts.txt?raw';
 import queryVideoElementsTypes from '@/components/codeEditor/monaco-types/monaco-query-video/index.d.ts.txt?raw';
-import sourceExtensionTypes from '@/components/codeEditor/monaco-types/source-extension/index.d.ts.txt?raw';
 import uuidTypes from '@/components/codeEditor/monaco-types/monaco-uuid/index.d.ts.txt?raw';
+import sourceExtensionTypes from '@/components/codeEditor/monaco-types/source-extension/index.d.ts.txt?raw';
 
 export function addCompletions(monaco: MonacoEditor) {
   monaco.languages.typescript.javascriptDefaults.addExtraLib(

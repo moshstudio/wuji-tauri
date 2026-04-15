@@ -1,14 +1,15 @@
 <script setup lang="ts">
+import { useWindowSize } from '@vueuse/core';
 import { computed } from 'vue';
 import MSongBar from './MSongBar.vue';
 import WSongBarReal from './WSongBarReal.vue';
-import { useWindowSize } from '@vueuse/core';
 
 const { width } = useWindowSize();
 const currentComponent = computed(() => {
   if (width.value > 690) {
     return WSongBarReal;
-  } else {
+  }
+  else {
     return MSongBar;
   }
 });

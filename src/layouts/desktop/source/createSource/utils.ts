@@ -1,10 +1,4 @@
-import { FormItem } from '@/store/sourceCreateStore';
-import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
-import COMIC_TEMPLATE from '@/components/codeEditor/templates/comicTemplate.txt?raw';
-import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
-import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
-import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
-import CMS_VIDEO_TEMPLATE from '@/components/codeEditor/templates/cmsVideoTemplate.txt?raw';
+import type { FormItem } from '@/store/sourceCreateStore';
 import {
   loadBookExtensionString,
   loadComicExtensionString,
@@ -13,6 +7,12 @@ import {
   loadVideoExtensionString,
 } from '@wuji-tauri/source-extension';
 import { showFailToast } from 'vant';
+import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
+import CMS_VIDEO_TEMPLATE from '@/components/codeEditor/templates/cmsVideoTemplate.txt?raw';
+import COMIC_TEMPLATE from '@/components/codeEditor/templates/comicTemplate.txt?raw';
+import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
+import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
+import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 
 export async function generateCode(
   content: FormItem,
@@ -20,23 +20,23 @@ export async function generateCode(
   name: string,
 ): Promise<string | undefined> {
   const findPage = (name: string) => {
-    return content.pages.find((page) => page.type === name);
+    return content.pages.find(page => page.type === name);
   };
 
   let code = '';
   switch (content.type) {
     case 'photo':
-      code = PHOTO_TEMPLATE.replace("id = 'testPhoto';", `id = '${id}';`)
+      code = PHOTO_TEMPLATE.replace('id = \'testPhoto\';', `id = '${id}';`)
         .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
-        .replace("name = '测试';", `name = '${name}';`)
+        .replace('name = \'测试\';', `name = '${name}';`)
         .replace('// @METHOD_LIST', findPage('list')!.code)
         .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
         .replace('// @METHOD_DETAIL', findPage('detail')!.code);
       break;
     case 'song':
-      code = SONG_TEMPLATE.replace("id = 'testSong';", `id = '${id}';`)
+      code = SONG_TEMPLATE.replace('id = \'testSong\';', `id = '${id}';`)
         .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
-        .replace("name = '测试';", `name = '${name}';`)
+        .replace('name = \'测试\';', `name = '${name}';`)
         .replace('// @METHOD_PLAYLIST', findPage('playlist')!.code)
         .replace('// @METHOD_SONG_LIST', findPage('songList')!.code)
         .replace('// @METHOD_SEARCH_PLAYLIST', findPage('searchPlaylist')!.code)
@@ -49,18 +49,18 @@ export async function generateCode(
         .replace('// @METHOD_LYRIC', findPage('lyric')!.code);
       break;
     case 'book':
-      code = BOOK_TEMPLATE.replace("id = 'testBook';", `id = '${id}';`)
+      code = BOOK_TEMPLATE.replace('id = \'testBook\';', `id = '${id}';`)
         .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
-        .replace("name = '测试';", `name = '${name}';`)
+        .replace('name = \'测试\';', `name = '${name}';`)
         .replace('// @METHOD_LIST', findPage('list')!.code)
         .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
         .replace('// @METHOD_DETAIL', findPage('detail')!.code)
         .replace('// @METHOD_CONTENT', findPage('content')!.code);
       break;
     case 'comic':
-      code = COMIC_TEMPLATE.replace("id = 'testComic';", `id = '${id}';`)
+      code = COMIC_TEMPLATE.replace('id = \'testComic\';', `id = '${id}';`)
         .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
-        .replace("name = '测试';", `name = '${name}';`)
+        .replace('name = \'测试\';', `name = '${name}';`)
         .replace('// @METHOD_LIST', findPage('list')!.code)
         .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
         .replace('// @METHOD_DETAIL', findPage('detail')!.code)
@@ -70,12 +70,12 @@ export async function generateCode(
       const isCms = content.mode === 'cms';
       const tpl = isCms ? CMS_VIDEO_TEMPLATE : VIDEO_TEMPLATE;
       const idPlaceholder = isCms
-        ? "id = 'testCmsVideo';"
-        : "id = 'testVideo';";
+        ? 'id = \'testCmsVideo\';'
+        : 'id = \'testVideo\';';
       code = tpl
         .replace(idPlaceholder, `id = '${id}';`)
         .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
-        .replace("name = '测试';", `name = '${name}';`)
+        .replace('name = \'测试\';', `name = '${name}';`)
         .replace('// @METHOD_LIST', findPage('list')!.code)
         .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
         .replace('// @METHOD_DETAIL', findPage('detail')!.code)
@@ -104,7 +104,8 @@ export async function generateCode(
         break;
     }
     return code;
-  } catch (error) {
+  }
+  catch (error) {
     showFailToast(`代码错误: ${error}`);
   }
 }

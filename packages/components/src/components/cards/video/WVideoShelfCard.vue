@@ -36,7 +36,8 @@ const lastWatchEpisode = computed((): VideoEpisode | undefined => {
     ?.find((resource) => {
       return resource.id === props.video.video.lastWatchResourceId;
     })
-    ?.episodes?.find((episode) => {
+    ?.episodes
+    ?.find((episode) => {
       return episode.id === props.video.video.lastWatchEpisodeId;
     });
 });

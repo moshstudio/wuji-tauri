@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import type { BookItem } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
-import { ref } from 'vue';
+import type { BookHistory } from '@/types/book';
 import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
+import { WBookCard } from '@wuji-tauri/components';
+import { storeToRefs } from 'pinia';
+import { ref } from 'vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import WHeader from '@/components/header/WHeader.vue';
 import WBookTab from '@/components/tab/WBookTab.vue';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import { WBookCard } from '@wuji-tauri/components/src';
 import { router } from '@/router';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
-import { BookHistory } from '@/types/book';
-import { storeToRefs } from 'pinia';
 
 const props = defineProps<{
   bookSources: BookSource[];
@@ -71,18 +71,22 @@ async function onRefresh() {
           </div>
           <ResponsiveGrid2>
             <WBookCard
-              v-for="book in bookHistory"
+              v-for="(book, bookIndex) in bookHistory"
+              :key="`${book.book.sourceId}_${book.book.id}_${bookIndex}`"
               :book="book.book"
               :click="() => historyToBook(book)"
             />
           </ResponsiveGrid2>
         </van-collapse-item>
-        <div v-for="(item, index) in bookSources" :key="item.item.id">
+        <div
+          v-for="(item, sourceIndex) in bookSources"
+          :key="`${item.item.id}_${sourceIndex}`"
+        >
           <van-collapse-item
             v-show="
               item.list && !(!Array.isArray(item.list) && !item.list?.list)
             "
-            :name="index + item.item.id"
+            :name="sourceIndex + item.item.id"
             :title="item.item.name"
           >
             <WBookTab :source="item" :to-page="toPage" :to-detail="toDetail" />
@@ -93,12 +97,12 @@ async function onRefresh() {
         <LiquidGlassContainer
           :width="40"
           :height="40"
-          :borderRadius="20"
-          :glassTintColor="'#000000'"
-          :glassTintOpacity="20"
-          :frostBlurRadius="1"
+          :border-radius="20"
+          glass-tint-color="#000000"
+          :glass-tint-opacity="20"
+          :frost-blur-radius="1"
         >
-          <van-icon name="arrow-up"></van-icon>
+          <van-icon name="arrow-up" />
         </LiquidGlassContainer>
       </van-back-top>
     </van-pull-refresh>

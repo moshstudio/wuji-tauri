@@ -1,4 +1,4 @@
-import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
+import { disable, enable, isEnabled } from '@tauri-apps/plugin-autostart';
 
 /**
  * 启用开机自启
@@ -6,7 +6,8 @@ import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
 export async function enableAutostart(): Promise<void> {
   try {
     await enable();
-  } catch (error) {
+  }
+  catch (error) {
     console.error('启用开机自启失败:', error);
     throw error;
   }
@@ -18,7 +19,8 @@ export async function enableAutostart(): Promise<void> {
 export async function disableAutostart(): Promise<void> {
   try {
     await disable();
-  } catch (error) {
+  }
+  catch (error) {
     console.error('禁用开机自启失败:', error);
     throw error;
   }
@@ -30,7 +32,8 @@ export async function disableAutostart(): Promise<void> {
 export async function checkAutostartEnabled(): Promise<boolean> {
   try {
     return await isEnabled();
-  } catch (error) {
+  }
+  catch (error) {
     console.error('检查开机自启状态失败:', error);
     return false;
   }
@@ -42,7 +45,8 @@ export async function checkAutostartEnabled(): Promise<boolean> {
 export async function setAutostartEnabled(enabled: boolean): Promise<void> {
   if (enabled) {
     await enableAutostart();
-  } else {
+  }
+  else {
     await disableAutostart();
   }
 }

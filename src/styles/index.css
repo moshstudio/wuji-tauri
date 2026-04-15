@@ -74,9 +74,7 @@ body,
   --van-tabs-nav-background: var(--van-background-2);
 }
 .van-button:not(.van-button--primary):not(.van-button--success),
-.van-button:not(.van-button--primary):not(.van-button--success)
-  > .van-button__content
-  > .van-button__text,
+.van-button:not(.van-button--primary):not(.van-button--success) > .van-button__content > .van-button__text,
 .van-cell__title {
   color: var(--van-text-color);
 }

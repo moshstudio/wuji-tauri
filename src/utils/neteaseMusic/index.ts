@@ -27,7 +27,7 @@ export async function songDetail(ids: string[]) {
   return await createRequest(
     '/api/v3/song/detail',
     {
-      c: `[${ids.map((id) => `{"id":${id}}`).join(',')}]`,
+      c: `[${ids.map(id => `{"id":${id}}`).join(',')}]`,
     },
     {
       crypto: CryptoType.weapi,
@@ -42,7 +42,8 @@ export async function playlistDetail(id: string): Promise<PlaylistInfo | null> {
     s: 8,
   });
   const json1 = await response1.json();
-  if (json1.code !== 200) return null;
+  if (json1.code !== 200)
+    return null;
 
   const trackIds: { id: string }[] = json1.playlist.trackIds;
   const list = [];
@@ -51,14 +52,15 @@ export async function playlistDetail(id: string): Promise<PlaylistInfo | null> {
     const response = await createRequest(
       '/api/v3/song/detail',
       {
-        c: `[${chunk.map((item) => `{"id":${item.id}}`).join(',')}]`,
+        c: `[${chunk.map(item => `{"id":${item.id}}`).join(',')}]`,
       },
       {
         crypto: CryptoType.weapi,
       },
     );
     const json = await response.json();
-    if (json.code !== 200) continue;
+    if (json.code !== 200)
+      continue;
     list.push(
       ...json.songs.map((item: any) => {
         return {

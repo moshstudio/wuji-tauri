@@ -154,7 +154,8 @@ function assemble() {
 function toggle() {
   if (randomized.value) {
     assemble();
-  } else {
+  }
+  else {
     randomize();
   }
 }
@@ -165,7 +166,8 @@ onMounted(() => {
 watch(taichiAnimateRandomized, (v) => {
   if (v) {
     randomize();
-  } else {
+  }
+  else {
     assemble();
   }
 });

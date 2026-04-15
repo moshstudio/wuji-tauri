@@ -1,60 +1,60 @@
 <script setup lang="ts">
-import {
-  ref,
-  watch,
-  onDeactivated,
-  computed,
-  nextTick,
-  onMounted,
-  onUnmounted,
-} from 'vue';
-import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
-import AppVideoDetail from '@/layouts/app/video/VideoDetail.vue';
-import DesktopVideoDetail from '@/layouts/desktop/video/VideoDetail.vue';
-import SearchDialog from '@/components/media/SearchDialog.vue';
-import {
-  useStore,
-  useBackStore,
-  useDisplayStore,
-  useVideoShelfStore,
-  useDownloadStore,
-} from '@/store';
-import { storeToRefs } from 'pinia';
-import { useRoute } from 'vue-router';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
-import { usePageDataLoader } from '@/hooks/usePageDataLoader';
-import { useStatusBar } from '@/hooks/useStatusBar';
-
-const downloadStore = useDownloadStore();
-import _ from 'lodash';
-import { showFailToast, showToast } from 'vant';
-import {
-  VideoSource,
+import type {
+  VideoEpisode,
   VideoItem,
   VideoResource,
-  VideoEpisode,
+  VideoSource,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
+import type Fullscreen from 'xgplayer/es/plugins/fullscreen';
+import type FavoriteButtonPlugin from '@/components/media/plugins/favoriteButton';
+import { onMountedOrActivated } from '@vant/use';
+import _ from 'lodash';
+import { storeToRefs } from 'pinia';
+import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
+import { showConfirmDialog, showFailToast, showToast } from 'vant';
+import {
+  computed,
+  nextTick,
+  onDeactivated,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+} from 'vue';
+import { useRoute } from 'vue-router';
 import Player, { Events } from 'xgplayer';
-import MobilePreset from 'xgplayer/es/presets/mobile';
 import DefaultPreset from 'xgplayer/es/presets/default';
 import LivePreset from 'xgplayer/es/presets/live';
-import 'xgplayer/dist/index.min.css';
-import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
-import { onMountedOrActivated } from '@vant/use';
+import MobilePreset from 'xgplayer/es/presets/mobile';
 import BackButtonPlugin from '@/components/media/plugins/backButton';
-import FavoriteButtonPlugin from '@/components/media/plugins/favoriteButton';
 import PlaylistButtonPlugin from '@/components/media/plugins/playlistButton';
-import Fullscreen from 'xgplayer/es/plugins/fullscreen';
 import VideoJsPlugin from '@/components/media/plugins/videoJs';
 import VideoNamePlugin from '@/components/media/plugins/videoName';
-import { router } from '@/router';
+import SearchDialog from '@/components/media/SearchDialog.vue';
 import VideoSwiper from '@/components/media/VideoSwiper.vue';
+import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+import { usePageDataLoader } from '@/hooks/usePageDataLoader';
+import { useStatusBar } from '@/hooks/useStatusBar';
+import AppVideoDetail from '@/layouts/app/video/VideoDetail.vue';
+import DesktopVideoDetail from '@/layouts/desktop/video/VideoDetail.vue';
+import { router } from '@/router';
+import {
+  useBackStore,
+  useDisplayStore,
+  useDownloadStore,
+  useStore,
+  useVideoShelfStore,
+} from '@/store';
+import { createCancellableFunction } from '@/utils/cancelableFunction';
+import 'xgplayer/dist/index.min.css';
 
 const { videoId, sourceId } = defineProps<{
   videoId: string;
   sourceId: string;
 }>();
+
+const downloadStore = useDownloadStore();
 
 const route = useRoute();
 const store = useStore();
@@ -81,6 +81,35 @@ const videoSrc = ref<VideoUrlMap>();
 
 const { run: runLoader } = usePageDataLoader({
   onFailed: () => showFailToast('视频解析失败，请点击重试或尝试更换线路'),
+});
+
+const getPlayUrl = createCancellableFunction(async (signal: AbortSignal) => {
+  if (!playingResource.value || !playingEpisode.value || !videoItem.value) {
+    return;
+  }
+  let url;
+  const t = displayStore.showToast();
+  try {
+    url = await store.videoPlay(
+      videoSource.value!,
+      videoItem.value,
+      playingResource.value,
+      playingEpisode.value,
+    );
+  }
+  catch (error) {
+    console.error('get video play url error', error);
+  }
+  displayStore.closeToast(t);
+
+  if (signal.aborted)
+    return;
+  if (url) {
+    videoSrc.value = url;
+  }
+  else {
+    showFailToast('播放地址获取失败');
+  }
 });
 
 async function loadData() {
@@ -113,13 +142,14 @@ async function loadData() {
     }
 
     const t = displayStore.showToast();
-    const detail =
-      (await store.videoDetail(source!, videoItem.value)) || undefined;
+    const detail
+      = (await store.videoDetail(source!, videoItem.value)) || undefined;
     displayStore.closeToast(t);
 
-    if (signal.aborted) return true;
+    if (signal.aborted)
+      return true;
 
-    if (detail?.id != videoItem.value?.id) {
+    if (detail?.id !== videoItem.value?.id) {
       shouldReload.value = true;
       return false;
     }
@@ -131,23 +161,24 @@ async function loadData() {
     }
 
     // 检查是否有资源和剧集
-    const hasContent =
-      videoItem.value.resources?.length &&
-      videoItem.value.resources.some((r) => r.episodes?.length);
+    const hasContent
+      = videoItem.value.resources?.length
+        && videoItem.value.resources.some(r => r.episodes?.length);
     shouldReload.value = !hasContent;
 
-    playingResource.value ||=
-      _.find(
+    playingResource.value
+      ||= _.find(
         videoItem.value.resources,
-        (resource) => resource.id == videoItem.value?.lastWatchResourceId,
+        resource => resource.id === videoItem.value?.lastWatchResourceId,
       ) || videoItem.value.resources?.[0];
-    playingEpisode.value ||=
-      _.find(
+    playingEpisode.value
+      ||= _.find(
         playingResource.value?.episodes,
-        (episode) => episode.id == videoItem.value?.lastWatchEpisodeId,
+        episode => episode.id === videoItem.value?.lastWatchEpisodeId,
       ) || playingResource.value?.episodes?.[0];
 
-    if (signal.aborted) return true;
+    if (signal.aborted)
+      return true;
 
     if (playingResource.value && playingEpisode.value) {
       shelfStore.updateVideoPlayInfo(videoItem.value, {
@@ -161,33 +192,6 @@ async function loadData() {
   });
 }
 
-
-const getPlayUrl = createCancellableFunction(async (signal: AbortSignal) => {
-  if (!playingResource.value || !playingEpisode.value || !videoItem.value) {
-    return;
-  }
-  let url;
-  const t = displayStore.showToast();
-  try {
-    url = await store.videoPlay(
-      videoSource.value!,
-      videoItem.value,
-      playingResource.value,
-      playingEpisode.value,
-    );
-  } catch (error) {
-    console.error('get video play url error', error);
-  }
-  displayStore.closeToast(t);
-
-  if (signal.aborted) return;
-  if (url) {
-    videoSrc.value = url;
-  } else {
-    showFailToast('播放地址获取失败');
-  }
-});
-
 async function play(resource: VideoResource, episode: VideoEpisode) {
   videoSrc.value = undefined;
   playingResource.value = resource;
@@ -200,15 +204,15 @@ async function play(resource: VideoResource, episode: VideoEpisode) {
 }
 
 const inShelf = computed(() => {
-  const result = videoShelf.value.some((shelf) =>
-    shelf.videos.some((video) => video.video.id === videoId),
+  const result = videoShelf.value.some(shelf =>
+    shelf.videos.some(video => video.video.id === videoId),
   );
   return result;
 });
 
 const showAddShelfSheet = ref(false);
 const addShelfActions = computed(() => {
-  return videoShelf.value.map((shelf) => ({
+  return videoShelf.value.map(shelf => ({
     name: shelf.name,
     subname: `共 ${shelf.videos.length || 0} 个视频`,
     callback: () => {
@@ -223,18 +227,20 @@ const addShelfActions = computed(() => {
 const showSearchDialog = ref(false);
 const searchText = ref('');
 
-const onAddToShelf = () => {
+function onAddToShelf() {
   if (inShelf.value) {
     router.push({ name: 'VideoShelf' });
-  } else {
+  }
+  else {
     showAddShelfSheet.value = true;
   }
-};
+}
 
 const flatVideoItems = computed(() => {
   return videoItem.value?.resources
     ?.map((r) => {
-      if (!r.episodes) return undefined;
+      if (!r.episodes)
+        return undefined;
       return r.episodes.map((e) => {
         return {
           resourceTitle: r.title,
@@ -245,33 +251,34 @@ const flatVideoItems = computed(() => {
       });
     })
     .flat()
-    .filter((i) => !!i);
+    .filter(i => !!i);
 });
 
 const filterVideoItems = computed(() => {
-  if (!searchText.value) return flatVideoItems.value;
+  if (!searchText.value)
+    return flatVideoItems.value;
   return flatVideoItems.value?.filter((i) => {
     return (
-      i.resourceTitle.includes(searchText.value) ||
-      i.episodeTitle.includes(searchText.value)
+      i.resourceTitle.includes(searchText.value)
+      || i.episodeTitle.includes(searchText.value)
     );
   });
 });
 
-const playSearchedVideo = (resourceId: string, episodeId: string) => {
-  const resource = videoItem.value?.resources?.find((i) => i.id === resourceId);
+function playSearchedVideo(resourceId: string, episodeId: string) {
+  const resource = videoItem.value?.resources?.find(i => i.id === resourceId);
   if (!resource) {
     showFailToast('没有找到该资源');
     return;
   }
-  const episode = resource.episodes?.find((i) => i.id === episodeId);
+  const episode = resource.episodes?.find(i => i.id === episodeId);
   if (!episode) {
     showFailToast('没有找到该集');
     return;
   }
   play(resource, episode);
   showSearchDialog.value = false;
-};
+}
 
 const updateVideoPlayInfo = _.throttle(
   (position?: number) => {
@@ -291,56 +298,59 @@ const updateVideoPlayInfo = _.throttle(
   { leading: true, trailing: false },
 );
 
-const playNext = async () => {
+async function playNext() {
   if (
-    !playingResource.value?.episodes ||
-    !playingEpisode.value ||
-    !videoItem.value
+    !playingResource.value?.episodes
+    || !playingEpisode.value
+    || !videoItem.value
   ) {
     return;
   }
   updateVideoPlayInfo(0);
   const index = playingResource.value.episodes.findIndex(
-    (item) => item.id == playingEpisode.value!.id,
+    item => item.id === playingEpisode.value!.id,
   );
 
-  if (index === undefined || index === -1) return;
+  if (index === undefined || index === -1)
+    return;
   if (index === playingResource.value.episodes.length - 1) {
     showToast('没有下一集了');
     return;
   }
   await play(playingResource.value, playingResource.value.episodes[index + 1]);
-};
+}
 
-const playPrevious = async () => {
+async function playPrevious() {
   if (
-    !playingResource.value?.episodes ||
-    !playingEpisode.value ||
-    !videoItem.value
+    !playingResource.value?.episodes
+    || !playingEpisode.value
+    || !videoItem.value
   ) {
     return;
   }
   updateVideoPlayInfo(0);
   const index = playingResource.value.episodes.findIndex(
-    (item) => item.id == playingEpisode.value!.id,
+    item => item.id === playingEpisode.value!.id,
   );
 
-  if (index === undefined || index === -1) return;
+  if (index === undefined || index === -1)
+    return;
   if (index === 0) {
     showToast('已经是第一集了');
     return;
   }
   await play(playingResource.value, playingResource.value.episodes[index - 1]);
-};
+}
 
 const prevEpisode = computed(() => {
   if (!playingResource.value?.episodes || !playingEpisode.value) {
     return null;
   }
   const index = playingResource.value.episodes.findIndex(
-    (item) => item.id === playingEpisode.value!.id,
+    item => item.id === playingEpisode.value!.id,
   );
-  if (index <= 0) return null;
+  if (index <= 0)
+    return null;
   return playingResource.value.episodes[index - 1];
 });
 
@@ -349,7 +359,7 @@ const nextEpisode = computed(() => {
     return null;
   }
   const index = playingResource.value.episodes.findIndex(
-    (item) => item.id === playingEpisode.value!.id,
+    item => item.id === playingEpisode.value!.id,
   );
   if (index === -1 || index === playingResource.value.episodes.length - 1) {
     return null;
@@ -357,7 +367,7 @@ const nextEpisode = computed(() => {
   return playingResource.value.episodes[index + 1];
 });
 
-const createPlayer = async (video?: VideoUrlMap) => {
+async function createPlayer(video?: VideoUrlMap) {
   const volume = videoVolume.value || 1;
   const rate = videoPlaybackRate.value || 1;
   videoPlayer.value?.destroy();
@@ -377,12 +387,12 @@ const createPlayer = async (video?: VideoUrlMap) => {
       '.xgplayer-container',
     ) as HTMLElement,
     url: video?.url,
-    nullUrlStart: !!!video?.url,
+    nullUrlStart: !video?.url,
     autoplay: true,
     loop: false,
     playsinline: true,
     cssFullscreen: false,
-    volume: volume,
+    volume,
     defaultPlaybackRate: rate,
     isMobileSimulateMode: displayStore.isAndroid ? 'mobile' : 'pc',
     isLive: videoSrc.value?.isLive || false,
@@ -485,7 +495,7 @@ const createPlayer = async (video?: VideoUrlMap) => {
   if (displayStore.isAndroid) {
     videoPlayer.value
       .getPlugin('fullscreen')
-      .useHooks('fullscreenChange', (plugin: Fullscreen, event: TouchEvent) => {
+      .useHooks('fullscreenChange', (plugin: Fullscreen) => {
         displayStore.fullScreenMode = !displayStore.fullScreenMode;
         plugin.animate(displayStore.fullScreenMode);
       });
@@ -493,7 +503,7 @@ const createPlayer = async (video?: VideoUrlMap) => {
   videoPlayer.value.getPlugin('error').useHooks('showError', () => {
     videoPlayer.value?.controls?.show();
   });
-};
+}
 
 watch(videoSrc, (newVideo) => {
   if (route.name !== 'VideoDetail') {
@@ -515,7 +525,8 @@ watch(
     ) as FavoriteButtonPlugin | undefined;
     if (favoritePlugin) {
       favoritePlugin.setFavorited(newInShelf);
-    } else {
+    }
+    else {
       console.warn('[VideoDetail] 未找到 favoritePlugin');
     }
   },
@@ -558,10 +569,12 @@ onMountedOrActivated(() => {
   // }
   if (shouldReload.value) {
     loadData();
-  } else if (savedVideoSrc) {
+  }
+  else if (savedVideoSrc) {
     videoSrc.value = savedVideoSrc;
     savedVideoSrc = undefined;
-  } else {
+  }
+  else {
     createPlayer();
   }
 });
@@ -595,25 +608,29 @@ onDeactivated(() => {
 onUnmounted(() => {
   videoPlayer.value?.destroy();
 });
-async function onDownload(resource: VideoResource, episode: VideoEpisode) {
-  if (!videoSource.value || !videoItem.value) return;
-  const t = showLoadingToast({ message: '正在解析地址', duration: 0 });
-  try {
-    const urlMap = await store.videoPlay(videoSource.value, videoItem.value, resource, episode);
-    t.close();
-    if (urlMap?.url) {
-      await downloadStore.startVideoDownload(
-        { title: `${videoItem.value.title} - ${episode.title}`, id: `${videoItem.value.id}_${episode.id}` },
-        videoSource.value,
-        urlMap.url,
-        urlMap.headers
-      );
-      showToast('已加入下载队列');
-    }
-  } catch (e) {
-    t.close();
-    showFailToast('解析地址失败');
+async function onDownload() {
+  const targetResource
+    = playingResource.value || videoItem.value?.resources?.[0];
+  if (!targetResource || !videoItem.value || !videoSource.value) {
+    showToast('无法获取资源信息');
+    return;
   }
+
+  // 检查当前播放视频是否为直播
+  if (videoSrc.value?.isLive) {
+    showConfirmDialog({
+      title: '提示',
+      message: '直播流暂不支持下载，请尝试点播资源。',
+      showCancelButton: false,
+    });
+    return;
+  }
+
+  await downloadStore.startVideoCollectionDownload(
+    videoItem.value,
+    videoSource.value,
+    targetResource,
+  );
 }
 </script>
 
@@ -643,7 +660,7 @@ async function onDownload(resource: VideoResource, episode: VideoEpisode) {
           <div
             ref="videoElement"
             class="xg-video-player !relative !h-full !w-full flex-grow"
-          ></div>
+          />
         </VideoSwiper>
         <SearchDialog
           v-model:show="showSearchDialog"
@@ -652,7 +669,7 @@ async function onDownload(resource: VideoResource, episode: VideoEpisode) {
           :playing-episode-id="playingEpisode?.id"
           :filter-video-items="filterVideoItems"
           @play-searched-video="playSearchedVideo"
-        ></SearchDialog>
+        />
       </DesktopVideoDetail>
     </template>
     <template #app>
@@ -679,7 +696,7 @@ async function onDownload(resource: VideoResource, episode: VideoEpisode) {
           <div
             ref="videoElement"
             class="xg-video-player !relative !h-full !w-full flex-grow"
-          ></div>
+          />
         </VideoSwiper>
         <SearchDialog
           v-model:show="showSearchDialog"
@@ -688,7 +705,7 @@ async function onDownload(resource: VideoResource, episode: VideoEpisode) {
           :playing-episode-id="playingEpisode?.id"
           :filter-video-items="filterVideoItems"
           @play-searched-video="playSearchedVideo"
-        ></SearchDialog>
+        />
       </AppVideoDetail>
     </template>
     <van-action-sheet

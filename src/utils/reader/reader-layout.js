@@ -1,6 +1,6 @@
-const inBrowser = typeof window !== 'undefined';
-const baseChar = '阅'; // 标准汉字
-let lineH = {};
+const inBrowser = typeof window !== 'undefined'
+const baseChar = '阅' // 标准汉字
+let lineH = {}
 let options = {
   // 参数
   /* platform
@@ -42,7 +42,7 @@ let options = {
   titleHeight: 1.4, // 行高-章节标题
   titleWeight: 'normal', // 字重-章节标题
   titleGap: 0, // 标题和内容的间距-章节标题
-};
+}
 let cacheData = {
   // 缓存数据减少计算
   cWidth: 0, // 容器宽度
@@ -51,25 +51,25 @@ let cacheData = {
   cfontFamily: '', // 字体族
   maxText: 0, // 行最大字数
   maxLine: 0, // 段落最大行数
-};
+}
 
 // 获取指定元素的 CSS 样式
 function getStyle(attr) {
   if (!inBrowser) {
-    return '';
+    return ''
   }
   if (getComputedStyle) {
-    return getComputedStyle(document.documentElement)[attr];
+    return getComputedStyle(document.documentElement)[attr]
   }
-  return document.documentElement.currentStyle[attr]; // ie
+  return document.documentElement.currentStyle[attr] // ie
 }
 
 // 删除字符串中的空格
 function trimAll(str) {
   if (str) {
-    return String(str).replace(/\s+/g, '');
+    return String(str).replace(/\s+/g, '')
   }
-  return '';
+  return ''
 }
 
 function emptyLine(content) {
@@ -86,7 +86,7 @@ function emptyLine(content) {
         text: content,
       },
     ],
-  ];
+  ]
 }
 
 /**
@@ -96,34 +96,34 @@ function emptyLine(content) {
  * @return {Array} [] 输出转化好的行数组
  */
 function Reader(content, option) {
-  const { type, width, height, fontFamily, fontSize, title, titleSize } =
-    option;
+  const { type, width, height, fontFamily, fontSize, title, titleSize }
+    = option
   if (!content) {
-    return emptyLine('无内容');
+    return emptyLine('无内容')
   }
   if (!width || Number(width) <= 0) {
-    return emptyLine('请传入容器宽度，值需要大于 0');
+    return emptyLine('请传入容器宽度，值需要大于 0')
   }
   if (type === 'page' && (!height || Number(height) <= 0)) {
-    return emptyLine('请传入容器高度，值需要大于 0');
+    return emptyLine('请传入容器高度，值需要大于 0')
   }
   if (!fontSize || Number(fontSize) <= 0) {
-    return emptyLine('请传入章节内容字号大小，值需要大于 0');
+    return emptyLine('请传入章节内容字号大小，值需要大于 0')
   }
   if (title && (!titleSize || Number(titleSize) <= 0)) {
-    return emptyLine('请传入章节标题字号大小，值需要大于 0');
+    return emptyLine('请传入章节标题字号大小，值需要大于 0')
   }
-  options = { ...options, ...option };
+  options = { ...options, ...option }
 
-  lineH = {};
+  lineH = {}
 
   // 宽高发生变化更新缓存数据
-  const { cWidth, cHeight, cfontSize, cfontFamily } = cacheData;
+  const { cWidth, cHeight, cfontSize, cfontFamily } = cacheData
   if (
-    cWidth !== width ||
-    cHeight !== height ||
-    cfontSize !== fontSize ||
-    cfontFamily !== options.fontFamily
+    cWidth !== width
+    || cHeight !== height
+    || cfontSize !== fontSize
+    || cfontFamily !== options.fontFamily
   ) {
     cacheData = {
       cWidth: width,
@@ -132,22 +132,22 @@ function Reader(content, option) {
       cfontFamily: options.fontFamily || '',
       maxText: 0,
       maxLine: 0,
-    };
+    }
   }
 
   // 字体
-  const rootFamily = getStyle('font-family');
+  const rootFamily = getStyle('font-family')
   if (!fontFamily && rootFamily) {
-    options.fontFamily = rootFamily;
+    options.fontFamily = rootFamily
   }
 
   if (type === 'line') {
     // 不要使用line
-    return splitContent2lines(content); // 把内容拆成行数组
+    return splitContent2lines(content) // 把内容拆成行数组
   }
 
-  const lines = splitContent2lines(content); // 把内容拆成行数组
-  return joinLine2Pages(lines); // 把行聚合成页数组
+  const lines = splitContent2lines(content) // 把内容拆成行数组
+  return joinLine2Pages(lines) // 把行聚合成页数组
 }
 
 /**
@@ -156,51 +156,51 @@ function Reader(content, option) {
  * @return {Array} [] 行数组
  */
 function splitContent2lines(content) {
-  const { splitCode, width, fontSize, title, pIndent } = options;
+  const { splitCode, width, fontSize, title, pIndent } = options
 
   // 把文本拆成段落数组
-  let hasTitle = false;
-  const reg = `[${splitCode}]+`;
+  let hasTitle = false
+  const reg = `[${splitCode}]+`
   const pList = content
     .split(new RegExp(reg, 'gim'))
     .map((v, i) => {
       if (i === 0 && v === title) {
-        hasTitle = true;
-        return v;
+        hasTitle = true
+        return v
       }
-      return trimAll(v);
+      return trimAll(v)
     })
-    .filter((v) => v);
+    .filter(v => v)
 
   // 内容无标题需要额外加上标题
   if (!hasTitle) {
-    pList.unshift(title);
+    pList.unshift(title)
   }
   // 去除多余的标题
   if (title && trimAll(pList[1]) === trimAll(title)) {
-    pList.splice(1, 1);
+    pList.splice(1, 1)
   }
 
   // 计算1行能放多少个标准汉字
   if (!cacheData.maxText) {
     // 宽高不变用缓存减少计算
-    const baseLen = Math.floor(width / fontSize);
-    let char = '';
+    const baseLen = Math.floor(width / fontSize)
+    let char = ''
     for (let i = 0; i < baseLen; i++) {
-      char += baseChar;
+      char += baseChar
     }
-    const maxText = getText({ fontSize }, char, true);
-    cacheData.maxText = maxText.length;
+    const maxText = getText({ fontSize }, char, true)
+    cacheData.maxText = maxText.length
   }
   // console.log(333, '一行放多少个汉字2', cacheData.maxText);
 
   // 把段落拆成行
-  let result = [];
+  let result = []
   pList.forEach((pText, index) => {
-    result = result.concat(p2line(pText, index, cacheData.maxText, pIndent));
-  });
+    result = result.concat(p2line(pText, index, cacheData.maxText, pIndent))
+  })
 
-  return result;
+  return result
 }
 
 /**
@@ -211,25 +211,26 @@ function splitContent2lines(content) {
  * @return {Array} [] 行数组
  */
 function p2line(pText, index, maxLen, pIndent) {
-  const { fast, fontSize, title, titleSize, titleWeight } = options;
-  const isTitle = pText === title;
-  let p = pText;
-  let tag = 0;
-  const lines = [];
+  const { fast, fontSize, title, titleSize, titleWeight } = options
+  const isTitle = pText === title
+  let p = pText
+  let tag = 0
+  const lines = []
 
   while (p) {
-    tag += 1;
-    const pFirst = !isTitle && tag === 1; // 是否段落行首
-    const sliceLen = pFirst ? maxLen - pIndent : maxLen;
-    let lineText = p.slice(0, sliceLen);
+    tag += 1
+    const pFirst = !isTitle && tag === 1 // 是否段落行首
+    const sliceLen = pFirst ? maxLen - pIndent : maxLen
+    let lineText = p.slice(0, sliceLen)
     if (pFirst) {
-      lineText = baseChar + baseChar + lineText;
+      lineText = baseChar + baseChar + lineText
     }
 
     if (!isTitle && p.length <= sliceLen) {
       // 少于行最大字数直接独立成行
-      p = '';
-    } else {
+      p = ''
+    }
+    else {
       if (!fast || isTitle) {
         // 计算加速
         lineText = getText(
@@ -240,35 +241,35 @@ function p2line(pText, index, maxLen, pIndent) {
             weight: isTitle ? titleWeight : '',
           },
           lineText,
-        );
+        )
       }
-      p = p.slice(pFirst ? lineText.length - pIndent : lineText.length);
+      p = p.slice(pFirst ? lineText.length - pIndent : lineText.length)
     }
 
     // 去掉首行行首额外加的pIndent个字符
     if (pFirst) {
-      lineText = lineText.slice(2);
+      lineText = lineText.slice(2)
     }
 
-    let center = true;
+    let center = true
     // 标点符号避头处理，掉字符到下一行
     if (p) {
-      const { transLine, transP, canCenter } = transDot(lineText, p);
-      lineText = transLine;
-      p = transP;
-      center = canCenter;
+      const { transLine, transP, canCenter } = transDot(lineText, p)
+      lineText = transLine
+      p = transP
+      center = canCenter
     }
     // 数字、英文处理，掉字符到下一行
     if (p) {
-      const { transLine, transP, canCenter } = transNumEn(lineText, p, center);
-      lineText = transLine;
-      p = transP;
-      center = canCenter;
+      const { transLine, transP, canCenter } = transNumEn(lineText, p, center)
+      lineText = transLine
+      p = transP
+      center = canCenter
     }
 
     // 段落中间行两端对齐，段落尾行和只有1行的不需要对齐
     if (isTitle || !p) {
-      center = false;
+      center = false
     }
 
     lines.push({
@@ -280,12 +281,12 @@ function p2line(pText, index, maxLen, pIndent) {
       lineIndex: tag, // 行索引
       textIndex: pText.indexOf(lineText), // 文字在段落未分行的固定位置
       text: lineText, // 行文字内容
-    });
+    })
   }
   if (lines.length) {
-    lines[lines.length - 1].pLast = true;
+    lines[lines.length - 1].pLast = true
   }
-  return lines;
+  return lines
 }
 
 /**
@@ -297,49 +298,49 @@ function p2line(pText, index, maxLen, pIndent) {
  * @return {string} 行文本
  */
 function getText(params, text, base = false, fontW) {
-  const { width, fontFamily } = options;
-  const { p, sliceLen, fontSize, weight } = params;
+  const { width, fontFamily } = options
+  const { p, sliceLen, fontSize, weight } = params
   const getWidth = (text) => {
-    return getTextWidth(text, fontSize, fontFamily, weight);
-  };
+    return getTextWidth(text, fontSize, fontFamily, weight)
+  }
 
   // 拿到过宽度的的传进来不再重复获取
-  const textW = fontW || getWidth(text);
+  const textW = fontW || getWidth(text)
   if (textW === width) {
-    return text;
+    return text
   }
 
   if (textW < width) {
-    const add = p && p.slice(sliceLen, sliceLen + 1);
+    const add = p && p.slice(sliceLen, sliceLen + 1)
     if (!base && !add) {
       // 没有多余的字符了
-      return text;
+      return text
     }
-    const addText = base ? text + baseChar : text + add;
-    const addTextW = getWidth(addText);
+    const addText = base ? text + baseChar : text + add
+    const addTextW = getWidth(addText)
     if (addTextW === width) {
-      return addText;
+      return addText
     }
     if (addTextW > width) {
-      return text;
+      return text
     }
     return getText(
       { ...params, sliceLen: sliceLen + 1 },
       addText,
       base,
       addTextW,
-    );
+    )
   }
 
-  const cutText = text.slice(0, -1);
+  const cutText = text.slice(0, -1)
   if (!cutText) {
-    return text;
+    return text
   }
-  const cutTextW = getWidth(cutText);
+  const cutTextW = getWidth(cutText)
   if (cutTextW <= width) {
-    return cutText;
+    return cutText
   }
-  return getText(params, cutText, base, cutTextW);
+  return getText(params, cutText, base, cutTextW)
 }
 
 /**
@@ -350,47 +351,47 @@ function getText(params, text, base = false, fontW) {
  * @param {string} [weight] 字重
  * @return {number} width 文字宽度
  */
-let canvas = null;
-let ctx = null;
+let canvas = null
+let ctx = null
 function getTextWidth(text, fontSize, fontFamily, weight) {
   if (!canvas) {
-    canvas = document.createElement('canvas');
-    ctx = canvas.getContext('2d');
+    canvas = document.createElement('canvas')
+    ctx = canvas.getContext('2d')
   }
-  ctx.font = `${weight || 'normal'} ${fontSize}px ${fontFamily}`;
-  const { width } = ctx.measureText(text);
-  return width;
+  ctx.font = `${weight || 'normal'} ${fontSize}px ${fontFamily}`
+  const { width } = ctx.measureText(text)
+  return width
 }
 
 // 按照各平台 api 创建 canvas
 function createCanvas() {
-  const { platform, id } = options;
+  const { platform, id } = options
   switch (platform) {
     case 'quickApp': // 快应用
-      return id;
+      return id
     case 'wxMini': // 微信小程序
       // 创建离屏 2D canvas，实例基础库 2.16.1 开始支持
       if (wx.createOffscreenCanvas) {
-        return wx.createOffscreenCanvas({ type: '2d' });
+        return wx.createOffscreenCanvas({ type: '2d' })
       }
       // 创建 canvas 绘图上下文对象
-      return wx.createCanvasContext(id);
+      return wx.createCanvasContext(id)
     case 'alipayMini': // 支付宝小程序
       // 创建离屏 Canvas
       if (my.createOffscreenCanvas) {
-        return my.createOffscreenCanvas();
+        return my.createOffscreenCanvas()
       }
-      return my.createCanvasContext(id);
+      return my.createCanvasContext(id)
     case 'alitbMini': // 淘宝小程序
       // 创建离屏 Canvas
       if (my.createOffscreenCanvas) {
-        return my.createOffscreenCanvas();
+        return my.createOffscreenCanvas()
       }
-      return my.createCanvasContext(id);
+      return my.createCanvasContext(id)
     case 'swan': // 百度小程序
-      return swan.createCanvasContext();
+      return swan.createCanvasContext()
     default: // browser 浏览器
-      return document.createElement('canvas');
+      return document.createElement('canvas')
   }
 }
 
@@ -400,29 +401,29 @@ function createCanvas() {
  * @return {Array} [] 多页数组
  */
 function joinLine2Pages(lines) {
-  const { height } = options;
+  const { height } = options
 
   // 计算1页能放多少标准行
   if (!cacheData.maxLine) {
     // 宽高不变用缓存减少计算
-    let maxLine = 1;
+    let maxLine = 1
     if (lines.length >= 2) {
-      const baseLineH = getLineHeight(lines[1], 0, 'base');
-      maxLine = Math.floor(height / baseLineH);
+      const baseLineH = getLineHeight(lines[1], 0, 'base')
+      maxLine = Math.floor(height / baseLineH)
     }
-    cacheData.maxLine = maxLine;
+    cacheData.maxLine = maxLine
   }
   // console.log(333, '1页能放多少标准行', cacheData.maxLine)
 
-  let pageLines = lines.slice(0);
-  const pages = [];
+  let pageLines = lines.slice(0)
+  const pages = []
   while (pageLines.length > 0) {
-    const page = getPage(pageLines, cacheData.maxLine);
-    pages.push(page);
-    pageLines = pageLines.slice(page.length);
+    const page = getPage(pageLines, cacheData.maxLine)
+    pages.push(page)
+    pageLines = pageLines.slice(page.length)
   }
 
-  return pages;
+  return pages
 }
 
 /**
@@ -433,93 +434,93 @@ function joinLine2Pages(lines) {
  * @return {Array} [] 多行页数组
  */
 function getPage(lines, maxLine, pageHeight) {
-  const { height, titleGap } = options;
-  const page = lines.slice(0, maxLine);
-  const pageH = pageHeight || getPageHeight(page);
-  let contHeight = height;
+  const { height, titleGap } = options
+  const page = lines.slice(0, maxLine)
+  const pageH = pageHeight || getPageHeight(page)
+  let contHeight = height
   // 章节标题距离章节内容的间距
   if (lines && lines[0] && lines[0].isTitle) {
-    contHeight = height - titleGap;
+    contHeight = height - titleGap
   }
 
   if (pageH === contHeight) {
-    return page;
+    return page
   }
   if (pageH < contHeight) {
-    const add = maxLine + 1;
-    const addLine = lines.slice(maxLine, add);
+    const add = maxLine + 1
+    const addLine = lines.slice(maxLine, add)
     if (addLine.length <= 0) {
       // 没有多余行
-      return page;
+      return page
     }
-    const addPage = lines.slice(0, add);
-    const addPageH = getPageHeight(addPage);
+    const addPage = lines.slice(0, add)
+    const addPageH = getPageHeight(addPage)
     if (addPageH === contHeight) {
-      return addPage;
+      return addPage
     }
     if (addPageH > contHeight) {
       // 释放 addLine
-      freedLineH(addLine[0]);
-      return page;
+      freedLineH(addLine[0])
+      return page
     }
-    return getPage(lines, add, addPageH);
+    return getPage(lines, add, addPageH)
   }
 
-  const cut = maxLine - 1;
+  const cut = maxLine - 1
   if (cut <= 0) {
     // 少于最小行
-    return page;
+    return page
   }
-  const cutPage = lines.slice(0, cut);
-  const cutPageH = getPageHeight(cutPage);
+  const cutPage = lines.slice(0, cut)
+  const cutPageH = getPageHeight(cutPage)
   if (cutPageH <= contHeight) {
     // 释放 cutLine
-    freedLineH(lines.slice(cut, maxLine)[0]);
-    return cutPage;
+    freedLineH(lines.slice(cut, maxLine)[0])
+    return cutPage
   }
-  return getPage(lines, cut, cutPageH);
+  return getPage(lines, cut, cutPageH)
 }
 
 // 释放后续还要计算的行-页首行消除间距
 function freedLineH(line) {
-  lineH[`${line.pIndex}_${line.lineIndex}`] = '';
+  lineH[`${line.pIndex}_${line.lineIndex}`] = ''
 }
 // 获取1行的高度
 function getLineHeight(line, linesIndex, type) {
   // 计算过的直接返回
-  const index = `${line.pIndex}_${line.lineIndex}`;
-  let theLineH = lineH[index];
+  const index = `${line.pIndex}_${line.lineIndex}`
+  let theLineH = lineH[index]
   if (theLineH) {
-    return theLineH;
+    return theLineH
   }
 
-  const { pGap, fontSize, lineHeight, titleSize, titleHeight } = options;
-  const size = line.isTitle ? titleSize : fontSize;
-  const height = line.isTitle ? titleHeight : lineHeight;
+  const { pGap, fontSize, lineHeight, titleSize, titleHeight } = options
+  const size = line.isTitle ? titleSize : fontSize
+  const height = line.isTitle ? titleHeight : lineHeight
 
   // 标准行计算处理
   if (type === 'base') {
-    return fontSize * lineHeight;
+    return fontSize * lineHeight
   }
 
-  let gap = 0;
+  let gap = 0
   // 非标题&&首行-段落首行
   // linesIndex !== 0，横翻每页的第1行不需要 padding-top-页首行消除间距
   if (!line.isTitle && line.lineIndex === 1 && linesIndex !== 0) {
-    gap = pGap;
+    gap = pGap
   }
-  theLineH = size * height + gap;
-  lineH[index] = theLineH;
-  return theLineH;
+  theLineH = size * height + gap
+  lineH[index] = theLineH
+  return theLineH
 }
 
 // 获取1页最大行真实高度
 function getPageHeight(lines) {
-  let pageH = 0;
+  let pageH = 0
   lines.forEach((line, index) => {
-    pageH += getLineHeight(line, index);
-  });
-  return pageH;
+    pageH += getLineHeight(line, index)
+  })
+  return pageH
 }
 
 /**
@@ -529,31 +530,31 @@ function getPageHeight(lines) {
  * @return {object} {} 经过标点处理后的对象
  */
 function transDot(line, p) {
-  let transLine = line; // 转化后的行文字
-  let transP = p; // 转化过后剩下的段文字
-  let canCenter = true; // 是否可两端对齐
+  let transLine = line // 转化后的行文字
+  let transP = p // 转化过后剩下的段文字
+  let canCenter = true // 是否可两端对齐
 
   // 下行行首是结尾标点
   if (isDot(p.slice(0, 1))) {
-    transLine = line.slice(0, -1);
-    transP = line.slice(-1) + p;
+    transLine = line.slice(0, -1)
+    transP = line.slice(-1) + p
 
     // 本行尾连续标点数量
-    const endDot = getEndDot(line);
+    const endDot = getEndDot(line)
     if (endDot && endDot.length > 0) {
       // 3个及以上标点符号的不做处理，只有1个文字其他都是标点符号的不做处理
-      let len = endDot.length;
+      let len = endDot.length
       if (len >= 3 || len >= line.length - 2) {
-        return { transLine: line, transP: p, canCenter: true };
+        return { transLine: line, transP: p, canCenter: true }
       }
-      len = len + 1;
-      transLine = line.slice(0, -len);
-      transP = line.slice(-len) + p;
-      canCenter = false; // 掉2个字符下去的不扩大间隙使两端对齐
+      len = len + 1
+      transLine = line.slice(0, -len)
+      transP = line.slice(-len) + p
+      canCenter = false // 掉2个字符下去的不扩大间隙使两端对齐
     }
   }
 
-  return { transLine, transP, canCenter };
+  return { transLine, transP, canCenter }
 }
 /**
  * 数字、英文处理
@@ -562,45 +563,46 @@ function transDot(line, p) {
  * @return {object} {} 经过处理后的对象
  */
 function transNumEn(line, p, center) {
-  const pFirst = p.slice(0, 1); // 下行行首字符
-  let transLen = 0;
-  let transLine = line; // 转化后的行文字
-  let transP = p; // 转化过后剩下的段文字
-  let canCenter = center; // 是否可两端对齐
+  const pFirst = p.slice(0, 1) // 下行行首字符
+  let transLen = 0
+  let transLine = line // 转化后的行文字
+  let transP = p // 转化过后剩下的段文字
+  let canCenter = center // 是否可两端对齐
 
   if (/\d/.test(pFirst)) {
     // 下行行首是数字
-    const endNum = getEndNum(line); // 本行尾连续数字数量
+    const endNum = getEndNum(line) // 本行尾连续数字数量
     if (endNum && endNum.length > 0) {
-      const len = endNum[0].length;
+      const len = endNum[0].length
       if (len < line.length) {
         // 连续数字不超过1行
-        transLen = len;
+        transLen = len
       }
     }
-  } else if (/[a-z]/i.test(pFirst)) {
+  }
+  else if (/[a-z]/i.test(pFirst)) {
     // 下行行首是英文
-    const endEn = getEndEn(line); // 本行尾连续英文数量
+    const endEn = getEndEn(line) // 本行尾连续英文数量
     if (endEn && endEn.length > 0) {
-      const len = endEn[0].length;
+      const len = endEn[0].length
       if (len < line.length) {
-        transLen = len;
+        transLen = len
       }
     }
   }
   if (transLen) {
-    transLine = line.slice(0, -transLen);
-    transP = line.slice(-transLen) + p;
-    canCenter = false; // 数字、英文掉下去不扩大间隙使两端对齐
+    transLine = line.slice(0, -transLen)
+    transP = line.slice(-transLen) + p
+    canCenter = false // 数字、英文掉下去不扩大间隙使两端对齐
   }
 
-  return { transLine, transP, canCenter };
+  return { transLine, transP, canCenter }
 }
 
 // 判断是否是结尾标点符号
 function isDot(code) {
   if (!code) {
-    return false;
+    return false
   }
   // 35 个结束符 ，。：；！？、）》」】, . : ; ! ? ^ ) > } ] … ~ % · ’ ” ` - — _ | \ /
   const dots = [
@@ -639,12 +641,12 @@ function isDot(code) {
     '7c',
     '5c',
     '2f',
-  ];
-  const charCode = code.charCodeAt(0).toString(16);
+  ]
+  const charCode = code.charCodeAt(0).toString(16)
   if (dots.includes(charCode)) {
-    return true;
+    return true
   }
-  return false;
+  return false
 }
 
 // 获取字符串结尾连续标点
@@ -653,19 +655,19 @@ function getEndDot(str) {
   // 15 个开始符（《「【 ( < { [ ‘ “ @ # ￥ $ & uff08
   return str.match(
     /[\uFF0C|\u3002\uFF1A\uFF1B\uFF01\uFF1F\u3001\uFF09\u300B\u300D\u3011\u002C\u002E\u003A\u003B\u0021\u003F\u005E\u0029\u003E\u007D\u005D\u2026\u007E\u0025\u00B7\u2019\u201D\u0060\u002D\u2014\u005F\u005C\u002F\uFF08\u300A\u300C\u3010\u0028\u003C\u007B\u005B\u2018\u201C\u0040\u0023\uFFE5\u0024\u0026]+$/g,
-  );
+  )
 }
 
 // 获取字符串结尾连续数字
 function getEndNum(str) {
-  return str.match(/\d+$/g);
+  return str.match(/\d+$/g)
 }
 
 // 获取字符串结尾连续英文
 function getEndEn(str) {
-  return str.match(/[a-z]+$/gi);
+  return str.match(/[a-z]+$/gi)
 }
-export default Reader;
+export default Reader
 
 // if (
 //   typeof define === 'function' &&

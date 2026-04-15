@@ -6,11 +6,12 @@ import type {
   ComicList,
 } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
+import { onMountedOrActivated } from '@vant/use';
 import _ from 'lodash';
 import { storeToRefs } from 'pinia';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 import { showFailToast, showToast } from 'vant';
-import { computed, onActivated, onDeactivated, ref, watch } from 'vue';
+import { computed, onDeactivated, ref, watch } from 'vue';
 import ComicSwitchSourceDialog from '@/components/dialog/ComicSwitchSource.vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppComicRead from '@/layouts/app/comic/ComicRead.vue';
@@ -20,12 +21,12 @@ import {
   useComicShelfStore,
   useComicStore,
   useDisplayStore,
+  useDownloadStore,
   useStore,
 } from '@/store';
 import { useBackStore } from '@/store/backStore';
 import { retryOnFalse } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
-import { onMountedOrActivated } from '@vant/use';
 
 const { chapterId, comicId, sourceId } = defineProps<{
   sourceId: string;
@@ -38,6 +39,7 @@ const backStore = useBackStore();
 const displayStore = useDisplayStore();
 const comicStore = useComicStore();
 const shelfStore = useComicShelfStore();
+const downloadStore = useDownloadStore();
 const { comicShelf } = storeToRefs(shelfStore);
 
 const comicSource = ref<ComicSource>();
@@ -57,15 +59,18 @@ const allSourceResults = ref<ComicItem[]>([]);
 const searchAllSources = createCancellableFunction(
   async (signal: AbortSignal, targetComic?: ComicItem) => {
     allSourceResults.value = [];
-    if (!targetComic) return;
+    if (!targetComic)
+      return;
     await Promise.all(
       store.comicSources.map(async (comicSource) => {
         await store.comicSearch(comicSource, targetComic.title);
-        if (signal.aborted) return;
+        if (signal.aborted)
+          return;
         if (comicSource.list) {
           for (const b of _.castArray<ComicList>(comicSource.list)[0].list) {
             if (b.title === targetComic.title) {
-              if (signal.aborted) return;
+              if (signal.aborted)
+                return;
               const detailedComic = await store.comicDetail(comicSource, b);
               if (detailedComic) {
                 allSourceResults.value.push(detailedComic);
@@ -88,15 +93,15 @@ async function switchSource(newComicItem: ComicItem) {
     showToast('章节为空');
     return;
   }
-  const chapter =
-    newComicItem.chapters?.find((chapter) => chapter.id === chapterId) ||
-    newComicItem.chapters?.find(
-      (chapter) => chapter.title === readingChapter.value?.title,
-    ) ||
-    newComicItem.chapters?.[
-      comic.value?.chapters?.findIndex((chapter) => chapter.id === chapterId) ||
-        0
-    ];
+  const chapter
+    = newComicItem.chapters?.find(chapter => chapter.id === chapterId)
+      || newComicItem.chapters?.find(
+        chapter => chapter.title === readingChapter.value?.title,
+      )
+      || newComicItem.chapters?.[
+        comic.value?.chapters?.findIndex(chapter => chapter.id === chapterId)
+        || 0
+      ];
   if (!chapter) {
     showToast('章节不存在');
     return;
@@ -153,7 +158,7 @@ async function loadChapter(chapter?: ComicChapter) {
     }
   }
   if (!chapter) {
-    chapter = comic.value.chapters?.find((chapter) => chapter.id === chapterId);
+    chapter = comic.value.chapters?.find(chapter => chapter.id === chapterId);
   }
 
   if (!chapter) {
@@ -167,9 +172,9 @@ async function loadChapter(chapter?: ComicChapter) {
   const t = displayStore.showToast();
   chapterList.value = comic.value.chapters || [];
   readingChapter.value = chapter;
-  readingContent.value =
-    (await store.comicRead(comicSource.value!, comic.value, chapter)) ||
-    undefined;
+  readingContent.value
+    = (await store.comicRead(comicSource.value!, comic.value, chapter))
+      || undefined;
 
   displayStore.closeToast(t);
   if (!readingContent.value) {
@@ -179,7 +184,7 @@ async function loadChapter(chapter?: ComicChapter) {
 
 function prevChapter(toLast: boolean = false) {
   const index = chapterList.value.findIndex(
-    (chapter) => chapter.id === readingChapter.value?.id,
+    chapter => chapter.id === readingChapter.value?.id,
   );
   if (index === -1) {
     return;
@@ -196,14 +201,15 @@ function prevChapter(toLast: boolean = false) {
         sourceId: comic.value?.sourceId,
       },
     });
-  } else {
+  }
+  else {
     showToast('没有上一章了');
   }
 }
 
 function nextChapter() {
   const index = chapterList.value.findIndex(
-    (chapter) => chapter.id === readingChapter.value?.id,
+    chapter => chapter.id === readingChapter.value?.id,
   );
   if (index === -1) {
     return;
@@ -218,7 +224,8 @@ function nextChapter() {
         sourceId: comic.value?.sourceId,
       },
     });
-  } else {
+  }
+  else {
     showToast('没有下一章了');
   }
 }
@@ -239,7 +246,8 @@ async function resfreshChapter() {
 }
 
 const comicInShelf = computed(() => {
-  if (!comic.value) return false;
+  if (!comic.value)
+    return false;
   for (const item of comicShelf.value) {
     for (const comic of item.comics) {
       if (comic.comic.id === comicId) {
@@ -257,7 +265,8 @@ function addToShelf() {
   }
   if (shelfStore.comicShelf.length === 1) {
     shelfStore.addToComicSelf(comic.value);
-  } else {
+  }
+  else {
     showSelectShelf.value = true;
   }
 }
@@ -277,6 +286,16 @@ const selectShelfActions = computed(() => {
   });
 });
 
+async function onDownload() {
+  if (comic.value && comicSource.value) {
+    if (!comic.value.chapters?.length) {
+      showToast('章节列表加载中，请稍后');
+      return;
+    }
+    await downloadStore.startComicDownload(comic.value, comicSource.value);
+  }
+}
+
 watch(
   [() => chapterId, () => comicId, () => sourceId],
   async () => {
@@ -294,7 +313,7 @@ watch(
   },
   { immediate: true },
 );
-watch(readingChapter, (c) => (comicStore.readingChapter = c), {
+watch(readingChapter, c => (comicStore.readingChapter = c), {
   immediate: true,
 });
 
@@ -332,6 +351,7 @@ onDeactivated(() => {
         :prev-chapter="prevChapter"
         :next-chapter="nextChapter"
         :refresh-chapter="resfreshChapter"
+        :on-download="onDownload"
       />
     </template>
     <template #desktop>
@@ -354,6 +374,7 @@ onDeactivated(() => {
         :prev-chapter="prevChapter"
         :next-chapter="nextChapter"
         :refresh-chapter="resfreshChapter"
+        :on-download="onDownload"
       />
     </template>
     <ComicSwitchSourceDialog
@@ -380,7 +401,8 @@ onDeactivated(() => {
                   displayStore.bookKeepScreenOn = v;
                   if (v) {
                     keepScreenOn(true);
-                  } else {
+                  }
+                  else {
                     keepScreenOn(false);
                   }
                 }

@@ -11,17 +11,14 @@ permissions = [
     "allow-remove-task",
     "allow-get-download-dir",
     "allow-set-download-dir",
+    "allow-show-in-folder",
+    "allow-package-to-cbz",
+    "allow-mark-chunk-completed",
+    "allow-mark-task-error",
+    "allow-update-task-downloaded-size",
+    "allow-download-m3u8-chunk",
+    "allow-check-task-file-exist",
 ]
-
-[[permission]]
-identifier = "allow-get-download-dir"
-description = "Allows getting the current download directory"
-commands.allow = ["get_download_dir"]
-
-[[permission]]
-identifier = "allow-set-download-dir"
-description = "Allows setting the current download directory"
-commands.allow = ["set_download_dir"]
 
 [allow]
 http = ['http://*']

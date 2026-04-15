@@ -1,5 +1,6 @@
-import { BasePlugin, Events, IBasePluginOptions, Sniffer } from 'xgplayer';
+import type { IBasePluginOptions } from 'xgplayer';
 import VideoJs from 'video.js';
+import { BasePlugin, Events } from 'xgplayer';
 
 class VideoJsPlugin extends BasePlugin {
   url?: string;

@@ -4,7 +4,7 @@ import type { SongSource } from '@/types';
 import {
   MoreOptionsSheet,
   SongSelectShelfSheet,
-} from '@wuji-tauri/components/src';
+} from '@wuji-tauri/components';
 import { storeToRefs } from 'pinia';
 import { ref } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
@@ -38,14 +38,17 @@ const search = createCancellableFunction(async (signal: AbortSignal) => {
   const t = displayStore.showToast();
   if (!keyword) {
     await recommend(true);
-  } else {
+  }
+  else {
     await Promise.all([
       ...songSources.value.map(async (source) => {
-        if (signal.aborted) return;
+        if (signal.aborted)
+          return;
         await store.songSearchPlaylist(source, keyword, 1);
       }),
       ...songSources.value.map(async (source) => {
-        if (signal.aborted) return;
+        if (signal.aborted)
+          return;
         await store.songSearchSong(source, keyword, 1);
       }),
     ]);
@@ -79,14 +82,16 @@ async function recommend(force: boolean = false) {
 async function playlistToPage(source: SongSource, pageNo: number) {
   if (!searchValue.value) {
     await store.songRecommendPlayist(source, pageNo);
-  } else {
+  }
+  else {
     await store.songSearchPlaylist(source, searchValue.value, pageNo);
   }
 }
 async function songToPage(source: SongSource, pageNo: number) {
   if (!searchValue.value) {
     await store.songRecommendSong(source, pageNo);
-  } else {
+  }
+  else {
     await store.songSearchSong(source, searchValue.value, pageNo);
   }
 }

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { type as osType } from '@tauri-apps/plugin-os';
 import { cachedFetch } from '@wuji-tauri/fetch';
-import { getProxyUrl } from '../utils/proxy';
 import { Image as VanImage } from 'vant';
 import { ref, useAttrs, watch } from 'vue';
+import { getProxyUrl } from '../utils/proxy';
 
 // 定义 props
 const props = withDefaults(
@@ -40,7 +40,7 @@ const processedSrc = ref<string>();
 
 function onLoadFinished() {
   loadFinished.value = true;
-  (attrs.load as Function)?.();
+  (attrs.load as () => void)?.();
 }
 // 异步处理 src 的函数
 async function processSrc(
@@ -60,7 +60,8 @@ async function processSrc(
         const response = await fetch(dataURL);
         const blob = await response.blob();
         return URL.createObjectURL(blob);
-      } catch (error) {
+      }
+      catch (error) {
         console.error('image 转换失败:', error);
         throw error;
       }
@@ -69,10 +70,12 @@ async function processSrc(
   }
   if (!headers && !props.compress) {
     return src;
-  } else if (osType() === 'android') {
+  }
+  else if (osType() === 'android') {
     const proxyUrl = await getProxyUrl(src, headers);
     return proxyUrl || src;
-  } else {
+  }
+  else {
     try {
       const maxRedirections = props.src.includes('imgdb.cn') ? 0 : undefined;
       const response = await cachedFetch(
@@ -101,7 +104,8 @@ async function processSrc(
       return URL.createObjectURL(
         new Blob([blob], { type: blob.type || 'image/png' }),
       );
-    } catch (error) {
+    }
+    catch (error) {
       // 网络异常时静默回退到原始 src
       return src;
     }

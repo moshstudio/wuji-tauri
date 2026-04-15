@@ -37,22 +37,22 @@ onMountedOrActivated(() => {
 
 const isVip = computed(() => {
   return (
-    isMembershipOrderValid(props.userInfo?.vipMembershipPlan, now.value) ||
-    isMembershipOrderValid(props.userInfo?.superVipMembershipPlan, now.value)
+    isMembershipOrderValid(props.userInfo?.vipMembershipPlan, now.value)
+    || isMembershipOrderValid(props.userInfo?.superVipMembershipPlan, now.value)
   );
 });
 
 const vipPlans = computed(() => {
   return (
     props.membershipPlans?.filter(
-      (plan) => plan.level === MembershipPlanLevel.Vip,
+      plan => plan.level === MembershipPlanLevel.Vip,
     ) || []
   );
 });
 const sVipPlans = computed(() => {
   return (
     props.membershipPlans?.filter(
-      (plan) => plan.level === MembershipPlanLevel.SuperVip,
+      plan => plan.level === MembershipPlanLevel.SuperVip,
     ) || []
   );
 });
@@ -102,12 +102,16 @@ watch(
 
     <!-- 会员状态显示 -->
     <div v-if="isVip" class="px-4 py-3 shadow-sm">
-      <div class="mb-1 text-sm text-gray-600 dark:text-gray-300">您的会员</div>
+      <div class="mb-1 text-sm text-gray-600 dark:text-gray-300">
+        您的会员
+      </div>
       <div
         v-if="isMembershipOrderValid(userInfo?.vipMembershipPlan, now)"
         class="flex items-center gap-2"
       >
-        <p class="w-8 font-bold text-orange-500">VIP</p>
+        <p class="w-8 font-bold text-orange-500">
+          VIP
+        </p>
         <p
           v-if="userInfo?.vipMembershipPlan?.endDate"
           class="text-xs text-gray-500 dark:text-gray-400"
@@ -119,7 +123,9 @@ watch(
         v-if="isMembershipOrderValid(userInfo?.superVipMembershipPlan, now)"
         class="mt-1 flex items-center gap-2"
       >
-        <p class="w-8 font-bold text-pink-500">SVIP</p>
+        <p class="w-8 font-bold text-pink-500">
+          SVIP
+        </p>
         <p
           v-if="userInfo?.superVipMembershipPlan?.endDate"
           class="text-xs text-gray-500 dark:text-gray-400"

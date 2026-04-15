@@ -1,4 +1,5 @@
 import path, { resolve } from 'node:path';
+import process from 'node:process';
 import vue from '@vitejs/plugin-vue';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
@@ -10,8 +11,10 @@ export default defineConfig({
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'WujiTauriComponents',
       fileName: (format) => {
-        if (format === 'es') return 'components.js';
-        if (format === 'umd') return 'components.umd.cjs';
+        if (format === 'es')
+          return 'components.js';
+        if (format === 'umd')
+          return 'components.umd.cjs';
         return `components.${format}.js`;
       },
       formats: ['es', 'umd'],

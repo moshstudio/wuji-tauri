@@ -11,7 +11,7 @@ const showSlider = ref(false); // 控制条显示状态
     <!-- 音量按钮 -->
     <Icon
       :icon="
-        audioVolume == 0
+        audioVolume === 0
           ? 'ion:volume-mute-outline'
           : audioVolume <= 0.5
             ? 'ion:volume-low-outline'

@@ -58,7 +58,9 @@ const showCloseActionSheet = ref(false);
         <van-cell center title="清除缓存" is-link @click="clearCache" />
         <van-cell center is-link @click="clearData">
           <template #title>
-            <p class="text-red">清空数据</p>
+            <p class="text-red">
+              清空数据
+            </p>
           </template>
         </van-cell>
       </van-cell-group>

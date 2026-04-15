@@ -28,7 +28,9 @@ const permissionStyle = computed(() => {
         >
           {{ source.name }}
         </div>
-        <div class="text-xs text-gray-400">v{{ source.version }}</div>
+        <div class="text-xs text-gray-400">
+          v{{ source.version }}
+        </div>
       </div>
       <van-button
         size="mini"
@@ -53,7 +55,9 @@ const permissionStyle = computed(() => {
       >
         {{ source.isPublic ? '公开' : '私有' }}
       </van-tag>
-      <van-tag v-if="source.isBanned" size="medium" type="danger">封禁</van-tag>
+      <van-tag v-if="source.isBanned" size="medium" type="danger">
+        封禁
+      </van-tag>
     </div>
     <div class="flex items-center gap-2">
       <van-tag size="medium" v-bind="permissionStyle">

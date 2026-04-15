@@ -41,7 +41,7 @@ const closeAction = defineModel<'close' | 'minimize'>('closeAction', {
     v-model:close-action="closeAction"
     :clear-cache="clearCache"
     :clear-data="clearData"
-  ></AppSetting>
+  />
 </template>
 
 <style scoped lang="less"></style>

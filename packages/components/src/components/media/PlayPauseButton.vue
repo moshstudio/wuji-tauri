@@ -6,7 +6,7 @@ const props = withDefaults(
   defineProps<{
     size?: number | string;
     color?: string;
-    isPlaying: boolean;
+    isPlaying?: boolean;
     play: () => void;
     pause: () => void;
   }>(),
@@ -22,7 +22,8 @@ const isAnimating = ref(false);
 function handleClick() {
   if (props.isPlaying) {
     props.pause();
-  } else {
+  }
+  else {
     props.play();
   }
   isAnimating.value = true;

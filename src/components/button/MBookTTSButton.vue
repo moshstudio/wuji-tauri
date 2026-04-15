@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { ReaderResult } from '@/utils/reader/types';
 import { Icon } from '@iconify/vue';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { useDisplayStore, useServerStore, useTTSStore } from '@/store';
 import { showDialog as vantShowDialog } from 'vant';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { router } from '@/router';
+import { useDisplayStore, useServerStore, useTTSStore } from '@/store';
 import ResponsiveGrid2 from '../grid/ResponsiveGrid2.vue';
 
 const props = defineProps<{
@@ -55,15 +55,18 @@ onMounted(() => {
 });
 
 const remainingTime = computed(() => {
-  const seconds =
-    (ttsStore.autoStopOptions.startTime +
-      ttsStore.autoStopOptions.duration * 60 * 1000 -
-      now.value) /
-    1000;
-  if (seconds === Infinity) return '';
+  const seconds
+    = (ttsStore.autoStopOptions.startTime
+      + ttsStore.autoStopOptions.duration * 60 * 1000
+      - now.value)
+    / 1000;
+  if (seconds === Infinity)
+    return '';
 
-  if (!seconds) return '--:--';
-  if (seconds < 0) return '00:00';
+  if (!seconds)
+    return '--:--';
+  if (seconds < 0)
+    return '00:00';
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -77,7 +80,8 @@ const remainingTime = computed(() => {
       () => {
         if (ttsStore.isReading) {
           ttsStore.stop();
-        } else {
+        }
+        else {
           onShowDialog();
         }
       }
@@ -118,7 +122,8 @@ const remainingTime = computed(() => {
       () => {
         if (ttsStore.isReading) {
           ttsStore.stop();
-        } else {
+        }
+        else {
           onPlay();
         }
       }
@@ -192,7 +197,7 @@ const remainingTime = computed(() => {
     >
       <template v-for="voice in ttsStore.voices" :key="voice.ChineseName">
         <van-badge color="#1989fa" :offset="[0, 0]">
-          <template #content v-if="voice.needVip">
+          <template v-if="voice.needVip" #content>
             <van-icon name="diamond" class="badge-icon" />
           </template>
           <div

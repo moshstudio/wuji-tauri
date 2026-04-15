@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { MarketSource } from '@wuji-tauri/source-extension';
-import { MarketSourceContentCard } from '@wuji-tauri/components/src';
+import { MarketSourceContentCard } from '@wuji-tauri/components';
 import { permissionStyle, permissionText } from '@/utils/marketSource';
 
 const props = defineProps<{
@@ -14,7 +14,9 @@ const show = defineModel<boolean>('show');
   <van-action-sheet v-model:show="show" title="订阅源详情" class="p-2">
     <van-cell title="名称" :value="source?.name" />
     <div v-if="source" class="flex items-center gap-2 px-4 py-1">
-      <van-tag type="primary">v{{ source.version }}</van-tag>
+      <van-tag type="primary">
+        v{{ source.version }}
+      </van-tag>
       <van-tag v-bind="permissionStyle(source)">
         {{ permissionText(source) }}
       </van-tag>

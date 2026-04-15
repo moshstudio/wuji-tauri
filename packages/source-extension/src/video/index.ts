@@ -85,9 +85,9 @@ abstract class VideoExtension extends Extension {
         videoList.id = String(videoList.id) || videoList.type || nanoid();
         videoList.list?.forEach((videoItem) => {
           videoItem.id = String(
-            videoItem.id ||
-              videoItem.url ||
-              videoItem.title + videoItem.sourceId,
+            videoItem.id
+            || videoItem.url
+            || videoItem.title + videoItem.sourceId,
           );
         });
       });
@@ -119,9 +119,9 @@ abstract class VideoExtension extends Extension {
         videoList.id = String(videoList.id || videoList.type || nanoid());
         videoList.list?.forEach((videoItem) => {
           videoItem.id = String(
-            videoItem.id ||
-              videoItem.url ||
-              videoItem.title + videoItem.sourceId,
+            videoItem.id
+            || videoItem.url
+            || videoItem.title + videoItem.sourceId,
           );
         });
       });
@@ -177,11 +177,11 @@ abstract class VideoExtension extends Extension {
       ret.lastWatchResourceId = item.lastWatchResourceId;
       ret.lastWatchEpisodeId = item.lastWatchEpisodeId;
       ret.resources.forEach((resource) => {
-        const oldResource = item.resources?.find((r) => r.id === resource.id);
+        const oldResource = item.resources?.find(r => r.id === resource.id);
         if (oldResource) {
           resource.episodes?.forEach((episode) => {
             const oldEpisode = oldResource.episodes?.find(
-              (e) => e.id === episode.id,
+              e => e.id === episode.id,
             );
             if (oldEpisode) {
               episode.lastWatchPosition = oldEpisode.lastWatchPosition;
@@ -212,7 +212,8 @@ abstract class VideoExtension extends Extension {
         if (r.headers) {
           if (r.url.includes('m3u8')) {
             r.url = (await this.getM3u8ProxyUrl(r.url, r.headers)) || r.url;
-          } else {
+          }
+          else {
             r.url = (await this.getProxyUrl(r.url, r.headers)) || r.url;
           }
         }
@@ -234,11 +235,13 @@ function loadVideoExtensionString(
 ): VideoExtension | undefined {
   try {
     const func = new Function('VideoExtension', codeString);
-    const extensionclass = func(VideoExtension);
-    return new extensionclass();
-  } catch (error) {
+    const ExtensionClass = func(VideoExtension);
+    return new ExtensionClass();
+  }
+  catch (error) {
     console.error('Error executing code:\n', error);
-    if (raise) throw error;
+    if (raise)
+      throw error;
   }
 }
 

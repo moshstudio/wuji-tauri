@@ -5,8 +5,8 @@ import { useElementResize } from '@/utils';
 const props = withDefaults(
   defineProps<{
     pageCount: number | string;
-    maxPageSize: number | string;
-    class?: string;
+    maxPageSize?: number | string;
+    className?: string;
     toPage: (page: number) => void;
   }>(),
   {
@@ -18,21 +18,24 @@ const container = ref<HTMLElement>();
 const width = ref(0);
 
 function calcSize() {
-  if (!container.value) return 2;
+  if (!container.value)
+    return 2;
   let splits = Math.ceil(width.value / 44);
 
-  if (splits < 6) splits = 6;
+  if (splits < 6)
+    splits = 6;
   splits = splits - 5;
   if (splits > Number(props.maxPageSize)) {
     return Number(props.maxPageSize);
-  } else {
+  }
+  else {
     return splits;
   }
 }
 
 const columns = computed(calcSize);
 
-useElementResize('.paginator', (w, h) => {
+useElementResize('.paginator', (w, _) => {
   width.value = w;
 });
 </script>
@@ -44,7 +47,7 @@ useElementResize('.paginator', (w, h) => {
       :page-count="pageCount"
       :show-page-size="columns"
       class="text-xs"
-      :class="class"
+      :class="className"
       force-ellipses
       @change="toPage"
     >

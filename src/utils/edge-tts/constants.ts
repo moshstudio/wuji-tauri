@@ -1,5 +1,5 @@
-export const BASE_URL =
-  'speech.platform.bing.com/consumer/speech/synthesize/readaloud';
+export const BASE_URL
+  = 'speech.platform.bing.com/consumer/speech/synthesize/readaloud';
 
 export const TRUSTED_CLIENT_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
 export const CLIENT_TOKEN = TRUSTED_CLIENT_TOKEN; // 保持向后兼容
@@ -23,18 +23,18 @@ export const BASE_HEADERS = {
 };
 
 export const WSS_HEADERS = {
-  Pragma: 'no-cache',
+  'Pragma': 'no-cache',
   'Cache-Control': 'no-cache',
-  Origin: 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
+  'Origin': 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
   'Sec-WebSocket-Version': '13',
   ...BASE_HEADERS,
 };
 
 export const VOICE_HEADERS = {
-  Authority: 'speech.platform.bing.com',
+  'Authority': 'speech.platform.bing.com',
   'Sec-CH-UA': `" Not;A Brand";v="99", "Microsoft Edge";v="${CHROMIUM_MAJOR_VERSION}", "Chromium";v="${CHROMIUM_MAJOR_VERSION}"`,
   'Sec-CH-UA-Mobile': '?0',
-  Accept: '*/*',
+  'Accept': '*/*',
   'Sec-Fetch-Site': 'none',
   'Sec-Fetch-Mode': 'cors',
   'Sec-Fetch-Dest': 'empty',

@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import type { VideoItem } from '@wuji-tauri/source-extension';
 import type { VideoSource } from '@/types';
-import { ref } from 'vue';
+import type { VideoHistory } from '@/types/video';
 import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
+import { WVideoCard } from '@wuji-tauri/components';
+import { storeToRefs } from 'pinia';
+import { ref } from 'vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import WHeader from '@/components/header/WHeader.vue';
 import WVideoTab from '@/components/tab/WVideoTab.vue';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import { WVideoCard } from '@wuji-tauri/components/src';
 import { router } from '@/router';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
-import { VideoHistory } from '@/types/video';
-import { storeToRefs } from 'pinia';
 
 const props = defineProps<{
   videoSources: VideoSource[];
@@ -72,6 +72,7 @@ async function onRefresh() {
           <ResponsiveGrid2 min-width="80" max-width="100">
             <WVideoCard
               v-for="video in videoHistory"
+              :key="video.video.id"
               :video="video.video"
               :click="() => historyToVideo(video)"
             />
@@ -93,12 +94,12 @@ async function onRefresh() {
         <LiquidGlassContainer
           :width="40"
           :height="40"
-          :borderRadius="20"
-          :glassTintColor="'#000000'"
-          :glassTintOpacity="20"
-          :frostBlurRadius="1"
+          :border-radius="20"
+          glass-tint-color="#000000"
+          :glass-tint-opacity="20"
+          :frost-blur-radius="1"
         >
-          <van-icon name="arrow-up"></van-icon>
+          <van-icon name="arrow-up" />
         </LiquidGlassContainer>
       </van-back-top>
     </van-pull-refresh>

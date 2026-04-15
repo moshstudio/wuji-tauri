@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { ComicChapter, ComicItem } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
-import { LoadImage } from '@wuji-tauri/components/src';
+import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
+import { LoadImage } from '@wuji-tauri/components';
 import _ from 'lodash';
 import tinycolor from 'tinycolor2';
-import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
 import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MNavBar from '@/components/header/MNavBar.vue';
@@ -23,8 +23,9 @@ withDefaults(
 );
 
 const getRandomColor = () => tinycolor.random().toRgbString();
-const joinTags = (tags: string | string[] | undefined) =>
-  _.castArray(tags)?.join(',');
+function joinTags(tags: string | string[] | undefined) {
+  return _.castArray(tags)?.join(',');
+}
 </script>
 
 <template>
@@ -45,7 +46,7 @@ const joinTags = (tags: string | string[] | undefined) =>
               height="100px"
               radius="4"
               :src="comic.cover"
-              :Headers="comic.coverHeaders"
+              :headers="comic.coverHeaders"
               class="mr-4"
             >
               <template #loading>
@@ -87,12 +88,13 @@ const joinTags = (tags: string | string[] | undefined) =>
 
       <div v-if="comic?.chapters" class="mt-4 w-full text-[--van-text-color]">
         <div class="flex w-full items-center justify-between">
-          <p class="ml-6 font-bold">共有{{ comic.chapters.length }} 章</p>
+          <p class="ml-6 font-bold">
+            共有{{ comic.chapters.length }} 章
+          </p>
           <div class="flex items-center gap-2">
             <van-button
-              icon="down"
               size="small"
-              round
+              type="primary"
               plain
               @click="() => onDownload?.()"
             >
@@ -119,9 +121,10 @@ const joinTags = (tags: string | string[] | undefined) =>
         </div>
         <van-tabs shrink animated>
           <van-tab
-            v-for="index of Array(
+            v-for="index in Array(
               Math.ceil(comic.chapters.length / 200),
             ).keys()"
+            :key="index"
             :title="`${index * 200 + 1}-${Math.min(comic.chapters.length, (index + 1) * 200)}`"
           >
             <ResponsiveGrid2>
@@ -153,12 +156,12 @@ const joinTags = (tags: string | string[] | undefined) =>
         <LiquidGlassContainer
           :width="40"
           :height="40"
-          :borderRadius="20"
-          :glassTintColor="'#000000'"
-          :glassTintOpacity="20"
-          :frostBlurRadius="1"
+          :border-radius="20"
+          glass-tint-color="#000000"
+          :glass-tint-opacity="20"
+          :frost-blur-radius="1"
         >
-          <van-icon name="arrow-up"></van-icon>
+          <van-icon name="arrow-up" />
         </LiquidGlassContainer>
       </van-back-top>
     </main>

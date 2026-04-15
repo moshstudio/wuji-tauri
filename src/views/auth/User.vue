@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMountedOrActivated } from '@vant/use';
 import { storeToRefs } from 'pinia';
 import {
   showConfirmDialog,
@@ -6,12 +7,11 @@ import {
   showSuccessToast,
   showToast,
 } from 'vant';
+import { ref } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppUser from '@/layouts/app/auth/User.vue';
 import DesktopUser from '@/layouts/desktop/auth/User.vue';
 import { useBackStore, useServerStore } from '@/store';
-import { ref } from 'vue';
-import { onMountedOrActivated } from '@vant/use';
 
 const backStore = useBackStore();
 const serverStore = useServerStore();
@@ -71,7 +71,8 @@ onMountedOrActivated(async () => {
   const status = await serverStore.checkTaichiFreeTrail();
   if (status === true) {
     showTaichiTrailNotice.value = true;
-  } else {
+  }
+  else {
     showTaichiTrailNotice.value = false;
   }
 });

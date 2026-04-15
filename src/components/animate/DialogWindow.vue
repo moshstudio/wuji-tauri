@@ -1,65 +1,5 @@
-<template>
-  <Transition name="window" @after-leave="handleAfterLeave">
-    <div
-      v-if="isVisible"
-      ref="windowRef"
-      class="window absolute overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl transition-all duration-300 ease-in-out dark:border-slate-700 dark:bg-slate-900"
-      :class="{
-        '!rounded-none !border-0 !shadow-none': isMaximized,
-        'scale-95 opacity-0': isMinimized,
-        'transition-none': isDragging,
-      }"
-      :style="windowStyle"
-      @mousedown="bringToFront"
-    >
-      <!-- 窗口标题栏 -->
-      <div
-        class="title-bar flex h-9 cursor-default select-none items-center justify-between border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100 px-3 text-xs dark:border-slate-700 dark:from-slate-800 dark:to-slate-700"
-        @mousedown="startDrag"
-      >
-        <div class="window-controls flex w-[64px] items-center gap-1.5">
-          <button
-            class="control-btn close"
-            @click="handleControl('close')"
-          ></button>
-          <button
-            class="control-btn minimize"
-            @click="handleControl('minimize')"
-          ></button>
-          <button
-            class="control-btn maximize"
-            @click="handleControl('maximize')"
-          ></button>
-        </div>
-
-        <span
-          class="title flex-1 text-center text-xs font-medium tracking-wide text-slate-800 dark:text-slate-100"
-        >
-          温馨提示
-        </span>
-
-        <div class="placeholder w-[64px]"></div>
-      </div>
-
-      <!-- 窗口内容 -->
-      <div
-        class="max-h-100 flex items-center justify-center overflow-y-auto bg-slate-50 p-6 text-sm leading-relaxed text-slate-700 transition-all duration-300 dark:bg-slate-900/40 dark:text-slate-100"
-        :class="{ 'h-[calc(100%-40px)] !max-h-none': isMaximized }"
-        :style="contentStyle"
-      >
-        <p
-          class="inline-block max-w-[80%] text-center font-medium transition-transform duration-300 ease-in-out"
-          :class="isMaximized ? 'scale-[1.08] text-base' : 'scale-100 text-sm'"
-        >
-          {{ message }}
-        </p>
-      </div>
-    </div>
-  </Transition>
-</template>
-
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 
 interface Props {
   id: number;
@@ -85,8 +25,9 @@ const isMaximized = ref(false);
 const isDragging = ref(false);
 
 const ANIMATION_DURATION = 300;
-const sleep = (ms: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, ms));
+function sleep(ms: number) {
+  return new Promise<void>(resolve => setTimeout(resolve, ms));
+}
 
 // 窗口位置
 const windowPosition = ref({
@@ -118,14 +59,17 @@ const windowStyle = computed(() => ({
 // 内容区域样式（仅在传入颜色时生效，默认使用柔和背景）
 const contentStyle = computed(() => {
   const style: Record<string, string> = {};
-  if (props.bgColor) style.backgroundColor = props.bgColor;
-  if (props.color) style.color = props.color;
+  if (props.bgColor)
+    style.backgroundColor = props.bgColor;
+  if (props.color)
+    style.color = props.color;
   return style;
 });
 
 // 开始拖拽
-const startDrag = (e: MouseEvent) => {
-  if (isMaximized.value || isMinimized.value || isClosing.value) return;
+function startDrag(e: MouseEvent) {
+  if (isMaximized.value || isMinimized.value || isClosing.value)
+    return;
 
   isDragging.value = true;
   bringToFront();
@@ -147,11 +91,12 @@ const startDrag = (e: MouseEvent) => {
 
   // 防止文本选择
   e.preventDefault();
-};
+}
 
 // 拖拽中
-const onDrag = (e: MouseEvent) => {
-  if (!isDragging.value) return;
+function onDrag(e: MouseEvent) {
+  if (!isDragging.value)
+    return;
 
   // 计算移动距离
   const deltaX = e.clientX - dragStartPos.value.x;
@@ -178,20 +123,21 @@ const onDrag = (e: MouseEvent) => {
       Math.min(windowPosition.value.top, maxTop),
     );
   }
-};
+}
 
 // 停止拖拽
-const stopDrag = () => {
+function stopDrag() {
   isDragging.value = false;
 
   // 移除事件监听
   document.removeEventListener('mousemove', onDrag);
   document.removeEventListener('mouseup', stopDrag);
-};
+}
 
 // 统一的控制按钮处理函数
-const handleControl = async (action: 'close' | 'minimize' | 'maximize') => {
-  if (isClosing.value) return;
+async function handleControl(action: 'close' | 'minimize' | 'maximize') {
+  if (isClosing.value)
+    return;
 
   switch (action) {
     case 'close':
@@ -204,33 +150,34 @@ const handleControl = async (action: 'close' | 'minimize' | 'maximize') => {
       await toggleMaximize();
       break;
   }
-};
+}
 
 // 开始关闭流程（触发动画）
-const startClose = () => {
+function startClose() {
   isClosing.value = true;
   isVisible.value = false;
-};
+}
 
 // 开始最小化流程
-const startMinimize = async () => {
+async function startMinimize() {
   isMinimized.value = true;
   await sleep(ANIMATION_DURATION);
   emit('minimize', props.id);
-};
+}
 
 // 还原窗口
-const restoreWindow = async () => {
+async function restoreWindow() {
   isMinimized.value = false;
   await sleep(ANIMATION_DURATION);
-};
+}
 
 // 最大化/还原切换
-const toggleMaximize = async () => {
+async function toggleMaximize() {
   if (isMaximized.value) {
     isMaximized.value = false;
     await sleep(ANIMATION_DURATION);
-  } else {
+  }
+  else {
     originalPosition.value = {
       ...windowPosition.value,
       width: windowRef.value?.offsetWidth || 320,
@@ -241,20 +188,21 @@ const toggleMaximize = async () => {
     isMaximized.value = true;
     await sleep(ANIMATION_DURATION);
   }
-};
+}
 
 // 动画结束后处理关闭
-const handleAfterLeave = () => {
+function handleAfterLeave() {
   if (isClosing.value) {
     emit('close', props.id);
   }
-};
+}
 
 // 窗口层级管理
-const bringToFront = () => {
-  if (isClosing.value || isMinimized.value) return;
+function bringToFront() {
+  if (isClosing.value || isMinimized.value)
+    return;
   emit('focus', props.id);
-};
+}
 
 // 组件卸载时移除事件监听
 onUnmounted(() => {
@@ -277,6 +225,66 @@ onMounted(() => {
   });
 });
 </script>
+
+<template>
+  <Transition name="window" @after-leave="handleAfterLeave">
+    <div
+      v-if="isVisible"
+      ref="windowRef"
+      class="window absolute overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl transition-all duration-300 ease-in-out dark:border-slate-700 dark:bg-slate-900"
+      :class="{
+        '!rounded-none !border-0 !shadow-none': isMaximized,
+        'scale-95 opacity-0': isMinimized,
+        'transition-none': isDragging,
+      }"
+      :style="windowStyle"
+      @mousedown="bringToFront"
+    >
+      <!-- 窗口标题栏 -->
+      <div
+        class="title-bar flex h-9 cursor-default select-none items-center justify-between border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100 px-3 text-xs dark:border-slate-700 dark:from-slate-800 dark:to-slate-700"
+        @mousedown="startDrag"
+      >
+        <div class="window-controls flex w-[64px] items-center gap-1.5">
+          <button
+            class="control-btn close"
+            @click="handleControl('close')"
+          />
+          <button
+            class="control-btn minimize"
+            @click="handleControl('minimize')"
+          />
+          <button
+            class="control-btn maximize"
+            @click="handleControl('maximize')"
+          />
+        </div>
+
+        <span
+          class="title flex-1 text-center text-xs font-medium tracking-wide text-slate-800 dark:text-slate-100"
+        >
+          温馨提示
+        </span>
+
+        <div class="placeholder w-[64px]" />
+      </div>
+
+      <!-- 窗口内容 -->
+      <div
+        class="max-h-100 flex items-center justify-center overflow-y-auto bg-slate-50 p-6 text-sm leading-relaxed text-slate-700 transition-all duration-300 dark:bg-slate-900/40 dark:text-slate-100"
+        :class="{ 'h-[calc(100%-40px)] !max-h-none': isMaximized }"
+        :style="contentStyle"
+      >
+        <p
+          class="inline-block max-w-[80%] text-center font-medium transition-transform duration-300 ease-in-out"
+          :class="isMaximized ? 'scale-[1.08] text-base' : 'scale-100 text-sm'"
+        >
+          {{ message }}
+        </p>
+      </div>
+    </div>
+  </Transition>
+</template>
 
 <style scoped>
 .window-enter-active,

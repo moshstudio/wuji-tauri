@@ -14,6 +14,7 @@
       "@/*": ["./src/*"]
     },
     "resolveJsonModule": true,
+    "types": [],
     "allowImportingTsExtensions": true,
     /* Linting */
     "strict": true,
@@ -22,16 +23,15 @@
     "noUnusedParameters": true,
     "noEmit": true,
     "isolatedModules": true,
-    "skipLibCheck": true,
-    "types": []
+    "skipLibCheck": true
   },
   "references": [{ "path": "./tsconfig.node.json" }],
+  "files": ["src/global.d.ts"],
   "include": [
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.tsx",
     "src/**/*.vue",
     "src/**/*.js"
-  ],
-  "files": ["src/global.d.ts"]
+  ]
 }

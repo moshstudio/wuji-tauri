@@ -33,5 +33,5 @@ declare module '@tinymomentum/liquid-glass-vue' {
   const LiquidGlassContainer: any;
   const LiquidGlassButton: any;
   const LiquidGlassLink: any;
-  export { LiquidGlassContainer, LiquidGlassButton, LiquidGlassLink };
+  export { LiquidGlassButton, LiquidGlassContainer, LiquidGlassLink };
 }

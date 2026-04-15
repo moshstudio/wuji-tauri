@@ -48,7 +48,8 @@ async function beforeClose(action: string): Promise<boolean> {
         name: formData.name,
       });
       return true;
-    } catch (error) {
+    }
+    catch (error) {
       showToast('请检查输入内容');
       return false;
     }

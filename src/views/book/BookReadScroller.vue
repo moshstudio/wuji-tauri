@@ -32,6 +32,7 @@ const props = withDefaults(
     nextChapter: () => void;
     refreshChapter: () => Promise<void>;
     loadChapterContent: (chapter: BookChapter) => Promise<string>;
+    onDownload: () => void;
   }>(),
   {
     isPrev: false,

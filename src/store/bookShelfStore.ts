@@ -3,16 +3,16 @@ import type {
   BookItem,
   BookShelf,
 } from '@wuji-tauri/source-extension';
+import type { BookHistory } from '@/types/book';
 import { debounceFilter, useStorage, useStorageAsync } from '@vueuse/core';
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
-import { defineStore } from 'pinia';
 
+import { defineStore } from 'pinia';
 import { showToast } from 'vant';
 import { useBookChapterStore } from './bookChaptersStore';
 import { useStore } from './store';
 import { createKVStore } from './utils';
-import { BookHistory } from '@/types/book';
 
 export const useBookShelfStore = defineStore('bookShelfStore', () => {
   const kvStorage = createKVStore('bookShelfStore');
@@ -51,9 +51,10 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
   );
 
   const createBookShelf = (name: string) => {
-    if (bookShelf.value.some((item) => item.name === name)) {
+    if (bookShelf.value.some(item => item.name === name)) {
       // 书架已存在
-    } else {
+    }
+    else {
       bookShelf.value.push({
         id: nanoid(),
         name,
@@ -62,13 +63,47 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
       });
     }
   };
+
+  const isBookInHistory = (book: BookItem | string): boolean => {
+    const id = typeof book === 'string' ? book : book.id;
+    return !!bookHistory.value.find(b => b.book.id === id);
+  };
+
+  const isBookInShelf = (
+    book: BookItem | string,
+    shelfId?: string,
+  ): boolean => {
+    let id: string;
+    if (typeof book === 'string') {
+      id = book;
+    }
+    else {
+      id = book.id;
+    }
+    if (shelfId) {
+      return !!bookShelf.value
+        .find(shelf => shelf.id === shelfId)
+        ?.books
+        .find(b => b.book.id === id);
+    }
+    else {
+      for (const shelf of bookShelf.value) {
+        const find = shelf.books.find(b => b.book.id === id);
+        if (find) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   const removeBookShelf = (shelfId: string) => {
     if (bookShelf.value.length === 1) {
       showToast('至少需要保留一个书架');
       return false;
     }
-    const find = bookShelf.value.find((item) => item.id === shelfId);
-    bookShelf.value = bookShelf.value.filter((item) => item.id !== shelfId);
+    const find = bookShelf.value.find(item => item.id === shelfId);
+    bookShelf.value = bookShelf.value.filter(item => item.id !== shelfId);
     if (find) {
       const bookChapterStore = useBookChapterStore();
       find.books.forEach((book) => {
@@ -79,82 +114,39 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
       });
     }
   };
-  const isBookInShelf = (
-    book: BookItem | string,
-    shelfId?: string,
-  ): boolean => {
-    let id: string;
-    if (typeof book === 'string') {
-      id = book;
-    } else {
-      id = book.id;
-    }
-    if (shelfId) {
-      return !!bookShelf.value
-        .find((shelf) => shelf.id === shelfId)
-        ?.books.find((b) => b.book.id === id);
-    } else {
-      for (const shelf of bookShelf.value) {
-        const find = shelf.books.find((b) => b.book.id === id);
-        if (find) {
-          return true;
-        }
+
+  const updateBookHistoryInfo = (bookItem: BookItem, chapter?: BookChapter) => {
+    const clonedChapter = chapter ? _.cloneDeep(chapter) : undefined;
+    const book = bookHistory.value.find(item => item.book.id === bookItem.id);
+    if (book) {
+      book.lastReadTime = Date.now();
+      if (!clonedChapter) {
+        book.lastReadChapter = undefined;
       }
+      else {
+        book.lastReadChapter = clonedChapter;
+      }
+      bookHistory.value = [...bookHistory.value].sort(
+        (a, b) => b.lastReadTime - a.lastReadTime,
+      );
     }
-    return false;
+    else {
+      bookHistory.value = [
+        {
+          book: bookItem,
+          lastReadChapter: chapter,
+          lastReadTime: Date.now(),
+        },
+        ...bookHistory.value,
+      ]
+        .sort((a, b) => b.lastReadTime - a.lastReadTime)
+        .slice(0, 50); // 增加历史记录限制
+    }
   };
 
-  const isBookInHistory = (book: BookItem | string): boolean => {
-    let id: string;
-    if (typeof book === 'string') {
-      id = book;
-    } else {
-      id = book.id;
-    }
-    return !!bookHistory.value.find((item) => item.book.id === id);
-  };
-  const addToBookSelf = (bookItem: BookItem, shelfId?: string): boolean => {
-    if (!bookShelf.value.length) {
-      showToast('书架为空，请先创建书架');
-      return false;
-    }
-    const shelf = shelfId
-      ? bookShelf.value.find((item) => item.id === shelfId)
-      : bookShelf.value[0];
-    if (!shelf) {
-      showToast('书架不存在');
-      return false;
-    }
-    if (shelf.books.find((item) => item.book.id === bookItem.id)) {
-      showToast('书架中已存在此书');
-      return false;
-    }
-    shelf.books.push({
-      book: _.cloneDeep(bookItem),
-      createTime: Date.now(),
-    });
-    showToast(`已添加到 ${shelf.name}`);
-    return true;
-  };
-  const removeBookFromShelf = (bookItem: BookItem, shelfId?: string) => {
-    if (!bookShelf.value.length) {
-      showToast('书架为空');
-      return;
-    }
-    if (!shelfId) shelfId = bookShelf.value[0].id;
-    const shelf = bookShelf.value.find((item) => item.id === shelfId);
-    if (!shelf) {
-      showToast('书架不存在');
-      return;
-    }
-    _.remove(shelf.books, (item) => item.book.id === bookItem.id);
-    if (!isBookInShelf(bookItem)) {
-      const bookChapterStore = useBookChapterStore();
-      bookChapterStore.removeBookCache(bookItem);
-    }
-  };
   const updateBookReadInfo = (bookItem: BookItem, chapter: BookChapter) => {
-    if (!bookShelf.value) return;
+    if (!bookShelf.value)
+      return;
     const clonedChapter = _.cloneDeep(chapter);
     for (const shelf of bookShelf.value) {
       for (const book of shelf.books) {
@@ -167,41 +159,32 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     updateBookHistoryInfo(bookItem, clonedChapter);
   };
 
-  const updateBookHistoryInfo = (bookItem: BookItem, chapter?: BookChapter) => {
-    const clonedChapter = chapter ? _.cloneDeep(chapter) : undefined;
-    const book = bookHistory.value.find((item) => item.book.id === bookItem.id);
-    if (book) {
-      book.lastReadTime = Date.now();
-      if (!clonedChapter) {
-        book.lastReadChapter = undefined;
-      } else {
-        book.lastReadChapter = clonedChapter;
-      }
-      bookHistory.value = [...bookHistory.value].sort(
-        (a, b) => b.lastReadTime - a.lastReadTime,
-      );
-    } else {
-      bookHistory.value = [
-        {
-          book: bookItem,
-          lastReadChapter: chapter,
-          lastReadTime: Date.now(),
-        },
-        ...bookHistory.value,
-      ]
-        .sort((a, b) => b.lastReadTime - a.lastReadTime)
-        .slice(0, 10);
-    }
-  };
-
   const clearBookHistory = () => {
     bookHistory.value = [];
   };
-  const deleteBookFromShelf = (bookItem: BookItem, shelfId: string) => {
-    const shelf = bookShelf.value.find((item) => item.id === shelfId);
-    if (!shelf) return;
-    _.remove(shelf.books, (item) => item.book.id === bookItem.id);
+
+  const addToBookShelf = (book: BookItem, shelfId?: string) => {
+    const targetId = shelfId || bookShelf.value[0]?.id;
+    if (!targetId)
+      return;
+    const shelf = bookShelf.value.find(item => item.id === targetId);
+    if (shelf) {
+      if (!shelf.books.find(b => b.book.id === book.id)) {
+        shelf.books.push({
+          book,
+          lastReadTime: Date.now(),
+        });
+      }
+    }
   };
+
+  const deleteBookFromShelf = (bookItem: BookItem, shelfId: string) => {
+    const shelf = bookShelf.value.find(item => item.id === shelfId);
+    if (!shelf)
+      return;
+    _.remove(shelf.books, item => item.book.id === bookItem.id);
+  };
+
   const bookRefreshChapters = async () => {
     const store = useStore();
     await Promise.all(
@@ -231,6 +214,7 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     });
     return clone;
   };
+
   const loadSyncData = async (data: BookShelf[]) => {
     bookShelf.value = data;
     for (const shelf of bookShelf.value) {
@@ -241,6 +225,7 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
       }
     }
   };
+
   const clear = async () => {
     bookShelf.value = [
       {
@@ -263,8 +248,8 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     removeBookShelf,
     isBookInShelf,
     isBookInHistory,
-    addToBookSelf,
-    removeBookFromShelf,
+    addToBookShelf,
+    removeBookFromShelf: deleteBookFromShelf,
     updateBookReadInfo,
     updateBookHistoryInfo,
     clearBookHistory,

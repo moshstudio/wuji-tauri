@@ -82,6 +82,7 @@
     "opener:default",
     "process:default",
     "process:allow-exit",
+    "notification:default",
     "download-manager:default"
   ]
 }

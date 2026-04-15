@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { WPlaylistShelfCard } from '@wuji-tauri/components/src';
+import type { SongShelf } from '@wuji-tauri/source-extension';
+import { WPlaylistShelfCard } from '@wuji-tauri/components';
 import MNavBar from '@/components/header/MNavBar.vue';
 import WSongBar from '@/components/songbar/WSongBar.vue';
 import { router } from '@/router';
-import { useDisplayStore, useSongShelfStore } from '@/store';
+import { useDisplayStore, useDownloadStore, useSongShelfStore, useStore } from '@/store';
 import { showPromptDialog } from '@/utils/usePromptDialog';
 
 defineProps<{
@@ -11,9 +12,16 @@ defineProps<{
 }>();
 const displayStore = useDisplayStore();
 const shelfStore = useSongShelfStore();
+const downloadStore = useDownloadStore();
+const store = useStore();
 
 function toDetail(shelfId: string) {
   router.push({ name: 'SongShelfDetail', params: { shelfId } });
+}
+
+function downloadPlaylist(shelf: SongShelf) {
+  const source = store.getSongSource(shelf.playlist.sourceId);
+  downloadStore.startMusicPlaylistDownload(shelf.playlist, source);
 }
 </script>
 
@@ -51,6 +59,7 @@ function toDetail(shelfId: string) {
             toDetail(shelfStore.songLikeShelf.playlist.id);
           }
         "
+        :download-playlist="downloadPlaylist"
       />
       <p class="text-gray-400">
         创建的歌单({{ shelfStore.songCreateShelf.length }})
@@ -70,6 +79,7 @@ function toDetail(shelfId: string) {
             shelfStore.removeSongShelf(shelf.playlist.id);
           }
         "
+        :download-playlist="downloadPlaylist"
       />
       <p class="text-gray-400">
         收藏的歌单({{ shelfStore.songPlaylistShelf.length }})
@@ -89,6 +99,7 @@ function toDetail(shelfId: string) {
             shelfStore.removeSongShelf(shelf.playlist.id);
           }
         "
+        :download-playlist="downloadPlaylist"
       />
     </div>
     <WSongBar />

@@ -4,7 +4,7 @@ import type {
   BookShelf,
   BookSource,
 } from '@wuji-tauri/source-extension';
-import { MBookShelfCard } from '@wuji-tauri/components/src';
+import { MBookShelfCard } from '@wuji-tauri/components';
 import _ from 'lodash';
 import MNavBar from '@/components/header/MNavBar.vue';
 import { showPromptDialog } from '@/utils/usePromptDialog';
@@ -73,11 +73,11 @@ const activeIndex = defineModel<number>('activeIndex', {
     </div>
 
     <van-tabs
+      v-model:active="activeIndex"
       shrink
       animated
       sticky
       offset-top="86"
-      v-model:active="activeIndex"
       class="h-full w-full flex-1 overflow-y-scroll"
     >
       <van-tab v-for="shelf in bookShelfs" :key="shelf.id" :title="shelf.name">

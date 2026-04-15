@@ -10,6 +10,8 @@ pub enum Error {
     Network(#[from] reqwest::Error),
     #[error(transparent)]
     Tauri(#[from] tauri::Error),
+    #[error(transparent)]
+    Zip(#[from] zip::result::ZipError),
     #[error("Task not found: {0}")]
     TaskNotFound(String),
     #[error("Source unavailable: {0}")]
@@ -18,6 +20,25 @@ pub enum Error {
     PathError(String),
     #[error("{0}")]
     Other(String),
+}
+
+impl Error {
+    pub fn to_user_message(&self) -> String {
+        match self {
+            Error::Io(e) => {
+                if e.kind() == std::io::ErrorKind::StorageFull {
+                    "磁盘空间不足，请清理后重试".to_string()
+                } else if e.kind() == std::io::ErrorKind::PermissionDenied {
+                    "权限不足，无法写入文件".to_string()
+                } else {
+                    format!("文件读写异常: {}", e)
+                }
+            }
+            Error::Network(e) => format!("网络连接异常: {}", e),
+            Error::TaskNotFound(_) => "任务不存在".to_string(),
+            _ => self.to_string(),
+        }
+    }
 }
 
 impl Serialize for Error {

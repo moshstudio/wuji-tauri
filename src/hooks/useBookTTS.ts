@@ -1,4 +1,4 @@
-import { ref, computed, watch, nextTick, onMounted } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useTTSStore } from '@/store';
 
 /**
@@ -24,7 +24,8 @@ export function useBookTTS(options: {
   const paragraphs = computed<string[]>(() => {
     const content = options.chapterContent();
     const title = options.title();
-    if (!content) return [];
+    if (!content)
+      return [];
 
     let hasTitle = false;
     const pList = content
@@ -37,7 +38,7 @@ export function useBookTTS(options: {
         }
         return p.replace(/\s+/g, '');
       })
-      .filter((p) => p !== '');
+      .filter(p => p !== '');
 
     if (!hasTitle && title) {
       pList.unshift(title);
@@ -60,7 +61,8 @@ export function useBookTTS(options: {
         const pIdx = ttsStore.scrollReadingContent?.index;
         // 使用属性选择器精准定位具体章节的具体段落
         const el = document.querySelector(`[data-chapter-id="${chId}"] [data-p-index="${pIdx}"]`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (el)
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
     }
   });
@@ -71,8 +73,9 @@ export function useBookTTS(options: {
     (newContent, oldContent) => {
       // 如果内容没有实质变化，或者正在播放且内容还是原来那一套内容，就不重置
       // 注意：滚动模式下 ttsActiveChapterId 变化会引起 chapterContent 变化，这是正常的重置触发点
-      if (!newContent || newContent === oldContent) return;
-      
+      if (!newContent || newContent === oldContent)
+        return;
+
       currentPIndex.value = 0;
       if (ttsStore.isReading) {
         nextTick(() => {
@@ -90,7 +93,8 @@ export function useBookTTS(options: {
    * 播放指定索引的段落
    */
   function playParagraph(index: number) {
-    if (!paragraphs.value.length) return;
+    if (!paragraphs.value.length)
+      return;
 
     // 跳过空段落
     if (index >= paragraphs.value.length) {
@@ -107,10 +111,10 @@ export function useBookTTS(options: {
 
     currentPIndex.value = index;
 
-    const contentObj = { 
-      content: text, 
-      index: index, 
-      chapterId: options.chapterId() 
+    const contentObj = {
+      content: text,
+      index,
+      chapterId: options.chapterId(),
     };
 
     // 预加载后续段落（使用相同的 { content, index } 格式，确保缓存 key 一致）

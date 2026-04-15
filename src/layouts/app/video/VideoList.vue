@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import type { VideoItem } from '@wuji-tauri/source-extension';
 import type { VideoSource } from '@/types';
-import { ref } from 'vue';
+import type { VideoHistory } from '@/types/video';
 import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
+import { MVideoCard } from '@wuji-tauri/components';
+import { storeToRefs } from 'pinia';
+import { ref } from 'vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MHeader from '@/components/header/MHeader.vue';
 import MVideoTab from '@/components/tab/MVideoTab.vue';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import { MVideoCard } from '@wuji-tauri/components/src';
 import { router } from '@/router';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
-import { storeToRefs } from 'pinia';
-import { VideoHistory } from '@/types/video';
 
 const props = defineProps<{
   videoSources: VideoSource[];
@@ -71,18 +71,22 @@ async function onRefresh() {
           </div>
           <ResponsiveGrid2 min-width="80" max-width="100">
             <MVideoCard
-              v-for="video in videoHistory"
+              v-for="(video, videoHistoryIndex) in videoHistory"
+              :key="`${video.video.sourceId}_${video.video.id}_${videoHistoryIndex}`"
               :video="video.video"
               :click="() => historyToVideo(video)"
             />
           </ResponsiveGrid2>
         </van-collapse-item>
-        <div v-for="(item, index) in videoSources" :key="item.item.id">
+        <div
+          v-for="(item, sourceIndex) in videoSources"
+          :key="`${item.item.id}_${sourceIndex}`"
+        >
           <van-collapse-item
             v-show="
               item.list && !(!Array.isArray(item.list) && !item.list?.list)
             "
-            :name="index + item.item.id"
+            :name="sourceIndex + item.item.id"
             :title="item.item.name"
           >
             <MVideoTab :source="item" :to-page="toPage" :to-detail="toDetail" />
@@ -93,12 +97,12 @@ async function onRefresh() {
         <LiquidGlassContainer
           :width="40"
           :height="40"
-          :borderRadius="20"
-          :glassTintColor="'#000000'"
-          :glassTintOpacity="20"
-          :frostBlurRadius="1"
+          :border-radius="20"
+          glass-tint-color="#000000"
+          :glass-tint-opacity="20"
+          :frost-blur-radius="1"
         >
-          <van-icon name="arrow-up"></van-icon>
+          <van-icon name="arrow-up" />
         </LiquidGlassContainer>
       </van-back-top>
     </van-pull-refresh>

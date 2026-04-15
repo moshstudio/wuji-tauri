@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type { BookItem, BooksList } from '@wuji-tauri/source-extension';
-import { LoadImage } from '@wuji-tauri/components/src';
+import type { FormItem } from '@/store/sourceCreateStore';
+import { LoadImage } from '@wuji-tauri/components';
 import { BookExtension } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
 import { showDialog } from 'vant';
 import { ref } from 'vue';
 import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
   content: FormItem<BooksList>;
@@ -76,8 +76,8 @@ async function load() {
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('BookExtension', code);
-    const extensionclass = func(BookExtension);
-    const cls = new extensionclass() as BookExtension;
+    const ExtensionClass = func(BookExtension);
+    const cls = new ExtensionClass() as BookExtension;
     if (cls.baseUrl === undefined) {
       throw new Error('初始化中的baseUrl未定义!');
     }
@@ -87,7 +87,8 @@ async function load() {
     if (page?.result) {
       if (_.isArray(page.result)) {
         item = page.result[0]?.list[0];
-      } else {
+      }
+      else {
         item = page.result.list[0];
       }
     }
@@ -96,7 +97,8 @@ async function load() {
       if (page?.result) {
         if (_.isArray(page.result)) {
           item = page.result[0]?.list[0];
-        } else {
+        }
+        else {
           item = page.result.list[0];
         }
       }
@@ -114,7 +116,8 @@ async function load() {
     result.value = res;
     props.updateResult('book', 'detail', result.value, true);
     runStatus.value = RunStatus.success;
-  } catch (error) {
+  }
+  catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
     props.updateResult('book', 'detail', result.value, false);
@@ -122,7 +125,7 @@ async function load() {
 }
 
 function findPage(name: string) {
-  return props.content.pages.find((page) => page.type === name);
+  return props.content.pages.find(page => page.type === name);
 }
 
 defineExpose({
@@ -132,7 +135,9 @@ defineExpose({
 
 <template>
   <div>
-    <div v-if="runStatus === RunStatus.not_running">未运行</div>
+    <div v-if="runStatus === RunStatus.not_running">
+      未运行
+    </div>
     <div
       v-else-if="runStatus === RunStatus.running"
       class="flex items-center justify-center"
@@ -155,7 +160,7 @@ defineExpose({
                 height="100px"
                 radius="4"
                 :src="result.cover"
-                :Headers="result.coverHeaders"
+                :headers="result.coverHeaders"
                 class="mr-4"
               />
             </div>
@@ -191,13 +196,16 @@ defineExpose({
           class="mt-4 w-full text-[--van-text-color]"
         >
           <div class="flex w-full items-center justify-between">
-            <p class="font-bold">共有{{ result.chapters.length }} 章</p>
+            <p class="font-bold">
+              共有{{ result.chapters.length }} 章
+            </p>
           </div>
           <van-tabs shrink animated>
             <van-tab
               v-for="index of Array(
                 Math.ceil(result.chapters.length / 200),
               ).keys()"
+              :key="index"
               :title="`${index * 200 + 1}-${Math.min(result.chapters.length, (index + 1) * 200)}`"
             >
               <ResponsiveGrid2>

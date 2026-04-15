@@ -23,10 +23,10 @@ const ttsStore = useTTSStore();
     <!-- 章节段落 -->
     <p
       v-for="(p, index) in lc.paragraphs"
-      :key="lc.chapter.id + '-' + index"
+      :key="`${lc.chapter.id}-${index}`"
       :data-p-index="index"
       :class="[
-        'index-' + index,
+        `index-${index}`,
         index === 0 ? 'text-2xl font-bold text-center' : '',
       ]"
       :style="{
@@ -39,9 +39,9 @@ const ttsStore = useTTSStore();
         textIndent: index === 0 ? '0' : '2em',
         textAlign: index === 0 ? 'center' : 'justify',
         backgroundColor:
-          ttsStore.isReading && 
-          ttsStore.scrollReadingContent?.chapterId === lc.chapter.id && 
-          ttsStore.scrollReadingContent?.index === index
+          ttsStore.isReading
+          && ttsStore.scrollReadingContent?.chapterId === lc.chapter.id
+          && ttsStore.scrollReadingContent?.index === index
             ? 'rgba(255, 165, 0, 0.3)'
             : 'transparent',
         transition: 'background-color 0.3s ease',

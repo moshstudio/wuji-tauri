@@ -27,8 +27,33 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
   const booksMap = ref<Map<string, number>>(new Map());
   let inited = false;
   const lruCache = new SimpleLRUCache<string, string>(30);
+
+  const refreshBooksMap = () => {
+    const tmpMap = new Map();
+    books.value.forEach((book, index) => {
+      tmpMap.set(`${book.cache_book_id}_${book.cache_chapter_id}`, index);
+    });
+    booksMap.value = tmpMap;
+  };
+
+  const removeBookCache2 = async (cacheBookId: string) => {
+    books.value = books.value.filter(b => b.cache_book_id !== cacheBookId);
+    if (await fs.exists(`${dirName}/${cacheBookId}`, { baseDir })) {
+      try {
+        await fs.remove(`${dirName}/${cacheBookId}`, {
+          baseDir,
+          recursive: true,
+        });
+      }
+      catch (error) {
+        console.warn('删除书籍缓存失败:', cacheBookId);
+      }
+    }
+  };
+
   const ensureBase = async () => {
-    if (inited) return;
+    if (inited)
+      return;
     if (!(await fs.exists(dirName, { baseDir }))) {
       await fs.mkdir(dirName, {
         baseDir,
@@ -47,7 +72,8 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
           baseDir,
         },
       );
-    } else {
+    }
+    else {
       books.value = JSON.parse(
         new TextDecoder().decode(
           await fs.readFile(`${dirName}/${baseFile}`, {
@@ -57,12 +83,16 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
       );
     }
     for (const cacheBookId of [
-      ...new Set(books.value.map((book) => book.cache_book_id)),
+      ...new Set(books.value.map(book => book.cache_book_id)),
     ]) {
       const bookId = books.value.find(
-        (book) => book.cache_book_id === cacheBookId,
+        book => book.cache_book_id === cacheBookId,
       )?.book_id;
-      if (bookId && !shelfStore.isBookInShelf(bookId) && !shelfStore.isBookInHistory(bookId)) {
+      if (
+        bookId
+        && !shelfStore.isBookInShelf(bookId)
+        && !shelfStore.isBookInHistory(bookId)
+      ) {
         await removeBookCache2(cacheBookId);
       }
     }
@@ -70,13 +100,6 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     inited = true;
   };
 
-  const refreshBooksMap = () => {
-    const tmpMap = new Map();
-    books.value.forEach((book, index) => {
-      tmpMap.set(`${book.cache_book_id}_${book.cache_chapter_id}`, index);
-    });
-    booksMap.value = tmpMap;
-  };
   watch(
     books,
     _.debounce(async (newValue) => {
@@ -102,8 +125,8 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
 
   const genBookCacheId = (book: BookItem) => {
     return (
-      CryptoJS.MD5(`${book.sourceId}_${book.id}`).toString().substring(0, 8) +
-      sanitizePathName(book.title)
+      CryptoJS.MD5(`${book.sourceId}_${book.id}`).toString().substring(0, 8)
+      + sanitizePathName(book.title)
     );
   };
   const genChapterCacheId = (book: BookItem, chapter: BookChapter) => {
@@ -129,9 +152,9 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     const find = booksMap.value.has(key)
       ? books.value[booksMap.value.get(key)!]
       : books.value.find(
-          (b) =>
-            b.cache_book_id === cache_book_id &&
-            b.cache_chapter_id === cache_chapter_id,
+          b =>
+            b.cache_book_id === cache_book_id
+            && b.cache_chapter_id === cache_chapter_id,
         );
 
     if (find && !force) {
@@ -163,13 +186,14 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
           baseDir,
         },
       );
-    } catch (error) {
+    }
+    catch (error) {
       // 保存失败，进行回退
       _.remove(
         books.value,
-        (b) =>
-          b.cache_book_id === cache_book_id &&
-          b.cache_chapter_id === cache_chapter_id,
+        b =>
+          b.cache_book_id === cache_book_id
+          && b.cache_chapter_id === cache_chapter_id,
       );
     }
   };
@@ -191,9 +215,9 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     const find = booksMap.value.has(tmpKey)
       ? books.value[booksMap.value.get(tmpKey)!]
       : books.value.find(
-          (b) =>
-            b.cache_book_id === cache_book_id &&
-            b.cache_chapter_id === cache_chapter_id,
+          b =>
+            b.cache_book_id === cache_book_id
+            && b.cache_chapter_id === cache_chapter_id,
         );
 
     if (find) {
@@ -205,7 +229,8 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
         );
         lruCache.set(key, content);
         return content;
-      } catch (error) {}
+      }
+      catch (error) {}
     }
   };
   const removeBookCache = async (book: BookItem) => {
@@ -213,30 +238,7 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
       await ensureBase();
     }
     const cache_book_id = genBookCacheId(book);
-    books.value = books.value.filter((b) => b.cache_book_id !== cache_book_id);
-    if (await fs.exists(`${dirName}/${cache_book_id}`, { baseDir })) {
-      try {
-        await fs.remove(`${dirName}/${cache_book_id}`, {
-          baseDir,
-          recursive: true,
-        });
-      } catch (error) {
-        console.warn('删除书籍缓存失败:', JSON.stringify(book));
-      }
-    }
-  };
-  const removeBookCache2 = async (cacheBookId: string) => {
-    books.value = books.value.filter((b) => b.cache_book_id !== cacheBookId);
-    if (await fs.exists(`${dirName}/${cacheBookId}`, { baseDir })) {
-      try {
-        await fs.remove(`${dirName}/${cacheBookId}`, {
-          baseDir,
-          recursive: true,
-        });
-      } catch (error) {
-        console.warn('删除书籍缓存失败:', cacheBookId);
-      }
-    }
+    await removeBookCache2(cache_book_id);
   };
   const clear = async () => {
     if (!inited) {
@@ -248,23 +250,6 @@ export const useBookChapterStore = defineStore('bookChapterStore', () => {
     });
     books.value = [];
     inited = false;
-
-    // [...new Set(books.value.map((book) => book.cache_book_id))].forEach(
-    //   async (cache_book_id) => {
-    //     if (
-    //       await fs.exists(`${dirName}/${cache_book_id}`, {
-    //         baseDir: baseDir,
-    //       })
-    //     ) {
-    //       try {
-    //         await fs.remove(`${dirName}/${cache_book_id}`, {
-    //           baseDir: baseDir,
-    //           recursive: true,
-    //         });
-    //       } catch (error) {}
-    //     }
-    //   }
-    // );
   };
 
   const chapterInCache = (book: BookItem, chapter: BookChapter) => {

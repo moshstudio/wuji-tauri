@@ -1,4 +1,5 @@
 import path, { resolve } from 'node:path';
+import process from 'node:process';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 
@@ -9,8 +10,10 @@ export default defineConfig({
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'WujiTauriHotApi',
       fileName: (format) => {
-        if (format === 'es') return 'hot-api.js';
-        if (format === 'umd') return 'hot-api.umd.cjs';
+        if (format === 'es')
+          return 'hot-api.js';
+        if (format === 'umd')
+          return 'hot-api.umd.cjs';
         return `hot-api.${format}.js`;
       },
       formats: ['es', 'umd'],

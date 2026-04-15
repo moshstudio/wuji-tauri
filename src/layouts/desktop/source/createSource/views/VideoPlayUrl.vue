@@ -5,19 +5,19 @@ import type {
   VideoResource,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
-import Player, { Events } from 'xgplayer';
-import 'xgplayer/dist/index.min.css';
+import type { FormItem } from '@/store/sourceCreateStore';
 import {
-  VideoExtension,
   CmsVideoExtension,
+  VideoExtension,
 } from '@wuji-tauri/source-extension';
 import { showDialog } from 'vant';
 import { computed, nextTick, onDeactivated, ref, watch } from 'vue';
-import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
+import Player, { Events } from 'xgplayer';
 import CMS_VIDEO_TEMPLATE from '@/components/codeEditor/templates/cmsVideoTemplate.txt?raw';
+import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import { FormItem } from '@/store/sourceCreateStore';
 import VideoJsPlugin from '@/components/media/plugins/videoJs';
+import 'xgplayer/dist/index.min.css';
 
 const props = defineProps<{
   content: FormItem<VideoItem>;
@@ -43,6 +43,10 @@ const errorMessage = ref('运行失败');
 const result = ref<VideoUrlMap>();
 const selectedResource = ref<VideoResource>();
 const selectedEpisode = ref<VideoEpisode>();
+const sourceItem = computed(() => findPage('detail')?.result);
+const videoElement = ref<HTMLElement>();
+const videoPlayer = ref<Player>();
+const videoSrc = ref<VideoUrlMap>();
 
 async function initLoad() {
   result.value = undefined;
@@ -82,9 +86,9 @@ async function load() {
     return;
   }
   if (
-    !findPage('list')?.result &&
-    !findPage('searchList')?.result &&
-    !findPage('detail')?.result
+    !findPage('list')?.result
+    && !findPage('searchList')?.result
+    && !findPage('detail')?.result
   ) {
     showDialog({
       message: '请先保证《推荐影视》或《搜索影视》或《影视详情》执行不为空',
@@ -92,8 +96,8 @@ async function load() {
     });
     return;
   }
-  const template =
-    props.content.mode === 'cms' ? CMS_VIDEO_TEMPLATE : VIDEO_TEMPLATE;
+  const template
+    = props.content.mode === 'cms' ? CMS_VIDEO_TEMPLATE : VIDEO_TEMPLATE;
   const code = template
     .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
     .replace('// @METHOD_LIST', findPage('list')!.code)
@@ -103,8 +107,8 @@ async function load() {
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('VideoExtension', 'CmsVideoExtension', code);
-    const extensionclass = func(VideoExtension, CmsVideoExtension);
-    const cls = new extensionclass() as VideoExtension;
+    const ExtensionClass = func(VideoExtension, CmsVideoExtension);
+    const cls = new ExtensionClass() as VideoExtension;
     if (cls.baseUrl === undefined) {
       throw new Error('初始化中的baseUrl未定义!');
     }
@@ -112,7 +116,7 @@ async function load() {
 
     if (!selectedResource.value) {
       selectedResource.value = sourceItem.value?.resources?.find(
-        (x) => !!x.episodes?.length,
+        x => !!x.episodes?.length,
       );
     }
     if (!selectedEpisode.value) {
@@ -120,9 +124,9 @@ async function load() {
     }
 
     if (
-      !sourceItem.value ||
-      !selectedResource.value ||
-      !selectedEpisode.value
+      !sourceItem.value
+      || !selectedResource.value
+      || !selectedEpisode.value
     ) {
       throw new Error('请先保证《影视详情》执行不为空');
     }
@@ -141,7 +145,8 @@ async function load() {
     videoSrc.value = res;
     props.updateResult('video', 'playUrl', result.value, true);
     runStatus.value = RunStatus.success;
-  } catch (error) {
+  }
+  catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
     props.updateResult('video', 'playUrl', result.value, false);
@@ -149,12 +154,9 @@ async function load() {
 }
 
 function findPage(name: string) {
-  return props.content.pages.find((page) => page.type === name);
+  return props.content.pages.find(page => page.type === name);
 }
-const sourceItem = computed(() => findPage('detail')?.result);
-const videoElement = ref<HTMLElement>();
-const videoPlayer = ref<Player>();
-const videoSrc = ref<VideoUrlMap>();
+
 watch(
   videoSrc,
   async (video) => {
@@ -187,7 +189,8 @@ watch(
       videoPlayer.value.getPlugin('error').useHooks('showError', () => {
         videoPlayer.value?.controls?.show();
       });
-    } else {
+    }
+    else {
       videoPlayer.value?.reset();
     }
   },
@@ -213,7 +216,9 @@ defineExpose({
 
 <template>
   <div>
-    <div v-if="runStatus === RunStatus.not_running">未运行</div>
+    <div v-if="runStatus === RunStatus.not_running">
+      未运行
+    </div>
     <div
       v-else-if="runStatus === RunStatus.running"
       class="flex items-center justify-center"
@@ -225,7 +230,7 @@ defineExpose({
     </div>
     <div v-else>
       <div class="flex grow select-none flex-col overflow-y-auto">
-        <div ref="videoElement" class="!relative !h-[200px] !w-full"></div>
+        <div ref="videoElement" class="!relative !h-[200px] !w-full" />
         <div
           class="flex w-full flex-shrink-0 items-center justify-start gap-2 overflow-hidden"
         >

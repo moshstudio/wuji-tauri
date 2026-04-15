@@ -1,9 +1,9 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use tauri::Manager;
+mod download_manager;
 mod fetch_plugin;
 mod proxy_plugin;
 mod websocket_plugin;
-mod download_manager;
 use log::LevelFilter;
 use tauri_plugin_log::{Target, TargetKind};
 
@@ -44,6 +44,7 @@ pub fn run() {
         .plugin(tauri_plugin_mediasession::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_keep_screen_on::init());
 
     // 仅在桌面端添加

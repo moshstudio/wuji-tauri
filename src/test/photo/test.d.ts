@@ -11,3 +11,5 @@ declare class TestPhotoExtension extends PhotoExtension {
 }
 
 export default TestPhotoExtension;
+
+

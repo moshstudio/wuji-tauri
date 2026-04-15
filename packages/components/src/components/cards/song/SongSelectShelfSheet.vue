@@ -14,7 +14,7 @@ const show = defineModel<boolean>();
 const actions = computed(() => {
   return props.shelfs.map((item) => {
     const existed = item.playlist.list?.list.some(
-      (s) => s.id === props.song.id,
+      s => s.id === props.song.id,
     );
     return {
       name: item.playlist.name,

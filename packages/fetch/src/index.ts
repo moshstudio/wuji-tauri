@@ -104,8 +104,8 @@ async function formatClientConfig(
 
   const req = new Request(input, init);
   const buffer = await req.arrayBuffer();
-  const data =
-    buffer.byteLength !== 0 ? Array.from(new Uint8Array(buffer)) : null;
+  const data
+    = buffer.byteLength !== 0 ? Array.from(new Uint8Array(buffer)) : null;
 
   // append new headers created by the browser `Request` implementation,
   // if not already declared by the caller of this function
@@ -119,21 +119,20 @@ async function formatClientConfig(
     let ua = navigator.userAgent;
     if (!ua.includes('Edg')) {
       // 使用edge ua
-      ua =
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0';
+      ua
+        = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0';
     }
     headers.set('user-agent', ua);
     // navigator.userAgent
   }
 
-  const headersArray =
-    headers instanceof Headers
+  const headersArray
+    = headers instanceof Headers
       ? Array.from(headers.entries())
       : Array.isArray(headers)
         ? headers
         : Object.entries(headers);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const mappedHeaders: Array<[string, string]> = headersArray.map(
     ([name, val]) => [
       name,
@@ -164,6 +163,11 @@ async function _fetch(
   input: URL | Request | string,
   init?: RequestInit & ClientOptions,
 ): Promise<Response> {
+  const inputUrl = input instanceof Request ? input.url : input.toString();
+  if (inputUrl.startsWith('blob:') || inputUrl.startsWith('data:')) {
+    return window.fetch(input, init);
+  }
+
   const clientConfig = await formatClientConfig(input, init);
 
   const rid = await invoke<number>('plugin:fetch-plugin|fetch', {
@@ -175,7 +179,6 @@ async function _fetch(
   // abort early here if needed
   if (init?.signal?.aborted) {
     // we don't care about the result of this proimse
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     abort();
     throw new Error(ERROR_REQUEST_CANCELLED);
   }
@@ -219,7 +222,7 @@ async function _fetch(
             const actualRes = resUint8.slice(0, resUint8.byteLength - 1);
 
             // close when the signal to close (last byte is 1) is sent from the IPC.
-            if (lastByte == 1) {
+            if (lastByte === 1) {
               controller.close();
               return;
             }
@@ -270,7 +273,8 @@ export async function fetch(
       }
     }
     return response;
-  } catch (error) {
+  }
+  catch (error) {
     console.error('fetch error:', error);
     return Response.error();
   }
@@ -313,7 +317,8 @@ export async function cachedFetch(
           });
           response = new Response(compressedFile);
           cache.put(cacheKey, response.clone());
-        } catch (error) {
+        }
+        catch (error) {
           console.warn(
             'LoadImage压缩错误, url: ',
             input.toString(),
@@ -322,12 +327,14 @@ export async function cachedFetch(
           );
           return new Response(blob);
         }
-      } else {
+      }
+      else {
         cache.put(cacheKey, response.clone());
       }
     }
     return response;
-  } else {
+  }
+  else {
     const response = await fetch(input, init);
     return response;
   }
@@ -335,8 +342,8 @@ export async function cachedFetch(
 
 export async function fetchAndSave(
   input: URL | Request | string,
-  init?: RequestInit &
-    ClientOptions & { baseDir?: BaseDirectory; path?: string },
+  init?: RequestInit
+    & ClientOptions & { baseDir?: BaseDirectory; path?: string },
 ): Promise<boolean> {
   const clientConfig = await formatClientConfig(input, init);
   const clientConfigWithSave = {

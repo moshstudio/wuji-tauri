@@ -11,3 +11,5 @@ declare class TestSongExtension extends SongExtension {
 }
 
 export default TestSongExtension;
+
+

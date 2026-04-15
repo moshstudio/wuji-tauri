@@ -4,9 +4,9 @@ import { fetch } from '@wuji-tauri/fetch';
 const baseUrl = 'https://www.kuwo.cn/';
 let cookies:
   | {
-      key: string;
-      value: string;
-    }
+    key: string;
+    value: string;
+  }
   | undefined;
 
 async function initCookie() {
@@ -24,30 +24,33 @@ async function generateSecret() {
   if (!cookies) {
     await initCookie();
   }
-  if (!cookies) return '';
+  if (!cookies)
+    return '';
   const t = cookies.value;
   const e = cookies.key;
 
-  if (e == null || e.length <= 0) return '';
+  if (e == null || e.length <= 0)
+    return '';
   let n: string | number = '';
   for (let i = 0; i < e.length; i++) n += e.charCodeAt(i).toString();
   const r = Math.floor(n.length / 5);
   const o = Number.parseInt(
-    n.charAt(r) +
-      n.charAt(2 * r) +
-      n.charAt(3 * r) +
-      n.charAt(4 * r) +
-      n.charAt(5 * r),
+    n.charAt(r)
+    + n.charAt(2 * r)
+    + n.charAt(3 * r)
+    + n.charAt(4 * r)
+    + n.charAt(5 * r),
   );
   const l = Math.ceil(e.length / 2);
   const c = 2 ** 31 - 1;
-  if (o < 2) return '';
+  if (o < 2)
+    return '';
   const d = Math.round(1e9 * Math.random()) % 1e8;
   n += d.toString();
   while (n.length > 10) {
     n = (
-      Number.parseInt(n.substring(0, 10)) +
-      Number.parseInt(n.substring(10, n.length))
+      Number.parseInt(n.substring(0, 10))
+      + Number.parseInt(n.substring(10, n.length))
     ).toString();
   }
   n = (o * Number(n) + l) % c;

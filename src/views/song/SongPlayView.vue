@@ -3,14 +3,14 @@ import type { Lyric } from '@/utils/lyric';
 import { cachedFetch } from '@wuji-tauri/fetch';
 import { storeToRefs } from 'pinia';
 import tinycolor from 'tinycolor2';
+import { showFailToast, showLoadingToast } from 'vant';
 import { ref, watch } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppSongPlayView from '@/layouts/app/song/SongPlayView.vue';
 import DesktopSongPlayView from '@/layouts/desktop/song/SongPlayView.vue';
-import { useDisplayStore, useSongStore, useDownloadStore, useStore } from '@/store';
+import { useDisplayStore, useDownloadStore, useSongStore, useStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
 import { getLyric, parseLyric } from '@/utils/lyric';
-import { showToast, showLoadingToast, showFailToast } from 'vant';
 
 const downloadStore = useDownloadStore();
 const store = useStore();
@@ -50,9 +50,10 @@ watch(
     audioCurrent.value = 0;
     if (newSong.lyric) {
       lyric.value = parseLyric(newSong.lyric);
-    } else if (newSong.name) {
+    }
+    else if (newSong.name) {
       const singer = newSong.artists
-        ?.map((artist) => (typeof artist === 'object' ? artist.name : artist))
+        ?.map(artist => (typeof artist === 'object' ? artist.name : artist))
         .join(',');
       lyric.value = await getLyric(newSong.name, singer);
     }
@@ -79,7 +80,8 @@ watch(
           // 如果太暗或太亮，使用与色相最接近的预设颜色
           const closestPreset = findClosestPresetColor(hue);
           activeLyricColor.value = closestPreset;
-        } else {
+        }
+        else {
           activeLyricColor.value = vibrantColor.toHexString();
         }
       },
@@ -99,8 +101,8 @@ watch(
     if (lyric.value) {
       for (let i = 0; i < lyric.value.length; i++) {
         if (
-          lyric.value[i].position < +newVal &&
-          (lyric.value[i + 1]?.position || 9999999999) > +newVal
+          lyric.value[i].position < +newVal
+          && (lyric.value[i + 1]?.position || 9999999999) > +newVal
         ) {
           let offset = 0;
           // 从0到i，计算元素高度
@@ -122,7 +124,7 @@ watch(
 
 // 根据色相找到最接近的预设颜色
 function findClosestPresetColor(hue: number): string {
-  const presetHues = PRESET_COLORS.map((color) => tinycolor(color).toHsl().h);
+  const presetHues = PRESET_COLORS.map(color => tinycolor(color).toHsl().h);
   let minDiff = 360;
   let closestIndex = 0;
 
@@ -203,14 +205,15 @@ async function onDownload() {
       const url = await songStore.getSongPlayUrl(playingSong.value);
       t.close();
       if (url) {
-        await downloadStore.startMusicDownload(
-          { title: playingSong.value.name, id: playingSong.value.id },
-          store.getSongSource(playingSong.value.sourceId),
-          url
+        await downloadStore.directDownloadMusic(
+          playingSong.value,
+          store.getSongSource(playingSong.value.sourceId)!,
+          url,
+          playingSong.value.playHeaders,
         );
-        showToast('已加入下载队列');
       }
-    } catch (e) {
+    }
+    catch (e) {
       t.close();
       showFailToast('解析失败');
     }

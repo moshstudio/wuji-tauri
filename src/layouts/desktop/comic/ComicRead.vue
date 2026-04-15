@@ -6,10 +6,10 @@ import type {
 } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
 import { Icon } from '@iconify/vue';
-import { LoadImage } from '@wuji-tauri/components/src';
-import { storeToRefs } from 'pinia';
-import { nextTick, onActivated, onDeactivated, ref, watch } from 'vue';
 import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
+import { LoadImage } from '@wuji-tauri/components';
+import { storeToRefs } from 'pinia';
+import { nextTick, onActivated, onDeactivated, onMounted, ref, watch } from 'vue';
 import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import { router } from '@/router';
 import { useDisplayStore } from '@/store';
@@ -29,6 +29,7 @@ defineProps<{
   prevChapter: () => void;
   nextChapter: () => void;
   refreshChapter: () => void;
+  onDownload?: () => void;
 }>();
 
 const backStore = useBackStore();
@@ -37,15 +38,25 @@ const displayStore = useDisplayStore();
 const { showTabBar } = storeToRefs(displayStore);
 
 const bubbleOffset = ref({
-  x: 10,
-  y: document.querySelector('body')!.clientHeight - 260,
+  x: 2000,
+  y: 0,
 });
-watch(bubbleOffset, (offset) => {
-  const ch = document.querySelector('body')!.clientHeight;
-  if (offset.y > ch - 140) {
-    offset.y = ch - 140;
-  }
+
+onMounted(() => {
+  bubbleOffset.value.x = window.innerWidth - 50;
+  bubbleOffset.value.y = window.innerHeight - 260;
 });
+
+watch(
+  bubbleOffset,
+  (offset) => {
+    const ch = window.innerHeight;
+    if (offset.y > ch - 140) {
+      offset.y = ch - 140;
+    }
+  },
+  { deep: true },
+);
 
 const isShowChapterList = ref(false);
 async function showChapterList() {
@@ -96,6 +107,11 @@ onDeactivated(() => {
           </span>
         </div>
         <div class="options flex items-center gap-3 pr-2">
+          <van-icon
+            name="down"
+            class="van-haptics-feedback text-[var(--van-text-color)]"
+            @click="onDownload"
+          />
           <van-icon
             name="replay"
             class="van-haptics-feedback text-[var(--van-text-color)]"
@@ -150,40 +166,42 @@ onDeactivated(() => {
           />
         </div>
       </div>
-      <van-floating-bubble
-        v-model:offset="bubbleOffset"
-        axis="xy"
-        magnetic="x"
-        :gap="6"
-        class="!h-[90px] !w-[40px] !rounded-[20px] !border-none !bg-transparent active:!opacity-100"
+    </div>
+
+    <van-floating-bubble
+      v-model:offset="bubbleOffset"
+      axis="xy"
+      magnetic="x"
+      :gap="6"
+      teleport="body"
+      class="!h-[90px] !w-[40px] !rounded-[20px] !border-none !bg-transparent active:!opacity-100 select-none"
+    >
+      <LiquidGlassContainer
+        :width="40"
+        :height="90"
+        glass-tint-color="#000000"
+        :glass-tint-opacity="20"
+        :frost-blur-radius="1"
+        class="flex-col"
       >
-        <LiquidGlassContainer
-          :width="40"
-          :height="90"
-          :glassTintColor="'#000000'"
-          :glassTintOpacity="20"
-          :frostBlurRadius="1"
-          class="flex-col"
+        <div
+          class="flex h-full w-full flex-col items-center gap-0 leading-[0]"
         >
           <div
-            class="flex h-full w-full flex-col items-center gap-0 leading-[0]"
+            class="z-10 flex h-full w-full flex-1 cursor-pointer items-center justify-center p-2"
+            @click.stop="() => prevChapter()"
           >
-            <div
-              class="z-10 flex h-full w-full flex-1 items-center justify-center"
-              @click="() => prevChapter()"
-            >
-              <van-icon name="arrow-up" size="14" color="white" />
-            </div>
-            <div
-              class="z-10 flex h-full w-full flex-1 items-center justify-center"
-              @click="() => nextChapter()"
-            >
-              <van-icon name="arrow-down" size="14" color="white" />
-            </div>
+            <van-icon name="arrow-up" size="14" color="white" />
           </div>
-        </LiquidGlassContainer>
-      </van-floating-bubble>
-    </div>
+          <div
+            class="z-10 flex h-full w-full flex-1 cursor-pointer items-center justify-center p-2"
+            @click.stop="() => nextChapter()"
+          >
+            <van-icon name="arrow-down" size="14" color="white" />
+          </div>
+        </div>
+      </LiquidGlassContainer>
+    </van-floating-bubble>
 
     <!-- 底部菜单 -->
     <div

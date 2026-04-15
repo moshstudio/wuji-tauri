@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
-import { WSongShelfCard } from '@wuji-tauri/components/src';
+import { WSongShelfCard } from '@wuji-tauri/components';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MNavBar from '@/components/header/MNavBar.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
@@ -15,6 +15,7 @@ withDefaults(
     removeSong?: (shelf: SongShelf, song: SongInfo) => void;
     removeShelf: (shelf: SongShelf) => void;
     showMoreOptions: (shelf: SongShelf, song: SongInfo) => void;
+    downloadAll: (shelf: SongShelf) => void;
   }>(),
   {},
 );
@@ -29,6 +30,7 @@ const shelfStore = useSongShelfStore();
       <div v-if="shelf" class="flex gap-2">
         <van-button
           size="small"
+          icon="play-circle-o"
           @click="
             () => {
               if (shelf) {
@@ -38,6 +40,19 @@ const shelfStore = useSongShelfStore();
           "
         >
           播放全部
+        </van-button>
+        <van-button
+          size="small"
+          icon="download"
+          @click="
+            () => {
+              if (shelf) {
+                downloadAll(shelf);
+              }
+            }
+          "
+        >
+          下载全部
         </van-button>
         <MPagination
           v-if="shelf.playlist.list?.totalPage"

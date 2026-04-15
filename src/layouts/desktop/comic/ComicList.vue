@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import type { ComicItem } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
-import { ref } from 'vue';
+import type { ComicHistory } from '@/types/comic';
 import { LiquidGlassContainer } from '@tinymomentum/liquid-glass-vue';
+import { WComicCard } from '@wuji-tauri/components';
+import { storeToRefs } from 'pinia';
+import { ref } from 'vue';
+import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import WHeader from '@/components/header/WHeader.vue';
 import WComicTab from '@/components/tab/WComicTab.vue';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import { WComicCard } from '@wuji-tauri/components/src';
 import { router } from '@/router';
 import { useDisplayStore } from '@/store';
 import { sleep } from '@/utils';
-import { ComicHistory } from '@/types/comic';
-import { storeToRefs } from 'pinia';
 
 const props = defineProps<{
   comicSources: ComicSource[];
@@ -71,18 +71,22 @@ async function onRefresh() {
           </div>
           <ResponsiveGrid2>
             <WComicCard
-              v-for="comic in comicHistory"
+              v-for="(comic, comicIndex) in comicHistory"
+              :key="`${comic.comic.sourceId}_${comic.comic.id}_${comicIndex}`"
               :comic="comic.comic"
               :click="() => historyToComic(comic)"
             />
           </ResponsiveGrid2>
         </van-collapse-item>
-        <div v-for="(item, index) in comicSources" :key="item.item.id">
+        <div
+          v-for="(item, sourceIndex) in comicSources"
+          :key="`${item.item.id}_${sourceIndex}`"
+        >
           <van-collapse-item
             v-show="
               item.list && !(!Array.isArray(item.list) && !item.list?.list)
             "
-            :name="index + item.item.id"
+            :name="sourceIndex + item.item.id"
             :title="item.item.name"
           >
             <WComicTab :source="item" :to-page="toPage" :to-detail="toDetail" />
@@ -93,12 +97,12 @@ async function onRefresh() {
         <LiquidGlassContainer
           :width="40"
           :height="40"
-          :borderRadius="20"
-          :glassTintColor="'#000000'"
-          :glassTintOpacity="20"
-          :frostBlurRadius="1"
+          :border-radius="20"
+          glass-tint-color="#000000"
+          :glass-tint-opacity="20"
+          :frost-blur-radius="1"
         >
-          <van-icon name="arrow-up"></van-icon>
+          <van-icon name="arrow-up" />
         </LiquidGlassContainer>
       </van-back-top>
     </van-pull-refresh>

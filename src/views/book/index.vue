@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { BookItem } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
+import type { BookHistory } from '@/types/book';
 import { storeToRefs } from 'pinia';
+import { showConfirmDialog, showLoadingToast, showToast } from 'vant';
 import { ref, triggerRef } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppBookList from '@/layouts/app/book/BookList.vue';
@@ -9,8 +11,6 @@ import DesktopBookList from '@/layouts/desktop/book/BookList.vue';
 import { router } from '@/router';
 import { useBookShelfStore, useDisplayStore, useStore } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
-import { BookHistory } from '@/types/book';
-import { showConfirmDialog, showLoadingToast, showToast } from 'vant';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -25,7 +25,8 @@ const recommend = createCancellableFunction(
     await Promise.all(
       bookSources.value.map(async (source) => {
         if (!source.list || force) {
-          if (signal.aborted) return;
+          if (signal.aborted)
+            return;
           await store.bookRecommendList(source);
         }
       }),
@@ -39,10 +40,12 @@ const search = createCancellableFunction(async (signal: AbortSignal) => {
   if (!keyword) {
     await recommend(true);
     triggerRef(bookSources);
-  } else {
+  }
+  else {
     await Promise.all(
       bookSources.value.map(async (bookSources) => {
-        if (signal.aborted) return;
+        if (signal.aborted)
+          return;
         await store.bookSearch(bookSources, keyword, 1);
       }),
     );
@@ -59,7 +62,8 @@ const toPage = createCancellableFunction(
   ) => {
     if (!searchValue.value) {
       await store.bookRecommendList(source, pageNo, type);
-    } else {
+    }
+    else {
       await store.bookSearch(source, searchValue.value, pageNo);
     }
   },

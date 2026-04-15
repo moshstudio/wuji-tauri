@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { MarketSource } from '@wuji-tauri/source-extension';
 import type { TagProps } from 'vant';
-import { MyMarketSourceCard } from '@wuji-tauri/components/src';
+import { MyMarketSourceCard } from '@wuji-tauri/components';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MNavBar from '@/components/header/MNavBar.vue';
 

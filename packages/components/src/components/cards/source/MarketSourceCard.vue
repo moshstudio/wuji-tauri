@@ -31,7 +31,9 @@ const permissionStyle = computed(() => {
         >
           {{ source.name }}
         </div>
-        <div class="text-xs text-gray-400">v{{ source.version }}</div>
+        <div class="text-xs text-gray-400">
+          v{{ source.version }}
+        </div>
       </div>
       <van-button
         size="small"
@@ -52,7 +54,7 @@ const permissionStyle = computed(() => {
         {{ permissionText(source) }}
       </van-tag>
       <LikeButton
-        v-model:count="source.thumbsUp"
+        :count="source.thumbsUp"
         :like-action="() => onLike(source)"
       />
     </div>

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { BookItem } from '@wuji-tauri/source-extension';
+import type { FormItem } from '@/store/sourceCreateStore';
 import { BookExtension } from '@wuji-tauri/source-extension';
 import { showDialog } from 'vant';
 import { ref } from 'vue';
 import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
-import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
   content: FormItem<BookItem>;
@@ -67,8 +67,8 @@ async function load() {
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('BookExtension', code);
-    const extensionclass = func(BookExtension);
-    const cls = new extensionclass() as BookExtension;
+    const ExtensionClass = func(BookExtension);
+    const cls = new ExtensionClass() as BookExtension;
     if (cls.baseUrl === undefined) {
       throw new Error('初始化中的baseUrl未定义!');
     }
@@ -84,7 +84,8 @@ async function load() {
     result.value = res;
     props.updateResult('book', 'content', result.value, true);
     runStatus.value = RunStatus.success;
-  } catch (error) {
+  }
+  catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
     props.updateResult('book', 'content', result.value, false);
@@ -92,7 +93,7 @@ async function load() {
 }
 
 function findPage(name: string) {
-  return props.content.pages.find((page) => page.type === name);
+  return props.content.pages.find(page => page.type === name);
 }
 
 defineExpose({
@@ -102,7 +103,9 @@ defineExpose({
 
 <template>
   <div>
-    <div v-if="runStatus === RunStatus.not_running">未运行</div>
+    <div v-if="runStatus === RunStatus.not_running">
+      未运行
+    </div>
     <div
       v-else-if="runStatus === RunStatus.running"
       class="flex items-center justify-center"
@@ -113,7 +116,7 @@ defineExpose({
       {{ errorMessage }}
     </div>
     <div v-else class="flex flex-col overflow-auto">
-      <p v-for="line in result?.split('\n')">
+      <p v-for="(line, index) in result?.split('\n')" :key="index">
         {{ line }}
       </p>
     </div>

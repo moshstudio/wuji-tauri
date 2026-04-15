@@ -8,8 +8,9 @@ import { useSongShelfStore } from '@/store';
 const shelfStore = useSongShelfStore();
 function createShelf(name: string) {
   name = name.trim();
-  if (!name) return;
-  if (shelfStore.songCreateShelf.some((item) => item.playlist.name === name)) {
+  if (!name)
+    return;
+  if (shelfStore.songCreateShelf.some(item => item.playlist.name === name)) {
     showToast('收藏夹已存在');
     return;
   }

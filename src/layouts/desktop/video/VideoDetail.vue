@@ -1,20 +1,17 @@
 <script setup lang="ts">
-import { castArray } from 'lodash';
-import {
-  VideoSource,
+import type {
+  VideoEpisode,
   VideoItem,
   VideoResource,
-  VideoEpisode,
+  VideoSource,
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
-import { ref, computed, watch } from 'vue';
+import type Player from 'xgplayer';
+import { castArray } from 'lodash';
+import { computed, ref, watch } from 'vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
-import Player from 'xgplayer';
 import { useDisplayStore } from '@/store';
 
-const showPlaylist = defineModel<boolean>('showPlaylist', {
-  default: false,
-});
 const props = defineProps<{
   player?: Player;
   videoItem?: VideoItem;
@@ -28,14 +25,17 @@ const props = defineProps<{
   onDownload?: (resource: VideoResource, episode: VideoEpisode) => void;
   showSearch: () => void;
 }>();
-
+const showPlaylist = defineModel<boolean>('showPlaylist', {
+  default: false,
+});
 const displayStore = useDisplayStore();
 const _selectedResource = ref<VideoResource>();
 const selectedResource = computed({
   get() {
     if (_selectedResource.value) {
       return _selectedResource.value;
-    } else {
+    }
+    else {
       return props.playingResource;
     }
   },
@@ -66,7 +66,7 @@ const activeTabName = ref('');
           : 'grid-cols-[1fr_0fr]'
     "
   >
-    <slot></slot>
+    <slot />
 
     <div
       class="video-list flex h-full w-full cursor-auto flex-col overflow-hidden rounded-l-lg bg-[var(--van-background-2)] text-[var(--van-text-color)]"
@@ -123,6 +123,7 @@ const activeTabName = ref('');
             <div class="flex gap-1 overflow-x-auto">
               <van-tag
                 v-for="tag in castArray(videoItem?.tags)"
+                :key="tag"
                 plain
                 color="rgba(100,100,100,0.3)"
                 text-color="var(--van-text-color-2)"
@@ -191,8 +192,8 @@ const activeTabName = ref('');
               class="episode-show-list flex w-full flex-col overflow-y-auto overflow-x-hidden"
             >
               <van-button
-                v-for="(episode, index) in resource?.episodes"
-                :key="`${resource.id}${episode.id}${index}`"
+                v-for="(episode, episodeIndex) in resource?.episodes"
+                :key="`${resource.id}${episode.id}${episodeIndex}`"
                 class="flex-shrink-0"
                 size="small"
                 :type="

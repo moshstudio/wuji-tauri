@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import _ from 'lodash';
-import { ref, reactive, h, computed, watch } from 'vue';
-import DialogWindow from './DialogWindow.vue';
 import { useResizeObserver } from '@vueuse/core';
-import { sleep } from '@/utils';
+import _ from 'lodash';
 import tinycolor from 'tinycolor2';
+import { computed, ref, watch } from 'vue';
+import { sleep } from '@/utils';
+import DialogWindow from './DialogWindow.vue';
 
 const messages = [
   '今天要加油！保持积极心态，一切都会好起来的。',
@@ -61,7 +61,7 @@ const currentDialogCount = computed(() => dialogConfigs.value.length);
 
 function dialogClose(id: number) {
   dialogConfigs.value = dialogConfigs.value.filter(
-    (config) => config.id !== id,
+    config => config.id !== id,
   );
 }
 
@@ -69,24 +69,26 @@ function dialogFocus(id: number) {
   dialogConfigs.value = dialogConfigs.value.map((config) => {
     if (config.id === id) {
       config.index = 2;
-    } else {
+    }
+    else {
       config.index = 1;
     }
     return config;
   });
 }
-const getRandomPosition = (): { top: number; left: number } => {
+function getRandomPosition(): { top: number; left: number } {
   const maxX = containerWidth.value - 80;
   const maxY = containerHeight.value - 80;
   const top = Math.max(-200, Math.random() * maxY);
   const left = Math.max(-100, Math.random() * maxX);
   return { top, left };
-};
+}
 
 let dialogId = 0;
 
 function addDialog() {
-  if (currentDialogCount.value >= maxDialogs.value) return;
+  if (currentDialogCount.value >= maxDialogs.value)
+    return;
 
   const bgColor = tinycolor.random();
   const newDialog = {
@@ -125,8 +127,8 @@ watch(
   <div ref="container" class="absolute inset-0 h-full w-full overflow-hidden">
     <DialogWindow
       v-for="config in dialogConfigs"
-      :key="config.id"
       :id="config.id"
+      :key="config.id"
       :message="config.message"
       :index="config.index"
       :color="config.color"

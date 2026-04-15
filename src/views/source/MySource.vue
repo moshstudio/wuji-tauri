@@ -3,7 +3,7 @@ import type {
   MarketSource,
   MarketSourcePermission,
 } from '@wuji-tauri/source-extension';
-import { MoreOptionsSheet } from '@wuji-tauri/components/src';
+import { MoreOptionsSheet } from '@wuji-tauri/components';
 import { storeToRefs } from 'pinia';
 import { showConfirmDialog, showToast } from 'vant';
 import { computed, onActivated, onMounted, ref } from 'vue';
@@ -43,16 +43,18 @@ const moreOptionActions = computed(() => {
     return [];
   }
   const isImported = !!subscribeStore.subscribeSources.find(
-    (s) => s.detail.id === moreOptionSource.value?._id,
+    s => s.detail.id === moreOptionSource.value?._id,
   );
   return [
     {
       name: isImported ? '已导入' : '导入',
       callback: async () => {
-        if (!moreOptionSource.value) return;
+        if (!moreOptionSource.value)
+          return;
         if (isImported) {
           router.push({ name: 'SourceManage' });
-        } else {
+        }
+        else {
           await store.addMarketSource(moreOptionSource.value);
         }
       },

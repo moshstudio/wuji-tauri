@@ -6,30 +6,28 @@ import type {
 } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
 import type { LineData, ReaderResult } from '@/utils/reader/types';
+import { onMountedOrActivated } from '@vant/use';
+
 import _ from 'lodash';
-
 import { storeToRefs } from 'pinia';
-import { get_system_font_scale } from 'tauri-plugin-commands-api';
 
+import { get_system_font_scale } from 'tauri-plugin-commands-api';
 import { showToast } from 'vant';
 import {
   computed,
   nextTick,
-  onActivated,
   onDeactivated,
-  onMounted,
   onUnmounted,
   ref,
   watch,
 } from 'vue';
-import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 
+import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppBookReadSwipe from '@/layouts/app/book/BookReadSwipe.vue';
 import DesktopBookReadSwipe from '@/layouts/desktop/book/BookReadSwipe.vue';
 import { useBookStore, useDisplayStore, useTTSStore } from '@/store';
 import { useElementResize } from '@/utils';
 import Reader from '@/utils/reader/reader-layout';
-import { onMountedOrActivated } from '@vant/use';
 
 const props = withDefaults(
   defineProps<{
@@ -52,6 +50,7 @@ const props = withDefaults(
     prevChapter: (toLast?: boolean) => void;
     nextChapter: () => void;
     refreshChapter: () => Promise<void>;
+    onDownload: () => void;
   }>(),
   {
     isPrev: false,
@@ -80,11 +79,12 @@ const fontScale = ref(1);
 const chapterPagedIndex = ref(0);
 const chapterIndex = computed(() => {
   return (
-    props.chapterList?.findIndex((item) => item.id === props.chapter?.id) || 0
+    props.chapterList?.findIndex(item => item.id === props.chapter?.id) || 0
   );
 });
 const chapterPagedContent = computed<ReaderResult>(() => {
-  if (!props.chapterContent) return [];
+  if (!props.chapterContent)
+    return [];
   return getPagedContent(props.chapterContent, props.chapter?.title);
 });
 
@@ -98,10 +98,12 @@ watch(chapterPagedContent, (newContent) => {
     nextTick(() => {
       if (props.isPrev && newContent.length > 0) {
         chapterPagedIndex.value = newContent.length - 1;
-      } else {
+      }
+      else {
         if (isNewOpen.value) {
           chapterPagedIndex.value = props.chapter?.readingPage || 0;
-        } else {
+        }
+        else {
           chapterPagedIndex.value = 0;
         }
       }
@@ -120,7 +122,8 @@ watch(chapterPagedContent, (newContent) => {
 });
 
 const prevChapterPagedContent = computed<ReaderResult>(() => {
-  if (!props.prevChapterContent) return [];
+  if (!props.prevChapterContent)
+    return [];
   const res = getPagedContent(
     props.prevChapterContent,
     props.chapterList?.[chapterIndex.value - 1]?.title,
@@ -129,7 +132,8 @@ const prevChapterPagedContent = computed<ReaderResult>(() => {
 });
 
 const nextChapterPagedContent = computed<ReaderResult>(() => {
-  if (!props.nextChapterContent) return [];
+  if (!props.nextChapterContent)
+    return [];
   return getPagedContent(
     props.nextChapterContent,
     props.chapterList?.[chapterIndex.value + 1]?.title,
@@ -166,7 +170,8 @@ function nextChapter() {
     if (ttsStore.isReading) {
       ttsStore.stop();
     }
-  } else {
+  }
+  else {
     chapterPagedIndex.value = 0;
     props.nextChapter();
   }
@@ -230,7 +235,8 @@ function playTTS() {
     if (chapterPagedIndex.value === chapterPagedContent.value!.length - 1) {
       // 去下一章
       nextChapter();
-    } else {
+    }
+    else {
       // 去下一页
       chapterPagedIndex.value += 1;
       playTTS();
@@ -248,24 +254,27 @@ function playTTS() {
     // 没有历史记录，从头开始阅读
 
     target = _.flatten(chapterPagedContent.value).filter(
-      (line) => line.pIndex === currPageLines[0].pIndex,
+      line => line.pIndex === currPageLines[0].pIndex,
     );
-  } else {
+  }
+  else {
     const currPIndex = playing[0].pIndex;
     if (
-      currPIndex < currPageLines[0].pIndex ||
-      currPIndex > currPageLines[currPageLines.length - 1].pIndex
+      currPIndex < currPageLines[0].pIndex
+      || currPIndex > currPageLines[currPageLines.length - 1].pIndex
     ) {
       // 从头开始读
       target = _.flatten(chapterPagedContent.value).filter(
-        (line) => line.pIndex === currPageLines[0].pIndex,
+        line => line.pIndex === currPageLines[0].pIndex,
       );
-    } else if (currPIndex < currPageLines[currPageLines.length - 1].pIndex) {
+    }
+    else if (currPIndex < currPageLines[currPageLines.length - 1].pIndex) {
       // 还在当前页面中
       target = _.flatten(chapterPagedContent.value).filter(
-        (line) => line.pIndex === playing[0].pIndex + 1,
+        line => line.pIndex === playing[0].pIndex + 1,
       );
-    } else {
+    }
+    else {
       // 需要去下一页或下一章
       toNext();
       return;
@@ -287,7 +296,7 @@ function playTTS() {
   );
   // 缓存后两段内容
   const forward1 = _.flatten(chapterPagedContent.value).filter(
-    (line) => line.pIndex === target[0].pIndex + 1,
+    line => line.pIndex === target[0].pIndex + 1,
   );
   if (forward1.length) {
     ttsStore.generateVoice(
@@ -297,7 +306,7 @@ function playTTS() {
     );
   }
   const forward2 = _.flatten(chapterPagedContent.value).filter(
-    (line) => line.pIndex === target[0].pIndex + 2,
+    line => line.pIndex === target[0].pIndex + 2,
   );
   if (forward2.length) {
     ttsStore.generateVoice(
@@ -314,18 +323,22 @@ watch(
     if (newVal?.[0]?.pIndex !== undefined && ttsStore.isReading) {
       const pIndex = newVal[0].pIndex;
       const pages = chapterPagedContent.value;
-      if (!pages || pages.length === 0) return;
-      
-      const targetPageIndex = pages.findIndex(page => 
-        page.some(line => line.pIndex === pIndex)
+      if (!pages || pages.length === 0)
+        return;
+
+      const targetPageIndex = pages.findIndex(page =>
+        page.some(line => line.pIndex === pIndex),
       );
-      
-      if (targetPageIndex !== -1 && targetPageIndex !== chapterPagedIndex.value) {
+
+      if (
+        targetPageIndex !== -1
+        && targetPageIndex !== chapterPagedIndex.value
+      ) {
         chapterPagedIndex.value = targetPageIndex;
       }
     }
   },
-  { deep: true, immediate: true }
+  { deep: true, immediate: true },
 );
 
 watch(
@@ -338,7 +351,8 @@ watch(
   },
 );
 watch(chapterPagedIndex, (page) => {
-  if (page != undefined && page >= 0 && props.chapter) {
+  if (page !== undefined && page >= 0 && props.chapter) {
+    // eslint-disable-next-line vue/no-mutating-props
     props.chapter.readingPage = page;
   }
 });
@@ -420,6 +434,7 @@ onDeactivated(() => {
         :next-chapter="nextChapter"
         :refresh-chapter="refreshChapter"
         :play-tts="playTTS"
+        :on-download="onDownload"
       />
     </template>
     <template #desktop>
@@ -445,6 +460,7 @@ onDeactivated(() => {
         :next-chapter="nextChapter"
         :refresh-chapter="refreshChapter"
         :play-tts="playTTS"
+        :on-download="onDownload"
       />
     </template>
     <slot />

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type { PhotoList } from '@wuji-tauri/source-extension';
-import { MPhotoCard } from '@wuji-tauri/components/src';
+import type { FormItem } from '@/store/sourceCreateStore';
+import { MPhotoCard } from '@wuji-tauri/components';
 import { PhotoExtension } from '@wuji-tauri/source-extension';
 import { showFailToast } from 'vant';
 import { ref } from 'vue';
 import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
-import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
   content: FormItem<PhotoList>;
@@ -57,8 +57,8 @@ async function load(pageNo: number) {
   try {
     if (!cls) {
       const func = new Function('PhotoExtension', code);
-      const extensionclass = func(PhotoExtension);
-      cls = new extensionclass() as PhotoExtension;
+      const ExtensionClass = func(PhotoExtension);
+      cls = new ExtensionClass() as PhotoExtension;
       if (cls.baseUrl === undefined) {
         cls = undefined;
         throw new Error('初始化中的baseUrl未定义!');
@@ -73,7 +73,8 @@ async function load(pageNo: number) {
     result.value = res;
     props.updateResult('photo', 'list', result.value, true);
     runStatus.value = RunStatus.success;
-  } catch (error) {
+  }
+  catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
     props.updateResult('photo', 'list', result.value, false);
@@ -81,7 +82,7 @@ async function load(pageNo: number) {
 }
 
 function findPage(name: string) {
-  return props.content.pages.find((page) => page.type === name);
+  return props.content.pages.find(page => page.type === name);
 }
 
 defineExpose({
@@ -91,7 +92,9 @@ defineExpose({
 
 <template>
   <div>
-    <div v-if="runStatus === RunStatus.not_running">未运行</div>
+    <div v-if="runStatus === RunStatus.not_running">
+      未运行
+    </div>
     <div
       v-else-if="runStatus === RunStatus.running"
       class="flex items-center justify-center"

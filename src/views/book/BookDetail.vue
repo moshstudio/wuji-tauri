@@ -3,21 +3,21 @@ import type { BookChapter, BookItem } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
 import { storeToRefs } from 'pinia';
 
-import { showLoadingToast, showToast, showFailToast } from 'vant';
+import { showFailToast, showLoadingToast, showToast } from 'vant';
 import { computed, onActivated, ref, watch } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+import { usePageDataLoader } from '@/hooks/usePageDataLoader';
 import AppBookDetail from '@/layouts/app/book/BookDetail.vue';
 import DesktopBookDetail from '@/layouts/desktop/book/BookDetail.vue';
 import { router } from '@/router';
-import { useBookShelfStore, useStore, useDownloadStore } from '@/store';
-import { usePageDataLoader } from '@/hooks/usePageDataLoader';
-
-const downloadStore = useDownloadStore();
+import { useBookShelfStore, useDownloadStore, useStore } from '@/store';
 
 const { bookId, sourceId } = defineProps({
   bookId: String,
   sourceId: String,
 });
+
+const downloadStore = useDownloadStore();
 
 const store = useStore();
 const shelfStore = useBookShelfStore();
@@ -28,7 +28,7 @@ const bookSource = ref<BookSource>();
 const shouldReload = ref(false);
 const inShelf = computed(() => {
   for (const shelf of bookShelf.value) {
-    if (shelf.books.some((book) => book.book.id === bookId)) {
+    if (shelf.books.some(book => book.book.id === bookId)) {
       return true;
     }
   }
@@ -36,12 +36,12 @@ const inShelf = computed(() => {
 });
 const showAddShelfSheet = ref(false);
 const addShelfActions = computed(() => {
-  return bookShelf.value.map((shelf) => ({
+  return bookShelf.value.map(shelf => ({
     name: shelf.name,
     subname: `共 ${shelf.books.length || 0} 本书`,
     callback: () => {
       if (book.value) {
-        shelfStore.addToBookSelf(book.value, shelf.id);
+        shelfStore.addToBookShelf(book.value, shelf.id);
       }
       showAddShelfSheet.value = false;
     },
@@ -87,7 +87,8 @@ async function loadData() {
     const detail = await store.bookDetail(bookSource.value, book.value);
     toast.close();
 
-    if (signal.aborted) return true;
+    if (signal.aborted)
+      return true;
 
     if (detail) {
       book.value = detail;
@@ -100,8 +101,6 @@ async function loadData() {
     return !!detail;
   });
 }
-
-
 
 function toChapter(_book: BookItem, chapter: BookChapter) {
   router.push({
@@ -129,7 +128,6 @@ async function onDownload() {
       return;
     }
     await downloadStore.startBookDownload(book.value, bookSource.value);
-    showToast('已加入下载队列');
   }
 }
 

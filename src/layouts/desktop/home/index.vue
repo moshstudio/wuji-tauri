@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { fetchHotApi } from '@wuji-tauri/hot-api';
 import { storeToRefs } from 'pinia';
 import { showFailToast } from 'vant';
 import { onMounted, ref } from 'vue';
-import { Icon } from '@iconify/vue';
 import DialogAnimate from '@/components/animate/DialogAnimate.vue';
 import { useDisplayStore, useStore } from '@/store';
 import { sleep } from '@/utils';
@@ -18,7 +18,8 @@ const active = ref(0);
 async function openInBrowser(url: string) {
   try {
     await openUrl(url);
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Failed to open link:', error);
     showFailToast('打开失败,请尝试重置默认浏览器');
   }
@@ -81,8 +82,8 @@ onMounted(async () => {
       plain
       round
       size="small"
-      @click="toggleNewsTab"
       class="absolute right-1 top-1 z-[13]"
+      @click="toggleNewsTab"
     >
       <Icon
         :icon="showNews ? 'tabler:news-off' : 'tabler:news'"

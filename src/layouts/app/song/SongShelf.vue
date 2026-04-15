@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MPlaylistShelfCard } from '@wuji-tauri/components/src';
+import { MPlaylistShelfCard } from '@wuji-tauri/components';
 import MNavBar from '@/components/header/MNavBar.vue';
 import MSongBar from '@/components/songbar/MSongBar.vue';
 import { router } from '@/router';

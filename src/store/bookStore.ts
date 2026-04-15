@@ -1,10 +1,22 @@
-import type { BookChapter, BookItem } from '@wuji-tauri/source-extension';
+import type {
+  BookChapter,
+  BookExtension,
+  BookItem,
+} from '@wuji-tauri/source-extension';
+import type { BookSource } from '@/types';
 import type { ReadTheme } from '@/types/book';
-import { useStorageAsync } from '@vueuse/core';
+import { debounceFilter, useStorageAsync } from '@vueuse/core';
+import _ from 'lodash';
 import { defineStore } from 'pinia';
-import { computed, onMounted, ref } from 'vue';
-import { useServerStore } from './serverStore';
+import { showFailToast } from 'vant';
+import { computed, onMounted, ref, triggerRef } from 'vue';
 import { sleep } from '@/utils';
+import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { useBookChapterStore } from './bookChaptersStore';
+import { useBookShelfStore } from './bookShelfStore';
+import { useExtensionStore } from './extensionStore';
+import { useServerStore } from './serverStore';
+import { createKVStore } from './utils';
 
 export const useBookStore = defineStore('book', () => {
   const serverStore = useServerStore();
@@ -13,27 +25,27 @@ export const useBookStore = defineStore('book', () => {
   const webFonts = ref([
     {
       label: '默认',
-      family: "'alipuhui','sans-serif'",
+      family: '\'alipuhui\',\'sans-serif\'',
       isVip: false,
     },
     {
       label: '黑体',
-      family: "'Source Han Sans SC VF','sans-serif'",
+      family: '\'Source Han Sans SC VF\',\'sans-serif\'',
       isVip: false,
     },
     {
       label: '仿宋',
-      family: "'FZFangSong-Z02S','serif'",
+      family: '\'FZFangSong-Z02S\',\'serif\'',
       isVip: true,
     },
     {
       label: '文楷',
-      family: "'LXGW WenKai GB Screen','serif'",
+      family: '\'LXGW WenKai GB Screen\',\'serif\'',
       isVip: true,
     },
     {
       label: '圆体',
-      family: "'MaoKenZhuYuanTi','sans-serif'",
+      family: '\'MaoKenZhuYuanTi\',\'sans-serif\'',
       isVip: true,
     },
   ]);
@@ -162,6 +174,213 @@ export const useBookStore = defineStore('book', () => {
 
   const chapterCacheNum = useStorageAsync('readChapterCacheNum', 10);
 
+  const kvStorage = createKVStore();
+  const extensionStore = useExtensionStore();
+  const bookChapterStore = useBookChapterStore();
+  const bookShelfStore = useBookShelfStore();
+
+  const bookSources = useStorageAsync<BookSource[]>(
+    'bookSources',
+    [],
+    kvStorage.storage,
+    {
+      eventFilter: debounceFilter(1000),
+    },
+  );
+
+  /**
+   * 获取推荐列表
+   */
+  const bookRecommendList = async (
+    source: BookSource,
+    pageNo: number = 1,
+    type?: string,
+  ) => {
+    const sc = (await extensionStore.getSourceClass(
+      source.item,
+    )) as BookExtension;
+    const res = await sc?.execGetRecommendBooks(pageNo, type);
+
+    if (res) {
+      if (!type) {
+        // 1. 获取的不是指定type类型的数据，直接赋值
+        source.list = res;
+      }
+      else {
+        // 2. 获取的是指定type类型的数据，判断是否已经存在，不存在则添加
+        const find = _.castArray(source.list).find(
+          item => item.type === type,
+        );
+        if (find) {
+          _.assign(find, res);
+        }
+        else {
+          source.list = [..._.castArray(source.list), ..._.castArray(res)];
+        }
+      }
+    }
+    else {
+      if (!type) {
+        source.list = undefined;
+      }
+    }
+    triggerRef(bookSources);
+  };
+
+  const bookSearch = async (
+    source: BookSource,
+    keyword: string,
+    pageNo: number = 1,
+  ) => {
+    const sc = (await extensionStore.getSourceClass(
+      source.item,
+    )) as BookExtension;
+    const res = await sc?.execSearch(keyword, pageNo);
+    if (res) {
+      if (!_.isArray(res) && !res.list.length) {
+        source.list = undefined;
+        return;
+      }
+      source.list = res;
+    }
+    else {
+      source.list = undefined;
+    }
+    triggerRef(bookSources);
+  };
+
+  const bookDetail = async (source: BookSource, book: BookItem) => {
+    const sc = (await extensionStore.getSourceClass(
+      source.item,
+    )) as BookExtension;
+    const res = await sc?.execGetBookDetail(book);
+    if (res) {
+      return res;
+    }
+    else {
+      showFailToast(`${source.item.name} 获取内容失败`);
+      return null;
+    }
+  };
+
+  const cacheBookChapters = createCancellableFunction(
+    async (
+      signal: AbortSignal,
+      source: BookSource,
+      book: BookItem,
+      chapter: BookChapter,
+    ) => {
+      if (!book.chapters)
+        return;
+      const index = book.chapters.findIndex(item => item.id === chapter.id);
+      if (index === -1)
+        return;
+      let count = 1;
+      while (count <= chapterCacheNum.value) {
+        if (signal.aborted) {
+          return;
+        }
+        const targetChapter = book.chapters[index + count];
+        if (targetChapter) {
+          await bookRead(source, book, targetChapter, {
+            cacheMoreChapters: false,
+          });
+        }
+        count += 1;
+        if (count >= book.chapters.length) {
+          return;
+        }
+      }
+    },
+  );
+
+  async function bookRead(
+    source: BookSource,
+    book: BookItem,
+    chapter: BookChapter,
+    options?: {
+      cacheMoreChapters?: boolean;
+      refresh?: boolean;
+    },
+  ): Promise<string | null> {
+    options ||= {};
+    if (options.cacheMoreChapters === undefined) {
+      options.cacheMoreChapters = true;
+    }
+    if (options.refresh === undefined) {
+      options.refresh = false;
+    }
+    if (!options.refresh) {
+      const content = await bookChapterStore.getBookChapter(book, chapter);
+      if (content) {
+        if (options.cacheMoreChapters) {
+          // 缓存书籍
+          cacheBookChapters(source, book, chapter).catch(() => {});
+        }
+        return content;
+      }
+    }
+
+    const sc = (await extensionStore.getSourceClass(
+      source.item,
+    )) as BookExtension;
+    const res = await sc?.execGetContent(book, chapter);
+    if (res) {
+      await bookChapterStore.saveBookChapter(book, chapter, res);
+      if (options.cacheMoreChapters) {
+        // 缓存书籍
+        cacheBookChapters(source, book, chapter).catch(() => {});
+      }
+    }
+
+    return res;
+  }
+
+  const getBookSource = (sourceId: string): BookSource | undefined => {
+    return bookSources.value.find(item => item.item.id === sourceId);
+  };
+
+  const getBookItem = (
+    source: BookSource,
+    bookId: string,
+  ): BookItem | undefined => {
+    const checkFromShelf = () => {
+      for (const shelf of bookShelfStore.bookShelf) {
+        for (const book of shelf.books) {
+          if (book.book.id === bookId) {
+            return book.book;
+          }
+        }
+      }
+    };
+    const checkFromHistory = () => {
+      for (const book of bookShelfStore.bookHistory) {
+        if (book.book.id === bookId) {
+          return book.book;
+        }
+      }
+    };
+    const fromSource = () => {
+      if (source.list) {
+        for (const bookList of _.castArray(source.list)) {
+          for (const bookItem of bookList.list) {
+            if (bookItem.id === bookId) {
+              return bookItem;
+            }
+          }
+        }
+      }
+    };
+
+    // 优先从书架中获取
+    if (bookShelfStore.isBookInShelf(bookId)) {
+      return checkFromShelf();
+    }
+    else {
+      return checkFromHistory() || fromSource();
+    }
+  };
+
   onMounted(async () => {
     await sleep(2000);
     if (!serverStore.isVipOrSuperVip) {
@@ -191,5 +410,13 @@ export const useBookStore = defineStore('book', () => {
     readingBook,
     readingChapter,
     chapterCacheNum,
+    bookSources,
+    bookRecommendList,
+    bookSearch,
+    bookDetail,
+    bookRead,
+    cacheBookChapters,
+    getBookSource,
+    getBookItem,
   };
 });

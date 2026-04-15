@@ -73,12 +73,14 @@ async function toComic(comic: ComicItemInShelf, chapterId?: string) {
 }
 
 function unreadCount(comic: ComicItemInShelf): number | undefined {
-  if (!comic.lastReadChapter || !comic.comic.chapters?.length) return undefined;
+  if (!comic.lastReadChapter || !comic.comic.chapters?.length)
+    return undefined;
   const index = comic.comic.chapters.findIndex(
-    (chapter) => chapter.id === comic.lastReadChapter!.id,
+    chapter => chapter.id === comic.lastReadChapter!.id,
   );
   const num = comic.comic.chapters.length - index - 1;
-  if (num <= 0) return undefined;
+  if (num <= 0)
+    return undefined;
   return num;
 }
 

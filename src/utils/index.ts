@@ -1,19 +1,20 @@
 import type { SongUrlMap } from '@wuji-tauri/source-extension';
 import * as fs from '@tauri-apps/plugin-fs';
 import { debug, error, info, trace, warn } from '@tauri-apps/plugin-log';
+import { useClipboard } from '@vueuse/core';
 import { fetch } from '@wuji-tauri/fetch';
 import * as commands from 'tauri-plugin-commands-api';
+// import * as dialog from '@tauri-apps/plugin-dialog';
+import tinycolor from 'tinycolor2';
 import _urlJoin from 'url-join';
 import { showToast } from 'vant';
 import { onBeforeUnmount, onMounted } from 'vue';
 import { useDisplayStore } from '@/store';
-import { useClipboard } from '@vueuse/core';
-// import * as dialog from '@tauri-apps/plugin-dialog';
-import tinycolor from 'tinycolor2';
+
 export * from './extensionUtils';
 
 export function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // 音频时间格式化换算
@@ -25,7 +26,8 @@ export function transTime(value: number) {
   const s = Number.parseInt(String(value % 60));
   if (h > 0) {
     time = formatTime(`${h}:${m}:${s}`);
-  } else {
+  }
+  else {
     time = formatTime(`${m}:${s}`);
   }
   return time;
@@ -36,10 +38,10 @@ function formatTime(value: string) {
   const s = value.split(':');
   let i = 0;
   for (; i < s.length - 1; i++) {
-    time += s[i].length == 1 ? `0${s[i]}` : s[i];
+    time += s[i].length === 1 ? `0${s[i]}` : s[i];
     time += ':';
   }
-  time += s[i].length == 1 ? `0${s[i]}` : s[i];
+  time += s[i].length === 1 ? `0${s[i]}` : s[i];
 
   return time;
 }
@@ -60,10 +62,12 @@ function formatTime(value: string) {
 // }
 
 export function songUrlToString(url: string | SongUrlMap | undefined): string {
-  if (!url) return '';
+  if (!url)
+    return '';
   if (typeof url === 'string') {
     return url;
-  } else {
+  }
+  else {
     return (
       url.flac || url['320k'] || url['128k'] || url['320'] || url['128'] || ''
     );
@@ -85,7 +89,8 @@ export function getScrollTop(el: Element | Window): number {
 export function setScrollTop(el: Element | Window, value: number) {
   if ('scrollTop' in el) {
     el.scrollTop = value;
-  } else {
+  }
+  else {
     el.scrollTo(el.scrollX, value);
   }
 }
@@ -116,7 +121,7 @@ export function retryOnFalse(
           console.log(
             `Retry ${retries}/${options.maxRetries} after ${options.waitTime}ms...`,
           );
-          await new Promise((resolve) => setTimeout(resolve, options.waitTime));
+          await new Promise(resolve => setTimeout(resolve, options.waitTime));
         }
       }
       options.onFailed?.();
@@ -138,7 +143,7 @@ export function purifyText(text: string): string {
     '&amp;': '&',
     '&lt;': '<',
     '&gt;': '>',
-    '&apos;': "'",
+    '&apos;': '\'',
     '&nbsp;': ' ',
     // 可以根据需要添加更多 HTML 实体
   };
@@ -163,7 +168,7 @@ export function purifyText(text: string): string {
   ];
   const lines = text.split('\n');
   const cleanedLines = lines.filter(
-    (line) => !uselessPatterns.some((pattern) => pattern.test(line)),
+    line => !uselessPatterns.some(pattern => pattern.test(line)),
   );
   text = cleanedLines.join('\n');
 
@@ -173,7 +178,7 @@ export function purifyText(text: string): string {
   // 6. 去除每行开头和结尾的多余空格
   text = text
     .split('\n')
-    .map((line) => line.trim())
+    .map(line => line.trim())
     .join('\n');
 
   return text;
@@ -198,12 +203,6 @@ export function useElementResize(
     }
   };
 
-  // 初始化观察器
-  const initObserver = () => {
-    observer = new ResizeObserver(handleResize);
-    observeCurrentElement();
-  };
-
   // 观察当前元素
   const observeCurrentElement = () => {
     const element = document.querySelector(elementSelector);
@@ -219,9 +218,16 @@ export function useElementResize(
         const rect = element.getBoundingClientRect();
         callback(rect.width, rect.height);
       }
-    } else {
+    }
+    else {
       // console.warn(`元素 "${elementSelector}" 未找到!`);
     }
+  };
+
+  // 初始化观察器
+  const initObserver = () => {
+    observer = new ResizeObserver(handleResize);
+    observeCurrentElement();
   };
 
   onMounted(() => {
@@ -272,27 +278,32 @@ export function urlJoin(
   parts: (string | null | undefined)[],
   option?: { baseUrl: string },
 ): string {
-  const filter = parts.filter((part) => part != null && part !== undefined);
-  if (!filter.length) return '';
+  const filter = parts.filter(part => part !== null && part !== undefined);
+  if (!filter.length)
+    return '';
   if (filter.length === 1) {
     if (filter[0].startsWith('//')) {
       return `http:${filter[0]}`;
-    } else if (
-      !filter[0].startsWith('http://') &&
-      !filter[0].startsWith('https://')
+    }
+    else if (
+      !filter[0].startsWith('http://')
+      && !filter[0].startsWith('https://')
     ) {
       if (option?.baseUrl) {
         return urlJoin([option.baseUrl, filter[0]], {
           baseUrl: option.baseUrl,
         });
-      } else {
+      }
+      else {
         return `http://${filter[0]}`;
       }
-    } else {
+    }
+    else {
       return filter[0];
     }
   }
-  if (filter[1].startsWith('http')) return urlJoin(filter.slice(1));
+  if (filter[1].startsWith('http'))
+    return urlJoin(filter.slice(1));
   if (filter[1].startsWith('../')) {
     // 适配，返回一级
     filter[0] = filter[0].split('/').slice(0, -1).join('/');
@@ -305,8 +316,8 @@ export function urlJoin(
 
 export function getFileNameFromUrl(url: string, suffix?: string): string {
   // 移除 URL 中的查询参数和哈希部分
-  const cleanUrl =
-    decodeURIComponent(url)
+  const cleanUrl
+    = decodeURIComponent(url)
       .split('http://')
       .pop()
       ?.split('https://')
@@ -343,7 +354,8 @@ async function streamToUint8Array(
 
   while (true) {
     const { done, value } = await reader.read();
-    if (done) break;
+    if (done)
+      break;
 
     chunks.push(value);
     totalLength += value.length;
@@ -387,8 +399,8 @@ export async function downloadFile(
       showToast(response.statusText);
       return false;
     }
-    const filename =
-      options?.filename || getFileNameFromUrl(url, options?.suffix);
+    const filename
+      = options?.filename || getFileNameFromUrl(url, options?.suffix);
 
     const displayStore = useDisplayStore();
     if (displayStore.isAndroid) {
@@ -401,7 +413,8 @@ export async function downloadFile(
       console.log('android download file 返回结果', res);
 
       return true;
-    } else {
+    }
+    else {
       const blob = await response.blob();
       if (!(await fs.exists('', { baseDir: fs.BaseDirectory.Download }))) {
         await fs.mkdir('', {
@@ -419,7 +432,8 @@ export async function downloadFile(
           create: true,
           baseDir: fs.BaseDirectory.Download,
         });
-      } else {
+      }
+      else {
         file = await fs.open(filename, {
           write: true,
           baseDir: fs.BaseDirectory.Download,
@@ -430,7 +444,8 @@ export async function downloadFile(
       await file.close();
       return true;
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('文件下载失败:', error);
     showToast('文件下载失败');
     return false;
@@ -444,6 +459,7 @@ export function sanitizePathName(
   const { removeSpaces = true, maxLength = 255 } = options;
 
   // 定义非法字符的正则表达式
+  // eslint-disable-next-line no-control-regex
   const illegalChars = /[<>:"/\\|?*\x00-\x1F]/g;
 
   // 替换非法字符为空字符串
@@ -458,7 +474,7 @@ export function sanitizePathName(
   sanitizedName = sanitizedName.replace(/^[\s.]+|[\s.]+$/g, '');
 
   // 检查 Windows 保留名称
-  const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+  const reservedNames = /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
   if (reservedNames.test(sanitizedName)) {
     sanitizedName = `_${sanitizedName}`;
   }
@@ -484,7 +500,8 @@ export function estimateJsonSize(obj: any): number {
 }
 
 export function bytesToSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
+  if (bytes === 0)
+    return '0 B';
 
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const base = 1024;
@@ -512,7 +529,8 @@ export function copyText(text: string) {
   if (clipboard.isSupported) {
     clipboard.copy(text);
     showToast('复制成功');
-  } else {
+  }
+  else {
     showToast('复制失败');
   }
 }
@@ -521,7 +539,8 @@ export function copyText(text: string) {
  * 判断颜色是否为深色 (使用 tinycolor2)
  */
 export function isColorDark(color: string): boolean {
-  if (!color) return false;
+  if (!color)
+    return false;
 
   let finalColor = color;
   // 处理 CSS 变量，通过临时节点获取计算后的真实颜色
@@ -534,14 +553,17 @@ export function isColorDark(color: string): boolean {
       document.documentElement.appendChild(tempEl);
       const computedColor = getComputedStyle(tempEl).color;
       document.documentElement.removeChild(tempEl);
-      if (computedColor) finalColor = computedColor;
-    } catch (e) {
+      if (computedColor)
+        finalColor = computedColor;
+    }
+    catch (e) {
       console.warn('解析 CSS 变量失败:', e);
     }
   }
 
   const c = tinycolor(finalColor);
-  if (!c.isValid()) return false;
+  if (!c.isValid())
+    return false;
 
   // 使用感知亮度 (Luminance) 判定，0.5 是标准的深浅色分界线
   // luminance 接近 1 说明是浅色，接近 0 说明是深色

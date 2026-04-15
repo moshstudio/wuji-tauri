@@ -207,9 +207,12 @@ export function isMembershipOrderValid(
   order: MembershipOrder | undefined,
   now: number = Date.now(), // 默认使用当前时间
 ): boolean {
-  if (!order) return false;
-  if (order.cancelled) return false;
-  if (order.paymentStatus !== PaymentStatus.COMPLETED) return false;
+  if (!order)
+    return false;
+  if (order.cancelled)
+    return false;
+  if (order.paymentStatus !== PaymentStatus.COMPLETED)
+    return false;
   const startDate = new Date(order.startDate);
   const endDate = new Date(order.endDate);
   // 直接使用 getTime() 获取时间戳进行比较

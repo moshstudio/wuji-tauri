@@ -21,16 +21,17 @@ async function getData(url: string, options: Record<string, any> = {}) {
   const text = await response.text();
   try {
     return JSON.parse(text);
-  } catch (error) {
+  }
+  catch (error) {
     return text;
   }
 }
 
 export async function searchSongs(keyword: string, pageNo = 1) {
   pageNo ||= 1;
-  const url =
-    `https://m.music.migu.cn/migu/remoting/scr_search_tag` +
-    `?keyword=${keyword}&pgc=${pageNo}&rows=10&type=2`;
+  const url
+    = `https://m.music.migu.cn/migu/remoting/scr_search_tag`
+      + `?keyword=${keyword}&pgc=${pageNo}&rows=10&type=2`;
   const response = await getData(url);
 
   const songs: SongInfo[] = [];
@@ -60,9 +61,9 @@ export async function getLyric(item: SongInfo) {
   if (!cid) {
     return null;
   }
-  const url =
-    `http://music.migu.cn/v3/api/music/audioPlayer/getLyric` +
-    `?copyrightId=${cid}`;
+  const url
+    = `http://music.migu.cn/v3/api/music/audioPlayer/getLyric`
+      + `?copyrightId=${cid}`;
   const response = await getData(url);
   return response.lyric;
 }

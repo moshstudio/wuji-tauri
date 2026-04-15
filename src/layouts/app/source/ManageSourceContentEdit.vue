@@ -39,8 +39,12 @@ watch(
   () => props.sourceContent,
   async (sourceContent) => {
     if (sourceContent) {
-      if (name.value === sourceContent.name && code.value === sourceContent.code)
+      if (
+        name.value === sourceContent.name
+        && code.value === sourceContent.code
+      ) {
         return;
+      }
       name.value = sourceContent.name;
       code.value = sourceContent.code;
     }
@@ -49,15 +53,17 @@ watch(
 );
 
 const isModified = computed(() => {
-  if (!props.sourceContent) return false;
+  if (!props.sourceContent)
+    return false;
   return (
-    name.value != props.sourceContent?.name ||
-    code.value != props.sourceContent?.code
+    name.value !== props.sourceContent?.name
+    || code.value !== props.sourceContent?.code
   );
 });
 
 async function save() {
-  if (!props.source || !props.sourceContent) return;
+  if (!props.source || !props.sourceContent)
+    return;
   try {
     // 验证表单
     await formRef.value?.validate();
@@ -71,7 +77,8 @@ async function save() {
       name: name.value,
       code: code.value,
     });
-  } catch (error) {
+  }
+  catch (error) {
     showToast('请检查输入内容');
     return false;
   }

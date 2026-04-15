@@ -1,304 +1,269 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue';
-import { open } from '@tauri-apps/plugin-dialog';
-import { showToast } from 'vant';
+import { inject } from 'vue';
 import WNavbar from '@/components/header/WNavbar.vue';
-import { useDownloadManager } from '@/composables/useDownloadManager';
+import { DownloadManagerKey } from '@/composables/useDownloadManager';
 
+const manager = inject(DownloadManagerKey)!;
 const {
-  downloadStore,
+  activeTab,
+  stats,
+  filteredTasks,
+  getCategoryTheme,
+  getTaskTotalText,
+  getTaskProgressText,
   getStatusText,
-  getStatusType,
   getProgress,
   handleAction,
-  removeTask,
+  confirmRemoveTask,
+  openFolder,
   pauseAll,
   resumeAll,
   clearCompleted,
-  getCategoryEmoji,
-  bytesToSize,
-} = useDownloadManager();
-
-const activeTab = ref('all');
-const showSettings = ref(false);
-
-onMounted(() => {
-  downloadStore.setupListener();
-});
-
-const filteredTasks = computed(() => {
-  if (activeTab.value === 'all') return downloadStore.tasks;
-  if (activeTab.value === 'downloading') {
-    return downloadStore.tasks.filter((t) => {
-      const status = getStatusText(t.status);
-      return status === '下载中' || status === '等待中' || status === '已暂停';
-    });
-  }
-  if (activeTab.value === 'completed') {
-    return downloadStore.tasks.filter(
-      (t) => getStatusText(t.status) === '已完成',
-    );
-  }
-  return downloadStore.tasks;
-});
-
-const chooseDirectory = async () => {
-  const selected = await open({
-    directory: true,
-    multiple: false,
-    defaultPath: downloadStore.downloadPath,
-  });
-  if (selected && typeof selected === 'string') {
-    await downloadStore.updateDownloadPath(selected);
-    showToast('下载路径已更新');
-  }
-};
-
-const stats = computed(() => {
-  const downloading = downloadStore.tasks.filter(
-    (t) => getStatusText(t.status) === '下载中',
-  ).length;
-  const paused = downloadStore.tasks.filter(
-    (t) => getStatusText(t.status) === '已暂停',
-  ).length;
-  const completed = downloadStore.tasks.filter(
-    (t) => getStatusText(t.status) === '已完成',
-  ).length;
-  return { downloading, paused, completed };
-});
+} = manager;
 </script>
 
 <template>
   <div
-    class="relative flex h-full flex-col overflow-hidden bg-[--van-background]"
+    class="flex h-full w-full flex-col overflow-hidden bg-[--van-background]"
   >
-    <WNavbar title="下载管理">
-      <template #right>
-        <van-button
-          size="small"
-          icon="folder-o"
-          plain
-          round
-          type="primary"
-          @click="showSettings = true"
-        >
-          目录
-        </van-button>
-      </template>
-    </WNavbar>
+    <WNavbar
+      title="下载中心"
+      right-text="设置"
+      :click-right="
+        () => {
+          manager.showSettings.value = true;
+        }
+      "
+    />
 
-    <!-- 顶层汇总与控制区 -->
-    <div class="flex flex-col gap-2 p-4">
-      <div
-        class="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50"
-      >
-        <div class="flex items-center gap-4">
-          <div class="flex flex-col">
-            <span class="text-xs text-gray-500">正在下载</span>
-            <span class="text-lg font-bold text-blue-600">
-              {{ stats.downloading }}
-            </span>
-          </div>
-          <div class="h-8 w-px bg-gray-200 dark:bg-zinc-800"></div>
-          <div class="flex flex-col">
-            <span class="text-xs text-gray-500">已完成</span>
-            <span class="text-lg font-bold text-green-600">
-              {{ stats.completed }}
-            </span>
-          </div>
-        </div>
-        <div class="flex gap-2">
-          <van-button
-            size="small"
-            round
-            type="primary"
-            plain
-            icon="play"
-            @click="resumeAll"
-          />
-          <van-button
-            size="small"
-            round
-            type="warning"
-            plain
-            icon="pause"
-            @click="pauseAll"
-          />
-        </div>
-      </div>
-
-      <div class="flex items-center justify-between">
-        <van-tabs
-          v-model:active="activeTab"
-          shrink
-          :border="false"
-          background="transparent"
-          color="#3b82f6"
-        >
-          <van-tab title="全部" name="all" />
-          <van-tab title="进行中" name="downloading" />
-          <van-tab title="已完成" name="completed" />
-        </van-tabs>
-        <van-button
-          v-if="stats.completed > 0"
-          size="mini"
-          plain
-          type="danger"
-          @click="clearCompleted"
-          class="!border-none !bg-transparent"
-        >
-          清理已完成
-        </van-button>
-      </div>
-    </div>
-
-    <!-- 列表区 -->
-    <div class="flex-grow overflow-y-auto px-4 pb-4">
-      <van-empty v-if="filteredTasks.length === 0" description="暂无下载任务" />
-
-      <van-cell-group
-        inset
-        v-else
-        class="!mx-0 border border-gray-100 dark:border-zinc-800"
-      >
-        <van-swipe-cell v-for="task in filteredTasks" :key="task.id">
-          <van-cell center class="download-item !py-3">
-            <template #icon>
-              <div
-                class="mr-3 flex h-10 w-10 shrink-0 items-center justify-center rounded bg-gray-100 text-xl dark:bg-zinc-800"
-              >
-                {{ getCategoryEmoji(task.category) }}
-              </div>
-            </template>
-
-            <template #title>
-              <div class="flex min-w-0 flex-col">
-                <div class="flex items-center gap-1">
-                  <span
-                    class="flex-1 truncate text-sm font-medium text-gray-800 dark:text-gray-200"
-                  >
-                    {{ task.title }}
-                  </span>
-                  <van-tag
-                    v-if="getStatusText(task.status) === '已完成'"
-                    type="success"
-                    plain
-                  >
-                    已完成
-                  </van-tag>
-                  <van-tag v-else :type="getStatusType(task.status)" plain>
-                    {{ getStatusText(task.status) }}
-                  </van-tag>
-                </div>
-
-                <div
-                  class="mt-1 flex items-center justify-between text-xs text-gray-400"
-                >
-                  <span class="truncate">
-                    {{
-                      task.totalSize > 0
-                        ? bytesToSize(task.downloadedSize) +
-                          ' / ' +
-                          bytesToSize(task.totalSize)
-                        : task.completedChunks.length +
-                          ' / ' +
-                          task.totalChunks +
-                          ' 章节'
-                    }}
-                  </span>
-                  <span
-                    v-if="task.speed && getStatusText(task.status) === '下载中'"
-                    class="text-blue-500"
-                  >
-                    {{ task.speed }}
-                  </span>
-                </div>
-              </div>
-            </template>
-
-            <template #label>
-              <div class="mt-2 w-full">
-                <van-progress
-                  :percentage="getProgress(task)"
-                  stroke-width="4"
-                  :show-pivot="false"
-                  :color="
-                    getStatusText(task.status) === '已完成'
-                      ? '#10b981'
-                      : '#3b82f6'
-                  "
-                />
-              </div>
-            </template>
-
-            <template #right-icon>
-              <div class="ml-2 flex items-center">
-                <van-button
-                  v-if="getStatusText(task.status) !== '已完成'"
-                  size="small"
-                  plain
-                  :type="
-                    getStatusText(task.status) === '下载中'
-                      ? 'warning'
-                      : 'primary'
-                  "
-                  class="!h-7 !w-7 !border-none !bg-gray-50 dark:!bg-zinc-800"
-                  :icon="getStatusText(task.status) === '下载中' ? 'pause' : 'play'"
-                  @click.stop="handleAction(task)"
-                />
-              </div>
-            </template>
-          </van-cell>
-
-          <template #right>
-            <van-button
-              square
-              type="danger"
-              text="删除"
-              class="h-full"
-              @click="removeTask(task.id)"
-            />
-          </template>
-        </van-swipe-cell>
-      </van-cell-group>
-    </div>
-
-    <!-- 下载设置弹窗 -->
-    <van-dialog
-      v-model:show="showSettings"
-      title="下载设置"
-      show-cancel-button
-      :show-confirm-button="false"
-      cancel-button-text="关闭"
-      class="download-settings-dialog"
+    <div
+      class="flex-grow overflow-y-auto bg-gray-50/50 px-4 py-3 dark:bg-zinc-950/20"
     >
-      <div class="px-5 py-6">
-        <div class="space-y-4">
-          <div class="flex flex-col gap-2">
-            <span class="text-xs font-medium text-gray-400">当前下载路径</span>
+      <!-- 控制面板 / 仪表盘 -->
+      <section
+        class="mb-3 overflow-hidden rounded-[1.25rem] border border-gray-100 bg-white/60 p-3.5 shadow-sm backdrop-blur-md dark:border-zinc-800/50 dark:bg-zinc-900/40"
+      >
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center gap-4">
             <div
-              class="flex items-center justify-between rounded-lg bg-gray-50 p-3 transition-colors dark:bg-zinc-800"
+              class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500 text-white shadow-lg shadow-blue-500/20"
             >
-              <span class="break-all text-sm text-gray-600 dark:text-gray-300">
-                {{ downloadStore.downloadPath || '未配置' }}
-              </span>
+              <van-icon name="down" size="20" />
+            </div>
+            <div class="flex-1">
+              <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">
+                下载中心
+              </h3>
+              <div
+                class="flex flex-wrap items-center gap-y-0.5 text-[11px] text-gray-500 dark:text-gray-400"
+              >
+                <div class="flex items-center whitespace-nowrap">
+                  进行中
+                  <span class="ml-1 font-bold text-blue-500">
+                    {{ stats.downloading }}
+                  </span>
+                  <span class="mx-1.5 opacity-40">·</span>
+                </div>
+                <div class="whitespace-nowrap">
+                  总任务数 {{ stats.total }}
+                </div>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-all active:scale-90 active:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:active:bg-blue-500/20"
+                title="全部开始"
+                @click="resumeAll"
+              >
+                <van-icon name="play" size="16" />
+              </button>
+              <button
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 transition-all active:scale-90 active:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:active:bg-amber-500/20"
+                title="全部暂停"
+                @click="pauseAll"
+              >
+                <van-icon name="pause" size="16" />
+              </button>
+              <button
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-all active:scale-90 active:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:active:bg-red-500/20"
+                title="清理完成"
+                @click="clearCompleted"
+              >
+                <van-icon name="clear" size="16" />
+              </button>
             </div>
           </div>
-          <van-button
-            block
-            type="primary"
-            plain
-            size="small"
-            icon="folder-o"
-            @click="chooseDirectory"
-          >
-            更改保存目录
-          </van-button>
+
+          <div class="h-px w-full bg-gray-100/80 dark:bg-zinc-800/50" />
+
+          <div class="flex items-center justify-between">
+            <van-tabs
+              v-model:active="activeTab"
+              shrink
+              :border="false"
+              background="transparent"
+              color="#3b82f6"
+              class="download-tabs"
+              line-width="16px"
+              line-height="3px"
+            >
+              <van-tab title="全部" name="all" />
+              <van-tab title="正在下载" name="downloading" />
+              <van-tab title="已完成" name="completed" />
+            </van-tabs>
+          </div>
+        </div>
+      </section>
+
+      <!-- 任务列表 -->
+      <div class="flex flex-col gap-2.5">
+        <van-empty
+          v-if="filteredTasks.length === 0"
+          description="暂无下载任务"
+          class="py-12"
+        />
+
+        <div
+          v-for="task in filteredTasks"
+          :key="task.id"
+          class="group relative flex flex-col gap-3.5 rounded-2xl border border-gray-100 bg-white p-3.5 shadow-sm transition-all active:bg-gray-50 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-900 dark:active:bg-zinc-800"
+          @dblclick="openFolder(task.id)"
+        >
+          <!-- 任务主体 -->
+          <div class="flex items-start gap-3">
+            <div
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform active:scale-90"
+              :class="[
+                getCategoryTheme(task.category).bg,
+                getCategoryTheme(task.category).text,
+              ]"
+            >
+              <van-icon
+                :name="getCategoryTheme(task.category).icon"
+                size="18"
+              />
+            </div>
+
+            <div class="min-w-0 flex-1">
+              <h4
+                class="truncate text-sm font-bold text-gray-800 dark:text-gray-100"
+              >
+                {{ task.title }}
+              </h4>
+              <div
+                class="mt-1 flex items-center gap-2 text-[10px] font-medium text-gray-400"
+              >
+                <span
+                  class="rounded px-1 py-0.5 text-[8px] font-black uppercase tracking-tight shadow-sm"
+                  :class="[
+                    getCategoryTheme(task.category).bg,
+                    getCategoryTheme(task.category).text,
+                  ]"
+                >
+                  {{ getCategoryTheme(task.category).label }}
+                </span>
+                <span class="opacity-40">/</span>
+                <span class="font-medium">
+                  {{ getTaskTotalText(task) }}
+                </span>
+                <span
+                  v-if="task.speed && getStatusText(task.status) === '下载中'"
+                  class="flex items-center gap-1 font-bold text-blue-500"
+                >
+                  <span
+                    class="h-1 w-1 animate-pulse rounded-full bg-blue-500"
+                  />
+                  {{ task.speed }}
+                </span>
+              </div>
+            </div>
+
+            <div class="flex gap-1.5">
+              <button
+                v-if="getStatusText(task.status) !== '已完成'"
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-gray-500 transition-all active:bg-blue-50 active:scale-90 active:text-blue-600 dark:bg-zinc-800 dark:text-gray-400 dark:active:bg-blue-950/50"
+                @click.stop="handleAction(task)"
+                @dblclick.stop
+              >
+                <van-icon
+                  :name="
+                    getStatusText(task.status) === '下载中' ? 'pause' : 'play'
+                  "
+                  size="16"
+                />
+              </button>
+              <button
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-gray-500 transition-all active:bg-red-50 active:scale-90 active:text-red-600 dark:bg-zinc-800 dark:text-gray-400 dark:active:bg-red-950/50"
+                @click.stop="confirmRemoveTask(task.id)"
+                @dblclick.stop
+              >
+                <van-icon name="delete-o" size="16" />
+              </button>
+            </div>
+          </div>
+
+          <!-- 进度区域 -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between text-[11px]">
+              <div class="flex items-center gap-2">
+                <span
+                  class="font-bold uppercase tracking-tight"
+                  :class="[
+                    getStatusText(task.status) === '已完成'
+                      ? 'text-emerald-500'
+                      : getStatusText(task.status) === '已暂停'
+                        ? 'text-amber-500'
+                        : 'text-blue-500',
+                  ]"
+                >
+                  {{ getStatusText(task.status) }}
+                </span>
+                <span class="text-gray-300 dark:text-zinc-700">|</span>
+                <span class="font-medium text-gray-400">
+                  {{ getTaskProgressText(task) }}
+                </span>
+              </div>
+              <span class="font-black text-gray-700 dark:text-gray-300">
+                {{ getProgress(task) }}%
+              </span>
+            </div>
+
+            <!-- 自定义进度条 -->
+            <div
+              class="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-zinc-800"
+            >
+              <div
+                class="h-full transition-all duration-700 ease-out"
+                :class="[
+                  getStatusText(task.status) === '已完成'
+                    ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]'
+                    : getStatusText(task.status) === '已暂停'
+                      ? 'bg-amber-500'
+                      : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]',
+                ]"
+                :style="{ width: `${getProgress(task)}%` }"
+              />
+            </div>
+          </div>
         </div>
       </div>
-    </van-dialog>
+    </div>
   </div>
 </template>
 
-<style scoped lang="less">
+<style scoped>
+:deep(.download-tabs) {
+  --van-tabs-line-height: 32px;
+  --van-tabs-nav-background: transparent;
+}
+
+:deep(.download-tabs .van-tab) {
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+:deep(.download-tabs .van-tabs__wrap) {
+  height: 32px;
+}
 </style>

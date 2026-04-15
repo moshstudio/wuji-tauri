@@ -1,12 +1,13 @@
 import type { LineData } from '@/utils/reader/types';
+import { Buffer } from 'node:buffer';
 import { useStorageAsync } from '@vueuse/core';
 import CryptoJS from 'crypto-js';
 import { defineStore } from 'pinia';
 import { showFailToast, showToast } from 'vant';
 import { onMounted, reactive, ref } from 'vue';
 import { clearTimeout, setInterval, setTimeout } from 'worker-timers';
-import { SimpleLRUCache } from '@/utils/lruCache';
 import { EdgeTTSClient } from '@/utils/edge-tts';
+import { SimpleLRUCache } from '@/utils/lruCache';
 
 export interface Voice {
   Name: string;
@@ -157,7 +158,11 @@ export const useTTSStore = defineStore('ttsStore', () => {
   const _generating = new SimpleLRUCache<string, boolean>(50);
 
   const isReading = ref(false);
-  const scrollReadingContent = ref<{ content: string; index: number; chapterId?: string }>();
+  const scrollReadingContent = ref<{
+    content: string;
+    index: number;
+    chapterId?: string;
+  }>();
   const slideReadingContent = ref<LineData[]>();
 
   const autoStopOptions = reactive({
@@ -167,19 +172,27 @@ export const useTTSStore = defineStore('ttsStore', () => {
   });
   const now = ref(Date.now());
 
+  const stop = () => {
+    if (audioPlayer.value) {
+      audioPlayer.value.pause();
+      audioPlayer.value.onended = () => {};
+    }
+    isReading.value = false;
+  };
+
   // 每秒更新时间戳
   onMounted(() => {
     const timer = setInterval(() => {
       now.value = Date.now();
       if (
-        isReading.value &&
-        autoStopOptions.enable &&
-        autoStopOptions.startTime
+        isReading.value
+        && autoStopOptions.enable
+        && autoStopOptions.startTime
       ) {
-        const remaining =
-          now.value -
-          autoStopOptions.startTime -
-          autoStopOptions.duration * 60 * 1000;
+        const remaining
+          = now.value
+            - autoStopOptions.startTime
+            - autoStopOptions.duration * 60 * 1000;
 
         if (Math.ceil(remaining / 1000) === -10) {
           showToast('听书将在10秒后停止');
@@ -206,10 +219,10 @@ export const useTTSStore = defineStore('ttsStore', () => {
   ): Promise<boolean> => {
     voice = voice || selectedVoice.value;
     rate = rate || playbackRate.value;
-    const message =
-      'index' in content
+    const message
+      = 'index' in content
         ? content.content
-        : content.map((item) => item.text).join('');
+        : content.map(item => item.text).join('');
     const uid = CryptoJS.MD5(message + JSON.stringify(voice) + rate).toString();
     if (lruCache.has(uid)) {
       return true;
@@ -224,7 +237,8 @@ export const useTTSStore = defineStore('ttsStore', () => {
           if (lruCache.has(uid)) {
             clearTimeout(timer);
             resolve(true);
-          } else {
+          }
+          else {
             setTimeout(check, 100);
           }
         };
@@ -232,28 +246,30 @@ export const useTTSStore = defineStore('ttsStore', () => {
       });
     }
     _generating.set(uid, true);
-    const res: boolean = await new Promise(async (resolve, reject) => {
-      try {
-        const chunks: Uint8Array[] = [];
-        const emitter = await new EdgeTTSClient().toStream(message, {
+    const res: boolean = await new Promise((resolve) => {
+      new EdgeTTSClient()
+        .toStream(message, {
           voice: voice.Name,
           voiceLocale: voice.Locale!,
           rate: rate || 1.0,
-        });
-        emitter.on('data', (data: Uint8Array) => {
-          chunks.push(data);
-        });
-        emitter.on('end', async () => {
-          const concatenated = Buffer.concat(chunks);
-          lruCache.set(uid, concatenated);
-          resolve(true);
-        });
-        emitter.on('close', (error: any) => {
+        })
+        .then((emitter) => {
+          const chunks: Uint8Array[] = [];
+          emitter.on('data', (data: Uint8Array) => {
+            chunks.push(data);
+          });
+          emitter.on('end', () => {
+            const concatenated = Buffer.concat(chunks);
+            lruCache.set(uid, concatenated as unknown as Buffer<ArrayBuffer>);
+            resolve(true);
+          });
+          emitter.on('close', () => {
+            resolve(false);
+          });
+        })
+        .catch(() => {
           resolve(false);
         });
-      } catch (error) {
-        resolve(false);
-      }
     });
     _generating.delete(uid);
     return res;
@@ -267,13 +283,14 @@ export const useTTSStore = defineStore('ttsStore', () => {
     isReading.value = true;
     voice = voice || selectedVoice.value;
     rate = rate || playbackRate.value;
-    const message =
-      'index' in content
+    const message
+      = 'index' in content
         ? content.content
-        : content.map((item) => item.text).join('');
+        : content.map(item => item.text).join('');
     if ('index' in content) {
       scrollReadingContent.value = content;
-    } else {
+    }
+    else {
       slideReadingContent.value = content;
     }
     const uid = CryptoJS.MD5(message + JSON.stringify(voice) + rate).toString();
@@ -292,12 +309,13 @@ export const useTTSStore = defineStore('ttsStore', () => {
     const blob = new Blob([buffer], { type: 'audio/mpeg' });
     if (blob.size === 0) {
       onended?.();
-    } else {
+    }
+    else {
       // 再次确认一下，当前要读的内容没有改变
       if (
         'index' in content
           ? content.content
-          : content.map((item) => item.text).join('') === message
+          : content.map(item => item.text).join('') === message
       ) {
         if (audioPlayer.value) {
           audioPlayer.value.src = URL.createObjectURL(blob);
@@ -311,13 +329,6 @@ export const useTTSStore = defineStore('ttsStore', () => {
   };
   const startAutoStopTimer = () => {
     autoStopOptions.startTime = Date.now();
-  };
-  const stop = () => {
-    if (audioPlayer.value) {
-      audioPlayer.value.pause();
-      audioPlayer.value.onended = (event) => {};
-    }
-    isReading.value = false;
   };
 
   const resetReadingPage = () => {

@@ -3,15 +3,15 @@ import type {
   MarketSource,
   MarketSourceContent,
 } from '@wuji-tauri/source-extension';
+import { onMountedOrActivated } from '@vant/use';
 import { storeToRefs } from 'pinia';
 import { showConfirmDialog, showToast } from 'vant';
-import { computed, onActivated, onMounted, ref, watch } from 'vue';
+import { ref } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppMySourceEdit from '@/layouts/app/source/MySourceEdit.vue';
 import DesktopMySourceEdit from '@/layouts/desktop/source/MySourceEdit.vue';
 import { router } from '@/router';
 import { useBackStore, useServerStore } from '@/store';
-import { onMountedOrActivated } from '@vant/use';
 
 const props = defineProps<{
   sourceId?: string;
@@ -46,7 +46,7 @@ function deleteSourceContent(
     if (confirm === 'confirm') {
       await serverStore.deleteMarketSourceContent(source, sourceContent);
       currentSource.value = myMarketSources.value.find(
-        (item) => item._id === props.sourceId,
+        item => item._id === props.sourceId,
       );
       if (!currentSource.value) {
         backStore.back().then(() => {
@@ -66,9 +66,10 @@ onMountedOrActivated(async () => {
     backStore.back().then(() => {
       showToast('请先登录');
     });
-  } else {
+  }
+  else {
     currentSource.value = myMarketSources.value.find(
-      (item) => item._id === props.sourceId,
+      item => item._id === props.sourceId,
     );
     if (!currentSource.value) {
       backStore.back().then(() => {

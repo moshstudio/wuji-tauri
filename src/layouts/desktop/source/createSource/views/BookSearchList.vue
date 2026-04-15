@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { BookList, BooksList } from '@wuji-tauri/source-extension';
-import { MBookCard } from '@wuji-tauri/components/src';
+import type { FormItem } from '@/store/sourceCreateStore';
+import { MBookCard } from '@wuji-tauri/components';
 import { BookExtension } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
 import { showDialog, showFailToast } from 'vant';
@@ -8,7 +9,6 @@ import { ref } from 'vue';
 import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
 import MPagination from '@/components/pagination/MPagination.vue';
 import SearchField from '@/components/search/SearchField.vue';
-import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
   content: FormItem<BooksList>;
@@ -68,8 +68,8 @@ async function load(pageNo?: number, type?: string) {
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('BookExtension', code);
-    const extensionclass = func(BookExtension);
-    const cls = new extensionclass() as BookExtension;
+    const ExtensionClass = func(BookExtension);
+    const cls = new ExtensionClass() as BookExtension;
     if (cls.baseUrl === undefined) {
       throw new Error('初始化中的baseUrl未定义!');
     }
@@ -79,19 +79,21 @@ async function load(pageNo?: number, type?: string) {
       throw new Error('获取搜索列表失败! 返回结果为空');
     }
     if (
-      result.value &&
-      _.isArray(result.value) &&
-      !_.isArray(res) &&
-      result.value.find((item) => item.type === res.type)
+      result.value
+      && _.isArray(result.value)
+      && !_.isArray(res)
+      && result.value.find(item => item.type === res.type)
     ) {
-      const index = result.value.findIndex((item) => item.type === res.type);
+      const index = result.value.findIndex(item => item.type === res.type);
       Object.assign(result.value[index], res);
-    } else {
+    }
+    else {
       result.value = res;
     }
     props.updateResult('book', 'searchList', result.value, true);
     runStatus.value = RunStatus.success;
-  } catch (error) {
+  }
+  catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
     props.updateResult('book', 'searchList', result.value, false);
@@ -99,18 +101,20 @@ async function load(pageNo?: number, type?: string) {
 }
 
 function loadTab(index: number, pageNo?: number) {
-  if (!result.value) return;
+  if (!result.value)
+    return;
   let t: BookList;
   if (Array.isArray(result.value)) {
     t = result.value[index];
-  } else {
+  }
+  else {
     t = result.value;
   }
   load(pageNo ?? 1, t.type);
 }
 
 function findPage(name: string) {
-  return props.content.pages.find((page) => page.type === name);
+  return props.content.pages.find(page => page.type === name);
 }
 
 defineExpose({
@@ -120,7 +124,9 @@ defineExpose({
 
 <template>
   <div>
-    <div v-if="runStatus === RunStatus.not_running">未运行</div>
+    <div v-if="runStatus === RunStatus.not_running">
+      未运行
+    </div>
     <div
       v-else-if="runStatus === RunStatus.running"
       class="flex items-center justify-center"

@@ -2,16 +2,20 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
+use tauri::{
+    plugin::{Builder, TauriPlugin},
+    AppHandle, Manager, Runtime,
+};
+use tauri_plugin_notification::NotificationExt;
 use tokio::sync::Mutex;
-use tauri::{Manager, Runtime, plugin::{Builder, TauriPlugin}};
 
+mod commands;
+pub mod engine;
 pub mod error;
 pub mod task;
-pub mod engine;
-mod commands;
 
+use crate::download_manager::error::{Error, Result};
 use crate::download_manager::task::{DownloadTask, TaskStatus};
-use crate::download_manager::error::{Result, Error};
 
 pub struct DownloadManagerInner {
     pub tasks: HashMap<String, DownloadTask>,
@@ -46,7 +50,7 @@ impl DownloadManagerInner {
         };
 
         manager.load_tasks();
-        
+
         // 确保下载目录存在
         if !manager.downloads_dir.exists() {
             let _ = fs::create_dir_all(&manager.downloads_dir);
@@ -116,6 +120,10 @@ impl DownloadManagerInner {
         self.save_tasks();
         task
     }
+
+    pub fn send_notification<R: Runtime>(&self, app: &AppHandle<R>, title: &str, body: &str) {
+        let _ = app.notification().builder().title(title).body(body).show();
+    }
 }
 
 pub type DownloadManager = Arc<Mutex<DownloadManagerInner>>;
@@ -135,24 +143,26 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                 #[cfg(not(windows))]
                 PathBuf::from("./data")
             });
-            
+
             // 优先获取系统下载目录
-            let downloads_dir = app.path().download_dir()
-                .unwrap_or_else(|_| {
-                    // 如果获取不到下载文件夹，回退到桌面 (Windows 特色)
-                    #[cfg(windows)]
-                    {
-                        if let Ok(profile) = std::env::var("USERPROFILE") {
-                            let p = std::path::PathBuf::from(profile).join("Desktop");
-                            if p.exists() {
-                                return p;
-                            }
+            let downloads_dir = app.path().download_dir().unwrap_or_else(|_| {
+                // 如果获取不到下载文件夹，回退到桌面 (Windows 特色)
+                #[cfg(windows)]
+                {
+                    if let Ok(profile) = std::env::var("USERPROFILE") {
+                        let p = std::path::PathBuf::from(profile).join("Desktop");
+                        if p.exists() {
+                            return p;
                         }
                     }
-                    app_data_dir.join("downloads")
-                });
-            
-            let manager = Arc::new(Mutex::new(DownloadManagerInner::new(app_data_dir, downloads_dir)));
+                }
+                app_data_dir.join("downloads")
+            });
+
+            let manager = Arc::new(Mutex::new(DownloadManagerInner::new(
+                app_data_dir,
+                downloads_dir,
+            )));
             app.manage(manager);
             Ok(())
         })
@@ -167,6 +177,13 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::pause_task,
             commands::resume_task,
             commands::remove_task,
+            commands::mark_task_error,
+            commands::check_task_file_exist,
+            commands::show_in_folder,
+            commands::package_to_cbz,
+            commands::mark_chunk_completed,
+            commands::update_task_downloaded_size,
+            commands::download_m3u8_chunk,
         ])
         .build()
 }

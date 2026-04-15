@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import type { VideoList, VideosList } from '@wuji-tauri/source-extension';
-import { MVideoCard } from '@wuji-tauri/components/src';
+import type { FormItem } from '@/store/sourceCreateStore';
+import { MVideoCard } from '@wuji-tauri/components';
 import {
-  VideoExtension,
   CmsVideoExtension,
+  VideoExtension,
 } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
 import { nanoid } from 'nanoid';
 import { showFailToast } from 'vant';
-import { nextTick, ref } from 'vue';
-import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
+import { ref } from 'vue';
 import CMS_VIDEO_TEMPLATE from '@/components/codeEditor/templates/cmsVideoTemplate.txt?raw';
+import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 import MPagination from '@/components/pagination/MPagination.vue';
-import { FormItem } from '@/store/sourceCreateStore';
 
 const props = defineProps<{
   content: FormItem<VideosList>;
@@ -38,6 +38,7 @@ const errorMessage = ref('运行失败');
 const result = ref<VideosList | undefined>();
 const tabKey = ref(nanoid());
 
+const tabActive = ref('');
 async function initLoad() {
   result.value = undefined;
   tabActive.value = '';
@@ -53,16 +54,16 @@ async function load(pageNo?: number, type?: string) {
     showFailToast('code未定义!');
     return;
   }
-  const template =
-    props.content.mode === 'cms' ? CMS_VIDEO_TEMPLATE : VIDEO_TEMPLATE;
+  const template
+    = props.content.mode === 'cms' ? CMS_VIDEO_TEMPLATE : VIDEO_TEMPLATE;
   const code = template
     .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
     .replace('// @METHOD_LIST', findPage('list')!.code);
   runStatus.value = RunStatus.running;
   try {
     const func = new Function('VideoExtension', 'CmsVideoExtension', code);
-    const extensionclass = func(VideoExtension, CmsVideoExtension);
-    const cls = new extensionclass() as VideoExtension;
+    const ExtensionClass = func(VideoExtension, CmsVideoExtension);
+    const cls = new ExtensionClass() as VideoExtension;
     if (cls.baseUrl === undefined) {
       throw new Error('初始化中的baseUrl未定义!');
     }
@@ -72,20 +73,22 @@ async function load(pageNo?: number, type?: string) {
       throw new Error('获取推荐列表失败! 返回结果为空');
     }
     if (
-      result.value &&
-      _.isArray(result.value) &&
-      !_.isArray(res) &&
-      result.value.find((item) => item.type === res.type)
+      result.value
+      && _.isArray(result.value)
+      && !_.isArray(res)
+      && result.value.find(item => item.type === res.type)
     ) {
-      const index = result.value.findIndex((item) => item.type === res.type);
+      const index = result.value.findIndex(item => item.type === res.type);
       Object.assign(result.value[index], res);
-    } else {
+    }
+    else {
       result.value = res;
       tabKey.value = nanoid();
     }
     props.updateResult('video', 'list', result.value, true);
     runStatus.value = RunStatus.success;
-  } catch (error) {
+  }
+  catch (error) {
     errorMessage.value = String(error);
     runStatus.value = RunStatus.error;
     props.updateResult('video', 'list', result.value, false);
@@ -93,20 +96,22 @@ async function load(pageNo?: number, type?: string) {
 }
 
 function loadTab(index: number, pageNo?: number) {
-  if (!result.value) return;
+  if (!result.value)
+    return;
   let t: VideoList;
   if (Array.isArray(result.value)) {
     t = result.value[index];
-  } else {
+  }
+  else {
     t = result.value;
   }
   load(pageNo ?? 1, t.type);
 }
 
 function findPage(name: string) {
-  return props.content.pages.find((page) => page.type === name);
+  return props.content.pages.find(page => page.type === name);
 }
-const tabActive = ref('');
+
 defineExpose({
   initLoad,
 });
@@ -114,7 +119,9 @@ defineExpose({
 
 <template>
   <div>
-    <div v-if="runStatus === RunStatus.not_running">未运行</div>
+    <div v-if="runStatus === RunStatus.not_running">
+      未运行
+    </div>
     <div
       v-else-if="runStatus === RunStatus.running"
       class="flex items-center justify-center"

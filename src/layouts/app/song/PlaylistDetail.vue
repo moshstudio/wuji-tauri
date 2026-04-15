@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PlaylistInfo } from '@wuji-tauri/source-extension';
-import { LoadImage, MSongCard } from '@wuji-tauri/components/src';
+import { LoadImage, MSongCard } from '@wuji-tauri/components';
 import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import MNavBar from '@/components/header/MNavBar.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
@@ -16,6 +16,7 @@ withDefaults(
     toPage: (playlist: PlaylistInfo, pageNo: number) => void;
     playAll: (playlist: PlaylistInfo) => void;
     addToShelf: (playlist: PlaylistInfo) => void;
+    downloadAll: (playlist: PlaylistInfo) => void;
   }>(),
   { pageNo: 1, inShelf: false },
 );
@@ -88,6 +89,20 @@ const displayStore = useDisplayStore();
             "
           >
             播放全部
+          </van-button>
+          <van-button
+            size="small"
+            type="primary"
+            plain
+            @click="
+              () => {
+                if (playlist) {
+                  downloadAll(playlist);
+                }
+              }
+            "
+          >
+            下载
           </van-button>
         </div>
 

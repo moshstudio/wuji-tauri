@@ -37,10 +37,12 @@ function onDbClick() {
   if (props.isPlayingSong) {
     if (props.isPlaying) {
       props.pause(props.song);
-    } else {
+    }
+    else {
       props.play(props.song);
     }
-  } else {
+  }
+  else {
     props.play(props.song);
   }
 }

@@ -29,7 +29,8 @@ onMounted(async () => {
   await nextTick();
   try {
     await checkAndUpdate();
-  } catch (error) {
+  }
+  catch (error) {
     console.warn('checkAndUpdate error', error);
   }
 });

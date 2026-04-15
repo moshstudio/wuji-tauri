@@ -21,7 +21,8 @@ const recommend = createCancellableFunction(
     await Promise.all(
       photoSources.value.map(async (source) => {
         if (!source.list || force) {
-          if (signal.aborted) return;
+          if (signal.aborted)
+            return;
           await store.photoRecommendList(source);
         }
       }),
@@ -34,10 +35,12 @@ const search = createCancellableFunction(async (signal: AbortSignal) => {
   const t = displayStore.showToast();
   if (!keyword) {
     await recommend(true);
-  } else {
+  }
+  else {
     await Promise.all(
       photoSources.value.map(async (source) => {
-        if (signal.aborted) return;
+        if (signal.aborted)
+          return;
         await store.photoSearchList(source, keyword, 1);
       }),
     );
@@ -56,7 +59,8 @@ const pageChange = debounce(
       });
       if (!searchValue.value) {
         await store.photoRecommendList(source, pageNo);
-      } else {
+      }
+      else {
         await store.photoSearchList(source, searchValue.value, pageNo);
       }
       toast.close();

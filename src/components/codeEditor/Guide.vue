@@ -6,7 +6,7 @@ import typescript from 'highlight.js/lib/languages/typescript';
 import html from 'highlight.js/lib/languages/xml';
 import { Marked } from 'marked';
 import { markedHighlight } from 'marked-highlight';
-import { computed, nextTick } from 'vue';
+import { computed, nextTick, watch } from 'vue';
 import { guideCommonMD } from './guides';
 import 'github-markdown-css/github-markdown-dark.css';
 import 'highlight.js/styles/github-dark.css'; // 代码块的黑暗主题
@@ -24,7 +24,7 @@ const marked = new Marked(
   markedHighlight({
     emptyLangClass: 'hljs',
     langPrefix: 'hljs language-',
-    highlight(code, lang, info) {
+    highlight(code, lang) {
       const language = hljs.getLanguage(lang) ? lang : 'plaintext';
       return hljs.highlight(code, { language }).value;
     },
@@ -51,6 +51,16 @@ function close() {
   show.value = false;
 }
 
+watch(
+  [show, htmlContent],
+  () => {
+    if (show.value) {
+      addCopyButtons();
+    }
+  },
+  { immediate: true },
+);
+
 // 添加复制功能
 function addCopyButtons() {
   nextTick(() => {
@@ -62,7 +72,7 @@ function addCopyButtons() {
           button.className = 'copy-button';
           button.textContent = '复制';
           button.addEventListener('click', () => {
-            const code = pre.querySelector('code')?.innerText || '';
+            const code = pre.querySelector('code')?.textContent || '';
             navigator.clipboard.writeText(code).then(() => {
               button.textContent = '已复制!';
               setTimeout(() => {

@@ -5,17 +5,14 @@ import type {
   ComicsList,
 } from '@wuji-tauri/source-extension';
 import type { ComicSource } from '@/types';
-import WComicCard from '@wuji-tauri/components/src/components/cards/comic/WComicCard.vue';
+import { WComicCard } from '@wuji-tauri/components';
 import { debounce } from 'lodash';
 import { nanoid } from 'nanoid';
-import { ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
+import { ref, watch } from 'vue';
 import MPagination from '@/components/pagination/MPagination.vue';
-import ResponsiveGrid2 from '../grid/ResponsiveGrid2.vue';
 import { useDisplayStore } from '@/store';
-
-const displayStore = useDisplayStore();
-const { paginationPosition } = storeToRefs(displayStore);
+import ResponsiveGrid2 from '../grid/ResponsiveGrid2.vue';
 
 const props = defineProps<{
   source: ComicSource;
@@ -26,33 +23,42 @@ const props = defineProps<{
   ) => Promise<any> | void;
   toDetail: (source: ComicSource, item: ComicItem) => void;
 }>();
+const displayStore = useDisplayStore();
+const { paginationPosition } = storeToRefs(displayStore);
 
 const active = ref(0);
 const tabKey = ref(nanoid()); // 修改此值来重新渲染组件
 const loadingMap = new Set<number>();
 async function load(i: number | string) {
-  if (!props.source.list || !Array.isArray(props.source.list)) return;
+  if (!props.source.list || !Array.isArray(props.source.list))
+    return;
   const index = Number(i);
-  if (isNaN(index)) return;
+  if (Number.isNaN(index))
+    return;
 
   const t = props.source.list[index];
-  if (t.list && t.list.length) return;
-  if (loadingMap.has(index)) return;
+  if (t.list && t.list.length)
+    return;
+  if (loadingMap.has(index))
+    return;
 
   loadingMap.add(index);
   try {
     await props.toPage(props.source, 1, t.type);
-  } finally {
+  }
+  finally {
     loadingMap.delete(index);
   }
 }
 
 function changePage(index: number, pageNo?: number) {
-  if (!props.source.list) return;
+  if (!props.source.list)
+    return;
   let t: ComicList;
   if (Array.isArray(props.source.list)) {
     t = props.source.list[index];
-  } else {
+  }
+  else {
     t = props.source.list;
   }
   props.toPage(props.source, pageNo, t.type);
@@ -91,10 +97,10 @@ watch(
     >
       <van-row
         v-if="
-          (paginationPosition === 'top' || paginationPosition === 'both') &&
-          item.page &&
-          item.totalPage &&
-          item.totalPage > 1
+          (paginationPosition === 'top' || paginationPosition === 'both')
+            && item.page
+            && item.totalPage
+            && item.totalPage > 1
         "
         class="px-2 py-1"
       >
@@ -107,18 +113,18 @@ watch(
       <van-loading v-if="item.list.length === 0" class="p-2" size="24px" />
       <ResponsiveGrid2 v-else>
         <WComicCard
-          v-for="(comic, index) in item.list"
-          :key="source.item.id + index.toString() + comic.id"
+          v-for="(comic, comicIndex) in item.list"
+          :key="source.item.id + comicIndex.toString() + comic.id"
           :comic="comic"
           :click="toDetail"
         />
       </ResponsiveGrid2>
       <van-row
         v-if="
-          (paginationPosition === 'bottom' || paginationPosition === 'both') &&
-          item.page &&
-          item.totalPage &&
-          item.totalPage > 1
+          (paginationPosition === 'bottom' || paginationPosition === 'both')
+            && item.page
+            && item.totalPage
+            && item.totalPage > 1
         "
         class="px-2 py-1"
       >
@@ -134,10 +140,10 @@ watch(
   <template v-else>
     <van-row
       v-if="
-        (paginationPosition === 'top' || paginationPosition === 'both') &&
-        source.list.page &&
-        source.list.totalPage &&
-        source.list.totalPage > 1
+        (paginationPosition === 'top' || paginationPosition === 'both')
+          && source.list.page
+          && source.list.totalPage
+          && source.list.totalPage > 1
       "
     >
       <MPagination
@@ -149,18 +155,18 @@ watch(
     <van-loading v-if="!source.list.list.length" class="p-2" size="24px" />
     <ResponsiveGrid2 v-else>
       <template
-        v-for="(comic, index) in source.list.list"
-        :key="source.item.id + index.toString() + comic.id"
+        v-for="(comic, comicIndex) in source.list.list"
+        :key="source.item.id + comicIndex.toString() + comic.id"
       >
         <WComicCard :comic="comic" :click="toDetail" />
       </template>
     </ResponsiveGrid2>
     <van-row
       v-if="
-        (paginationPosition === 'bottom' || paginationPosition === 'both') &&
-        source.list.page &&
-        source.list.totalPage &&
-        source.list.totalPage > 1
+        (paginationPosition === 'bottom' || paginationPosition === 'both')
+          && source.list.page
+          && source.list.totalPage
+          && source.list.totalPage > 1
       "
     >
       <MPagination

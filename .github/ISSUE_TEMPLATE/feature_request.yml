@@ -1,7 +1,7 @@
 name: ✨ 功能请求
 description: 提出一个新功能或改进建议
 title: '[Feature]: '
-labels: ['enhancement', '待评估']
+labels: [enhancement, 待评估]
 assignees: []
 
 body:
@@ -38,7 +38,7 @@ body:
     attributes:
       label: 问题描述
       description: 描述你遇到的问题或不便之处
-      placeholder: '当我想要 ... 的时候，我发现 ...'
+      placeholder: 当我想要 ... 的时候，我发现 ...
     validations:
       required: true
 
@@ -47,7 +47,7 @@ body:
     attributes:
       label: 期望的解决方案
       description: 描述你期望的功能或解决方案
-      placeholder: '我希望能够...'
+      placeholder: 我希望能够...
     validations:
       required: true
 
@@ -56,14 +56,14 @@ body:
     attributes:
       label: 考虑过的替代方案
       description: 描述你考虑过的任何替代解决方案或功能
-      placeholder: '我也考虑过...'
+      placeholder: 我也考虑过...
 
   - type: textarea
     id: mockups
     attributes:
       label: 设计稿或示例
       description: 如果有设计稿、原型图或其他应用的类似功能截图，请在这里添加
-      placeholder: '拖拽图片到此处或粘贴链接'
+      placeholder: 拖拽图片到此处或粘贴链接
 
   - type: dropdown
     id: priority
