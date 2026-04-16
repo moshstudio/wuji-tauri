@@ -19,7 +19,7 @@ const showDialog = ref(false);
 
 function onPlay() {
   if (ttsStore.selectedVoice.needVip) {
-    if (!serverStore.isVipOrSuperVip) {
+    if (!serverStore.hasFeature('tts_voice')) {
       vantShowDialog({
         message: '您选择的语音为会员专属哦\n是否立即开通会员?',
       }).then(() => {

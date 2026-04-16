@@ -29,7 +29,6 @@ import {
 import { computed, markRaw, onMounted, triggerRef } from 'vue';
 import { router } from '@/router';
 import { SourceType } from '@/types';
-import { isMembershipOrderValid } from '@/types/user';
 import { sleep } from '@/utils';
 import { useBookStore } from './bookStore';
 import { useComicStore } from './comicStore';
@@ -272,13 +271,14 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       }
       if (
         marketSource.permissions?.includes(MarketSourcePermission.Vip)
-        && isMembershipOrderValid(userInfo.value?.vipMembershipPlan)
+        && serverStore.hasFeature('vip_market_source')
       ) {
         needPermission = false;
       }
       if (
         marketSource.permissions?.includes(MarketSourcePermission.SuperVip)
-        && isMembershipOrderValid(userInfo.value?.superVipMembershipPlan)
+        && serverStore.hasFeature('vip_market_source')
+        && serverStore.isSuperVip
       ) {
         needPermission = false;
       }

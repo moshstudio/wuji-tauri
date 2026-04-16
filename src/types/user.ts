@@ -157,6 +157,16 @@ export class MembershipOrder {
   cancelled!: boolean;
 }
 
+export interface Feature {
+  _id: string;
+  key: string;
+  label: string;
+  description?: string;
+  enableVip: boolean;
+  enableSuperVip: boolean;
+  sortOrder: number;
+}
+
 // 3. 更新 UserInfo 类
 export class UserInfo {
   @IsDefined()

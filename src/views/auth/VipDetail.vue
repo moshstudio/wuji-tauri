@@ -14,7 +14,7 @@ import DesktopVipDetail from '@/layouts/desktop/auth/VipDetail.vue';
 import { useServerStore } from '@/store';
 
 const serverStore = useServerStore();
-const { membershipPlans, userInfo } = storeToRefs(serverStore);
+const { membershipPlans, userInfo, featureList } = storeToRefs(serverStore);
 
 function isExist(
   level: MembershipPlanLevel,
@@ -47,6 +47,7 @@ async function genPayUrl(plan: MembershipPlan) {
 
 onMountedOrActivated(() => {
   serverStore.getMembershipPlans();
+  serverStore.fetchFeatures();
 });
 </script>
 
@@ -56,6 +57,7 @@ onMountedOrActivated(() => {
       <AppVipDetail
         :membership-plans="membershipPlans"
         :user-info="userInfo"
+        :feature-list="featureList"
         :is-exist="isExist"
         :get-pay-url="genPayUrl"
       />
@@ -64,6 +66,7 @@ onMountedOrActivated(() => {
       <DesktopVipDetail
         :membership-plans="membershipPlans"
         :user-info="userInfo"
+        :feature-list="featureList"
         :is-exist="isExist"
         :get-pay-url="genPayUrl"
       />

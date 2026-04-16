@@ -79,7 +79,7 @@ interface FontOption {
 }
 
 function selectFont(font: FontOption) {
-  if (!serverStore.isVipOrSuperVip) {
+  if (!serverStore.hasFeature('book_font')) {
     showDialog({
       title: 'VIP功能',
       message: '此字体VIP可用, 是否去开通会员？',

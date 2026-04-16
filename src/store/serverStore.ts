@@ -6,8 +6,7 @@ import type {
   PagedMarketSource,
 } from '@wuji-tauri/source-extension';
 import type { SyncTypes } from '@/types/sync';
-import type { MembershipPlan } from '@/types/user';
-import process from 'node:process';
+import type { Feature, MembershipPlan } from '@/types/user';
 import * as os from '@tauri-apps/plugin-os';
 import { useStorageAsync } from '@vueuse/core';
 import { fetch } from '@wuji-tauri/fetch';
@@ -30,9 +29,10 @@ import { sleep } from '@/utils';
 import { getDeviceId } from '@/utils/device';
 import { createKVStore, useDisplayStore } from '.';
 
-let API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
+let API_BASE_URL = 'http://localhost:3000/v1/api/';
+// let API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
 
-if (process.env.NODE_ENV !== 'development') {
+if (import.meta.env.MODE !== 'development') {
   API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
 }
 
@@ -197,7 +197,20 @@ export const useServerStore = defineStore('serverStore', () => {
     );
   };
 
+  const featureList = ref<Feature[]>([]);
+
+  const fetchFeatures = async (): Promise<void> => {
+    return await sendRequest<void>(
+      'feature',
+      {},
+      async (response) => {
+        featureList.value = await response.json();
+      },
+    );
+  };
+
   onMounted(() => {
+    fetchFeatures();
     setInterval(() => {
       now.value = Date.now();
       if (now.value % 300 === 0) {
@@ -220,6 +233,24 @@ export const useServerStore = defineStore('serverStore', () => {
   });
   const isVipOrSuperVip = computed(() => {
     return isVip.value || isSuperVip.value;
+  });
+
+  /**
+   * 检查用户当前有效订单是否包含指定功能
+   * 基于 /feature 接口返回的配置与当前用户等级进行判断
+   */
+  const hasFeature = computed(() => {
+    return (featureKey: string): boolean => {
+      const feature = featureList.value.find(f => f.key === featureKey);
+      if (!feature)
+        return false;
+
+      if (isSuperVip.value && feature.enableSuperVip)
+        return true;
+      if (isVip.value && feature.enableVip)
+        return true;
+      return false;
+    };
   });
 
   const getDeviceInfo = async () => {
@@ -644,10 +675,7 @@ export const useServerStore = defineStore('serverStore', () => {
       showFailToast('请先登录');
       return;
     }
-    if (
-      !isMembershipOrderValid(userInfo.value.superVipMembershipPlan)
-      && !isMembershipOrderValid(userInfo.value.vipMembershipPlan)
-    ) {
+    if (!hasFeature.value('cloud_sync')) {
       showDialog({
         message: '数据同步为会员功能\n请先开通会员',
       }).then(() => {
@@ -685,10 +713,7 @@ export const useServerStore = defineStore('serverStore', () => {
       showFailToast('请先登录');
       return;
     }
-    if (
-      !isMembershipOrderValid(userInfo.value.superVipMembershipPlan)
-      && !isMembershipOrderValid(userInfo.value.vipMembershipPlan)
-    ) {
+    if (!hasFeature.value('cloud_sync')) {
       showDialog({
         title: '提示',
         message: '数据同步为会员功能\n请先开通会员',
@@ -780,8 +805,11 @@ export const useServerStore = defineStore('serverStore', () => {
     isVip,
     isSuperVip,
     isVipOrSuperVip,
+    hasFeature,
     myMarketSources,
     membershipPlans,
+    featureList,
+    fetchFeatures,
     fetchUserInfo,
     updateUserInfo,
     getDeviceInfo,

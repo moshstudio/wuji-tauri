@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  Feature,
   MembershipPlan,
   MembershipPlanBillingCycle,
   MembershipPlanLevel,
@@ -10,6 +11,7 @@ import AppVipDetail from '@/layouts/app/auth/VipDetail.vue';
 defineProps<{
   membershipPlans?: MembershipPlan[];
   userInfo?: UserInfo;
+  featureList?: Feature[];
   isExist: (
     level: MembershipPlanLevel,
     cycle: MembershipPlanBillingCycle,
@@ -22,6 +24,7 @@ defineProps<{
   <AppVipDetail
     :membership-plans="membershipPlans"
     :user-info="userInfo"
+    :feature-list="featureList"
     :is-exist="isExist"
     :get-pay-url="getPayUrl"
   />
