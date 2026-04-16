@@ -25,7 +25,7 @@ export enum PaymentStatus {
 export enum MembershipPlanLevel {
   Basic = 'basic',
   Vip = 'vip',
-  SuperVip = 'superVip',
+  Pro = 'pro',
 }
 
 export enum MembershipPlanBillingCycle {
@@ -163,7 +163,7 @@ export interface Feature {
   label: string;
   description?: string;
   enableVip: boolean;
-  enableSuperVip: boolean;
+  enablePro: boolean;
   sortOrder: number;
 }
 
@@ -208,7 +208,7 @@ export class UserInfo {
   @IsOptional()
   @ValidateNested()
   @Type(() => MembershipOrder)
-  superVipMembershipPlan?: MembershipOrder;
+  proMembershipPlan?: MembershipOrder;
 }
 
 // 4. 工具函数 - 现在可以安全地使用 Date 对象的方法

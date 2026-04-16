@@ -14,6 +14,7 @@ export async function runMusicPlaylistFetcher(
   taskId: string,
   deps: {
     getTasks: () => DownloadTask[];
+    addTask: (task: Omit<DownloadTask, 'status' | 'downloadedSize' | 'totalSize' | 'completedChunks' | 'createdAt'>) => Promise<void>;
     runBackgroundTask: (id: string, fn: () => Promise<void>) => void;
     markTaskError: (id: string, error: string) => Promise<void>;
   },
@@ -34,78 +35,88 @@ export async function runMusicPlaylistFetcher(
       throw new Error('无法加载歌单详情');
 
     const totalPages = firstPage.list?.totalPage || 1;
-    const nameCounters = new Map<string, number>();
-    let globalCount = 0;
+    const allSongs: SongInfo[] = [...(firstPage.list?.list || [])];
 
-    for (let p = 1; p <= totalPages; p++) {
+    // 获取所有页面的歌曲列表以获得准确的总数
+    for (let p = 2; p <= totalPages; p++) {
       if (!isTaskRunning(deps.getTasks(), taskId))
         return;
-
-      const currentDetail = p === 1 ? firstPage : await fetchPage(p);
-      const currentList = currentDetail?.list?.list || [];
-
-      // 并行处理下载
-      const limit = pLimit(3);
-      const pagePromises = currentList.map(async (song, indexInPage) => {
-        const globalIndex = globalCount + indexInPage;
-        const currentTask = deps.getTasks().find(t => t.id === taskId);
-        if (currentTask?.completedChunks.includes(globalIndex))
-          return;
-
-        return limit(async () => {
-          if (!isTaskRunning(deps.getTasks(), taskId))
-            return;
-          try {
-            const artists = joinSongArtists(song.artists);
-            const songName = song.name || '未知歌曲';
-            const baseName = sanitizePathName(
-              artists ? `${songName} - ${artists}` : songName,
-              { removeSpaces: false },
-            );
-            const count = nameCounters.get(baseName) || 0;
-            const safeTitle
-              = count === 0 ? baseName : `${baseName} (${count})`;
-            nameCounters.set(baseName, count + 1);
-
-            // 检查缓存
-            const cachedData = await songCacheStore.getSongBuffer(song);
-            if (cachedData) {
-              await invokePlugin('append_collection_chunk', {
-                taskId,
-                index: globalIndex,
-                title: safeTitle,
-                data: Array.from(cachedData),
-              });
-              return;
-            }
-
-            // 获取播放地址并下载
-            const url = await songStore.getSongPlayUrl(song, {
-              silent: true,
-            });
-            if (url) {
-              await invokePlugin('download_remote_chunk', {
-                taskId,
-                index: globalIndex,
-                title: safeTitle + getAudioExtFromUrl(url),
-                url,
-                headers: song.playHeaders || {},
-              });
-            }
-          }
-          catch (e) {
-            console.error(`[MusicFetcher] Failed for ${song.name}:`, e);
-          }
-        });
-      });
-
-      await Promise.all(pagePromises);
-      globalCount += currentList.length;
+      const page = await fetchPage(p);
+      if (page?.list?.list) {
+        allSongs.push(...page.list.list);
+      }
     }
+
+    const totalCount = allSongs.length;
+    const currentTaskBefore = deps.getTasks().find(t => t.id === taskId);
+    if (currentTaskBefore && currentTaskBefore.totalChunks !== totalCount) {
+      // 更新总数量，防止进度显示错误（如 20/10 200%）
+      await deps.addTask({
+        ...currentTaskBefore,
+        totalChunks: totalCount,
+      });
+    }
+
+    const nameCounters = new Map<string, number>();
+
+    // 并行处理下载
+    const limit = pLimit(3);
+    const promises = allSongs.map(async (song, index) => {
+      const currentTask = deps.getTasks().find(t => t.id === taskId);
+      if (currentTask?.completedChunks.includes(index))
+        return;
+
+      return limit(async () => {
+        if (!isTaskRunning(deps.getTasks(), taskId))
+          return;
+        try {
+          const artists = joinSongArtists(song.artists);
+          const songName = song.name || '未知歌曲';
+          const baseName = sanitizePathName(
+            artists ? `${songName} - ${artists}` : songName,
+            { removeSpaces: false },
+          );
+          const count = nameCounters.get(baseName) || 0;
+          const safeTitle
+            = count === 0 ? baseName : `${baseName} (${count})`;
+          nameCounters.set(baseName, count + 1);
+
+          // 检查缓存
+          const cachedData = await songCacheStore.getSongBuffer(song);
+          if (cachedData) {
+            await invokePlugin('append_collection_chunk', {
+              taskId,
+              index,
+              title: safeTitle,
+              data: Array.from(cachedData),
+            });
+            return;
+          }
+
+          // 获取播放地址并下载
+          const url = await songStore.getSongPlayUrl(song, {
+            silent: true,
+          });
+          if (url) {
+            await invokePlugin('download_remote_chunk', {
+              taskId,
+              index,
+              title: safeTitle + getAudioExtFromUrl(url),
+              url,
+              headers: song.playHeaders || {},
+            });
+          }
+        }
+        catch (e) {
+          console.error(`[MusicFetcher] Failed for ${song.name}:`, e);
+        }
+      });
+    });
+
+    await Promise.all(promises);
 
     const finalTask = deps.getTasks().find(t => t.id === taskId);
     const completedCount = finalTask?.completedChunks.length || 0;
-    const totalCount = playlist.list?.list.length || 1;
 
     if (isTaskRunning(deps.getTasks(), taskId)) {
       if (completedCount >= totalCount) {

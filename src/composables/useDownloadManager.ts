@@ -1,5 +1,6 @@
 import { open } from '@tauri-apps/plugin-dialog';
-import { showConfirmDialog, showToast } from 'vant';
+import { getSourceTypeTheme } from '@wuji-tauri/components';
+import { showToast } from 'vant';
 import { computed, onMounted, ref } from 'vue';
 import { useDownloadStore } from '@/store';
 import { bytesToSize } from '@/utils';
@@ -13,6 +14,7 @@ export function useDownloadManager() {
   const showDeleteDialog = ref(false);
   const taskToDelete = ref<any>(null);
   const alsoDeleteFile = ref(false);
+  const isClearingCompleted = ref(false);
 
   // 2. 状态监听
   onMounted(() => {
@@ -46,6 +48,15 @@ export function useDownloadManager() {
       }
     }
     return '未知';
+  };
+
+  const getTaskError = (status: any) => {
+    if (status && typeof status === 'object') {
+      if ('error' in status || 'Error' in status) {
+        return status.error || status.Error;
+      }
+    }
+    return '';
   };
 
   const getStatusType = (status: any) => {
@@ -167,23 +178,41 @@ export function useDownloadManager() {
   const confirmRemoveTask = (id: string) => {
     taskToDelete.value = downloadStore.tasks.find(t => t.id === id);
     if (taskToDelete.value) {
+      isClearingCompleted.value = false;
       alsoDeleteFile.value = false;
       showDeleteDialog.value = true;
     }
   };
 
   const executeDelete = async () => {
-    if (!taskToDelete.value)
-      return;
-    const id = taskToDelete.value.id;
     const deleteFile = alsoDeleteFile.value;
 
-    await downloadStore.removeTask(id, deleteFile);
-    showToast(
-      deleteFile ? '已删除任务及物理文件' : '已移除任务（保留本地文件）',
-    );
+    if (isClearingCompleted.value) {
+      const completedTasks = downloadStore.tasks.filter(
+        t => getStatusText(t.status) === '已完成',
+      );
+      for (const task of completedTasks) {
+        await downloadStore.removeTask(task.id, deleteFile);
+      }
+      showToast(
+        deleteFile
+          ? `已清理 ${completedTasks.length} 个任务及相关文件`
+          : `已清理 ${completedTasks.length} 个任务`,
+      );
+    }
+    else {
+      if (!taskToDelete.value)
+        return;
+      const id = taskToDelete.value.id;
+      await downloadStore.removeTask(id, deleteFile);
+      showToast(
+        deleteFile ? '已删除任务及物理文件' : '已移除任务（保留本地文件）',
+      );
+    }
+
     showDeleteDialog.value = false;
     taskToDelete.value = null;
+    isClearingCompleted.value = false;
   };
 
   const pauseAll = async () => {
@@ -219,83 +248,13 @@ export function useDownloadManager() {
       return;
     }
 
-    showConfirmDialog({
-      title: '提示',
-      message: `确认清理所有已完成的任务（共 ${completedTasks.length} 个）吗？`,
-    })
-      .then(async () => {
-        for (const task of completedTasks) {
-          await downloadStore.removeTask(task.id);
-        }
-        showToast(`已清理 ${completedTasks.length} 个任务`);
-      })
-      .catch(() => {});
+    isClearingCompleted.value = true;
+    taskToDelete.value = null;
+    alsoDeleteFile.value = false;
+    showDeleteDialog.value = true;
   };
 
-  const getCategoryTheme = (category: string) => {
-    switch (category) {
-      case 'Image':
-        return {
-          icon: 'photo',
-          emoji: '🖼️',
-          label: '图片',
-          unit: '张',
-          color: 'teal',
-          bg: 'bg-teal-50 dark:bg-teal-500/10',
-          text: 'text-teal-600 dark:text-teal-400',
-        };
-      case 'Video':
-        return {
-          icon: 'video',
-          emoji: '🎬',
-          label: '视频',
-          unit: '个',
-          color: 'blue',
-          bg: 'bg-blue-50 dark:bg-blue-500/10',
-          text: 'text-blue-600 dark:text-blue-400',
-        };
-      case 'Music':
-        return {
-          icon: 'music',
-          emoji: '🎵',
-          label: '音乐',
-          unit: '首',
-          color: 'purple',
-          bg: 'bg-purple-50 dark:bg-purple-500/10',
-          text: 'text-purple-600 dark:text-purple-400',
-        };
-      case 'Book':
-        return {
-          icon: 'description',
-          emoji: '📖',
-          label: '小说',
-          unit: '章节',
-          color: 'orange',
-          bg: 'bg-orange-50 dark:bg-orange-500/10',
-          text: 'text-orange-600 dark:text-orange-400',
-        };
-      case 'Comic':
-        return {
-          icon: 'photo-o',
-          emoji: '🎨',
-          label: '漫画',
-          unit: '话',
-          color: 'pink',
-          bg: 'bg-pink-50 dark:bg-pink-500/10',
-          text: 'text-pink-600 dark:text-pink-400',
-        };
-      default:
-        return {
-          icon: 'question-o',
-          emoji: '❔',
-          label: '未知',
-          unit: '项',
-          color: 'gray',
-          bg: 'bg-gray-50 dark:bg-zinc-800',
-          text: 'text-gray-600 dark:text-gray-400',
-        };
-    }
-  };
+  const getCategoryTheme = (category: string) => getSourceTypeTheme(category);
 
   const getTaskProgressText = (task: any) => {
     if (isCollectionTask(task)) {
@@ -334,6 +293,7 @@ export function useDownloadManager() {
     showDeleteDialog,
     taskToDelete,
     alsoDeleteFile,
+    isClearingCompleted,
     stats,
     filteredTasks,
     // 绘图相关
@@ -344,6 +304,7 @@ export function useDownloadManager() {
     getProgress,
     getTaskProgressText,
     getTaskTotalText,
+    getTaskError,
     // 单项操作
     handleAction,
     confirmRemoveTask,

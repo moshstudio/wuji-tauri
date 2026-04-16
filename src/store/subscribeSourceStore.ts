@@ -278,7 +278,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       if (
         marketSource.permissions?.includes(MarketSourcePermission.SuperVip)
         && serverStore.hasFeature('vip_market_source')
-        && serverStore.isSuperVip
+        && serverStore.isPro
       ) {
         needPermission = false;
       }

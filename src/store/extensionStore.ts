@@ -64,6 +64,8 @@ export const useExtensionStore = defineStore('extension', () => {
       return sourceClasses.get(idKey);
     }
 
+    console.log(item);
+
     if (!item.code) {
       try {
         if (item.url.startsWith('http')) {

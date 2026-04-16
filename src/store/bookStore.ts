@@ -26,27 +26,25 @@ export const useBookStore = defineStore('book', () => {
     {
       label: '默认',
       family: '\'alipuhui\',\'sans-serif\'',
-      isVip: false,
     },
     {
       label: '黑体',
       family: '\'Source Han Sans SC VF\',\'sans-serif\'',
-      isVip: false,
     },
     {
       label: '仿宋',
       family: '\'FZFangSong-Z02S\',\'serif\'',
-      isVip: true,
+      feature: 'book_font',
     },
     {
       label: '文楷',
       family: '\'LXGW WenKai GB Screen\',\'serif\'',
-      isVip: true,
+      feature: 'book_font',
     },
     {
       label: '圆体',
       family: '\'MaoKenZhuYuanTi\',\'sans-serif\'',
-      isVip: true,
+      feature: 'book_font',
     },
   ]);
   const fontSize = useStorageAsync('readFontSize', 20);
@@ -383,7 +381,7 @@ export const useBookStore = defineStore('book', () => {
 
   onMounted(async () => {
     await sleep(2000);
-    if (!serverStore.isVipOrSuperVip) {
+    if (!serverStore.hasFeature('book_font')) {
       // 非会员用户使用默认字体
       fontFamily.value = 'alipuhui';
     }

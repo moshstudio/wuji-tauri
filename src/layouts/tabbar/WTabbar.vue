@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue';
+import { getSourceTypeTheme } from '@wuji-tauri/components';
 import { storeToRefs } from 'pinia';
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import WLoginButton from '@/components/button/WLoginButton.vue';
 import { router } from '@/router';
-import { useDisplayStore, useServerStore, useStore } from '@/store';
+import { useDisplayStore, useServerStore } from '@/store';
 
-const store = useStore();
 const displayStore = useDisplayStore();
 const serverStore = useServerStore();
 
@@ -21,7 +21,14 @@ const {
   tabBarPages,
   showTabBar,
 } = storeToRefs(displayStore);
-const _pages: any = reactive({
+interface TabPage {
+  name: string;
+  icon: string;
+  selectedIcon: string;
+  to: string;
+}
+
+const _pages: Record<string, TabPage> = reactive({
   Home: {
     name: 'Home',
     icon: 'wap-home-o',
@@ -62,7 +69,13 @@ const _pages: any = reactive({
 const pages = computed(() => {
   return tabBarPages.value
     .filter(page => page.enable)
-    .map(page => _pages[page.name as keyof typeof _pages]);
+    .map((page) => {
+      const p = _pages[page.name as keyof typeof _pages];
+      return {
+        ...p,
+        theme: getSourceTypeTheme(page.name),
+      };
+    });
 });
 
 const activeKey = ref('0');
@@ -71,7 +84,13 @@ const route = useRoute();
 const showSettingPopover = ref(false);
 
 const showSourcePopover = ref(false);
-const settingActions = [
+interface PopoverAction {
+  text: string;
+  color?: string;
+  onClick: () => void;
+}
+
+const settingActions: PopoverAction[] = [
   {
     text: '下载管理',
     onClick: () => {
@@ -91,7 +110,7 @@ const settingActions = [
     },
   },
 ];
-const sourceActions = [
+const sourceActions: PopoverAction[] = [
   {
     text: '管理订阅源',
     color: '#1989fa',
@@ -113,7 +132,7 @@ const sourceActions = [
     },
   },
 ];
-function onClickAction(action: { text: string; onClick: () => void }) {
+function onClickAction(action: PopoverAction) {
   action.onClick();
 }
 
@@ -201,6 +220,7 @@ watch(
                     ? 'wtabbar-icon--active'
                     : 'wtabbar-icon--inactive',
                 ]"
+                :color="activeKey === `${index}` ? page.theme.textColor : 'inherit'"
                 size="22"
               />
             </template>
@@ -326,7 +346,6 @@ body {
 
 .wtabbar-icon--active {
   opacity: 1;
-  color: var(--van-primary-color);
   transform: scale(1.05);
 }
 

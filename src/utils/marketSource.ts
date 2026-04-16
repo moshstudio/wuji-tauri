@@ -33,7 +33,7 @@ export const permissionRules: {
     },
   },
   {
-    name: '超级会员',
+    name: 'PRO',
     permissions: [MarketSourcePermission.SuperVip],
     style: {
       type: 'primary',
@@ -41,7 +41,7 @@ export const permissionRules: {
     },
   },
   {
-    name: '会员和超级会员',
+    name: '会员和PRO',
     permissions: [MarketSourcePermission.Vip, MarketSourcePermission.SuperVip],
     style: {
       type: 'primary',

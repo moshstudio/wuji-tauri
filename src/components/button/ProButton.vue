@@ -1,26 +1,26 @@
 <script setup lang="ts">
 defineProps<{
-  isSvip: boolean;
+  isPro: boolean;
   onClick?: () => void;
 }>();
 </script>
 
 <template>
   <div
-    class="svip-badge"
-    :class="{ 'svip-active': isSvip, 'svip-inactive': !isSvip }"
+    class="pro-badge"
+    :class="{ 'pro-active': isPro, 'pro-inactive': !isPro }"
     @click="onClick"
   >
-    <span class="svip-text">SVIP</span>
-    <span v-if="!isSvip" class="svip-plus">+</span>
-    <div v-if="isSvip" class="sparkle">
+    <span class="pro-text">PRO</span>
+    <span v-if="!isPro" class="pro-plus">+</span>
+    <div v-if="isPro" class="sparkle">
       <div v-for="i in 6" :key="i" class="sparkle-dot" :style="`--i: ${i}`" />
     </div>
   </div>
 </template>
 
 <style scoped>
-.svip-badge {
+.pro-badge {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -40,24 +40,24 @@ defineProps<{
   letter-spacing: 0.5px;
 }
 
-.svip-active {
+.pro-active {
   background: linear-gradient(135deg, #ff3434, #ff00aa, #c300ff);
   color: #fff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   animation: glow 2s infinite alternate;
 }
 
-.svip-inactive {
+.pro-inactive {
   background: linear-gradient(135deg, #e4e4e4, #c1c1c1);
   color: #888;
 }
 
-.svip-text {
+.pro-text {
   position: relative;
   z-index: 2;
 }
 
-.svip-plus {
+.pro-plus {
   margin-left: 2px;
   font-size: 14px;
   font-weight: 800;
@@ -65,12 +65,12 @@ defineProps<{
   z-index: 2;
 }
 
-.svip-badge:hover {
+.pro-badge:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.svip-badge:active {
+.pro-badge:active {
   transform: translateY(0);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }

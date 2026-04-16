@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import MLoginButton from '@/components/button/MLoginButton.vue';
 import { router } from '@/router';
-import { useDisplayStore, useServerStore, useStore } from '@/store';
+import { useDisplayStore, useServerStore } from '@/store';
 
-const store = useStore();
 const displayStore = useDisplayStore();
 const serverStore = useServerStore();
 
-const options = [
+interface SidebarOption {
+  text: string;
+  color?: string;
+  feature?: string;
+  onClick: () => void;
+}
+
+const options: SidebarOption[] = [
   {
     text: '下载管理',
     color: '#1989fa',
+    feature: 'download_management',
     onClick: () => {
       router.push({ name: 'DownloadManager' });
     },
@@ -79,7 +86,15 @@ const options = [
             @click="option.onClick"
           >
             <template #title>
-              <span :style="{ color: option.color }">{{ option.text }}</span>
+              <div class="flex items-center gap-1">
+                <span :style="{ color: option.color }">{{ option.text }}</span>
+                <van-icon
+                  v-if="option.feature && serverStore.isFeatureVip(option.feature)"
+                  name="diamond"
+                  color="#f2c97d"
+                  size="14"
+                />
+              </div>
             </template>
           </van-cell>
         </van-cell-group>

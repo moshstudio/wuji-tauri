@@ -156,7 +156,7 @@ function getSourceStats(source: SubscribeSource) {
               <template #right>
                 <div class="flex items-center gap-3">
                   <div
-                    v-if="serverStore.isVipOrSuperVip"
+                    v-if="serverStore.hasFeature('vip_market_source')"
                     class="van-haptics-feedback rounded bg-blue-500 p-1 text-white"
                     @click.stop="() => updateItem(source, item)"
                   >

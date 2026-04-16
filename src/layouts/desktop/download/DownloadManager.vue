@@ -12,6 +12,7 @@ const {
   getTaskTotalText,
   getTaskProgressText,
   getStatusText,
+  getTaskError,
   getProgress,
   handleAction,
   confirmRemoveTask,
@@ -37,11 +38,11 @@ const {
     />
 
     <div
-      class="flex-grow overflow-y-auto bg-gray-50/50 px-6 py-6 dark:bg-zinc-950/20"
+      class="flex-grow overflow-y-auto bg-[--van-background] px-6 py-6 dark:bg-zinc-950/20"
     >
       <!-- 控制面板 / 仪表盘 -->
       <section
-        class="mb-8 overflow-hidden rounded-2xl border border-gray-100 bg-white/50 p-6 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/50"
+        class="mb-8 overflow-hidden rounded-2xl border border-gray-100 bg-[--van-background-2] p-6 shadow-sm backdrop-blur-md dark:border-zinc-800/50 dark:bg-zinc-900/60"
       >
         <div
           class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between"
@@ -121,14 +122,14 @@ const {
         <div
           v-for="task in filteredTasks"
           :key="task.id"
-          class="group relative flex cursor-pointer select-none flex-col gap-4 rounded-2xl border border-gray-100 bg-white p-5 transition-all hover:border-blue-100 hover:shadow-xl hover:shadow-blue-500/5 active:scale-[0.99] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-900/30"
+          class="group relative flex cursor-pointer select-none flex-col gap-4 rounded-2xl border border-gray-100 bg-[--van-background-2] p-5 transition-all hover:border-blue-500/30 hover:shadow-xl hover:shadow-blue-500/5 active:scale-[0.99] dark:border-zinc-800/50 dark:bg-zinc-900/90 dark:backdrop-blur-sm dark:hover:border-blue-500/50 dark:hover:shadow-blue-500/10"
           @dblclick="openFolder(task.id)"
         >
           <!-- 头部：图标 + 标题 + 动作 -->
           <div class="flex items-center justify-between gap-3">
             <div class="flex min-w-0 items-center gap-3">
               <div
-                class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl transition-all group-hover:scale-110"
+                class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl transition-all group-hover:scale-110 group-hover:shadow-lg"
                 :class="[
                   getCategoryTheme(task.category).bg,
                   getCategoryTheme(task.category).text,
@@ -141,7 +142,7 @@ const {
               </div>
               <div class="min-w-0">
                 <h4
-                  class="truncate text-sm font-extrabold text-gray-800 dark:text-gray-100"
+                  class="truncate text-sm font-extrabold text-gray-800 dark:text-zinc-100"
                 >
                   {{ task.title }}
                 </h4>
@@ -180,7 +181,7 @@ const {
             <div class="flex shrink-0 items-center gap-1">
               <button
                 v-if="getStatusText(task.status) !== '已完成'"
-                class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-gray-500 transition-all hover:bg-blue-50 hover:text-blue-600 active:scale-90 dark:bg-zinc-800 dark:text-gray-400 dark:hover:bg-blue-950/50 dark:hover:text-blue-400"
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-[--van-background] text-gray-400 transition-all hover:bg-blue-500/10 hover:text-blue-500 active:scale-90 dark:bg-zinc-800/80 dark:text-zinc-500 dark:hover:bg-blue-500/20 dark:hover:text-blue-400"
                 @click.stop="handleAction(task)"
                 @dblclick.stop
               >
@@ -192,7 +193,7 @@ const {
                 />
               </button>
               <button
-                class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-gray-500 transition-all hover:bg-red-50 hover:text-red-600 active:scale-90 dark:bg-zinc-800 dark:text-gray-400 dark:active:bg-red-950/50 dark:hover:text-red-400"
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-[--van-background] text-gray-400 transition-all hover:bg-red-500/10 hover:text-red-500 active:scale-90 dark:bg-zinc-800/80 dark:text-zinc-500 dark:hover:bg-red-500/20 dark:hover:text-red-400"
                 @click.stop="confirmRemoveTask(task.id)"
                 @dblclick.stop
               >
@@ -208,39 +209,43 @@ const {
             >
               <div class="flex min-w-0 items-center gap-2">
                 <span
-                  class="truncate font-medium transition-colors"
+                  class="truncate font-bold transition-colors"
                   :class="[
                     getStatusText(task.status) === '已完成'
-                      ? 'text-emerald-500'
+                      ? 'text-emerald-500 dark:text-emerald-400'
                       : getStatusText(task.status) === '已暂停'
-                        ? 'text-amber-500'
-                        : 'text-blue-500',
+                        ? 'text-amber-500 dark:text-amber-400'
+                        : getTaskError(task.status)
+                          ? 'text-red-500 dark:text-red-400'
+                          : 'text-blue-500 dark:text-blue-400',
                   ]"
                 >
                   {{ getStatusText(task.status) }}
                 </span>
-                <span class="text-gray-300 dark:text-zinc-700">|</span>
-                <span class="truncate text-gray-400">
+                <span class="text-gray-300 dark:text-zinc-800">|</span>
+                <span class="truncate text-gray-400 dark:text-zinc-500">
                   {{ getTaskProgressText(task) }}
                 </span>
               </div>
-              <span class="font-bold text-gray-700 dark:text-gray-300">
+              <span class="font-bold text-gray-700 dark:text-zinc-300">
                 {{ getProgress(task) }}%
               </span>
             </div>
 
             <!-- 自定义进度条 -->
             <div
-              class="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-zinc-800"
+              class="h-1.5 w-full overflow-hidden rounded-full bg-[--van-background] dark:bg-zinc-800/80"
             >
               <div
                 class="h-full transition-all duration-500 ease-out"
                 :class="[
                   getStatusText(task.status) === '已完成'
-                    ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                    ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)] dark:bg-emerald-400'
                     : getStatusText(task.status) === '已暂停'
-                      ? 'bg-amber-500'
-                      : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]',
+                      ? 'bg-amber-500 dark:bg-amber-400'
+                      : getTaskError(task.status)
+                        ? 'bg-red-500 dark:bg-red-400 shadow-[0_0_12px_rgba(239,68,68,0.4)]'
+                        : 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)] dark:bg-blue-400',
                 ]"
                 :style="{ width: `${getProgress(task)}%` }"
               />

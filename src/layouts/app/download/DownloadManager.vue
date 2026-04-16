@@ -12,6 +12,7 @@ const {
   getTaskTotalText,
   getTaskProgressText,
   getStatusText,
+  getTaskError,
   getProgress,
   handleAction,
   confirmRemoveTask,
@@ -37,11 +38,11 @@ const {
     />
 
     <div
-      class="flex-grow overflow-y-auto bg-gray-50/50 px-4 py-3 dark:bg-zinc-950/20"
+      class="flex-grow overflow-y-auto bg-[--van-background] px-4 py-3 dark:bg-zinc-950/20"
     >
       <!-- 控制面板 / 仪表盘 -->
       <section
-        class="mb-3 overflow-hidden rounded-[1.25rem] border border-gray-100 bg-white/60 p-3.5 shadow-sm backdrop-blur-md dark:border-zinc-800/50 dark:bg-zinc-900/40"
+        class="mb-3 overflow-hidden rounded-[1.25rem] border border-gray-100 bg-[--van-background-2] p-3.5 shadow-sm backdrop-blur-md dark:border-zinc-800/50 dark:bg-zinc-900/40"
       >
         <div class="flex flex-col gap-3">
           <div class="flex items-center gap-4">
@@ -126,7 +127,7 @@ const {
         <div
           v-for="task in filteredTasks"
           :key="task.id"
-          class="group relative flex flex-col gap-3.5 rounded-2xl border border-gray-100 bg-white p-3.5 shadow-sm transition-all active:bg-gray-50 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-900 dark:active:bg-zinc-800"
+          class="group relative flex flex-col gap-3.5 rounded-2xl border border-gray-100 bg-[--van-background-2] p-4 shadow-sm transition-all active:scale-[0.98] dark:border-zinc-800/60 dark:bg-zinc-900/90 dark:backdrop-blur-sm dark:active:bg-zinc-800"
           @dblclick="openFolder(task.id)"
         >
           <!-- 任务主体 -->
@@ -146,12 +147,12 @@ const {
 
             <div class="min-w-0 flex-1">
               <h4
-                class="truncate text-sm font-bold text-gray-800 dark:text-gray-100"
+                class="truncate text-sm font-bold text-gray-800 dark:text-zinc-100"
               >
                 {{ task.title }}
               </h4>
               <div
-                class="mt-1 flex items-center gap-2 text-[10px] font-medium text-gray-400"
+                class="mt-1 flex items-center gap-2 text-[10px] font-medium text-gray-400 dark:text-zinc-500"
               >
                 <span
                   class="rounded px-1 py-0.5 text-[8px] font-black uppercase tracking-tight shadow-sm"
@@ -181,7 +182,7 @@ const {
             <div class="flex gap-1.5">
               <button
                 v-if="getStatusText(task.status) !== '已完成'"
-                class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-gray-500 transition-all active:bg-blue-50 active:scale-90 active:text-blue-600 dark:bg-zinc-800 dark:text-gray-400 dark:active:bg-blue-950/50"
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-[--van-background] text-gray-400 transition-all active:scale-90 dark:bg-zinc-800/80 dark:text-zinc-500 dark:active:bg-blue-500/20 dark:active:text-blue-400"
                 @click.stop="handleAction(task)"
                 @dblclick.stop
               >
@@ -193,7 +194,7 @@ const {
                 />
               </button>
               <button
-                class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-gray-500 transition-all active:bg-red-50 active:scale-90 active:text-red-600 dark:bg-zinc-800 dark:text-gray-400 dark:active:bg-red-950/50"
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-[--van-background] text-gray-400 transition-all active:scale-90 dark:bg-zinc-800/80 dark:text-zinc-500 dark:active:bg-red-500/20 dark:active:text-red-400"
                 @click.stop="confirmRemoveTask(task.id)"
                 @dblclick.stop
               >
@@ -207,39 +208,43 @@ const {
             <div class="flex items-center justify-between text-[11px]">
               <div class="flex items-center gap-2">
                 <span
-                  class="font-bold uppercase tracking-tight"
+                  class="font-extrabold uppercase tracking-tight"
                   :class="[
                     getStatusText(task.status) === '已完成'
-                      ? 'text-emerald-500'
+                      ? 'text-emerald-500 dark:text-emerald-400'
                       : getStatusText(task.status) === '已暂停'
-                        ? 'text-amber-500'
-                        : 'text-blue-500',
+                        ? 'text-amber-500 dark:text-amber-400'
+                        : getTaskError(task.status)
+                          ? 'text-red-500 dark:text-red-400'
+                          : 'text-blue-500 dark:text-blue-400',
                   ]"
                 >
                   {{ getStatusText(task.status) }}
                 </span>
-                <span class="text-gray-300 dark:text-zinc-700">|</span>
-                <span class="font-medium text-gray-400">
+                <span class="text-gray-300 dark:text-zinc-800">|</span>
+                <span class="font-medium text-gray-400 dark:text-zinc-500">
                   {{ getTaskProgressText(task) }}
                 </span>
               </div>
-              <span class="font-black text-gray-700 dark:text-gray-300">
+              <span class="font-black text-gray-700 dark:text-zinc-300">
                 {{ getProgress(task) }}%
               </span>
             </div>
 
             <!-- 自定义进度条 -->
             <div
-              class="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-zinc-800"
+              class="h-1.5 w-full overflow-hidden rounded-full bg-[--van-background] dark:bg-zinc-800/80"
             >
               <div
                 class="h-full transition-all duration-700 ease-out"
                 :class="[
                   getStatusText(task.status) === '已完成'
-                    ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]'
+                    ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)] dark:bg-emerald-400'
                     : getStatusText(task.status) === '已暂停'
-                      ? 'bg-amber-500'
-                      : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]',
+                      ? 'bg-amber-500 dark:bg-amber-400'
+                      : getTaskError(task.status)
+                        ? 'bg-red-500 dark:bg-red-400 shadow-[0_0_12px_rgba(239,68,68,0.4)]'
+                        : 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)] dark:bg-blue-400',
                 ]"
                 :style="{ width: `${getProgress(task)}%` }"
               />

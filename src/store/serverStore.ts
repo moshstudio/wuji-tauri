@@ -29,7 +29,7 @@ import { sleep } from '@/utils';
 import { getDeviceId } from '@/utils/device';
 import { createKVStore, useDisplayStore } from '.';
 
-let API_BASE_URL = 'http://localhost:3000/v1/api/';
+let API_BASE_URL = 'http://10.80.1.22:3000/v1/api/';
 // let API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
 
 if (import.meta.env.MODE !== 'development') {
@@ -225,31 +225,47 @@ export const useServerStore = defineStore('serverStore', () => {
   const isVip = computed(() => {
     return isMembershipOrderValid(userInfo.value?.vipMembershipPlan, now.value);
   });
-  const isSuperVip = computed(() => {
+  const isPro = computed(() => {
     return isMembershipOrderValid(
-      userInfo.value?.superVipMembershipPlan,
+      userInfo.value?.proMembershipPlan,
       now.value,
     );
   });
-  const isVipOrSuperVip = computed(() => {
-    return isVip.value || isSuperVip.value;
+  const isVipOrPro = computed(() => {
+    return isVip.value || isPro.value;
   });
 
-  /**
-   * 检查用户当前有效订单是否包含指定功能
-   * 基于 /feature 接口返回的配置与当前用户等级进行判断
-   */
   const hasFeature = computed(() => {
     return (featureKey: string): boolean => {
       const feature = featureList.value.find(f => f.key === featureKey);
       if (!feature)
         return false;
 
-      if (isSuperVip.value && feature.enableSuperVip)
+      // 1. Pro 会员权限：仅当功能明确为 PRO 开启时可用 (平级逻辑)
+      if (isPro.value && feature.enablePro)
         return true;
+
+      // 2. 普通会员权限：仅当功能明确为普通会员开启时可用 (平级逻辑)
       if (isVip.value && feature.enableVip)
         return true;
+
+      // 3. 公众功能：若未设置任何会员限制，则所有人可用
+      if (!feature.enableVip && !feature.enablePro)
+        return true;
+
       return false;
+    };
+  });
+
+  /**
+   * 检查指定功能是否为 VIP 专属功能
+   */
+  const isFeatureVip = computed(() => {
+    return (featureKey: string): boolean => {
+      const feature = featureList.value.find(f => f.key === featureKey);
+      if (!feature)
+        return false;
+      return feature.enableVip || feature.enablePro;
     };
   });
 
@@ -668,7 +684,7 @@ export const useServerStore = defineStore('serverStore', () => {
   };
 
   const syncToServer = async (
-    data: { type: string; data: any }[],
+    data: { type: string; data: unknown }[],
     isIncremental: boolean = false,
   ) => {
     if (!userInfo.value?.email) {
@@ -803,9 +819,10 @@ export const useServerStore = defineStore('serverStore', () => {
     userInfo,
     marketSource,
     isVip,
-    isSuperVip,
-    isVipOrSuperVip,
+    isPro,
+    isVipOrPro,
     hasFeature,
+    isFeatureVip,
     myMarketSources,
     membershipPlans,
     featureList,

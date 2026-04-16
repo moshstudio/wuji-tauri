@@ -16,16 +16,19 @@ import type { DownloadTask } from '@/store/download/types';
 import { listen } from '@tauri-apps/api/event';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
+import { type as osType } from '@tauri-apps/plugin-os';
 import { cachedFetch } from '@wuji-tauri/fetch';
 import { defineStore } from 'pinia';
 import {
   showConfirmDialog,
+  showDialog,
   showFailToast,
   showLoadingToast,
   showSuccessToast,
   showToast,
 } from 'vant';
 import { ref, toRef, watch } from 'vue';
+import { router } from '@/router';
 import {
   invokePlugin,
   TASK_PREFIX,
@@ -61,6 +64,7 @@ import {
   getVideoSavePath,
   getVideoTaskId,
 } from './download/fetchers/video';
+import { useServerStore } from './serverStore';
 import { useSettingStore } from './settingStore';
 import { useSongCacheStore } from './songCacheStore';
 import { useSongStore } from './songStore';
@@ -85,7 +89,7 @@ export const useDownloadStore = defineStore('download', () => {
   const downloadPath = toRef(settingStore, 'downloadPath');
 
   async function loadDownloadPath() {
-    if (!settingStore.downloadPath) {
+    if (osType() === 'android' || !settingStore.downloadPath) {
       const defaultPath = await invokePlugin<string>('get_download_dir');
       settingStore.downloadPath = defaultPath;
     }
@@ -132,13 +136,29 @@ export const useDownloadStore = defineStore('download', () => {
 
   async function pauseTask(id: string) {
     console.log(`[DownloadManager] Pausing task: ${id}`);
+
+    // 立即更新本地状态，确保 collection 任务的 JS 循环能通过 isTaskRunning 立即感知到暂停并终止
+    const taskIndex = tasks.value.findIndex(t => t.id === id);
+    if (taskIndex !== -1) {
+      tasks.value[taskIndex] = {
+        ...tasks.value[taskIndex],
+        status: 'paused',
+      };
+    }
+
     await invokePlugin('pause_task', { id });
-    runningFetchers.delete(id);
+
+    // 注意：不要在这里删除 runningFetchers.delete(id)
+    // 应让 Fetcher 的循环感知到 status 变为 paused 后通过 finally 块自行清理
+    // 这样可以防止在旧循环还没退出时，resumeTask 误以为没在运行而开启新循环
   }
 
   async function removeTask(id: string, deleteFile = false) {
     console.log(`[DownloadManager] Removing task: ${id}`);
-    await stopFetcher(id);
+
+    // 立即从本地移除，使 isTaskRunning(id) 立即返回 false，从而终止 collection 抓取循环
+    tasks.value = tasks.value.filter(t => t.id !== id);
+
     await invokePlugin('remove_task', { id, deleteFile });
     await loadTasks();
   }
@@ -154,10 +174,6 @@ export const useDownloadStore = defineStore('download', () => {
     fetcher: (id: string, task: DownloadTask) => void | Promise<void>,
   ) {
     fetcherRegistry.set(prefix, fetcher);
-  }
-
-  async function stopFetcher(id: string) {
-    runningFetchers.delete(id);
   }
 
   function runBackgroundTask(id: string, taskFn: () => Promise<void>) {
@@ -239,6 +255,7 @@ export const useDownloadStore = defineStore('download', () => {
           message: '该资源已经下载过了，是否重新下载？',
           confirmButtonText: '重新下载',
           cancelButtonText: '查看文件',
+          closeOnClickOverlay: true,
         });
         return true;
       }
@@ -246,6 +263,25 @@ export const useDownloadStore = defineStore('download', () => {
         showInFolder(taskId);
         return false;
       }
+    }
+    return true;
+  }
+
+  async function checkPermission(): Promise<boolean> {
+    const serverStore = useServerStore();
+    if (!serverStore.hasFeature('download_management')) {
+      try {
+        await showDialog({
+          title: '会员功能',
+          message: '下载功能为会员专属，是否前往查看会员方案？',
+          showCancelButton: true,
+        });
+        router.push({ name: 'VipDetail' });
+      }
+      catch {
+        // 取消
+      }
+      return false;
     }
     return true;
   }
@@ -261,6 +297,8 @@ export const useDownloadStore = defineStore('download', () => {
     headers?: Record<string, string>;
     extra?: Record<string, string>;
   }) {
+    if (!(await checkPermission()))
+      return;
     if (!(await checkExistingTask(params.id)))
       return;
 
@@ -287,6 +325,8 @@ export const useDownloadStore = defineStore('download', () => {
     headers?: Record<string, string>;
     extra?: Record<string, string>;
   }) {
+    if (!(await checkPermission()))
+      return;
     if (!(await checkExistingTask(params.id)))
       return;
     await addTask(
@@ -363,6 +403,7 @@ export const useDownloadStore = defineStore('download', () => {
     };
     await runMusicPlaylistFetcher(playlist, source, id, {
       getTasks: () => tasks.value,
+      addTask,
       runBackgroundTask,
       markTaskError,
     });
@@ -602,6 +643,8 @@ export const useDownloadStore = defineStore('download', () => {
     source?: SongSource,
   ) {
     const taskId = getMusicPlaylistTaskId(playlist);
+    const totalCount = playlist.songCount ? Number(playlist.songCount) : (playlist.list?.list.length || 1);
+
     await prepareCollectionTask({
       id: taskId,
       sourceId: source?.item.id || playlist.sourceId || 'local',
@@ -609,7 +652,7 @@ export const useDownloadStore = defineStore('download', () => {
       url: playlist.url || '',
       savePath: sanitizePathName(playlist.name || taskId, { removeSpaces: false }),
       category: 'Music',
-      totalChunks: playlist.list?.list.length || 1,
+      totalChunks: totalCount,
       extra: { playlistId: playlist.id },
     });
   }
@@ -620,6 +663,8 @@ export const useDownloadStore = defineStore('download', () => {
     playUrl: string,
     headers: Record<string, string> = {},
   ) {
+    if (!(await checkPermission()))
+      return;
     try {
       const defaultName = getMusicSavePath(song, playUrl);
       const filePath = await save({

@@ -34,6 +34,7 @@ declare module 'vue' {
     MVideoTab: typeof import('./src/components/tab/MVideoTab.vue')['default']
     PlatformSwitch: typeof import('./src/components/platform/PlatformSwitch.vue')['default']
     PlayingSongList: typeof import('./src/components/list/PlayingSongList.vue')['default']
+    ProButton: typeof import('./src/components/button/ProButton.vue')['default']
     PromptDialog: typeof import('./src/components/dialog/PromptDialog.vue')['default']
     ResponsiveGrid2: typeof import('./src/components/grid/ResponsiveGrid2.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

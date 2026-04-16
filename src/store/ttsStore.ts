@@ -16,7 +16,7 @@ export interface Voice {
   Gender: 'Female' | 'Male';
   Locale?: string;
   type: 'edge';
-  needVip: boolean;
+  feature?: string;
   [name: string]: any;
 }
 
@@ -30,7 +30,6 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-CN',
       type: 'edge',
-      needVip: false,
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, YunjianNeural)',
@@ -39,7 +38,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Male',
       Locale: 'zh-CN',
       type: 'edge',
-      needVip: true,
+      feature: 'tts_voice',
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, YunxiNeural)',
@@ -48,7 +47,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Male',
       Locale: 'zh-CN',
       type: 'edge',
-      needVip: true,
+      feature: 'tts_voice',
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, YunxiaNeural)',
@@ -57,7 +56,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Male',
       Locale: 'zh-CN',
       type: 'edge',
-      needVip: true,
+      feature: 'tts_voice',
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, YunyangNeural)',
@@ -66,7 +65,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Male',
       Locale: 'zh-CN',
       type: 'edge',
-      needVip: true,
+      feature: 'tts_voice',
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoxiaoNeural)',
@@ -75,7 +74,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-CN',
       type: 'edge',
-      needVip: true,
+      feature: 'tts_voice',
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN-liaoning, XiaobeiNeural)',
@@ -84,7 +83,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-CN-liaoning',
       type: 'edge',
-      needVip: true,
+      feature: 'tts_voice',
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-TW, HsiaoChenNeural)',
@@ -93,7 +92,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-TW',
       type: 'edge',
-      needVip: true,
+      feature: 'tts_voice',
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-TW, YunJheNeural)',
@@ -102,7 +101,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Male',
       Locale: 'zh-TW',
       type: 'edge',
-      needVip: true,
+      feature: 'tts_voice',
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-TW, HsiaoYuNeural)',
@@ -111,7 +110,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-TW',
       type: 'edge',
-      needVip: true,
+      feature: 'tts_voice',
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN-shaanxi, XiaoniNeural)',
@@ -120,7 +119,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-CN-shaanxi',
       type: 'edge',
-      needVip: true,
+      feature: 'tts_voice',
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-HK, HiuGaaiNeural)',
@@ -129,7 +128,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-HK',
       type: 'edge',
-      needVip: true,
+      feature: 'tts_voice',
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-HK, HiuMaanNeural)',
@@ -138,7 +137,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Female',
       Locale: 'zh-HK',
       type: 'edge',
-      needVip: true,
+      feature: 'tts_voice',
     },
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-HK, WanLungNeural)',
@@ -147,7 +146,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       Gender: 'Male',
       Locale: 'zh-HK',
       type: 'edge',
-      needVip: true,
+      feature: 'tts_voice',
     },
   ]);
 
@@ -182,7 +181,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
 
   // 每秒更新时间戳
   onMounted(() => {
-    const timer = setInterval(() => {
+    setInterval(() => {
       now.value = Date.now();
       if (
         isReading.value

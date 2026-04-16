@@ -2,7 +2,7 @@
 import type { UserInfo } from '@/types/user';
 import { onMountedOrActivated } from '@vant/use';
 import { onDeactivated, onUnmounted, reactive, ref, watch } from 'vue';
-import SVipButton from '@/components/button/SVipButton.vue';
+import ProButton from '@/components/button/ProButton.vue';
 import VipButton from '@/components/button/VipButton.vue';
 import MNavBar from '@/components/header/MNavBar.vue';
 import { router } from '@/router';
@@ -156,10 +156,10 @@ function updateName() {
                     "
                     :on-click="() => {}"
                   />
-                  <SVipButton
-                    :is-svip="
+                  <ProButton
+                    :is-pro="
                       isMembershipOrderValid(
-                        userInfo.superVipMembershipPlan,
+                        userInfo.proMembershipPlan,
                         now,
                       )
                     "

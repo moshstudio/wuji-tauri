@@ -41,6 +41,11 @@ import MoreOptionsSheet from './components/MoreOptionsSheet.vue';
 export { joinSongArtists } from './components/cards/song/index';
 
 export {
+  getSourceTypeProperty,
+  getSourceTypeTheme,
+} from './utils/source';
+
+export {
   LoadImage,
   MarketSourceCard,
   MarketSourceContentCard,

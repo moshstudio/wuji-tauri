@@ -3,54 +3,16 @@ import type {
   SubscribeItem,
   SubscribeSource,
 } from '@wuji-tauri/source-extension';
-import { SourceType } from '@wuji-tauri/source-extension';
+import { computed } from 'vue';
+import { getSourceTypeProperty } from '../../../utils/source';
 
-defineProps<{
+const props = defineProps<{
   source: SubscribeSource;
   item: SubscribeItem;
   onClick: (source: SubscribeSource, item: SubscribeItem) => void;
 }>();
 
-function getTypeProperty(type: SourceType) {
-  switch (type) {
-    case SourceType.Book:
-      return {
-        name: '书籍',
-        bgColor: '#dcfce7',
-        textColor: '#166534',
-      };
-    case SourceType.Comic:
-      return {
-        name: '漫画',
-        bgColor: '#fef3c7',
-        textColor: '#92400e',
-      };
-    case SourceType.Photo:
-      return {
-        name: '图片',
-        bgColor: '#f5f5f5',
-        textColor: '#525252',
-      };
-    case SourceType.Song:
-      return {
-        name: '音乐',
-        bgColor: '#fce7f3',
-        textColor: '#9d174d',
-      };
-    case SourceType.Video:
-      return {
-        name: '影视',
-        bgColor: '#fee2e2',
-        textColor: '#991b1b',
-      };
-    case SourceType.Resource:
-      return {
-        name: '资源',
-        bgColor: '#e0e7ff',
-        textColor: '#4338ca',
-      };
-  }
-}
+const typeProperty = computed(() => getSourceTypeProperty(props.item.type));
 </script>
 
 <template>
@@ -58,10 +20,10 @@ function getTypeProperty(type: SourceType) {
     <template #title>
       <div class="flex items-center gap-2">
         <van-tag
-          :color="getTypeProperty(item.type).bgColor"
-          :text-color="getTypeProperty(item.type).textColor"
+          :color="typeProperty.bgColor"
+          :text-color="typeProperty.textColor"
         >
-          {{ getTypeProperty(item.type).name }}
+          {{ typeProperty.name }}
         </van-tag>
         <div>
           {{ item.name }}

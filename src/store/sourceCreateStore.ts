@@ -33,7 +33,7 @@ import {
 } from '@/components/codeEditor/templates';
 import { createKVStore } from './utils';
 
-export interface FormItem<T = any> {
+export interface FormItem<T = unknown> {
   type: string;
   chineseName: string;
   id: string;

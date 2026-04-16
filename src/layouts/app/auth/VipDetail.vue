@@ -44,7 +44,7 @@ onMountedOrActivated(() => {
 const isVip = computed(() => {
   return (
     isMembershipOrderValid(props.userInfo?.vipMembershipPlan, now.value)
-    || isMembershipOrderValid(props.userInfo?.superVipMembershipPlan, now.value)
+    || isMembershipOrderValid(props.userInfo?.proMembershipPlan, now.value)
   );
 });
 
@@ -55,32 +55,31 @@ const vipPlans = computed(() => {
     ) || []
   );
 });
-const sVipPlans = computed(() => {
+const proPlans = computed(() => {
   return (
     props.membershipPlans?.filter(
-      plan => plan.level === MembershipPlanLevel.SuperVip,
+      plan => plan.level === MembershipPlanLevel.Pro,
     ) || []
   );
 });
 
 const active = ref(0);
 const selectedVipPlan = ref<MembershipPlan>();
-const selectedSvipPlan = ref<MembershipPlan>();
+const selectedProPlan = ref<MembershipPlan>();
 const payMethod = ref<'alipay' | 'wechat'>('alipay');
 
 function selectVipPlan(plan: MembershipPlan) {
   selectedVipPlan.value = plan;
 }
-function selectSvipPlan(plan: MembershipPlan) {
-  selectedSvipPlan.value = plan;
+function selectProPlan(plan: MembershipPlan) {
+  selectedProPlan.value = plan;
 }
 
 const displayFeatures = computed(() => {
   if (!props.featureList)
     return [];
-  const level = active.value === 0 ? 'enableVip' : 'enableSuperVip';
   return props.featureList
-    .filter(f => f[level])
+    .filter(f => active.value === 0 ? f.enableVip : f.enablePro)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 });
 watch(
@@ -93,10 +92,10 @@ watch(
   { immediate: true },
 );
 watch(
-  sVipPlans,
+  proPlans,
   (plans) => {
-    if (plans.length > 0 && !selectedSvipPlan.value) {
-      selectedSvipPlan.value = plans[0];
+    if (plans.length > 0 && !selectedProPlan.value) {
+      selectedProPlan.value = plans[0];
     }
   },
   { immediate: true },
@@ -132,18 +131,18 @@ watch(
           </p>
         </div>
         <div
-          v-if="isMembershipOrderValid(userInfo?.superVipMembershipPlan, now)"
+          v-if="isMembershipOrderValid(userInfo?.proMembershipPlan, now)"
           class="mt-1 flex items-center gap-2"
         >
           <p class="w-8 font-bold text-pink-500">
-            SVIP
+            PRO
           </p>
           <p
-            v-if="userInfo?.superVipMembershipPlan?.endDate"
+            v-if="userInfo?.proMembershipPlan?.endDate"
             class="text-xs text-gray-500 dark:text-gray-400"
           >
             {{
-              format(userInfo.superVipMembershipPlan.endDate, 'yyyy年MM月dd日')
+              format(userInfo.proMembershipPlan.endDate, 'yyyy年MM月dd日')
             }}到期
           </p>
         </div>
@@ -236,7 +235,7 @@ watch(
             <div class="pb-6 pt-2">
               <van-cell-group
                 inset
-                :title="active === 0 ? 'VIP专属特权' : 'SVIP专属特权'"
+                :title="active === 0 ? 'VIP专属特权' : 'PRO专属特权'"
               >
                 <van-cell
                   v-for="f in displayFeatures"
@@ -258,20 +257,20 @@ watch(
           </div>
         </van-tab>
 
-        <van-tab title="SVIP会员">
-          <div v-if="sVipPlans.length > 0" class="p-4">
+        <van-tab title="PRO会员">
+          <div v-if="proPlans.length > 0" class="p-4">
             <HorizonList class="mb-6 gap-3">
               <div
-                v-for="plan in sVipPlans"
+                v-for="plan in proPlans"
                 :key="plan._id"
                 class="flex h-36 w-28 shrink-0 flex-col items-center justify-start rounded-xl border-2 p-4 transition-all duration-200"
                 :class="{
                   'border-purple-400 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md dark:from-purple-900/30 dark:to-pink-900/30':
-                    selectedSvipPlan?._id === plan._id,
+                    selectedProPlan?._id === plan._id,
                   'border-gray-200 !bg-white dark:border-gray-700 dark:!bg-gray-800':
-                    selectedSvipPlan?._id !== plan._id,
+                    selectedProPlan?._id !== plan._id,
                 }"
-                @click="selectSvipPlan(plan)"
+                @click="selectProPlan(plan)"
               >
                 <p
                   class="mb-2 line-clamp-2 text-center font-bold text-gray-800 dark:text-gray-200"
@@ -323,9 +322,9 @@ watch(
                 type="primary"
                 size="large"
                 class="w-4/5 rounded-full border-0 bg-gradient-to-r from-purple-500 to-pink-500 shadow-lg"
-                @click="selectedSvipPlan && getPayUrl(selectedSvipPlan)"
+                @click="selectedProPlan && getPayUrl(selectedProPlan)"
               >
-                <span class="pr-1">¥{{ selectedSvipPlan?.price }}</span>
+                <span class="pr-1">¥{{ selectedProPlan?.price }}</span>
                 <span>立即开通</span>
               </van-button>
             </div>
@@ -333,7 +332,7 @@ watch(
             <div class="pb-6 pt-2">
               <van-cell-group
                 inset
-                :title="active === 0 ? 'VIP专属特权' : 'SVIP专属特权'"
+                :title="active === 0 ? 'VIP专属特权' : 'PRO专属特权'"
               >
                 <van-cell
                   v-for="f in displayFeatures"

@@ -145,19 +145,37 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             });
 
             // 优先获取系统下载目录
-            let downloads_dir = app.path().download_dir().unwrap_or_else(|_| {
-                // 如果获取不到下载文件夹，回退到桌面 (Windows 特色)
-                #[cfg(windows)]
+            let downloads_dir = {
+                #[cfg(target_os = "android")]
                 {
-                    if let Ok(profile) = std::env::var("USERPROFILE") {
-                        let p = std::path::PathBuf::from(profile).join("Desktop");
-                        if p.exists() {
-                            return p;
-                        }
+                    // 尝试系统公共下载目录
+                    let public_download = std::path::PathBuf::from("/storage/emulated/0/Download");
+                    if public_download.exists() {
+                        public_download
+                    } else {
+                        // 回退到应用私有下载目录
+                        app.path()
+                            .download_dir()
+                            .unwrap_or_else(|_| app_data_dir.join("downloads"))
                     }
                 }
-                app_data_dir.join("downloads")
-            });
+                #[cfg(not(target_os = "android"))]
+                {
+                    app.path().download_dir().unwrap_or_else(|_| {
+                        // 如果获取不到下载文件夹，回退到桌面 (Windows 特色)
+                        #[cfg(windows)]
+                        {
+                            if let Ok(profile) = std::env::var("USERPROFILE") {
+                                let p = std::path::PathBuf::from(profile).join("Desktop");
+                                if p.exists() {
+                                    return p;
+                                }
+                            }
+                        }
+                        app_data_dir.join("downloads")
+                    })
+                }
+            };
 
             let manager = Arc::new(Mutex::new(DownloadManagerInner::new(
                 app_data_dir,

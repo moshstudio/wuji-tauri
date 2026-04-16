@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getSourceTypeTheme } from '@wuji-tauri/components';
 import { storeToRefs } from 'pinia';
 import { set_screen_orientation } from 'tauri-plugin-commands-api';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
@@ -49,7 +50,13 @@ const _pages = reactive({
 const pages = computed(() => {
   return tabBarPages.value
     .filter(page => page.enable && page.name !== 'Home')
-    .map(page => _pages[page.name as keyof typeof _pages]);
+    .map((page) => {
+      const p = _pages[page.name as keyof typeof _pages];
+      return {
+        ...p,
+        theme: getSourceTypeTheme(page.name),
+      };
+    });
 });
 
 function updateActiveKey(newPath?: string) {
@@ -124,24 +131,23 @@ window.androidBackCallback = async () => {
         v-model="activeKey"
         placeholder
         class="mtabbar-root z-[1002] h-[50px] shrink-0"
-        active-color="var(--van-text-color)"
       >
         <van-tabbar-item
           v-for="(page, index) in pages"
           :key="index"
-          :icon="page.icon"
           :to="page.to"
         >
           <template #icon>
             <van-icon
-              v-if="activeKey === index"
-              :name="page.selectedIcon"
-              class="mtabbar-icon mtabbar-icon--active"
-            />
-            <van-icon
-              v-else
-              :name="page.icon"
-              class="mtabbar-icon mtabbar-icon--inactive"
+              :name="activeKey === index ? page.selectedIcon : page.icon"
+              class="mtabbar-icon"
+              :class="[
+                activeKey === index
+                  ? 'mtabbar-icon--active'
+                  : 'mtabbar-icon--inactive',
+              ]"
+              :color="activeKey === index ? page.theme.textColor : 'inherit'"
+              size="20"
             />
           </template>
         </van-tabbar-item>
@@ -185,7 +191,6 @@ window.androidBackCallback = async () => {
 }
 
 .mtabbar-icon {
-  font-size: 20px;
   transition:
     transform 0.18s ease-out,
     color 0.18s ease-out,
@@ -199,7 +204,6 @@ window.androidBackCallback = async () => {
 
 .mtabbar-icon--active {
   opacity: 1;
-  color: var(--van-primary-color);
   transform: scale(1.05);
   text-shadow: 0 0 6px rgb(from var(--van-text-color) r g b / 35%);
 }

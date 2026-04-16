@@ -62,11 +62,17 @@ const prevChapterContent = ref<string>();
 const nextChapterContent = ref<string>();
 
 const showReadModeSheet = ref(false);
-const readModeActions = [
+interface ReadModeAction {
+  name: string;
+  value: 'slide' | 'scroll';
+}
+
+const readModeActions: ReadModeAction[] = [
   { name: '侧滑翻页', value: 'slide' },
   { name: '上下滚动', value: 'scroll' },
 ];
-function onSelectReadMode(action: any) {
+
+function onSelectReadMode(action: ReadModeAction) {
   bookStore.readMode = action.value;
   showReadModeSheet.value = false;
 }
@@ -76,10 +82,11 @@ const serverStore = useServerStore();
 interface FontOption {
   label: string;
   family: string;
+  feature?: string;
 }
 
 function selectFont(font: FontOption) {
-  if (!serverStore.hasFeature('book_font')) {
+  if (font.feature && !serverStore.hasFeature(font.feature)) {
     showDialog({
       title: 'VIP功能',
       message: '此字体VIP可用, 是否去开通会员？',
@@ -608,7 +615,7 @@ onDeactivated(() => {
         >
           <template v-for="font in webFonts" :key="font.family">
             <van-badge color="#1989fa" :offset="[-8, 0]">
-              <template v-if="font.isVip" #content>
+              <template v-if="font.feature && serverStore.isFeatureVip(font.feature)" #content>
                 <van-icon name="diamond" class="badge-icon" />
               </template>
               <div

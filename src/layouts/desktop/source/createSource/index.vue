@@ -174,7 +174,7 @@ const logs = ref<
 >([]);
 
 function deepToString(
-  obj: any,
+  obj: unknown,
   depth = 0,
   maxDepth = 10,
   isJsonLike = true, // 新增参数，标记是否按 JSON 风格格式化
@@ -218,7 +218,7 @@ function deepToString(
   }
 
   // 如果是普通对象
-  const entries = Object.entries(obj);
+  const entries = Object.entries(obj as Record<string, unknown>);
   if (entries.length === 0)
     return '{}';
 
@@ -253,7 +253,7 @@ function deepToString(
   return `{${singleLineEntries.join(', ')}}`;
 }
 
-function logFunction(...args: any[]) {
+function logFunction(...args: unknown[]) {
   logs.value.push({
     id: nanoid(),
     message: args
@@ -354,7 +354,8 @@ const typePickerActions = computed(() =>
 
 const showGuide = ref(false);
 const guideContent = computed(() => {
-  return (guideExamplesMD[showingType.value] as any)[selectedPage.value];
+  const category = guideExamplesMD[showingType.value] as Record<string, string>;
+  return category[selectedPage.value];
 });
 
 const showPreview = ref(false);
@@ -362,9 +363,9 @@ const previewComponent = computed(() => {
   if (selectedPage.value === 'constructor') {
     return undefined;
   }
-  const page = previewPages[showingType.value][
-    selectedPage.value as keyof (typeof previewPages)[typeof showingType.value]
-  ] as any;
+  const categoryPages = previewPages[showingType.value];
+  const pageKey = selectedPage.value as keyof typeof categoryPages;
+  const page = categoryPages[pageKey] as { page: any } | undefined;
 
   if (page === undefined) {
     return undefined;
@@ -381,7 +382,7 @@ const previewPage = computed(() => {
 function updatePreviewResult(
   type: Type,
   page: string,
-  result: any,
+  result: unknown,
   passed: boolean,
 ) {
   const f = form.value[type].pages.find(p => p.type === page);
@@ -421,7 +422,7 @@ async function handleRun() {
   showPreview.value = true;
   logs.value = [];
   nextTick(() => {
-    (previewComponentRef.value as any)?.initLoad();
+    (previewComponentRef.value as { initLoad: () => void } | null)?.initLoad();
   });
 }
 

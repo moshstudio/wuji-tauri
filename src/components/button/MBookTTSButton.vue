@@ -18,8 +18,8 @@ const displayStore = useDisplayStore();
 const showDialog = ref(false);
 
 function onPlay() {
-  if (ttsStore.selectedVoice.needVip) {
-    if (!serverStore.hasFeature('tts_voice')) {
+  if (ttsStore.selectedVoice.feature) {
+    if (!serverStore.hasFeature(ttsStore.selectedVoice.feature)) {
       vantShowDialog({
         message: '您选择的语音为会员专属哦\n是否立即开通会员?',
       }).then(() => {
@@ -197,7 +197,7 @@ const remainingTime = computed(() => {
     >
       <template v-for="voice in ttsStore.voices" :key="voice.ChineseName">
         <van-badge color="#1989fa" :offset="[0, 0]">
-          <template v-if="voice.needVip" #content>
+          <template v-if="voice.feature && serverStore.isFeatureVip(voice.feature)" #content>
             <van-icon name="diamond" class="badge-icon" />
           </template>
           <div
