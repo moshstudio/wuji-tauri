@@ -12,10 +12,11 @@ withDefaults(
     shelf?: SongShelf;
     toPage: (shelf: SongShelf, pageNo: number) => void;
     playAll: (shelf: SongShelf) => void;
+    downloadAll: (shelf: SongShelf) => void;
+    downloadSong: (song: SongInfo) => void;
     removeSong?: (shelf: SongShelf, song: SongInfo) => void;
     removeShelf: (shelf: SongShelf) => void;
     showMoreOptions: (shelf: SongShelf, song: SongInfo) => void;
-    downloadAll: (shelf: SongShelf) => void;
   }>(),
   {},
 );

@@ -18,6 +18,8 @@ pub enum Error {
     SourceUnavailable(String),
     #[error("Invalid path: {0}")]
     PathError(String),
+    #[error("TASK_STOPPED")]
+    TaskStopped,
     #[error("{0}")]
     Other(String),
 }
@@ -25,6 +27,7 @@ pub enum Error {
 impl Error {
     pub fn to_user_message(&self) -> String {
         match self {
+            Error::TaskStopped => "任务已暂停".to_string(),
             Error::Io(e) => {
                 if e.kind() == std::io::ErrorKind::StorageFull {
                     "磁盘空间不足，请清理后重试".to_string()

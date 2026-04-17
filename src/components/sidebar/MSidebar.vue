@@ -15,14 +15,6 @@ interface SidebarOption {
 
 const options: SidebarOption[] = [
   {
-    text: '下载管理',
-    color: '#1989fa',
-    feature: 'download_management',
-    onClick: () => {
-      router.push({ name: 'DownloadManager' });
-    },
-  },
-  {
     text: '管理订阅源',
     color: '#1989fa',
     onClick: () => {
@@ -34,6 +26,13 @@ const options: SidebarOption[] = [
     color: '#07c160',
     onClick: () => {
       router.push({ name: 'SourceMarket' });
+    },
+  },
+  {
+    text: '下载管理',
+    feature: 'download_management',
+    onClick: () => {
+      router.push({ name: 'DownloadManager' });
     },
   },
   {
@@ -88,12 +87,6 @@ const options: SidebarOption[] = [
             <template #title>
               <div class="flex items-center gap-1">
                 <span :style="{ color: option.color }">{{ option.text }}</span>
-                <van-icon
-                  v-if="option.feature && serverStore.isFeatureVip(option.feature)"
-                  name="diamond"
-                  color="#f2c97d"
-                  size="14"
-                />
               </div>
             </template>
           </van-cell>

@@ -17,6 +17,7 @@ import {
   useDownloadStore,
   usePhotoShelfStore,
   useStore,
+  useSubscribeSourceStore,
 } from '@/store';
 import { useBackStore } from '@/store/backStore';
 import { downloadFile } from '@/utils';
@@ -55,7 +56,7 @@ const selectShelfActions = computed(() => {
 });
 
 const { run: loadPage, isActive } = usePageDataLoader({
-  onFailed: () => showFailToast('图集详情加载失败，请重试'),
+  onFailed: () => showFailToast('加载失败，请检查网络或图源状态'),
 });
 
 function back() {
@@ -76,14 +77,30 @@ async function toPage(pageNo?: number) {
   await loadPage(async (signal) => {
     clear();
     if (!id || !sourceId) {
+      showFailToast('跳转参数错误');
       shouldReload.value = true;
-      return false;
+      return true;
     }
 
     photoSource.value = store.getPhotoSource(sourceId!);
     if (!photoSource.value) {
+      const subscribeStore = useSubscribeSourceStore();
+      const subscribeSource = subscribeStore.subscribeSources.find(s =>
+        s.detail.urls.some(u => u.id === sourceId),
+      );
+      const urlItem = subscribeSource?.detail.urls.find(u => u.id === sourceId);
+
+      if (urlItem && (urlItem.disable || subscribeSource?.disable)) {
+        showFailToast('图源已禁用，请在订阅源管理中启用');
+      }
+      else if (!urlItem) {
+        showFailToast('图源不存在或已删除');
+      }
+      else {
+        showFailToast('图源加载失败，请检查订阅源配置');
+      }
       shouldReload.value = true;
-      return false;
+      return true;
     }
 
     photoItem.value = store.getPhotoItem(photoSource.value, id!);
@@ -109,6 +126,7 @@ async function toPage(pageNo?: number) {
       photoSource.value!,
       photoItem.value!,
       pageNo,
+      { silent: true },
     );
 
     if (signal.aborted)

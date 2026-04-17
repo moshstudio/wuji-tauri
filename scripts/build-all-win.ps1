@@ -3,8 +3,10 @@
 
 param(
     [string]$OutputDir = "C:\Users\14438\Desktop\wuji_things",
-    [Parameter(Mandatory=$true)]
-    [string]$Password
+    [Parameter(Mandatory=$false)] # 修改为非强制，因为 SkipBuild 时不需要
+    [string]$Password,
+    [string]$Notes = "",
+    [switch]$SkipBuild
 )
 
 # 基础路径
@@ -34,19 +36,30 @@ Write-Host "版本号: $version" -ForegroundColor Cyan
 Write-Host "输出目录: $OutputDir" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan
 
-# 设置签名密码环境变量
-# Tauri 会自动读取此环境变量进行签名，无需交互式输入
-$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = $Password
-Write-Host "已设置签名密码环境变量 (TAURI_SIGNING_PRIVATE_KEY_PASSWORD)" -ForegroundColor Green
-
 # 执行构建
-Write-Host "`n正在执行 pnpm run tauri:build ..." -ForegroundColor Yellow
+if (-not $SkipBuild) {
+    if ([string]::IsNullOrWhiteSpace($Password)) {
+        Write-Host "✗ 错误: 打包模式必须提供签名密码 (-Password)" -ForegroundColor Red
+        exit 1
+    }
+    
+    # 设置签名密码环境变量
+    $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = $Password
+    Write-Host "已设置签名密码环境变量 (TAURI_SIGNING_PRIVATE_KEY_PASSWORD)" -ForegroundColor Green
 
-# 运行构建命令
-pnpm run tauri:build
-
-if ($LASTEXITCODE -eq 0) {
+    Write-Host "`n正在执行 pnpm run tauri:build ..." -ForegroundColor Yellow
+    pnpm run tauri:build
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "✗ 构建失败" -ForegroundColor Red
+        exit 1
+    }
     Write-Host "✓ 构建命令执行完成" -ForegroundColor Green
+} else {
+    Write-Host "跳过打包步骤，直接处理现有文件..." -ForegroundColor Yellow
+}
+
+# 此时无论是刚构建完还是跳过构建，都检查输出目录是否有 artifact
+if ($true) { # 始终执行后续的同步和 JSON 更新逻辑
     
     # 查找生成的exe文件
     # 过滤包含版本号的exe文件，如果找不到尝试找最新的
@@ -83,7 +96,11 @@ if ($LASTEXITCODE -eq 0) {
                 # 更新基础信息
                 $jsonContent.version = $version
                 $jsonContent.pub_date = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ss") + "+08:00"
-                $jsonContent.notes = "更新版本 $version" # 可选：更新说明
+                if ([string]::IsNullOrWhiteSpace($Notes)) {
+                    $jsonContent.notes = "更新版本 $version"
+                } else {
+                    $jsonContent.notes = $Notes
+                }
 
                 # 构建下载 URL (假设服务器路径固定)
                 $encodedName = [Uri]::EscapeDataString($exeName)
@@ -100,13 +117,35 @@ if ($LASTEXITCODE -eq 0) {
                 Write-Host "  已更新 updater_win.json (所有平台)" -ForegroundColor Green
 
                 # 保存 JSON (2 空格缩进)
-                $jsonOptions = @{
-                    Depth = 10
-                    Compress = $false
+                $jsonRaw = $jsonContent | ConvertTo-Json -Depth 10 -Compress
+                
+                # 尝试用 Python 进行格式化 (最稳定)
+                $pythonPath = Join-Path $projectRoot ".venv\Scripts\python.exe"
+                if (-not (Test-Path $pythonPath)) { $pythonPath = "python" }
+                
+                try {
+                    # 使用 Base64 传递数据以规避转义问题
+                    $bytes = [System.Text.Encoding]::UTF8.GetBytes($jsonRaw)
+                    $base64 = [System.Convert]::ToBase64String($bytes)
+                    $pyCmd = "import json, base64, sys; data=json.loads(base64.b64decode('$base64').decode('utf-8')); print(json.dumps(data, indent=2, ensure_ascii=False))"
+                    # 使用 Out-String 确保保留换行符，避免变成单行
+                    $newJson = & $pythonPath -c $pyCmd | Out-String
+                    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($newJson)) { throw "Python 格式化失败" }
+                } catch {
+                    # 备用方案：暴力正则修复
+                    Write-Host "  ⚠ 警告: Python 格式化失败，使用备用正则修复缩进" -ForegroundColor Yellow
+                    $newJson = $jsonContent | ConvertTo-Json -Depth 10
+                    $newJson = [regex]::Replace($newJson, "(?m)^( +)", { 
+                        param($m) 
+                        $len = $m.Value.Length
+                        # 尝试将大缩进压缩 (假设 11 -> 4, 22 -> 6 等)
+                        # 这里简单处理：超过 4 的都减半再减半
+                        $newLen = [int]($len / 4) * 2
+                        if ($newLen -lt 2) { $newLen = 2 }
+                        return " " * $newLen
+                    })
+                    $newJson = $newJson -replace '":  +', '": '
                 }
-                $newJson = $jsonContent | ConvertTo-Json @jsonOptions
-                # 将 PowerShell 默认的 4 空格缩进替换为 2 空格
-                $newJson = $newJson -replace '(?m)^((?:  )*)  ', '$1'
                 
                 # 使用无 BOM 的 UTF-8 编码
                 $utf8NoBom = New-Object System.Text.UTF8Encoding $false

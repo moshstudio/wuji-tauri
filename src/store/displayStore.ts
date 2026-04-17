@@ -17,7 +17,6 @@ import { useSettingStore } from './settingStore';
 import { tauriAddPluginListener } from './utils';
 
 export const useDisplayStore = defineStore('display', () => {
-  const showNews = useStorage('showNews', true);
   const showTabBar = ref(true);
   const fullScreenMode = ref(false);
 
@@ -77,8 +76,6 @@ export const useDisplayStore = defineStore('display', () => {
     mobileMediaQuery.removeEventListener('change', checkMobile);
     landscapeMediaQuery.removeEventListener('change', checklanscape);
   });
-
-  const taichiAnimateRandomized = ref(false);
 
   const isDark = useDark();
   const toggleDark = useToggle(isDark);
@@ -297,14 +294,12 @@ export const useDisplayStore = defineStore('display', () => {
   });
 
   return {
-    showNews,
     fullScreenMode,
     isAppView,
     isAndroid,
     isWindows,
     androidOrientation,
 
-    taichiAnimateRandomized,
     isDark,
     toggleDark,
     showTabBar,

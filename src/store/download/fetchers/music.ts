@@ -17,6 +17,7 @@ export async function runMusicPlaylistFetcher(
     addTask: (task: Omit<DownloadTask, 'status' | 'downloadedSize' | 'totalSize' | 'completedChunks' | 'createdAt'>) => Promise<void>;
     runBackgroundTask: (id: string, fn: () => Promise<void>) => void;
     markTaskError: (id: string, error: string) => Promise<void>;
+    loadTasks: () => Promise<void>;
   },
 ) {
   return deps.runBackgroundTask(taskId, async () => {
@@ -114,6 +115,9 @@ export async function runMusicPlaylistFetcher(
     });
 
     await Promise.all(promises);
+
+    // 刷新任务列表以确保状态最新
+    await deps.loadTasks();
 
     const finalTask = deps.getTasks().find(t => t.id === taskId);
     const completedCount = finalTask?.completedChunks.length || 0;

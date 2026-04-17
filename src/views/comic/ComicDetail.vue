@@ -9,7 +9,12 @@ import { usePageDataLoader } from '@/hooks/usePageDataLoader';
 import AppComicDetail from '@/layouts/app/comic/ComicDetail.vue';
 import DesktopComicDetail from '@/layouts/desktop/comic/ComicDetail.vue';
 import { router } from '@/router';
-import { useComicShelfStore, useDownloadStore, useStore } from '@/store';
+import {
+  useComicShelfStore,
+  useDownloadStore,
+  useStore,
+  useSubscribeSourceStore,
+} from '@/store';
 
 const { comicId, sourceId } = defineProps({
   comicId: String,
@@ -48,7 +53,7 @@ const addShelfActions = computed(() => {
 });
 
 const { run: loadPage } = usePageDataLoader({
-  onFailed: () => showFailToast('漫画详情加载失败，请重试'),
+  onFailed: () => showFailToast('加载失败，请检查网络或订阅源状态'),
 });
 
 async function loadData() {
@@ -58,14 +63,30 @@ async function loadData() {
     shouldReload.value = false;
 
     if (!comicId || !sourceId) {
+      showFailToast('跳转参数错误');
       shouldReload.value = true;
-      return false;
+      return true;
     }
 
     comicSource.value = store.getComicSource(sourceId);
     if (!comicSource.value) {
+      const subscribeStore = useSubscribeSourceStore();
+      const subscribeSource = subscribeStore.subscribeSources.find(s =>
+        s.detail.urls.some(u => u.id === sourceId),
+      );
+      const urlItem = subscribeSource?.detail.urls.find(u => u.id === sourceId);
+
+      if (urlItem && (urlItem.disable || subscribeSource?.disable)) {
+        showFailToast('漫画源已禁用，请在订阅源管理中启用');
+      }
+      else if (!urlItem) {
+        showFailToast('漫画源不存在或已删除');
+      }
+      else {
+        showFailToast('漫画源加载失败，请检查订阅源配置');
+      }
       shouldReload.value = true;
-      return false;
+      return true;
     }
 
     comic.value = store.getComicItem(comicSource.value, comicId);
@@ -80,7 +101,7 @@ async function loadData() {
       closeOnClick: true,
       closeOnClickOverlay: false,
     });
-    const detail = await store.comicDetail(comicSource.value, comic.value);
+    const detail = await store.comicDetail(comicSource.value, comic.value, { silent: true });
     toast.close();
 
     if (signal.aborted)

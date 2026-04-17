@@ -87,13 +87,13 @@ fn get_m3u8_content_with_redirect(
         let mut header_map = parse_encoded_headers(&headers_part);
 
         // Merge request headers (excluding host, referer, origin)
-        let excluded_headers: [reqwest::header::HeaderName; 3] = [
-            reqwest::header::HeaderName::from_static("host"),
-            reqwest::header::HeaderName::from_static("referer"),
-            reqwest::header::HeaderName::from_static("origin"),
+        let excluded_headers = [
+            reqwest::header::HOST,
+            reqwest::header::REFERER,
+            reqwest::header::ORIGIN,
         ];
         let reqwest_headers = convert_to_reqwest_headers(headers);
-        merge_headers(&mut header_map, reqwest_headers, &excluded_headers);
+        merge_headers(&mut header_map, reqwest_headers, &excluded_headers[..]);
 
         // Create HTTP client
         let client = get_m3u8_http_client(&url, &header_map);
@@ -360,13 +360,13 @@ async fn get_ts_content_async(
     let mut header_map = parse_encoded_headers(&headers_part);
 
     // Merge request headers (excluding host, referer, origin)
-    let excluded_headers: [reqwest::header::HeaderName; 3] = [
-        reqwest::header::HeaderName::from_static("host"),
-        reqwest::header::HeaderName::from_static("referer"),
-        reqwest::header::HeaderName::from_static("origin"),
+    let excluded_headers = [
+        reqwest::header::HOST,
+        reqwest::header::REFERER,
+        reqwest::header::ORIGIN,
     ];
     let reqwest_headers = convert_to_reqwest_headers(headers);
-    merge_headers(&mut header_map, reqwest_headers, &excluded_headers);
+    merge_headers(&mut header_map, reqwest_headers, &excluded_headers[..]);
     let client = get_m3u8_http_client(&url, &header_map);
 
     let response = match client.get(&url).send().await {
@@ -510,13 +510,13 @@ fn handle_proxy_request_with_redirect(
         let mut header_map = parse_encoded_headers(&headers_part);
 
         // Merge request headers
-        let excluded_headers: [reqwest::header::HeaderName; 3] = [
-            reqwest::header::HeaderName::from_static("host"),
-            reqwest::header::HeaderName::from_static("referer"),
-            reqwest::header::HeaderName::from_static("origin"),
+        let excluded_headers = [
+            reqwest::header::HOST,
+            reqwest::header::REFERER,
+            reqwest::header::ORIGIN,
         ];
         let reqwest_headers = convert_to_reqwest_headers(headers);
-        merge_headers(&mut header_map, reqwest_headers, &excluded_headers);
+        merge_headers(&mut header_map, reqwest_headers, &excluded_headers[..]);
 
         #[cfg(debug_assertions)]
         println!(

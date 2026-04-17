@@ -13,6 +13,7 @@ export async function doRunVideoCollectionFetcher(
     getTasks: () => DownloadTask[];
     addTask: (task: any) => Promise<void>;
     markTaskError: (id: string, error: string) => Promise<void>;
+    loadTasks: () => Promise<void>;
   },
 ) {
   const store = useStore();
@@ -127,6 +128,9 @@ export async function doRunVideoCollectionFetcher(
       // 不再标记全局 Error 以免中断循环，只记录日志
     }
   }
+
+  // 刷新任务列表以确保状态最新
+  await deps.loadTasks();
 
   // 检查是否所有分片都已完成
   const finalTask = deps.getTasks().find(t => t.id === taskId);

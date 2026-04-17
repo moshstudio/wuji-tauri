@@ -39,6 +39,7 @@ fn main() {
                     "update_task_downloaded_size",
                     "download_m3u8_chunk",
                     "check_task_file_exist",
+                    "check_path_exists",
                 ]),
             ),
     )

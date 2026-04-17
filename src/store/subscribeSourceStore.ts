@@ -30,6 +30,7 @@ import { computed, markRaw, onMounted, triggerRef } from 'vue';
 import { router } from '@/router';
 import { SourceType } from '@/types';
 import { sleep } from '@/utils';
+import { showVipDialog } from '@/utils/vip';
 import { useBookStore } from './bookStore';
 import { useComicStore } from './comicStore';
 import { useDisplayStore } from './displayStore';
@@ -288,17 +289,14 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
         showConfirmDialog({
           title: '请登录',
           message: '请登录以访问此内容',
-        }).then(() => {
-          router.push({ name: 'Login' });
-        });
+        }).then((action) => {
+          if (action === 'confirm') {
+            router.push({ name: 'Login' });
+          }
+        }).catch(() => {});
       }
       else {
-        showConfirmDialog({
-          title: '权限不足',
-          message: '请升级会员以访问此内容',
-        }).then(() => {
-          router.push({ name: 'VipDetail' });
-        });
+        showVipDialog('请升级会员以访问此内容', '权限不足');
       }
       return false;
     }
@@ -805,5 +803,6 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     addToSource,
     removeFromSource,
     loadSubscribeSources,
+    localSourceId,
   };
 });

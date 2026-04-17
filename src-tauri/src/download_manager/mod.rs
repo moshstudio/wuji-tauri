@@ -197,6 +197,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::remove_task,
             commands::mark_task_error,
             commands::check_task_file_exist,
+            commands::check_path_exists,
             commands::show_in_folder,
             commands::package_to_cbz,
             commands::mark_chunk_completed,

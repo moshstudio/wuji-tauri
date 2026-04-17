@@ -60,6 +60,23 @@ pub async fn add_task<R: Runtime>(
             task.total_size = 0;
             task.completed_chunks.clear();
             task.chunk_progress.clear();
+
+            // 物理重置文件
+            if final_path.exists() {
+                if final_path.is_dir() {
+                    let _ = std::fs::remove_dir_all(&final_path);
+                } else {
+                    let _ = std::fs::remove_file(&final_path);
+                }
+            }
+            // 清理可能的临时目录
+            if let Some(parent) = final_path.parent() {
+                let file_name = final_path.file_name().unwrap_or_default().to_string_lossy();
+                let temp_dir = parent.join(format!(".tmp_{}", file_name));
+                if temp_dir.exists() {
+                    let _ = std::fs::remove_dir_all(temp_dir);
+                }
+            }
         }
         task.title = title;
         task.url = url;
@@ -76,6 +93,25 @@ pub async fn add_task<R: Runtime>(
         let _ = app.emit("download-progress", task_clone);
     } else {
         log::info!("Creating new task: {} (title: {})", id, title);
+
+        // 如果是强制重置模式，说明前端已经弹窗确认过了，我们在这里检查并删除已存在的同名文件
+        if reset.unwrap_or(false) {
+            if final_path.exists() {
+                if final_path.is_dir() {
+                    let _ = std::fs::remove_dir_all(&final_path);
+                } else {
+                    let _ = std::fs::remove_file(&final_path);
+                }
+            }
+            if let Some(parent) = final_path.parent() {
+                let file_name = final_path.file_name().unwrap_or_default().to_string_lossy();
+                let temp_dir = parent.join(format!(".tmp_{}", file_name));
+                if temp_dir.exists() {
+                    let _ = std::fs::remove_dir_all(temp_dir);
+                }
+            }
+        }
+
         let mut task = DownloadTask::new(
             id, source_id, title, url, final_path, category, headers, extra,
         );
@@ -540,4 +576,13 @@ pub async fn check_task_file_exist(
     } else {
         Ok(false)
     }
+}
+#[tauri::command]
+pub async fn check_path_exists(manager: State<'_, DownloadManager>, path: String) -> Result<bool> {
+    let inner = manager.lock().await;
+    let mut final_path = std::path::PathBuf::from(&path);
+    if final_path.is_relative() {
+        final_path = inner.downloads_dir.join(&path);
+    }
+    Ok(final_path.exists())
 }

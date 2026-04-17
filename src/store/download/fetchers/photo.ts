@@ -14,6 +14,7 @@ export async function runPhotoAlbumFetcher(
     addTask: (task: any) => Promise<void>;
     runBackgroundTask: (id: string, fn: () => Promise<void>) => void;
     markTaskError: (id: string, error: string) => Promise<void>;
+    loadTasks: () => Promise<void>;
   },
 ) {
   return deps.runBackgroundTask(taskId, async () => {
@@ -84,17 +85,22 @@ export async function runPhotoAlbumFetcher(
       }
     }
 
+    // 强制刷新任务列表以确保 completedChunks 的长度是最新的（防止事件延迟）
+    await deps.loadTasks();
+
     const finalTask = deps.getTasks().find(t => t.id === taskId);
     const completedCount = finalTask?.completedChunks.length || 0;
 
     if (isTaskRunning(deps.getTasks(), taskId)) {
-      if (completedCount >= totalImages && totalImages > 0) {
+      if (totalImages > 0 && completedCount >= totalImages) {
         await invokePlugin('finalize_collection_download', { taskId });
       }
       else {
         await deps.markTaskError(
           taskId,
-          `相册下载完成，但有部分图片(${totalImages - completedCount})未成功。`,
+          totalImages === 0
+            ? '未发现可下载的图片'
+            : `相册下载完成，但有部分图片(${totalImages - completedCount})未成功。`,
         );
       }
     }

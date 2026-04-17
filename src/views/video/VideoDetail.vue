@@ -44,6 +44,7 @@ import {
   useDisplayStore,
   useDownloadStore,
   useStore,
+  useSubscribeSourceStore,
   useVideoShelfStore,
 } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
@@ -80,7 +81,7 @@ const playingEpisode = ref<VideoEpisode>();
 const videoSrc = ref<VideoUrlMap>();
 
 const { run: runLoader } = usePageDataLoader({
-  onFailed: () => showFailToast('视频解析失败，请点击重试或尝试更换线路'),
+  onFailed: () => showFailToast('加载失败，请检查网络或订阅源状态'),
 });
 
 const getPlayUrl = createCancellableFunction(async (signal: AbortSignal) => {
@@ -124,14 +125,30 @@ async function loadData() {
     shouldReload.value = false;
 
     if (!videoId || !sourceId) {
+      showFailToast('跳转参数错误');
       shouldReload.value = true;
-      return false;
+      return true;
     }
 
     const source = store.getVideoSource(sourceId);
     if (!source) {
+      const subscribeStore = useSubscribeSourceStore();
+      const subscribeSource = subscribeStore.subscribeSources.find(s =>
+        s.detail.urls.some(u => u.id === sourceId),
+      );
+      const urlItem = subscribeSource?.detail.urls.find(u => u.id === sourceId);
+
+      if (urlItem && (urlItem.disable || subscribeSource?.disable)) {
+        showFailToast('视频源已禁用，请在订阅源管理中启用');
+      }
+      else if (!urlItem) {
+        showFailToast('视频源不存在或已删除');
+      }
+      else {
+        showFailToast('视频源加载失败，请检查订阅源配置');
+      }
       shouldReload.value = true;
-      return false;
+      return true;
     }
 
     videoSource.value = source;
@@ -143,7 +160,7 @@ async function loadData() {
 
     const t = displayStore.showToast();
     const detail
-      = (await store.videoDetail(source!, videoItem.value)) || undefined;
+      = (await store.videoDetail(source!, videoItem.value, { silent: true })) || undefined;
     displayStore.closeToast(t);
 
     if (signal.aborted)

@@ -87,7 +87,11 @@ export const useVideoStore = defineStore('video', () => {
     triggerRef(videoSources);
   };
 
-  const videoDetail = async (source: VideoSource, video: VideoItem) => {
+  const videoDetail = async (
+    source: VideoSource,
+    video: VideoItem,
+    options: { silent?: boolean } = {},
+  ) => {
     const sc = (await extensionStore.getSourceClass(
       source.item,
     )) as VideoExtension;
@@ -96,7 +100,9 @@ export const useVideoStore = defineStore('video', () => {
       return res;
     }
     else {
-      showFailToast(`${source.item.name} 获取内容失败`);
+      if (!options.silent) {
+        showFailToast(`${source.item.name} 获取内容失败`);
+      }
       return null;
     }
   };

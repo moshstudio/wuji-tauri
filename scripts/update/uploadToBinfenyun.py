@@ -3,7 +3,6 @@ import json
 import urllib.parse
 from pathlib import Path
 import boto3
-from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 
 # 配置
 CURR_PATH = Path(__file__).parent.absolute()
@@ -48,22 +47,41 @@ def upload_project():
     for name in ["updater_win.json", "updater_android.json"]:
         _upload(client_wuji, CURR_PATH / name, bucket, name)
 
-    # 3. 解析版本并上传 Windows 安装包 (直接上传到根目录)
+    # 3. 解析版本并上传 Windows 安装包和 Android APK (上传到根目录)
     try:
-        logging.info("--- 开始解析并上传 Windows 安装包 ---")
+        logging.info("--- 开始解析并上传安装包 ---")
+        
+        # 从 updater_win.json 获取版本和 exe
         with open(CURR_PATH / "updater_win.json", "r", encoding="utf-8") as f:
             win_data = json.load(f)
         
-        # 提取安装包名称
+        version = win_data["version"]
         win_url = win_data["platforms"]["windows-x86_64"]["url"]
         exe_name = urllib.parse.unquote(win_url.split("/")[-1])
-        exe_path = Path(r"C:\Users\14438\Desktop\wuji_things") / exe_name
+        output_dir = Path(r"C:\Users\14438\Desktop\wuji_things")
 
+        client_root = get_client(bit_cfg, use_path_prefix=False)
+
+        # 上传 Windows 安装包
+        exe_path = output_dir / exe_name
         if exe_path.exists():
-            client_root = get_client(bit_cfg, use_path_prefix=False)
+            logging.info(f"正在上传 Windows 安装包: {exe_name}")
             _upload(client_root, exe_path, bucket, exe_name)
         else:
-            logging.warning(f"未找到安装包文件: {exe_path}")
+            logging.warning(f"未找到 Windows 安装包文件: {exe_path}")
+
+        # 上传 Android APKs
+        logging.info(f"正在查找版本 {version} 的 Android APK...")
+        apk_files = list(output_dir.glob(f"wuji-{version}-*.apk"))
+        
+        if not apk_files:
+            logging.warning(f"在 {output_dir} 中未找到版本 {version} 的 APK")
+        
+        for apk_path in apk_files:
+            apk_name = apk_path.name
+            logging.info(f"正在上传 Android APK: {apk_name}")
+            _upload(client_root, apk_path, bucket, apk_name)
+
     except Exception as e:
         logging.error(f"安装包上传流程异常: {e}")
 

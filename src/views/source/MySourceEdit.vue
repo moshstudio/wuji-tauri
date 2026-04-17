@@ -44,9 +44,9 @@ function deleteSourceContent(
     cancelButtonText: '取消',
   }).then(async (confirm) => {
     if (confirm === 'confirm') {
-      await serverStore.deleteMarketSourceContent(source, sourceContent);
+      await serverStore.deleteMarketSourceContent(sourceContent);
       currentSource.value = myMarketSources.value.find(
-        item => item._id === props.sourceId,
+        item => item._id === source._id,
       );
       if (!currentSource.value) {
         backStore.back().then(() => {
@@ -54,7 +54,7 @@ function deleteSourceContent(
         });
       }
     }
-  });
+  }).catch(() => {});
 }
 
 async function save(source: MarketSource) {

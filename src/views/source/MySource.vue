@@ -81,7 +81,7 @@ const moreOptionActions = computed(() => {
               serverStore.deleteMarketSource(moreOptionSource.value);
             }
           }
-        });
+        }).catch(() => {});
       },
     },
     {

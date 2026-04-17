@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import type { ReaderResult } from '@/utils/reader/types';
 import { Icon } from '@iconify/vue';
-import { showDialog as vantShowDialog } from 'vant';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { router } from '@/router';
 import { useDisplayStore, useServerStore, useTTSStore } from '@/store';
+import { showVipDialog } from '@/utils/vip';
 import ResponsiveGrid2 from '../grid/ResponsiveGrid2.vue';
 
 const props = defineProps<{
@@ -20,11 +19,7 @@ const showDialog = ref(false);
 function onPlay() {
   if (ttsStore.selectedVoice.feature) {
     if (!serverStore.hasFeature(ttsStore.selectedVoice.feature)) {
-      vantShowDialog({
-        message: '您选择的语音为会员专属哦\n是否立即开通会员?',
-      }).then(() => {
-        router.push({ name: 'VipDetail' });
-      });
+      showVipDialog('您选择的语音为会员专属哦\n是否立即开通会员?');
       return;
     }
   }

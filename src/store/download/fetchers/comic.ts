@@ -14,6 +14,7 @@ export async function runComicFetcher(
     addTask: (task: any) => Promise<void>;
     runBackgroundTask: (id: string, fn: () => Promise<void>) => void;
     markTaskError: (id: string, error: string) => Promise<void>;
+    loadTasks: () => Promise<void>;
   },
 ) {
   return deps.runBackgroundTask(taskId, async () => {
@@ -134,6 +135,9 @@ export async function runComicFetcher(
     );
 
     await Promise.all(chapterTasks);
+
+    // 刷新任务列表以确保状态最新
+    await deps.loadTasks();
 
     // 获取最新任务状态
     const currentTaskFinal = deps.getTasks().find(t => t.id === taskId);

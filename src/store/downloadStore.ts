@@ -21,7 +21,6 @@ import { cachedFetch } from '@wuji-tauri/fetch';
 import { defineStore } from 'pinia';
 import {
   showConfirmDialog,
-  showDialog,
   showFailToast,
   showLoadingToast,
   showSuccessToast,
@@ -34,6 +33,7 @@ import {
   TASK_PREFIX,
 } from '@/store/download/utils';
 import { bytesToSize, sanitizePathName } from '@/utils';
+import { showVipDialog } from '@/utils/vip';
 import {
   getBookSavePath,
   getBookTaskId,
@@ -67,6 +67,7 @@ import {
 import { useServerStore } from './serverStore';
 import { useSettingStore } from './settingStore';
 import { useSongCacheStore } from './songCacheStore';
+import { useSongShelfStore } from './songShelfStore';
 import { useSongStore } from './songStore';
 import { useStore } from './store';
 
@@ -136,21 +137,7 @@ export const useDownloadStore = defineStore('download', () => {
 
   async function pauseTask(id: string) {
     console.log(`[DownloadManager] Pausing task: ${id}`);
-
-    // 立即更新本地状态，确保 collection 任务的 JS 循环能通过 isTaskRunning 立即感知到暂停并终止
-    const taskIndex = tasks.value.findIndex(t => t.id === id);
-    if (taskIndex !== -1) {
-      tasks.value[taskIndex] = {
-        ...tasks.value[taskIndex],
-        status: 'paused',
-      };
-    }
-
     await invokePlugin('pause_task', { id });
-
-    // 注意：不要在这里删除 runningFetchers.delete(id)
-    // 应让 Fetcher 的循环感知到 status 变为 paused 后通过 finally 块自行清理
-    // 这样可以防止在旧循环还没退出时，resumeTask 误以为没在运行而开启新循环
   }
 
   async function removeTask(id: string, deleteFile = false) {
@@ -186,8 +173,13 @@ export const useDownloadStore = defineStore('download', () => {
         await taskFn();
       }
       catch (e) {
+        const errorMsg = String(e);
         console.error(`[DownloadManager] Task ${id} run error:`, e);
-        await markTaskError(id, `下载异常: ${e}`);
+
+        // 如果是由于任务停止造成的异常（识别后端返回的 TASK_STOPPED），不需要在界面显示为下载异常
+        if (!errorMsg.includes('TASK_STOPPED')) {
+          await markTaskError(id, `下载异常: ${e}`);
+        }
       }
       finally {
         runningFetchers.delete(id);
@@ -202,19 +194,15 @@ export const useDownloadStore = defineStore('download', () => {
     if (runningFetchers.has(id))
       return;
 
-    const taskIndex = tasks.value.findIndex(t => t.id === id);
-    if (taskIndex !== -1) {
-      tasks.value[taskIndex] = {
-        ...tasks.value[taskIndex],
-        status: 'downloading',
-      };
-    }
+    // 先通过后端切换状态为下载中，确保 fetcher 循环中的 isTaskRunning 检查能通过
+    await invokePlugin('resume_task', { id });
+    await loadTasks();
 
     const task = tasks.value.find(t => t.id === id);
     if (!task)
       return;
 
-    // 匹配注册的抓取器进行信息刷新（如 Headers/URL 等）
+    // 匹配注册的抓取器进行信息刷新或启动合集循环
     let bestMatch: { prefix: string; fetcher: (id: string, task: DownloadTask) => void | Promise<void> } | null = null;
     for (const [prefix, fetcher] of fetcherRegistry.entries()) {
       if (id.startsWith(prefix)) {
@@ -226,61 +214,107 @@ export const useDownloadStore = defineStore('download', () => {
 
     if (bestMatch) {
       await bestMatch.fetcher(id, task);
-    }
 
-    // 后端执行恢复（启动引擎）
-    await invokePlugin('resume_task', { id });
+      // 如果是单任务（URL 可能已刷新），再次确保引擎启动
+      if (task.totalChunks === 0) {
+        await invokePlugin('resume_task', { id });
+      }
+    }
   }
 
-  async function checkExistingTask(taskId: string): Promise<boolean> {
+  async function checkExistingTask(taskId: string, savePath?: string): Promise<boolean> {
     const existingTask = tasks.value.find(t => t.id === taskId);
-    if (!existingTask)
-      return true;
 
-    const statusObj = existingTask.status;
-    const statusStr
-      = typeof statusObj === 'string'
-        ? statusObj.toLowerCase()
-        : Object.keys(statusObj)[0].toLowerCase();
+    // 1. 如果任务已存在于列表中
+    if (existingTask) {
+      const statusObj = existingTask.status;
+      const statusStr
+        = typeof statusObj === 'string'
+          ? statusObj.toLowerCase()
+          : (statusObj && typeof statusObj === 'object' && Object.keys(statusObj)[0].toLowerCase()) || '';
 
-    if (statusStr === 'downloading' || statusStr === 'pending') {
-      showToast('任务正在进行中');
-      return false;
-    }
+      if (statusStr === 'downloading' || statusStr === 'pending') {
+        const action = await showConfirmDialog({
+          title: '任务正在进行中',
+          message: '任务已经在下载队列中，是否前往查看？',
+          confirmButtonText: '去查看（打开下载管理页面）',
+          cancelButtonText: '取消',
+          closeOnClickOverlay: true,
+        }).catch(() => 'cancel');
+        if (action === 'confirm') {
+          router.push({ name: 'DownloadManager' });
+        }
+        return false;
+      }
 
-    if (statusStr === 'completed') {
-      try {
-        await showConfirmDialog({
+      if (statusStr === 'completed') {
+        const action = await showConfirmDialog({
           title: '任务已完成',
           message: '该资源已经下载过了，是否重新下载？',
           confirmButtonText: '重新下载',
-          cancelButtonText: '查看文件',
+          cancelButtonText: '去查看（打开下载管理页面）',
           closeOnClickOverlay: true,
-        });
-        return true;
+        }).catch(err => err);
+        console.log('actions is ', action);
+
+        if (action === 'confirm') {
+          return true; // 触发 addTask(..., true)
+        }
+        if (action === 'cancel') {
+          router.push({ name: 'DownloadManager' });
+        }
+        return false; // 取消或关闭弹窗
       }
-      catch {
-        showInFolder(taskId);
+
+      // 如果是暂停或出错状态，询问是继续还是重来
+      if (statusStr === 'paused' || statusStr === 'error') {
+        const action = await showConfirmDialog({
+          confirmButtonText: '继续下载',
+          cancelButtonText: '重新开始',
+          message: '检测到任务已有下载进度，要继续下载还是重新开始？',
+          closeOnClickOverlay: true,
+        }).catch(err => err);
+
+        if (action === 'confirm') {
+          resumeTask(taskId);
+          return false;
+        }
+        if (action === 'cancel') {
+          return true; // 触发 addTask(..., true) 进行重置
+        }
+        return false; // 点击背景等，不进行后续操作
+      }
+    }
+
+    // 2. 如果任务不在列表中，但可能存在物理文件
+    if (savePath) {
+      const exists = await invokePlugin<boolean>('check_path_exists', { path: savePath });
+      if (exists) {
+        const action = await showConfirmDialog({
+          title: '文件已存在',
+          message: '磁盘上已存在同名文件或文件夹，极大概率已经下载过了，是否重新下载？',
+          confirmButtonText: '重新下载',
+          cancelButtonText: '去查看（打开下载管理页面）',
+          closeOnClickOverlay: true,
+        }).catch(err => err);
+
+        if (action === 'confirm') {
+          return true;
+        }
+        if (action === 'cancel') {
+          router.push({ name: 'DownloadManager' });
+        }
         return false;
       }
     }
+
     return true;
   }
 
   async function checkPermission(): Promise<boolean> {
     const serverStore = useServerStore();
     if (!serverStore.hasFeature('download_management')) {
-      try {
-        await showDialog({
-          title: '会员功能',
-          message: '下载功能为会员专属，是否前往查看会员方案？',
-          showCancelButton: true,
-        });
-        router.push({ name: 'VipDetail' });
-      }
-      catch {
-        // 取消
-      }
+      showVipDialog('下载功能为会员专属，是否前往查看会员方案？');
       return false;
     }
     return true;
@@ -299,7 +333,7 @@ export const useDownloadStore = defineStore('download', () => {
   }) {
     if (!(await checkPermission()))
       return;
-    if (!(await checkExistingTask(params.id)))
+    if (!(await checkExistingTask(params.id, params.savePath)))
       return;
 
     await addTask(
@@ -327,7 +361,7 @@ export const useDownloadStore = defineStore('download', () => {
   }) {
     if (!(await checkPermission()))
       return;
-    if (!(await checkExistingTask(params.id)))
+    if (!(await checkExistingTask(params.id, params.savePath)))
       return;
     await addTask(
       {
@@ -361,6 +395,7 @@ export const useDownloadStore = defineStore('download', () => {
       getTasks: () => tasks.value,
       addTask,
       runBackgroundTask,
+      loadTasks,
     });
   });
 
@@ -383,29 +418,51 @@ export const useDownloadStore = defineStore('download', () => {
       addTask,
       runBackgroundTask,
       markTaskError,
+      loadTasks,
     });
   });
 
   registerFetcher(TASK_PREFIX.MUSIC_PLAYLIST, async (id, task) => {
     const store = useStore();
+    const shelfStore = useSongShelfStore();
     const source = store.getSongSource(task.sourceId);
     const playlistId = task.extra?.playlistId;
-    if (!source || !playlistId)
+    if (!playlistId)
       return;
 
-    const playlist: PlaylistInfo = {
-      id: playlistId,
-      name: task.title.replace('歌单: ', ''),
-      url: task.url,
-      sourceId: task.sourceId,
-      picUrl: '',
-      list: { list: [], page: 1, totalPage: 1 },
-    };
+    let playlist: PlaylistInfo | undefined;
+    if (playlistId === shelfStore.songLikeShelf.playlist.id) {
+      playlist = shelfStore.songLikeShelf.playlist;
+    }
+    else {
+      // 检查创建的歌单和收藏的歌单
+      playlist = (shelfStore.songCreateShelf.find(s => s.playlist.id === playlistId)
+        || shelfStore.songPlaylistShelf.find(s => s.playlist.id === playlistId))?.playlist;
+    }
+
+    if (!playlist) {
+      playlist = {
+        id: playlistId,
+        name: task.title.replace('歌单: ', ''),
+        url: task.url,
+        sourceId: task.sourceId,
+        picUrl: '',
+        list: { list: [], page: 1, totalPage: 1 },
+      };
+    }
+
+    // 最后的安全检查：如果没有源且歌单列表为空，则无法继续
+    if (!source && (!playlist.list?.list || playlist.list.list.length === 0)) {
+      console.warn(`[DownloadManager] Skip playlist ${playlistId}: no source and empty list`);
+      return;
+    }
+
     await runMusicPlaylistFetcher(playlist, source, id, {
       getTasks: () => tasks.value,
       addTask,
       runBackgroundTask,
       markTaskError,
+      loadTasks,
     });
   });
 
@@ -428,6 +485,7 @@ export const useDownloadStore = defineStore('download', () => {
       addTask,
       runBackgroundTask,
       markTaskError,
+      loadTasks,
     });
   });
 
@@ -508,7 +566,7 @@ export const useDownloadStore = defineStore('download', () => {
             source,
             resource,
             id,
-            { getTasks: () => tasks.value, addTask, markTaskError },
+            { getTasks: () => tasks.value, addTask, markTaskError, loadTasks },
           );
         }
         else {
@@ -604,9 +662,6 @@ export const useDownloadStore = defineStore('download', () => {
     headers: Record<string, string> = {},
   ) {
     const taskId = getMusicTaskId(song);
-    if (!(await checkExistingTask(taskId)))
-      return;
-
     const savePath = getMusicSavePath(song, playUrl);
 
     // 优先尝试缓存
@@ -741,9 +796,6 @@ export const useDownloadStore = defineStore('download', () => {
     episode?: { id: string; title: string },
   ) {
     const taskId = getVideoTaskId(video, episode);
-
-    if (!(await checkExistingTask(taskId)))
-      return;
 
     await prepareSingleTask({
       id: taskId,

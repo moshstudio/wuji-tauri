@@ -5,12 +5,12 @@ import {
   SongSelectShelfSheet,
 } from '@wuji-tauri/components';
 import { SongShelfType } from '@wuji-tauri/source-extension';
-import { showLoadingToast, showToast } from 'vant';
+import { showFailToast, showLoadingToast, showToast } from 'vant';
 import { ref, watch } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppSongShelfDetail from '@/layouts/app/song/SongShelfDetail.vue';
 import DesktopSongShelfDetail from '@/layouts/desktop/song/SongShelfDetail.vue';
-import { useDownloadStore, useSongShelfStore, useSongStore, useStore } from '@/store';
+import { useDownloadStore, useSongShelfStore, useSongStore, useStore, useSubscribeSourceStore } from '@/store';
 
 const props = defineProps({
   shelfId: String,
@@ -28,9 +28,24 @@ const moreOptionsSong = ref<SongInfo>();
 const showAddToShelfSheet = ref(false);
 
 async function toPage(shelf: SongShelf, pageNo: number) {
-  const source = store.getSongSource(shelf.playlist.sourceId);
+  const sourceId = shelf.playlist.sourceId;
+  const source = store.getSongSource(sourceId);
   if (!source) {
-    showToast('找不到歌曲源');
+    const subscribeStore = useSubscribeSourceStore();
+    const subscribeSource = subscribeStore.subscribeSources.find(s =>
+      s.detail.urls.some(u => u.id === sourceId),
+    );
+    const urlItem = subscribeSource?.detail.urls.find(u => u.id === sourceId);
+
+    if (urlItem && (urlItem.disable || subscribeSource?.disable)) {
+      showFailToast('音乐源已禁用，请在订阅源管理中启用');
+    }
+    else if (!urlItem) {
+      showFailToast('音乐源不存在或已删除');
+    }
+    else {
+      showFailToast('音乐源加载中');
+    }
     return;
   }
   const t = showLoadingToast({
@@ -38,7 +53,7 @@ async function toPage(shelf: SongShelf, pageNo: number) {
     closeOnClick: true,
     closeOnClickOverlay: false,
   });
-  await store.songPlaylistDetail(source, shelf.playlist, pageNo);
+  await store.songPlaylistDetail(source, shelf.playlist, pageNo, { silent: true });
   t.close();
 }
 async function playAll(shelf: SongShelf) {
@@ -69,6 +84,19 @@ async function playAll(shelf: SongShelf) {
 async function downloadAll(shelf: SongShelf) {
   const source = store.getSongSource(shelf.playlist.sourceId);
   downloadStore.startMusicPlaylistDownload(shelf.playlist, source);
+}
+
+async function downloadSong(song: SongInfo) {
+  const source = store.getSongSource(song.sourceId);
+  if (!source) {
+    showFailToast('找不到音源');
+    return;
+  }
+  const playUrl = await songStore.getSongPlayUrl(song);
+  if (!playUrl)
+    return;
+
+  downloadStore.startMusicDownload(song, source, playUrl);
 }
 
 function removeShelf(shelf: SongShelf) {
@@ -120,6 +148,7 @@ watch(
         :to-page="toPage"
         :play-all="playAll"
         :download-all="downloadAll"
+        :download-song="downloadSong"
         :remove-shelf="removeShelf"
         :show-more-options="showMoreOptions"
       />
@@ -130,6 +159,7 @@ watch(
         :to-page="toPage"
         :play-all="playAll"
         :download-all="downloadAll"
+        :download-song="downloadSong"
         :remove-shelf="removeShelf"
         :show-more-options="showMoreOptions"
       />
@@ -137,6 +167,17 @@ watch(
     <MoreOptionsSheet
       v-model="moreOptions"
       :actions="[
+        // {
+        //   name: '下载',
+        //   subname: moreOptionsSong?.name,
+        //   color: '#1989fa',
+        //   callback: () => {
+        //     moreOptions = false;
+        //     if (moreOptionsSong) {
+        //       downloadSong(moreOptionsSong);
+        //     }
+        //   },
+        // },
         {
           name: '从当前收藏夹移除',
           subname: moreOptionsSong?.name,

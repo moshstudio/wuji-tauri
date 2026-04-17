@@ -92,7 +92,11 @@ pub async fn append_collection_chunk<R: Runtime>(
             Error::TaskNotFound(task_id.clone())
         })?;
 
-        // 更新状态和已下载大小
+        // 状态守卫：如果任务已暂停或出错，拒绝追加新数据分片（JS 循环可能此时还没停下来）
+        if !matches!(task.status, TaskStatus::Downloading | TaskStatus::Pending) {
+            return Err(Error::TaskStopped);
+        }
+
         // 约定：index >= 1,000,000 的块不计入 completed_chunks（用于漫画图片等静默下载）
         let is_silent = index >= 1_000_000;
         let is_new = if is_silent {
@@ -279,6 +283,10 @@ pub async fn download_remote_chunk<R: Runtime>(
                 return save_collection_chunk_data(app, manager, task_id, index, title, data).await;
             }
             Err(e) => {
+                // 如果是人为暂停引发的停止，直接返回不再重试
+                if matches!(e, Error::TaskStopped) {
+                    return Err(e);
+                }
                 log::warn!("[Backend] Download failed: {}", e);
                 last_error = Some(e);
                 retry_count += 1;
@@ -327,6 +335,11 @@ async fn download_remote_chunk_streaming<R: Runtime>(
                 .unwrap_or(true);
 
             if let Some(task) = inner.get_task_mut(task_id) {
+                // 如果任务状态不再是下载中（例如已暂停或出错），终止下载
+                if !matches!(task.status, TaskStatus::Downloading) {
+                    return Err(Error::TaskStopped);
+                }
+
                 let amt = chunk.len() as u64;
                 task.downloaded_size += amt;
                 bytes_received_in_this_attempt += amt;

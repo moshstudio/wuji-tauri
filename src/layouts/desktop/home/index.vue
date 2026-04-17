@@ -1,20 +1,18 @@
 <script setup lang="ts">
-import { Icon } from '@iconify/vue';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { fetchHotApi } from '@wuji-tauri/hot-api';
 import { storeToRefs } from 'pinia';
 import { showFailToast } from 'vant';
 import { onMounted, ref } from 'vue';
-import DialogAnimate from '@/components/animate/DialogAnimate.vue';
+
 import { useDisplayStore, useStore } from '@/store';
-import { sleep } from '@/utils';
 
 const store = useStore();
 const displayStore = useDisplayStore();
 const { hotItems } = storeToRefs(store);
-const { showNews } = storeToRefs(displayStore);
 
 const active = ref(0);
+const loading = ref(false);
 async function openInBrowser(url: string) {
   try {
     await openUrl(url);
@@ -24,32 +22,42 @@ async function openInBrowser(url: string) {
     showFailToast('打开失败,请尝试重置默认浏览器');
   }
 }
-function toggleNewsTab() {
-  showNews.value = !showNews.value;
-}
 onMounted(async () => {
   if (!hotItems.value.length) {
-    const res = await fetchHotApi();
-    const displayStore = useDisplayStore();
-    displayStore.taichiAnimateRandomized = true;
-    await sleep(200);
-    hotItems.value = res;
+    loading.value = true;
+    try {
+      const res = await fetchHotApi();
+      hotItems.value = res;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 });
 </script>
 
 <template>
   <div class="relative h-full w-full">
-    <DialogAnimate v-if="!showNews" />
     <div class="absolute left-1/2 h-full max-w-full -translate-x-1/2">
+      <!-- 骨架屏 -->
+      <div v-if="loading" class="w-screen space-y-4 p-4 lg:w-[800px]">
+        <van-skeleton v-for="i in 8" :key="i" animated>
+          <template #template>
+            <div class="flex w-full items-center py-3">
+              <div class="flex-1 pr-4">
+                <van-skeleton-paragraph row-width="60%" />
+                <van-skeleton-paragraph row-width="90%" class="mt-2" />
+              </div>
+              <van-skeleton-image style="width: 10em; height: 60px; border-radius: 4px;" />
+            </div>
+          </template>
+        </van-skeleton>
+      </div>
+
       <van-tabs
-        v-if="showNews"
+        v-if="!loading"
         v-model:active="active"
         class="h-full max-w-full transform select-none overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out lg:max-w-[800px]"
-        :class="{
-          'scale-95 opacity-0': !showNews,
-          'scale-100 opacity-100': showNews,
-        }"
         sticky
         animated
       >
@@ -78,19 +86,6 @@ onMounted(async () => {
         </van-tab>
       </van-tabs>
     </div>
-    <van-button
-      plain
-      round
-      size="small"
-      class="absolute right-1 top-1 z-[13]"
-      @click="toggleNewsTab"
-    >
-      <Icon
-        :icon="showNews ? 'tabler:news-off' : 'tabler:news'"
-        width="20px"
-        height="20px"
-      />
-    </van-button>
   </div>
 </template>
 

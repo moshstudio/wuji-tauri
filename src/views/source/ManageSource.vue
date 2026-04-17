@@ -66,20 +66,20 @@ function removeSource(source: SubscribeSource) {
     title: '删除订阅源',
     message: `确定要删除订阅源 "${source.detail.name}" 吗？`,
   }).then(async (confirm) => {
-    if (confirm) {
+    if (confirm === 'confirm') {
       sourceStore.removeSubscribeSource(source);
     }
-  });
+  }).catch(() => {});
 }
 function removeItem(source: SubscribeSource, item: SubscribeItem) {
   showConfirmDialog({
     title: '删除订阅项',
     message: `确定要删除订阅项 "${item.name}" 吗？`,
   }).then(async (confirm) => {
-    if (confirm) {
+    if (confirm === 'confirm') {
       sourceStore.removeItemFromSubscribeSource(item.id, source.detail.id);
     }
-  });
+  }).catch(() => {});
 }
 
 function updateItem(source: SubscribeSource, item: SubscribeItem) {

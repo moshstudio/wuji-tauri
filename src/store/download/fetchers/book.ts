@@ -13,6 +13,7 @@ export async function runBookFetcher(
     getTasks: () => DownloadTask[];
     addTask: (task: any) => Promise<void>;
     runBackgroundTask: (id: string, fn: () => Promise<void>) => void;
+    loadTasks: () => Promise<void>;
   },
 ) {
   return deps.runBackgroundTask(taskId, async () => {

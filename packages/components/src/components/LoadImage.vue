@@ -53,7 +53,7 @@ async function processSrc(
   if (src.startsWith('blob:')) {
     return src;
   }
-  if (src.startsWith('data:image') && src.includes('base64')) {
+  if (src.startsWith('data:') && src.includes('base64')) {
     // 转为blob
     const dataURLToBlobURL = async (dataURL: string) => {
       try {

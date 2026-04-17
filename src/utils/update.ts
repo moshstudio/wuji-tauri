@@ -178,7 +178,7 @@ async function androidCheckAndUpdate() {
       cancelButtonText: '暂不升级',
       messageAlign: 'left',
       allowHtml: true,
-    });
+    }).catch(err => err);
     if (confirm === 'confirm') {
       console.log(newInfo.platforms.cloudpan.url);
       if (!copyToClipboard(newInfo.platforms.cloudpan.url)) {

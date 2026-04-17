@@ -247,7 +247,11 @@ export const useBookStore = defineStore('book', () => {
     triggerRef(bookSources);
   };
 
-  const bookDetail = async (source: BookSource, book: BookItem) => {
+  const bookDetail = async (
+    source: BookSource,
+    book: BookItem,
+    options: { silent?: boolean } = {},
+  ) => {
     const sc = (await extensionStore.getSourceClass(
       source.item,
     )) as BookExtension;
@@ -256,7 +260,9 @@ export const useBookStore = defineStore('book', () => {
       return res;
     }
     else {
-      showFailToast(`${source.item.name} 获取内容失败`);
+      if (!options.silent) {
+        showFailToast(`${source.item.name} 获取内容失败`);
+      }
       return null;
     }
   };

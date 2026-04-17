@@ -159,6 +159,7 @@ export const useStore = defineStore('store', () => {
     removeFromSource: subscribeSourceStore.removeFromSource,
     getSource: subscribeSourceStore.getSource,
     removeSource: subscribeSourceStore.removeSource,
+    localSourceId: subscribeSourceStore.localSourceId,
 
     // Extension Actions
     sourceClass: extensionStore.getSourceClass,

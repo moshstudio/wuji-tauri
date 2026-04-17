@@ -102,17 +102,29 @@ pub async fn start_m3u8_download<R: Runtime>(
         } else {
             // 扫描临时目录，重新计算已下载大小（仅统计已完成的 .ts 分片）
             let mut physical_size = 0;
+            task.completed_chunks.clear();
             if let Ok(mut entries) = std::fs::read_dir(&temp_dir) {
                 while let Some(Ok(entry)) = entries.next() {
                     let path = entry.path();
                     if path.is_file() && path.extension().map_or(false, |e| e == "ts") {
                         if let Ok(meta) = entry.metadata() {
                             physical_size += meta.len();
+                            if let Some(file_stem) = path.file_stem() {
+                                if let Ok(idx) = file_stem.to_string_lossy().parse::<u32>() {
+                                    task.completed_chunks.insert(idx);
+                                }
+                            }
                         }
                     }
                 }
             }
             task.downloaded_size = physical_size;
+
+            // 如果已知部分大小且有总分片数，可以尝试预估总大小，使进度条更稳
+            if task.total_chunks > 0 && task.completed_chunks.len() > 0 {
+                let avg_size = physical_size / task.completed_chunks.len() as u64;
+                task.total_size = avg_size * task.total_chunks as u64;
+            }
         }
 
         task.status = TaskStatus::Downloading;
@@ -438,6 +450,11 @@ pub async fn download_m3u8_to_path<R: Runtime>(
                                     .unwrap_or(true);
 
                                 if let Some(task) = inner.get_task_mut(&task_id) {
+                                    // 给合集中的小分片也要检查主任务状态，如果已暂停则终止线程
+                                    if !matches!(task.status, TaskStatus::Downloading) {
+                                        return Err(Error::TaskStopped);
+                                    }
+
                                     let amt = chunk.len() as u64;
                                     task.downloaded_size += amt;
                                     bytes_in_this_attempt += amt;
@@ -472,6 +489,21 @@ pub async fn download_m3u8_to_path<R: Runtime>(
                         success = true;
                         break;
                     } else {
+                        let err = download_res.unwrap_err();
+                        // 如果是人为暂停引发的停止，直接退出不再重试
+                        if matches!(err, Error::TaskStopped) {
+                            // 失败回滚当前尝试的下载量
+                            let mut inner = manager.lock().await;
+                            if let Some(task) = inner.get_task_mut(&task_id) {
+                                task.downloaded_size =
+                                    task.downloaded_size.saturating_sub(bytes_in_this_attempt);
+                                if !is_collection_chunk {
+                                    task.chunk_progress.remove(&(i as u32));
+                                }
+                            }
+                            return Err(err);
+                        }
+
                         // 失败回滚当前尝试的下载量
                         let mut inner = manager.lock().await;
                         if let Some(task) = inner.get_task_mut(&task_id) {
@@ -485,7 +517,7 @@ pub async fn download_m3u8_to_path<R: Runtime>(
                             "[M3U8] Segment {} download failed (attempt {}): {:?}",
                             i,
                             retry_count,
-                            download_res.err()
+                            err
                         );
                     }
 
@@ -514,9 +546,19 @@ pub async fn download_m3u8_to_path<R: Runtime>(
                 let mut task_to_emit = None;
                 if let Some(task) = inner.get_task_mut(&task_id) {
                     if !is_collection_chunk {
-                        if !task.completed_chunks.contains(&(i as u32)) {
-                            task.completed_chunks.insert(i as u32);
-                            task.chunk_progress.remove(&(i as u32)); // 完成后移除平滑进度
+                        task.completed_chunks.insert(i as u32);
+                        task.chunk_progress.remove(&(i as u32));
+
+                        // 动态更新总大小估算
+                        if task.total_chunks > 0 {
+                            let completed_len = task.completed_chunks.len() as u64;
+                            if completed_len > 0 {
+                                let avg_size = task.downloaded_size / completed_len;
+                                task.total_size = avg_size * task.total_chunks as u64;
+                            }
+                        }
+
+                        if should_emit || count == total_segments as u32 {
                             task_to_emit = Some(task.clone());
                         }
                     } else {
@@ -530,9 +572,7 @@ pub async fn download_m3u8_to_path<R: Runtime>(
                 }
 
                 if let Some(task_clone) = task_to_emit {
-                    if is_collection_chunk {
-                        inner.last_update_times.insert(task_id.clone(), now);
-                    }
+                    inner.last_update_times.insert(task_id.clone(), now);
                     let _ = app.emit("download-progress", task_clone);
                 }
             }

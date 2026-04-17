@@ -27,10 +27,11 @@ import { router } from '@/router';
 import { isMembershipOrderValid, UserInfo } from '@/types/user';
 import { sleep } from '@/utils';
 import { getDeviceId } from '@/utils/device';
+import { showVipDialog } from '@/utils/vip';
 import { createKVStore, useDisplayStore } from '.';
 
-let API_BASE_URL = 'http://10.80.1.22:3000/v1/api/';
-// let API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
+// let API_BASE_URL = 'http://10.80.1.22:3000/v1/api/';
+let API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
 
 if (import.meta.env.MODE !== 'development') {
   API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
@@ -692,11 +693,7 @@ export const useServerStore = defineStore('serverStore', () => {
       return;
     }
     if (!hasFeature.value('cloud_sync')) {
-      showDialog({
-        message: '数据同步为会员功能\n请先开通会员',
-      }).then(() => {
-        router.push({ name: 'VipDetail' });
-      });
+      showVipDialog('数据同步为会员功能\n请先开通会员');
       return;
     }
     showDialog({
@@ -730,12 +727,7 @@ export const useServerStore = defineStore('serverStore', () => {
       return;
     }
     if (!hasFeature.value('cloud_sync')) {
-      showDialog({
-        title: '提示',
-        message: '数据同步为会员功能\n请先开通会员',
-      }).then(() => {
-        router.push({ name: 'VipDetail' });
-      });
+      showVipDialog('数据同步为会员功能\n请先开通会员');
       return;
     }
     showDialog({

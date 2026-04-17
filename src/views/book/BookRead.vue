@@ -25,7 +25,9 @@ import {
 import { useBackStore } from '@/store/backStore';
 import { retryOnFalse } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { showVipDialog } from '@/utils/vip';
 import BookReadScroller from './BookReadScroller.vue';
+
 import BookReadSwiper from './BookReadSwiper.vue';
 
 const {
@@ -87,13 +89,7 @@ interface FontOption {
 
 function selectFont(font: FontOption) {
   if (font.feature && !serverStore.hasFeature(font.feature)) {
-    showDialog({
-      title: 'VIP功能',
-      message: '此字体VIP可用, 是否去开通会员？',
-      showCancelButton: true,
-    }).then(() => {
-      router.push({ name: 'VipDetail' });
-    });
+    showVipDialog('此字体VIP可用, 是否去开通会员？', 'VIP功能');
     return;
   }
   bookStore.fontFamily = font.family;

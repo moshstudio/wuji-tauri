@@ -15,7 +15,12 @@ import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import { usePageDataLoader } from '@/hooks/usePageDataLoader';
 import AppPlaylistDetail from '@/layouts/app/song/PlaylistDetail.vue';
 import DesktopPlaylistDetail from '@/layouts/desktop/song/PlaylistDetail.vue';
-import { useDownloadStore, useSongShelfStore, useStore } from '@/store';
+import {
+  useDownloadStore,
+  useSongShelfStore,
+  useStore,
+  useSubscribeSourceStore,
+} from '@/store';
 
 const { playlistId, sourceId } = defineProps({
   playlistId: String,
@@ -35,7 +40,7 @@ const moreOptionsSong = ref<SongInfo>();
 const showAddToShelfSheet = ref(false);
 
 const { run: loadPage } = usePageDataLoader({
-  onFailed: () => showFailToast('歌单详情加载失败，请重试'),
+  onFailed: () => showFailToast('加载失败，请检查网络或订阅源状态'),
 });
 
 function clear() {
@@ -51,14 +56,30 @@ async function toPage(pageNo?: number) {
     currentPage.value = pageNo || 1;
 
     if (!playlistId || !sourceId) {
+      showFailToast('跳转参数错误');
       shouldReload.value = true;
-      return false;
+      return true;
     }
 
     songSource.value = store.getSongSource(sourceId);
     if (!songSource.value) {
+      const subscribeStore = useSubscribeSourceStore();
+      const subscribeSource = subscribeStore.subscribeSources.find(s =>
+        s.detail.urls.some(u => u.id === sourceId),
+      );
+      const urlItem = subscribeSource?.detail.urls.find(u => u.id === sourceId);
+
+      if (urlItem && (urlItem.disable || subscribeSource?.disable)) {
+        showFailToast('音乐源已禁用，请在订阅源管理中启用');
+      }
+      else if (!urlItem) {
+        showFailToast('音乐源不存在或已删除');
+      }
+      else {
+        showFailToast('音乐源加载失败，请检查订阅源配置');
+      }
       shouldReload.value = true;
-      return false;
+      return true;
     }
 
     playlist.value = store.getPlaylistInfo(songSource.value, playlistId);
@@ -77,6 +98,7 @@ async function toPage(pageNo?: number) {
       songSource.value,
       playlist.value,
       pageNo,
+      { silent: true },
     );
     toast.close();
 

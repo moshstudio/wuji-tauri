@@ -191,6 +191,11 @@ async fn stream_download<R: Runtime>(
             .unwrap_or(true);
 
         if let Some(task) = inner.get_task_mut(&task_id) {
+            // 如果任务状态不再是下载中（例如已暂停或出错），终止下载
+            if !matches!(task.status, TaskStatus::Downloading) {
+                return Err(Error::TaskStopped);
+            }
+
             task.downloaded_size += bytes_since_last_emit;
             bytes_since_last_emit = 0;
 

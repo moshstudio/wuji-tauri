@@ -119,7 +119,7 @@ function clearHistory() {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
   }).then((confirm) => {
-    if (confirm) {
+    if (confirm === 'confirm') {
       comicShelfStore.clearComicHistory();
     }
   });

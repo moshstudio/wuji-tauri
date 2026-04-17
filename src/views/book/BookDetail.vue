@@ -10,7 +10,12 @@ import { usePageDataLoader } from '@/hooks/usePageDataLoader';
 import AppBookDetail from '@/layouts/app/book/BookDetail.vue';
 import DesktopBookDetail from '@/layouts/desktop/book/BookDetail.vue';
 import { router } from '@/router';
-import { useBookShelfStore, useDownloadStore, useStore } from '@/store';
+import {
+  useBookShelfStore,
+  useDownloadStore,
+  useStore,
+  useSubscribeSourceStore,
+} from '@/store';
 
 const { bookId, sourceId } = defineProps({
   bookId: String,
@@ -49,7 +54,7 @@ const addShelfActions = computed(() => {
 });
 
 const { run: loadPage } = usePageDataLoader({
-  onFailed: () => showFailToast('书籍详情加载失败，请重试'),
+  onFailed: () => showFailToast('加载失败，请检查网络或订阅源状态'),
 });
 
 function clear() {
@@ -62,14 +67,30 @@ async function loadData() {
   await loadPage(async (signal) => {
     clear();
     if (!bookId || !sourceId) {
+      showFailToast('跳转参数错误');
       shouldReload.value = true;
-      return false;
+      return true;
     }
 
     bookSource.value = store.getBookSource(sourceId!);
     if (!bookSource.value) {
+      const subscribeStore = useSubscribeSourceStore();
+      const subscribeSource = subscribeStore.subscribeSources.find(s =>
+        s.detail.urls.some(u => u.id === sourceId),
+      );
+      const urlItem = subscribeSource?.detail.urls.find(u => u.id === sourceId);
+
+      if (urlItem && (urlItem.disable || subscribeSource?.disable)) {
+        showFailToast('书籍源已禁用，请在订阅源管理中启用');
+      }
+      else if (!urlItem) {
+        showFailToast('书籍源不存在或已删除');
+      }
+      else {
+        showFailToast('书籍源加载失败，请检查订阅源配置');
+      }
       shouldReload.value = true;
-      return false;
+      return true;
     }
 
     book.value = store.getBookItem(bookSource.value, bookId);
@@ -84,7 +105,7 @@ async function loadData() {
       closeOnClick: true,
       closeOnClickOverlay: false,
     });
-    const detail = await store.bookDetail(bookSource.value, book.value);
+    const detail = await store.bookDetail(bookSource.value, book.value, { silent: true });
     toast.close();
 
     if (signal.aborted)

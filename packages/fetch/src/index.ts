@@ -285,11 +285,15 @@ export async function cachedFetch(
   init?: RequestInit & ClientOptions,
   imageAndCompress = false,
 ): Promise<Response> {
-  if (!input.toString().length) {
+  const inputUrl = input instanceof Request ? input.url : input.toString();
+  if (!inputUrl.length) {
     return Response.error();
   }
-  if ('caches' in window) {
-    const cacheKey = input.toString() + imageAndCompress.toString();
+  const isSupportedScheme
+    = inputUrl.startsWith('http://') || inputUrl.startsWith('https://');
+
+  if ('caches' in window && isSupportedScheme) {
+    const cacheKey = inputUrl + imageAndCompress.toString();
     const cache = await caches.open('wuji-cache');
 
     const cachedResponse = await cache.match(cacheKey);

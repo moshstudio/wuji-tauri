@@ -87,7 +87,11 @@ export const useComicStore = defineStore('comic', () => {
     triggerRef(comicSources);
   };
 
-  const comicDetail = async (source: ComicSource, comic: ComicItem) => {
+  const comicDetail = async (
+    source: ComicSource,
+    comic: ComicItem,
+    options: { silent?: boolean } = {},
+  ) => {
     const sc = (await extensionStore.getSourceClass(
       source.item,
     )) as ComicExtension;
@@ -96,7 +100,9 @@ export const useComicStore = defineStore('comic', () => {
       return res;
     }
     else {
-      showFailToast(`${source.item.name} 获取内容失败`);
+      if (!options.silent) {
+        showFailToast(`${source.item.name} 获取内容失败`);
+      }
       return null;
     }
   };
