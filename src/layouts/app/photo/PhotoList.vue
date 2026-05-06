@@ -44,85 +44,88 @@ async function onRefresh() {
         }
       "
     />
-    <van-pull-refresh
-      v-model="isRefreshing"
+    <div
       v-remember-scroll
-      :head-height="100"
-      class="photo-main-container main flex h-full w-full grow flex-col overflow-y-auto overflow-x-hidden"
-      @refresh="onRefresh"
+      class="photo-main-container main flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden h-full w-full"
     >
-      <van-collapse v-model="displayStore.photoCollapse">
-        <div v-for="(item, index) in photoSources" :key="item.item.id">
-          <van-collapse-item
-            v-if="!!item.list?.list.length"
-            v-show="item.list"
-            :name="index + item.item.id"
-            :title="item.item.name"
-          >
-            <div
-              v-if="
-                (paginationPosition === 'top'
-                  || paginationPosition === 'both')
-                  && item.list
-                  && item.list.totalPage
-              "
-              class="flex flex-nowrap px-2"
+      <van-pull-refresh
+        v-model="isRefreshing"
+        :head-height="100"
+        @refresh="onRefresh"
+      >
+        <van-collapse v-model="displayStore.photoCollapse">
+          <div v-for="(item, index) in photoSources" :key="item.item.id">
+            <van-collapse-item
+              v-if="!!item.list?.list.length"
+              v-show="item.list"
+              :name="index + item.item.id"
+              :title="item.item.name"
             >
-              <MPagination
-                :page-no="item.list.page"
-                :page-count="item.list.totalPage"
-                :to-page="(page) => toPage(item, page)"
-              />
-            </div>
-            <ResponsiveGrid2 min-width="80" max-width="100">
-              <template
-                v-for="photo in item.list?.list"
-                :key="item.item.id + photo.id"
+              <div
+                v-if="
+                  (paginationPosition === 'top'
+                    || paginationPosition === 'both')
+                    && item.list
+                    && item.list.totalPage
+                "
+                class="flex flex-nowrap px-2"
               >
-                <MPhotoCard
-                  :item="photo"
-                  @click="
-                    (item) => {
-                      router.push({
-                        name: 'PhotoDetail',
-                        params: { id: item.id, sourceId: item.sourceId },
-                      });
-                    }
-                  "
+                <MPagination
+                  :page-no="item.list.page"
+                  :page-count="item.list.totalPage"
+                  :to-page="(page) => toPage(item, page)"
                 />
-              </template>
-            </ResponsiveGrid2>
-            <div
-              v-if="
-                (paginationPosition === 'bottom'
-                  || paginationPosition === 'both')
-                  && item.list
-                  && item.list.totalPage
-              "
-              class="flex flex-nowrap px-2"
-            >
-              <MPagination
-                :page-no="item.list.page"
-                :page-count="item.list.totalPage"
-                :to-page="(page) => toPage(item, page)"
-              />
-            </div>
-          </van-collapse-item>
-        </div>
-      </van-collapse>
-      <van-back-top bottom="60" right="10">
-        <LiquidGlassContainer
-          :width="40"
-          :height="40"
-          :border-radius="20"
-          glass-tint-color="#000000"
-          :glass-tint-opacity="20"
-          :frost-blur-radius="1"
-        >
-          <van-icon name="arrow-up" />
-        </LiquidGlassContainer>
-      </van-back-top>
-    </van-pull-refresh>
+              </div>
+              <ResponsiveGrid2 min-width="80" max-width="100">
+                <template
+                  v-for="photo in item.list?.list"
+                  :key="item.item.id + photo.id"
+                >
+                  <MPhotoCard
+                    :item="photo"
+                    @click="
+                      (item) => {
+                        router.push({
+                          name: 'PhotoDetail',
+                          params: { id: item.id, sourceId: item.sourceId },
+                        });
+                      }
+                    "
+                  />
+                </template>
+              </ResponsiveGrid2>
+              <div
+                v-if="
+                  (paginationPosition === 'bottom'
+                    || paginationPosition === 'both')
+                    && item.list
+                    && item.list.totalPage
+                "
+                class="flex flex-nowrap px-2"
+              >
+                <MPagination
+                  :page-no="item.list.page"
+                  :page-count="item.list.totalPage"
+                  :to-page="(page) => toPage(item, page)"
+                />
+              </div>
+            </van-collapse-item>
+          </div>
+        </van-collapse>
+        <van-back-top bottom="60" right="10">
+          <LiquidGlassContainer
+            :width="40"
+            :height="40"
+            :border-radius="20"
+            glass-tint-color="#000000"
+            :glass-tint-opacity="20"
+            :frost-blur-radius="1"
+          >
+            <van-icon name="arrow-up" />
+          </LiquidGlassContainer>
+        </van-back-top>
+      </van-pull-refresh>
+    </div>
   </div>
 </template>
 

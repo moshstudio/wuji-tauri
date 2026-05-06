@@ -80,7 +80,8 @@ export async function runPhotoAlbumFetcher(
             }),
           );
         });
-        await Promise.all(pagePushPromises);
+        // 等待所有当前页的图片下载尝试完成，避免单张失败中断整个任务
+        await Promise.allSettled(pagePushPromises);
         totalImages += pageImagesCount;
       }
     }
@@ -92,7 +93,7 @@ export async function runPhotoAlbumFetcher(
     const completedCount = finalTask?.completedChunks.length || 0;
 
     if (isTaskRunning(deps.getTasks(), taskId)) {
-      if (totalImages > 0 && completedCount >= totalImages) {
+      if (totalImages > 0 && completedCount > 0) {
         await invokePlugin('finalize_collection_download', { taskId });
       }
       else {
@@ -100,7 +101,7 @@ export async function runPhotoAlbumFetcher(
           taskId,
           totalImages === 0
             ? '未发现可下载的图片'
-            : `相册下载完成，但有部分图片(${totalImages - completedCount})未成功。`,
+            : `所有图片均下载失败，请重试。`,
         );
       }
     }

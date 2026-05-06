@@ -129,7 +129,7 @@ function updateName() {
                 </div>
               </template>
               <template v-if="!tmpUserInfo.isVerified" #label>
-                <span class="text-red">账号未验证</span>
+                <span class="text-red-500">账号未验证</span>
               </template>
             </van-cell>
             <van-cell
@@ -170,7 +170,7 @@ function updateName() {
             </van-cell>
           </van-cell-group>
 
-          <van-cell-group inset class="mt-4">
+          <van-cell-group inset class="!mt-4">
             <van-cell
               title="同步数据至服务器"
               is-link
@@ -192,7 +192,7 @@ function updateName() {
           </van-cell-group>
 
           <!-- 操作按钮 -->
-          <van-cell-group inset class="action-section mt-4">
+          <van-cell-group inset class="action-section !mt-4">
             <van-cell title="重置密码" is-link @click="resetPassword" />
             <van-cell title="退出登录" is-link @click="logout" />
           </van-cell-group>

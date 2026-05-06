@@ -6,24 +6,18 @@ import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
 import { defineConfig } from 'vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
-import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
 
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
   plugins: [
-    Vue({
-      template: { transformAssetUrls },
-    }),
+    Vue(),
     AutoImport({
       resolvers: [VantResolver()],
     }),
     Components({
       resolvers: [VantResolver()],
-    }),
-    Vuetify({
-      autoImport: true,
     }),
     nodePolyfills(),
   ],

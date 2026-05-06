@@ -45,7 +45,7 @@ const typeProperty = computed(() => getSourceTypeProperty(props.item.type));
         </div>
         <div
           v-if="isLocalSource(source)"
-          class="van-haptics-feedback bg-red rounded p-1 text-white"
+          class="van-haptics-feedback rounded bg-red-500 p-1 text-white"
           @click.stop="removeItem(source, item)"
         >
           <Icon icon="mdi:delete-outline" width="16" height="16" />

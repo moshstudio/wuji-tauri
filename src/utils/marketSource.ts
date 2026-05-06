@@ -1,7 +1,38 @@
 import type { MarketSource } from '@wuji-tauri/source-extension';
 import type { TagProps } from 'vant';
 import { MarketSourcePermission } from '@wuji-tauri/source-extension';
-import _ from 'lodash';
+
+/** 后端历史枚举，兼容旧数据 */
+const LEGACY_PERMISSION: Record<string, MarketSourcePermission> = {
+  superVip: MarketSourcePermission.Pro,
+};
+
+/** 将接口返回的权限规范化为当前枚举（含 superVip → pro），供展示与权限判断共用 */
+export function normalizeMarketSourcePermissions(
+  permissions: MarketSourcePermission[] | string[] | undefined,
+): MarketSourcePermission[] {
+  if (!permissions?.length)
+    return [];
+  return permissions.map((p) => {
+    const s = String(p);
+    return LEGACY_PERMISSION[s] ?? (s as MarketSourcePermission);
+  });
+}
+
+function permissionsMatch(
+  a: MarketSourcePermission[],
+  b: MarketSourcePermission[],
+): boolean {
+  if (a.length !== b.length)
+    return false;
+  const sa = [...a].map(String).sort();
+  const sb = [...b].map(String).sort();
+  for (let i = 0; i < sa.length; i++) {
+    if (sa[i] !== sb[i])
+      return false;
+  }
+  return true;
+}
 
 export const permissionRules: {
   name: string;
@@ -34,7 +65,7 @@ export const permissionRules: {
   },
   {
     name: 'PRO',
-    permissions: [MarketSourcePermission.SuperVip],
+    permissions: [MarketSourcePermission.Pro],
     style: {
       type: 'primary',
       plain: false,
@@ -42,7 +73,7 @@ export const permissionRules: {
   },
   {
     name: '会员和PRO',
-    permissions: [MarketSourcePermission.Vip, MarketSourcePermission.SuperVip],
+    permissions: [MarketSourcePermission.Vip, MarketSourcePermission.Pro],
     style: {
       type: 'primary',
       plain: false,
@@ -50,15 +81,20 @@ export const permissionRules: {
   },
 ];
 
-export function permissionText(source: MarketSource) {
+export function findPermissionRule(
+  permissions: MarketSourcePermission[] | string[] | undefined,
+) {
+  const normalized = normalizeMarketSourcePermissions(permissions);
   return permissionRules.find(rule =>
-    _.isEqual(rule.permissions, source.permissions),
-  )?.name;
+    permissionsMatch(rule.permissions, normalized),
+  );
+}
+
+export function permissionText(source: MarketSource) {
+  return findPermissionRule(source.permissions)?.name;
 }
 export function permissionStyle(source: MarketSource) {
-  return permissionRules.find(rule =>
-    _.isEqual(rule.permissions, source.permissions),
-  )?.style;
+  return findPermissionRule(source.permissions)?.style;
 }
 
 export default { permissionRules, permissionText, permissionStyle };

@@ -17,7 +17,7 @@ export enum MarketSourcePermission {
   NoLogin = 'noLogin',
   Login = 'login',
   Vip = 'vip',
-  SuperVip = 'superVip',
+  Pro = 'pro',
 }
 
 export interface SubscribeItem {

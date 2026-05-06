@@ -23,6 +23,7 @@ import {
   useDisplayStore,
   useDownloadStore,
   useStore,
+  useSubscribeSourceStore,
 } from '@/store';
 import { useBackStore } from '@/store/backStore';
 import { retryOnFalse } from '@/utils';
@@ -40,6 +41,7 @@ const displayStore = useDisplayStore();
 const comicStore = useComicStore();
 const shelfStore = useComicShelfStore();
 const downloadStore = useDownloadStore();
+const subscribeStore = useSubscribeSourceStore();
 const { comicShelf } = storeToRefs(shelfStore);
 
 const comicSource = ref<ComicSource>();
@@ -126,6 +128,12 @@ const loadData = retryOnFalse({ onFailed: backStore.back })(async () => {
   readingContent.value = undefined;
 
   if (!comicId || !sourceId || !chapterId) {
+    return false;
+  }
+
+  const loaded = await subscribeStore.waitForLoaded();
+  if (!loaded) {
+    showToast('订阅源加载超时，请稍后重试');
     return false;
   }
 

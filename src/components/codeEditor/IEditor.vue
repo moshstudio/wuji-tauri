@@ -74,13 +74,24 @@ defineExpose({
 </script>
 
 <template>
-  <VueMonacoEditor
-    :value="value"
-    v-bind="editorProps"
-    :path="path"
-    @mount="editorInit"
-    @change="handleEditorChange"
-  />
+  <!--
+    @vant/touch-emulator 会全局把 mouse 事件模拟成 touch 事件，可能干扰 Monaco 的选择/拖拽。
+    通过 data-no-touch-simulate 可对指定容器及其子元素禁用模拟。
+  -->
+  <div class="i-editor" data-no-touch-simulate>
+    <VueMonacoEditor
+      :value="value"
+      v-bind="editorProps"
+      :path="path"
+      @mount="editorInit"
+      @change="handleEditorChange"
+    />
+  </div>
 </template>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+.i-editor {
+  width: 100%;
+  height: 100%;
+}
+</style>

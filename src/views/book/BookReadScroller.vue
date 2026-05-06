@@ -31,6 +31,7 @@ const props = withDefaults(
     prevChapter: (toLast?: boolean) => void;
     nextChapter: () => void;
     refreshChapter: () => Promise<void>;
+    refreshChapters: () => Promise<void>;
     loadChapterContent: (chapter: BookChapter) => Promise<string>;
     onDownload: () => void;
   }>(),

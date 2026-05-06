@@ -241,6 +241,7 @@ onDeactivated(() => {
     </div>
     <van-popup
       v-model:show="isShowChapterList"
+      teleport="body"
       position="left"
       :style="{
         minWidth: '30%',
@@ -253,7 +254,7 @@ onDeactivated(() => {
       <van-list>
         <template v-for="item in comic?.chapters" :key="item.id">
           <div
-            class="mobile-scrollbar van-haptics-feedback flex select-none flex-nowrap items-center justify-start gap-2 p-2 text-sm"
+            class="van-haptics-feedback flex select-none flex-nowrap items-center justify-start gap-2 p-2 text-sm"
             :class="{
               'reading-chapter': chapter?.id === item.id,
             }"
@@ -296,26 +297,6 @@ onDeactivated(() => {
   }
   .bottom {
     transform: translateY(100%);
-  }
-}
-:deep(.van-list) {
-  ::-webkit-scrollbar {
-    background-color: transparent;
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background-color: rgba(110, 110, 110, 0.2);
-    border-radius: 6px;
-  }
-
-  :hover::-webkit-scrollbar-thumb {
-    background-color: rgba(110, 110, 110, 0.6);
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(110, 110, 110, 0.8);
   }
 }
 </style>

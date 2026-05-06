@@ -31,7 +31,7 @@ const permissionStyle = computed(() => {
         >
           {{ source.name }}
         </div>
-        <div class="text-xs text-gray-400">
+        <div class="text-xs text-[var(--van-text-color-3)]">
           v{{ source.version }}
         </div>
       </div>

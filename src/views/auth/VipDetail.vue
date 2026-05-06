@@ -39,8 +39,9 @@ async function genPayUrl(plan: MembershipPlan) {
     openUrl(url);
     showDialog({
       title: '提示',
+      allowHtml: true,
       message:
-        '将跳转至浏览器支付\n如未跳转, 请尝试重置默认浏览器。\n支付成功后, 请重启软件。',
+        '将跳转至浏览器支付<br>如未跳转, 请尝试<span style="font-weight:600">重置默认浏览器</span>。<br><span style="color:var(--van-primary-color);font-weight:600">支付成功后, 请重启软件。</span>',
     });
   }
 }

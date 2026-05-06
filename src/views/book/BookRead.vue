@@ -8,7 +8,7 @@ import type { BookSource } from '@/types';
 import _ from 'lodash';
 import { storeToRefs } from 'pinia';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
-import { showDialog, showFailToast, showToast } from 'vant';
+import { showFailToast, showToast } from 'vant';
 import { computed, onActivated, onDeactivated, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import BookSwitchSourceDialog from '@/components/dialog/BookSwitchSource.vue';
@@ -20,6 +20,7 @@ import {
   useDownloadStore,
   useServerStore,
   useStore,
+  useSubscribeSourceStore,
   useTTSStore,
 } from '@/store';
 import { useBackStore } from '@/store/backStore';
@@ -51,6 +52,7 @@ const bookStore = useBookStore();
 const shelfStore = useBookShelfStore();
 const ttsStore = useTTSStore();
 const downloadStore = useDownloadStore();
+const subscribeStore = useSubscribeSourceStore();
 const { webFonts } = storeToRefs(bookStore);
 const { bookShelf } = storeToRefs(shelfStore);
 const route = useRoute();
@@ -220,6 +222,12 @@ const loadData = retryOnFalse({ onFailed: backStore.back })(async () => {
     return false;
   }
 
+  const loaded = await subscribeStore.waitForLoaded();
+  if (!loaded) {
+    showToast('订阅源加载超时，请稍后重试');
+    return false;
+  }
+
   bookSource.value = store.getBookSource(sourceId!);
   if (!bookSource.value) {
     showToast('源不存在或未启用');
@@ -266,7 +274,7 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
   const chapterIndex = book.value.chapters?.findIndex(
     chapter => chapter.id === chapterId,
   );
-  // shelfStore.updateBookReadInfo(book.value, chapter);
+  shelfStore.updateBookReadInfo(book.value, chapter);
   const displayStore = useDisplayStore();
   const t = displayStore.showToast();
   chapterList.value = book.value.chapters || [];
@@ -391,6 +399,48 @@ async function resfreshChapter() {
   await loadChapter(undefined, true);
 }
 
+let lastRefreshChaptersTime = 0;
+const REFRESH_INTERVAL = 2 * 1000;
+let isRefreshingChapters = false;
+
+async function refreshChapters() {
+  if (!book.value || !bookSource.value || isRefreshingChapters)
+    return;
+
+  const now = Date.now();
+  if (now - lastRefreshChaptersTime < REFRESH_INTERVAL) {
+    return;
+  }
+
+  isRefreshingChapters = true;
+  const t = displayStore.showToast();
+  try {
+    const oldCount = book.value.chapters?.length || 0;
+    const ret = await store.bookDetail(bookSource.value, book.value, {
+      silent: true,
+    });
+    if (ret) {
+      ret.chapters ??= [];
+      const newCount = ret.chapters.length;
+      Object.assign(book.value, ret);
+
+      chapterList.value = book.value.chapters || [];
+      if (newCount > oldCount) {
+        showToast(`已更新 ${newCount - oldCount} 个新章节`);
+        nextChapter();
+      }
+      else {
+        showToast('已是最新内容');
+      }
+      lastRefreshChaptersTime = Date.now();
+    }
+  }
+  finally {
+    isRefreshingChapters = false;
+    displayStore.closeToast(t);
+  }
+}
+
 /**
  * 按章节加载内容，不做路由跳转，供无限滚动模式使用
  */
@@ -420,6 +470,15 @@ async function onDownload() {
       return;
     }
     await downloadStore.startBookDownload(book.value, bookSource.value);
+  }
+}
+
+function updateReadingPage(page: number) {
+  if (readingChapter.value) {
+    readingChapter.value.readingPage = page;
+    if (book.value) {
+      shelfStore.updateBookReadInfo(book.value, readingChapter.value);
+    }
   }
 }
 
@@ -492,8 +551,10 @@ onDeactivated(() => {
     :prev-chapter="prevChapter"
     :next-chapter="nextChapter"
     :refresh-chapter="resfreshChapter"
+    :refresh-chapters="refreshChapters"
     :load-chapter-content="loadChapterContent"
     :on-download="onDownload"
+    @update:reading-page="updateReadingPage"
   >
     <BookSwitchSourceDialog
       v-model:show="showSwitchSourceDialog"

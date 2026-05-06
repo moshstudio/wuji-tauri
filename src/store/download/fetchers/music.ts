@@ -114,7 +114,7 @@ export async function runMusicPlaylistFetcher(
       });
     });
 
-    await Promise.all(promises);
+    await Promise.allSettled(promises);
 
     // 刷新任务列表以确保状态最新
     await deps.loadTasks();
@@ -123,13 +123,13 @@ export async function runMusicPlaylistFetcher(
     const completedCount = finalTask?.completedChunks.length || 0;
 
     if (isTaskRunning(deps.getTasks(), taskId)) {
-      if (completedCount >= totalCount) {
+      if (completedCount > 0) {
         await invokePlugin('finalize_collection_download', { taskId });
       }
       else {
         await deps.markTaskError(
           taskId,
-          `歌单下载完成，但有 ${totalCount - completedCount} 首歌曲失败。`,
+          `歌单所有歌曲下载失败，请检查网络或源站。`,
         );
       }
     }

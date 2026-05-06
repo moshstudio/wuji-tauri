@@ -6,11 +6,6 @@ import { createPinia } from 'pinia';
 import { Dialog, ImagePreview, Lazyload, Notify, Sticky, Toast } from 'vant';
 
 import { createApp } from 'vue';
-import { createVuetify } from 'vuetify';
-import * as components from 'vuetify/components';
-
-import * as directives from 'vuetify/directives';
-import { aliases, mdi } from 'vuetify/iconsets/mdi';
 
 import App from './App.vue';
 import { router } from './router';
@@ -18,8 +13,8 @@ import { router } from './router';
 import HorizontalScrollDirective from './utils/directives/horizontalScroll';
 import HoverDelay from './utils/directives/hoverDelay';
 import RememberScrollDirective from './utils/directives/rememberScroll';
+import TooltipDirective from './utils/directives/tooltip';
 
-import 'vuetify/styles';
 import 'vant/es/toast/style';
 import 'vant/es/dialog/style';
 import 'vant/es/notify/style';
@@ -41,19 +36,6 @@ loader.config({
 
 createApp(App)
   .use(createPinia())
-  .use(
-    createVuetify({
-      components,
-      directives,
-      icons: {
-        defaultSet: 'mdi',
-        aliases,
-        sets: {
-          mdi,
-        },
-      },
-    }),
-  )
   .use(Lazyload)
   .use(Toast)
   .use(Dialog)
@@ -65,4 +47,5 @@ createApp(App)
   .directive('remember-scroll', RememberScrollDirective)
   .directive('horizontal-scroll', HorizontalScrollDirective)
   .directive('hover-delay', HoverDelay)
+  .directive('tooltip', TooltipDirective)
   .mount('#app');

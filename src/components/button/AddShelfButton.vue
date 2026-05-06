@@ -28,9 +28,3 @@ withDefaults(
     </van-button>
   </div>
 </template>
-
-<style scoped lang="less">
-:deep(.van-button__text) {
-  color: #eee;
-}
-</style>

@@ -5,7 +5,7 @@ import {
   SongSelectShelfSheet,
 } from '@wuji-tauri/components';
 import { SongShelfType } from '@wuji-tauri/source-extension';
-import { showFailToast, showLoadingToast, showToast } from 'vant';
+import { showFailToast, showLoadingToast } from 'vant';
 import { ref, watch } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppSongShelfDetail from '@/layouts/app/song/SongShelfDetail.vue';
@@ -20,6 +20,7 @@ const store = useStore();
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
 const downloadStore = useDownloadStore();
+const subscribeStore = useSubscribeSourceStore();
 
 const shelf = ref<SongShelf>();
 const moreOptions = ref(false);
@@ -29,9 +30,13 @@ const showAddToShelfSheet = ref(false);
 
 async function toPage(shelf: SongShelf, pageNo: number) {
   const sourceId = shelf.playlist.sourceId;
+  const loaded = await subscribeStore.waitForLoaded();
+  if (!loaded) {
+    showFailToast('订阅源加载超时，请稍后重试');
+    return;
+  }
   const source = store.getSongSource(sourceId);
   if (!source) {
-    const subscribeStore = useSubscribeSourceStore();
     const subscribeSource = subscribeStore.subscribeSources.find(s =>
       s.detail.urls.some(u => u.id === sourceId),
     );

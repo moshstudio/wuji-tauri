@@ -44,6 +44,7 @@ export const useSongStore = defineStore('song', () => {
     SongPlayMode.list,
   );
   const playProgress = ref(0); // 音频播放进度
+  const consecutivePlayFailures = ref(0); // 连续播放失败次数
 
   const playingSong = useStorageAsync<SongInfo>(
     'songPlayingSong',
@@ -296,7 +297,14 @@ export const useSongStore = defineStore('song', () => {
       );
     }
 
-    async setPlaylist(list: SongInfo[], firstSong: SongInfo): Promise<void> {
+    async setPlaylist(
+      list: SongInfo[],
+      firstSong: SongInfo,
+      isAutoJump = false,
+    ): Promise<void> {
+      if (!isAutoJump) {
+        consecutivePlayFailures.value = 0;
+      }
       if (list !== playlist.value) {
         playlist.value = list;
         if (playMode.value === SongPlayMode.random) {
@@ -343,10 +351,23 @@ export const useSongStore = defineStore('song', () => {
           return;
         }
         if (!url) {
-          showToast(`歌曲 ${song.name} 无法播放`);
+          if (playMode.value === SongPlayMode.single) {
+            showToast(`歌曲 ${song.name} 无法播放`);
+            consecutivePlayFailures.value = 0;
+            return;
+          }
+          consecutivePlayFailures.value++;
+          if (consecutivePlayFailures.value < 5) {
+            await this.nextSong(true);
+          }
+          else {
+            showToast(`歌曲无法播放`);
+            consecutivePlayFailures.value = 0;
+          }
           return;
         }
         else {
+          consecutivePlayFailures.value = 0;
           audioRef.value.src = url;
           const song = playingSong.value;
           if (!song.lyric) {
@@ -389,7 +410,7 @@ export const useSongStore = defineStore('song', () => {
       await this.setPlaylist(playlist.value, playingPlaylist.value[prevIndex]);
     }
 
-    async nextSong(): Promise<void> {
+    async nextSong(isAutoJump = false): Promise<void> {
       if (!playingPlaylist.value)
         return;
       const index = playingPlaylist.value.findIndex(
@@ -404,7 +425,11 @@ export const useSongStore = defineStore('song', () => {
       else {
         nextIndex = index + 1;
       }
-      await this.setPlaylist(playlist.value, playingPlaylist.value[nextIndex]);
+      await this.setPlaylist(
+        playlist.value,
+        playingPlaylist.value[nextIndex],
+        isAutoJump,
+      );
     }
 
     onSetVolume(value: number): Promise<void> | void {
@@ -654,11 +679,15 @@ export const useSongStore = defineStore('song', () => {
       );
     }
 
-    async setPlaylist(list: SongInfo[], firstSong: SongInfo): Promise<void> {
+    async setPlaylist(
+      list: SongInfo[],
+      firstSong: SongInfo,
+      isAutoJump = false,
+    ): Promise<void> {
       await androidMedia.setPlaybackState({
         state: 'paused',
       });
-      await super.setPlaylist(list, firstSong);
+      await super.setPlaylist(list, firstSong, isAutoJump);
     }
 
     async onPlay() {

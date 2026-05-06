@@ -23,7 +23,6 @@ import {
   showSuccessToast,
 } from 'vant';
 import { computed, onMounted, ref, triggerRef } from 'vue';
-import { router } from '@/router';
 import { isMembershipOrderValid, UserInfo } from '@/types/user';
 import { sleep } from '@/utils';
 import { getDeviceId } from '@/utils/device';
@@ -212,11 +211,14 @@ export const useServerStore = defineStore('serverStore', () => {
 
   onMounted(() => {
     fetchFeatures();
+    setTimeout(() => {
+      fetchUserInfo();
+    }, 2000);
+    setInterval(() => {
+      fetchUserInfo();
+    }, 5 * 60 * 1000);
     setInterval(() => {
       now.value = Date.now();
-      if (now.value % 300 === 0) {
-        fetchUserInfo();
-      }
     }, 1000);
   });
 
@@ -457,6 +459,7 @@ export const useServerStore = defineStore('serverStore', () => {
     const query = new URLSearchParams();
     query.set('page', pageNo.toString());
     query.set('sortBy', sort);
+    query.set('includeEmpty', 'false');
     return await sendRequest<PagedMarketSource | undefined>(
       `source/list` + `?${query.toString()}`,
       {},

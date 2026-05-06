@@ -9,12 +9,18 @@ import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppComicList from '@/layouts/app/comic/ComicList.vue';
 import DesktopComicList from '@/layouts/desktop/comic/ComicList.vue';
 import { router } from '@/router';
-import { useComicShelfStore, useDisplayStore, useStore } from '@/store';
+import {
+  useComicShelfStore,
+  useDisplayStore,
+  useStore,
+  useSubscribeSourceStore,
+} from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 
 const store = useStore();
 const displayStore = useDisplayStore();
 const comicShelfStore = useComicShelfStore();
+const subscribeStore = useSubscribeSourceStore();
 const { comicHistory } = storeToRefs(comicShelfStore);
 const { comicSources } = storeToRefs(store);
 
@@ -79,6 +85,11 @@ function toDetail(source: ComicSource, item: ComicItem) {
 }
 
 async function hisrotyToComic(comic: ComicHistory) {
+  const loaded = await subscribeStore.waitForLoaded();
+  if (!loaded) {
+    showToast('订阅源加载超时，请稍后重试');
+    return;
+  }
   const source = store.getComicSource(comic.comic.sourceId);
   if (!source) {
     showToast('源不存在或未启用');

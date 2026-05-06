@@ -42,106 +42,111 @@ const showCloseActionSheet = ref(false);
   <div class="relative flex h-full flex-col overflow-hidden">
     <WNavbar title="设置" />
     <div
-      class="flex w-full flex-grow flex-col items-center gap-4 overflow-y-auto overflow-x-hidden bg-[--van-background] p-4"
+      class="flex w-full flex-grow min-h-0 flex-col items-center overflow-y-auto overflow-x-hidden bg-[--van-background]"
     >
-      <van-cell-group inset class="w-full">
-        <van-cell
-          center
-          title="深色模式"
-          is-link
-          @click="() => (isDark = !isDark)"
-        >
-          <template #right-icon>
-            <van-switch v-model="isDark" @click.stop />
-          </template>
-        </van-cell>
-        <van-cell center title="清除缓存" is-link @click="clearCache" />
-        <van-cell center is-link @click="clearData">
-          <template #title>
-            <p class="text-red">
-              清空数据
-            </p>
-          </template>
-        </van-cell>
-      </van-cell-group>
+      <div class="w-full max-w-3xl flex flex-col p-4 px-4">
+        <van-cell-group inset title="基础设置">
+          <van-cell
+            center
+            title="深色模式"
+            is-link
+            @click="() => (isDark = !isDark)"
+          >
+            <template #right-icon>
+              <van-switch v-model="isDark" @click.stop />
+            </template>
+          </van-cell>
+          <van-cell
+            center
+            title="首页显示历史记录"
+            is-link
+            @click="() => (showHistory = !showHistory)"
+          >
+            <template #right-icon>
+              <van-switch v-model="showHistory" @click.stop />
+            </template>
+          </van-cell>
+        </van-cell-group>
 
-      <van-cell-group v-if="displayStore.isWindows" inset class="w-full">
-        <van-cell
-          center
-          title="开机自启"
-          is-link
-          @click="() => (enableAutostart = !enableAutostart)"
-        >
-          <template #right-icon>
-            <van-switch v-model="enableAutostart" @click.stop />
-          </template>
-        </van-cell>
-        <van-cell
-          center
-          title="关闭窗口时"
-          is-link
-          @click="showCloseActionSheet = true"
-        >
-          <template #value>
-            <div class="text-[var(--van-gray-6)]">
-              {{ closeAction === 'close' ? '关闭应用' : '最小化到托盘' }}
-            </div>
-          </template>
-        </van-cell>
-      </van-cell-group>
+        <van-cell-group inset title="功能设置">
+          <van-cell
+            center
+            title="音乐自动切换源"
+            is-link
+            @click="() => (songAutoSwitchSource = !songAutoSwitchSource)"
+          >
+            <template #right-icon>
+              <van-switch v-model="songAutoSwitchSource" @click.stop />
+            </template>
+          </van-cell>
+          <van-cell
+            center
+            title="自动更新订阅源"
+            is-link
+            @click="
+              () => (autoUpdateSubscribeSource = !autoUpdateSubscribeSource)
+            "
+          >
+            <template #right-icon>
+              <van-switch v-model="autoUpdateSubscribeSource" @click.stop />
+            </template>
+          </van-cell>
+          <van-cell
+            center
+            title="换页按钮位置"
+            is-link
+            @click="showPaginationSheet = true"
+          >
+            <template #value>
+              <div class="text-[var(--van-gray-6)]">
+                {{
+                  paginationPosition === 'top'
+                    ? '列表上方'
+                    : paginationPosition === 'bottom'
+                      ? '列表下方'
+                      : '列表上下方'
+                }}
+              </div>
+            </template>
+          </van-cell>
+        </van-cell-group>
 
-      <van-cell-group inset class="w-full">
-        <van-cell
-          center
-          title="首页显示历史记录"
-          is-link
-          @click="() => (showHistory = !showHistory)"
-        >
-          <template #right-icon>
-            <van-switch v-model="showHistory" @click.stop />
-          </template>
-        </van-cell>
-        <van-cell
-          center
-          title="音乐自动切换源"
-          is-link
-          @click="() => (songAutoSwitchSource = !songAutoSwitchSource)"
-        >
-          <template #right-icon>
-            <van-switch v-model="songAutoSwitchSource" @click.stop />
-          </template>
-        </van-cell>
-        <van-cell
-          center
-          title="自动更新订阅源"
-          is-link
-          @click="
-            () => (autoUpdateSubscribeSource = !autoUpdateSubscribeSource)
-          "
-        >
-          <template #right-icon>
-            <van-switch v-model="autoUpdateSubscribeSource" @click.stop />
-          </template>
-        </van-cell>
-        <van-cell
-          center
-          title="换页按钮位置"
-          is-link
-          @click="showPaginationSheet = true"
-        >
-          <template #value>
-            <div class="text-[var(--van-gray-6)]">
-              {{
-                paginationPosition === 'top'
-                  ? '列表上方'
-                  : paginationPosition === 'bottom'
-                    ? '列表下方'
-                    : '列表上下方'
-              }}
-            </div>
-          </template>
-        </van-cell>
-      </van-cell-group>
+        <van-cell-group v-if="displayStore.isWindows" inset title="系统设置">
+          <van-cell
+            center
+            title="开机自启"
+            is-link
+            @click="() => (enableAutostart = !enableAutostart)"
+          >
+            <template #right-icon>
+              <van-switch v-model="enableAutostart" @click.stop />
+            </template>
+          </van-cell>
+          <van-cell
+            center
+            title="关闭窗口时"
+            is-link
+            @click="showCloseActionSheet = true"
+          >
+            <template #value>
+              <div class="text-[var(--van-gray-6)]">
+                {{ closeAction === 'close' ? '关闭应用' : '最小化到托盘' }}
+              </div>
+            </template>
+          </van-cell>
+        </van-cell-group>
+
+        <van-cell-group inset title="数据管理">
+          <van-cell center title="清除缓存" is-link @click="clearCache" />
+          <van-cell center is-link @click="clearData">
+            <template #title>
+              <p class="text-red-500">
+                清空数据
+              </p>
+            </template>
+          </van-cell>
+        </van-cell-group>
+      </div>
     </div>
   </div>
   <van-action-sheet
@@ -175,4 +180,11 @@ const showCloseActionSheet = ref(false);
   />
 </template>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+:deep(.van-cell-group__title) {
+  padding: 12px 16px 8px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--van-text-color-2);
+}
+</style>

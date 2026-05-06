@@ -10,12 +10,15 @@ import {
   MarketSourceContentCard,
   MoreOptionsSheet,
 } from '@wuji-tauri/components';
-import _ from 'lodash';
 import { showToast } from 'vant';
 import { computed, reactive, ref, watch } from 'vue';
 import MNavBar from '@/components/header/MNavBar.vue';
 import { router } from '@/router';
-import { permissionRules } from '@/utils/marketSource';
+import {
+  findPermissionRule,
+  normalizeMarketSourcePermissions,
+  permissionRules,
+} from '@/utils/marketSource';
 
 const props = defineProps<{
   source?: MarketSource;
@@ -93,7 +96,7 @@ async function save() {
       _id: formData._id!,
       name: formData.name!,
       version: formData.version!,
-      permissions: formData.permissions!,
+      permissions: normalizeMarketSourcePermissions(formData.permissions),
       sourceContents: formData.sourceContents!,
       isPublic: formData.isPublic!,
       isBanned: formData.isBanned!,
@@ -136,11 +139,7 @@ async function save() {
         />
         <van-cell
           title="使用权限"
-          :value="
-            permissionRules.find((rule) =>
-              _.isEqual(rule.permissions, formData.permissions),
-            )?.name
-          "
+          :value="findPermissionRule(formData.permissions)?.name"
           clickable
           is-link
           @click="() => (showPermissionMoreOptions = true)"
@@ -170,7 +169,7 @@ async function save() {
                 <Icon icon="uil:edit" width="16" height="16" />
               </div>
               <div
-                class="van-haptics-feedback bg-red rounded p-1 text-white"
+                class="van-haptics-feedback rounded bg-red-500 p-1 text-white"
                 @click.stop="() => deleteSourceContent(source!, sourceContent)"
               >
                 <Icon icon="mdi:delete-outline" width="16" height="16" />

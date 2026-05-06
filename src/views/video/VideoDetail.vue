@@ -59,6 +59,7 @@ const downloadStore = useDownloadStore();
 
 const route = useRoute();
 const store = useStore();
+const subscribeStore = useSubscribeSourceStore();
 const backStore = useBackStore();
 const displayStore = useDisplayStore();
 const shelfStore = useVideoShelfStore();
@@ -130,9 +131,17 @@ async function loadData() {
       return true;
     }
 
+    const loaded = await subscribeStore.waitForLoaded();
+    if (signal.aborted)
+      return true;
+    if (!loaded) {
+      showFailToast('订阅源加载超时，请稍后重试');
+      shouldReload.value = true;
+      return true;
+    }
+
     const source = store.getVideoSource(sourceId);
     if (!source) {
-      const subscribeStore = useSubscribeSourceStore();
       const subscribeSource = subscribeStore.subscribeSources.find(s =>
         s.detail.urls.some(u => u.id === sourceId),
       );

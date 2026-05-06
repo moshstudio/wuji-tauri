@@ -40,6 +40,7 @@ const props = withDefaults(
     prevChapter: (toLast?: boolean) => void;
     nextChapter: () => void;
     refreshChapter: () => void;
+    refreshChapters: () => void;
     playTts: () => void;
     onDownload?: () => void;
   }>(),
@@ -196,8 +197,20 @@ const nextPageContent = computed<LineData[]>(() => {
   }
 });
 
+/** 是否为第一页 */
+const isFirstPage = computed(
+  () => readingChapterIndex.value === 0 && readingPageIndex.value === 0,
+);
+/** 是否为最后一页 */
+const isLastPage = computed(
+  () =>
+    (readingChapterIndex.value === chapterCount.value - 1
+      && readingPageIndex.value === (props.readingContent?.length || 0) - 1)
+    || false,
+);
+
 const pages = computed(() => {
-  return [
+  const res = [
     readingPageIndex.value <= 0
       ? {
           content: prevPageContent.value,
@@ -217,34 +230,31 @@ const pages = computed(() => {
       pageNo: readingPageIndex.value + 1,
       totalPage: props.readingContent?.length || '',
     },
-    props.readingContent
-    && readingPageIndex.value < props.readingContent.length - 1
+    readingPageIndex.value < (props.readingContent?.length || 0) - 1
       ? {
           content: nextPageContent.value,
           title: props.readingChapter?.title,
           pageNo: readingPageIndex.value + 2,
           totalPage: props.readingContent?.length || '',
         }
-      : {
-          content: nextPageContent.value,
-          title: props.chapterList?.[readingChapterIndex.value + 1]?.title,
-          pageNo: 1,
-          totalPage: props.nextChapterContent?.length || '',
-        },
+      : (isLastPage.value
+          ? {
+              content: [],
+              title: '已读完',
+              pageNo: -1,
+              totalPage: -1,
+              isEndSlide: true,
+            }
+          : {
+              content: nextPageContent.value,
+              title: props.chapterList?.[readingChapterIndex.value + 1]?.title,
+              pageNo: 1,
+              totalPage: props.nextChapterContent?.length || '',
+            }),
   ];
+  return res;
 });
 
-/** 是否为第一页 */
-const isFirstPage = computed(
-  () => readingChapterIndex.value === 0 && readingPageIndex.value === 0,
-);
-/** 是否为最后一页 */
-const isLastPage = computed(
-  () =>
-    (readingChapterIndex.value === chapterCount.value - 1
-      && readingPageIndex.value === (props.readingContent?.length || 0) - 1)
-    || false,
-);
 const sliderToPageValue = computed({
   get() {
     return readingPageIndex.value + 1;
@@ -285,19 +295,12 @@ defineExpose({
   },
 });
 
-function toChapterPage(page: number) {
-  readingPageIndex.value = page;
-  if (ttsStore.isReading) {
-    // 刷新阅读状态
-    ttsStore.stop();
-    props.playTts();
-  }
-}
-
 function onClickPage(
-  swiper: SwiperType,
+  _swiper: SwiperType,
   e: PointerEvent | MouseEvent | TouchEvent,
 ) {
+  if ((e.target as HTMLElement)?.closest('.van-button'))
+    return;
   if (showMenu.value) {
     showMenu.value = false;
     return;
@@ -363,8 +366,10 @@ function handlePageChange(swiper: SwiperType) {
       return;
     if (readingPageIndex.value >= props.readingContent.length - 1) {
       if (isLastPage.value) {
-        showToast('没有更多内容了');
-        swiperElement.value?.slideTo(1, 200, false);
+        if (!pages.value[swiper.activeIndex] || !(pages.value[swiper.activeIndex] as any).isEndSlide) {
+          showToast('没有更多内容了');
+          swiperElement.value?.slideTo(1, 200, false);
+        }
       }
       else {
         props.nextChapter();
@@ -457,6 +462,15 @@ useStatusBar(() => {
     : bookStore.currTheme.bgColor;
 });
 
+watch(
+  () => props.readingChapter?.id,
+  () => {
+    // 切换章节时，强制重置 Swiper 到中间页
+    // 解决在“最后一页（EndSlide）”点击检查更新后，Swiper 停留在 index 2 导致 handlePageChange 错误递增页码的问题
+    swiperElement.value?.slideTo(1, 0, false);
+  },
+);
+
 onActivated(() => {
   showTabBar.value = showMenu.value;
 });
@@ -548,10 +562,26 @@ onActivated(() => {
       @click="onClickPage"
     >
       <SwiperSlide
-        v-for="({ content, title, pageNo, totalPage }, slideIndex) in pages"
+        v-for="({ content, title, pageNo, totalPage, isEndSlide }, slideIndex) in (pages as any[])"
         :key="`slide_${slideIndex}`"
       >
+        <div v-if="isEndSlide" class="flex h-full w-full flex-col items-center justify-center gap-6" :style="computedStyle">
+          <div class="text-sm opacity-40">
+            已经是最后一页了
+          </div>
+          <van-button
+            type="primary"
+            plain
+            round
+            icon="replay"
+            size="small"
+            @click.stop="props.refreshChapters"
+          >
+            检查更新
+          </van-button>
+        </div>
         <div
+          v-else
           class="flex h-full w-full flex-col overflow-hidden underline-offset-[6px]"
           :style="computedStyle"
         >

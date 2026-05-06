@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia';
 import { set_screen_orientation } from 'tauri-plugin-commands-api';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import GlobalToastProgress from '@/components/GlobalToastProgress.vue';
 import { useDisplayStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
 
@@ -155,12 +156,8 @@ window.androidBackCallback = async () => {
     </transition>
 
     <div class="absolute top-0 z-[999999999] w-screen">
-      <v-progress-linear
+      <GlobalToastProgress
         :active="displayStore.toastActive"
-        indeterminate
-        rounded
-        color="teal"
-        height="4"
         @click="() => displayStore.closeToast()"
       />
     </div>

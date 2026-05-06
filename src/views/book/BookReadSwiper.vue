@@ -50,12 +50,17 @@ const props = withDefaults(
     prevChapter: (toLast?: boolean) => void;
     nextChapter: () => void;
     refreshChapter: () => Promise<void>;
+    refreshChapters: () => Promise<void>;
     onDownload: () => void;
   }>(),
   {
     isPrev: false,
   },
 );
+
+const emit = defineEmits<{
+  (e: 'update:reading-page', page: number): void;
+}>();
 
 const displayStore = useDisplayStore();
 const bookStore = useBookStore();
@@ -90,27 +95,33 @@ const chapterPagedContent = computed<ReaderResult>(() => {
 
 // 新增 watch 来处理副作用逻辑
 watch(chapterPagedContent, (newContent) => {
-  // console.log('chapterPagedContent change', checkIsPrev.value, checkTTS.value);
-  // console.log(ttsStore.isReading);
-
-  if (checkIsPrev.value) {
+  if (checkIsPrev.value && newContent.length > 0) {
     checkIsPrev.value = false;
     nextTick(() => {
-      if (props.isPrev && newContent.length > 0) {
+      if (props.isPrev) {
         chapterPagedIndex.value = newContent.length - 1;
       }
-      else {
-        if (isNewOpen.value) {
-          chapterPagedIndex.value = props.chapter?.readingPage || 0;
-        }
-        else {
-          chapterPagedIndex.value = 0;
-        }
+      else if (isNewOpen.value) {
+        chapterPagedIndex.value = props.chapter?.readingPage || 0;
       }
+      else {
+        chapterPagedIndex.value = 0;
+      }
+      isNewOpen.value = false;
     });
   }
 
-  if (checkTTS.value) {
+  // 越界检查
+  if (newContent.length > 0) {
+    if (chapterPagedIndex.value >= newContent.length) {
+      chapterPagedIndex.value = newContent.length - 1;
+    }
+    else if (chapterPagedIndex.value < 0) {
+      chapterPagedIndex.value = 0;
+    }
+  }
+
+  if (checkTTS.value && newContent.length > 0) {
     checkTTS.value = false;
     nextTick(() => {
       if (ttsStore.isReading) {
@@ -288,7 +299,7 @@ function playTTS() {
     target,
     ttsStore.selectedVoice,
     ttsStore.playbackRate,
-    (event) => {
+    (_event) => {
       if (ttsStore.isReading) {
         playTTS();
       }
@@ -347,20 +358,19 @@ watch(
     if (c) {
       checkIsPrev.value = true;
       checkTTS.value = true;
+      // 切换章节时，尽早重置页码，避免由于 Swiper 状态滞后或未销毁导致的页码错误
+      if (!props.isPrev) {
+        chapterPagedIndex.value = c.readingPage || 0;
+      }
     }
   },
 );
 watch(chapterPagedIndex, (page) => {
   if (page !== undefined && page >= 0 && props.chapter) {
-    // eslint-disable-next-line vue/no-mutating-props
-    props.chapter.readingPage = page;
+    emit('update:reading-page', page);
   }
 });
-watch(chapterPagedContent, () => {
-  if (chapterPagedIndex.value < 0) {
-    chapterPagedIndex.value = 0;
-  }
-});
+// 已合并至上方 watch(chapterPagedContent) 中
 
 onMountedOrActivated(async () => {
   isNewOpen.value = true;
@@ -433,6 +443,7 @@ onDeactivated(() => {
         :prev-chapter="prevChapter"
         :next-chapter="nextChapter"
         :refresh-chapter="refreshChapter"
+        :refresh-chapters="refreshChapters"
         :play-tts="playTTS"
         :on-download="onDownload"
       />
@@ -459,6 +470,7 @@ onDeactivated(() => {
         :prev-chapter="prevChapter"
         :next-chapter="nextChapter"
         :refresh-chapter="refreshChapter"
+        :refresh-chapters="refreshChapters"
         :play-tts="playTTS"
         :on-download="onDownload"
       />

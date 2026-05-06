@@ -29,6 +29,7 @@ const { playlistId, sourceId } = defineProps({
 
 const store = useStore();
 const shelfStore = useSongShelfStore();
+const subscribeStore = useSubscribeSourceStore();
 const songSource = ref<SongSource>();
 const playlist = ref<PlaylistInfo>();
 const shouldReload = ref(false);
@@ -61,9 +62,17 @@ async function toPage(pageNo?: number) {
       return true;
     }
 
+    const loaded = await subscribeStore.waitForLoaded();
+    if (signal.aborted)
+      return true;
+    if (!loaded) {
+      showFailToast('订阅源加载超时，请稍后重试');
+      shouldReload.value = true;
+      return true;
+    }
+
     songSource.value = store.getSongSource(sourceId);
     if (!songSource.value) {
-      const subscribeStore = useSubscribeSourceStore();
       const subscribeSource = subscribeStore.subscribeSources.find(s =>
         s.detail.urls.some(u => u.id === sourceId),
       );

@@ -54,7 +54,7 @@ async function onRefresh() {
       v-model="isRefreshing"
       v-remember-scroll
       :head-height="100"
-      class="main grow overflow-y-auto overflow-x-hidden"
+      class="main min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
       @refresh="onRefresh"
     >
       <van-collapse v-model="displayStore.bookCollapse">

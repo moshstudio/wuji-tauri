@@ -2,10 +2,9 @@
 import type { FormInstance } from 'vant';
 import { MoreOptionsSheet } from '@wuji-tauri/components';
 import { MarketSourcePermission } from '@wuji-tauri/source-extension';
-import _ from 'lodash';
 import { showToast } from 'vant';
 import { reactive, ref } from 'vue';
-import { permissionRules } from '@/utils/marketSource';
+import { findPermissionRule, permissionRules } from '@/utils/marketSource';
 
 const props = defineProps<{
   create: (
@@ -92,19 +91,13 @@ async function beforeClose(action: string): Promise<boolean> {
       />
       <van-cell
         title="使用权限"
-        :value="
-          permissionRules.find((rule) =>
-            _.isEqual(rule.permissions, formData.permissions),
-          )?.name
-        "
-        clickable
+        :value="findPermissionRule(formData.permissions)?.name"
         is-link
         @click="() => (showPermissionMoreOptions = true)"
       />
       <van-cell
         title="是否公开"
         :value="formData.isPublic ? '公开' : '私有'"
-        clickable
         is-link
         @click="() => (showPublicMoreOptions = true)"
       />

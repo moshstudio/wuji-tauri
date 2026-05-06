@@ -10,10 +10,11 @@ import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppComicShelf from '@/layouts/app/comic/ComicShelf.vue';
 import DesktopComicShelf from '@/layouts/desktop/comic/ComicShelf.vue';
 import { router } from '@/router';
-import { useComicShelfStore, useStore } from '@/store';
+import { useComicShelfStore, useStore, useSubscribeSourceStore } from '@/store';
 
 const store = useStore();
 const shelfStore = useComicShelfStore();
+const subscribeStore = useSubscribeSourceStore();
 const { comicShelf, tabIndex } = storeToRefs(shelfStore);
 
 const isChapterRefreshing = ref(false);
@@ -39,6 +40,11 @@ async function refreshChapters() {
 }
 
 async function toComic(comic: ComicItemInShelf, chapterId?: string) {
+  const loaded = await subscribeStore.waitForLoaded();
+  if (!loaded) {
+    showToast('订阅源加载超时，请稍后重试');
+    return;
+  }
   const source = store.getComicSource(comic.comic.sourceId);
   if (!source) {
     showToast('源不存在或未启用');

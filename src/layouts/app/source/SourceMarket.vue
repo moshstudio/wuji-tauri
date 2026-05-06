@@ -36,50 +36,54 @@ const isFreshing = defineModel<boolean>('isFreshing', { default: false });
         }
       "
     />
-    <van-pull-refresh
-      v-model="isFreshing"
+    <div
       v-remember-scroll
-      :head-height="100"
-      class="flex w-full flex-grow flex-col overflow-y-auto bg-[--van-background-2] p-2"
-      @refresh="() => toPage(1, sortType)"
+      class="flex min-h-0 w-full flex-1 flex-col overflow-y-auto bg-[--van-background-2] p-2"
     >
-      <div class="hidden w-full items-center justify-center">
-        <SearchField
-          v-model:value="searchValue"
-          :search="() => {}"
-          :search-histories="[]"
-        />
-      </div>
-      <div class="flex w-full items-center justify-start gap-2">
-        <MPagination
-          :page-no="source?.page"
-          :page-count="source?.totalPages || 1"
-          :to-page="(page: number) => toPage(page, sortType)"
-        />
-        <van-button
-          size="small"
-          type="primary"
-          plain
-          icon="sort"
-          @click="toggleSortType"
-        >
-          {{ sortType === 'thumbsUp' ? '点赞' : '时间' }}
-        </van-button>
-      </div>
-      <ResponsiveGrid2>
-        <MarketSourceCard
-          v-for="s in source?.data"
-          :key="s._id"
-          :source="s"
-          :is-imported="isImported(s)"
-          :on-import="onImport"
-          :click="() => showDetail(s)"
-          :permission-text="permissionText"
-          :permission-style="permissionStyle"
-          :on-like="onLike"
-        />
-      </ResponsiveGrid2>
-    </van-pull-refresh>
+      <van-pull-refresh
+        v-model="isFreshing"
+        :head-height="100"
+        class="h-full"
+        @refresh="() => toPage(1, sortType)"
+      >
+        <div class="hidden w-full items-center justify-center">
+          <SearchField
+            v-model:value="searchValue"
+            :search="() => {}"
+            :search-histories="[]"
+          />
+        </div>
+        <div class="flex w-full items-center justify-start gap-2">
+          <MPagination
+            :page-no="source?.page"
+            :page-count="source?.totalPages || 1"
+            :to-page="(page: number) => toPage(page, sortType)"
+          />
+          <van-button
+            size="small"
+            type="primary"
+            plain
+            icon="sort"
+            @click="toggleSortType"
+          >
+            {{ sortType === 'thumbsUp' ? '点赞' : '时间' }}
+          </van-button>
+        </div>
+        <ResponsiveGrid2>
+          <MarketSourceCard
+            v-for="s in source?.data"
+            :key="s._id"
+            :source="s"
+            :is-imported="isImported(s)"
+            :on-import="onImport"
+            :click="() => showDetail(s)"
+            :permission-text="permissionText"
+            :permission-style="permissionStyle"
+            :on-like="onLike"
+          />
+        </ResponsiveGrid2>
+      </van-pull-refresh>
+    </div>
   </div>
 </template>
 

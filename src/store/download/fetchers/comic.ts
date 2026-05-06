@@ -144,16 +144,15 @@ export async function runComicFetcher(
     const completedChunksCount
       = currentTaskFinal?.completedChunks.filter(idx => idx < 1_000_000).length
         || 0;
-    const isFullyCompleted = completedChunksCount >= totalChunks;
 
     if (isTaskRunning(deps.getTasks(), taskId)) {
-      if (isFullyCompleted) {
+      if (completedChunksCount > 0) {
         await invokePlugin('finalize_collection_download', { taskId });
       }
       else {
         await deps.markTaskError(
           taskId,
-          `任务处理完成，但有 ${totalChunks - completedChunksCount} 个章节处理失败，请重试。`,
+          `所有章节处理失败，请重试。`,
         );
       }
     }

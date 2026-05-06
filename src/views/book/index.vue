@@ -9,12 +9,18 @@ import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppBookList from '@/layouts/app/book/BookList.vue';
 import DesktopBookList from '@/layouts/desktop/book/BookList.vue';
 import { router } from '@/router';
-import { useBookShelfStore, useDisplayStore, useStore } from '@/store';
+import {
+  useBookShelfStore,
+  useDisplayStore,
+  useStore,
+  useSubscribeSourceStore,
+} from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 
 const store = useStore();
 const displayStore = useDisplayStore();
 const bookShelfStore = useBookShelfStore();
+const subscribeStore = useSubscribeSourceStore();
 const { bookSources } = storeToRefs(store);
 const { bookHistory } = storeToRefs(bookShelfStore);
 
@@ -79,6 +85,11 @@ function toDetail(source: BookSource, item: BookItem) {
 }
 
 async function hisrotyToBook(book: BookHistory) {
+  const loaded = await subscribeStore.waitForLoaded();
+  if (!loaded) {
+    showToast('订阅源加载超时，请稍后重试');
+    return;
+  }
   const source = store.getBookSource(book.book.sourceId);
   if (!source) {
     showToast('源不存在或未启用');

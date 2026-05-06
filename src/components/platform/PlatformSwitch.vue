@@ -10,7 +10,7 @@ const { isAppView } = storeToRefs(displayStore);
 </script>
 
 <template>
-  <div class="h-full w-full overflow-hidden">
+  <div class="min-h-0 min-w-0 h-full w-full overflow-hidden">
     <template v-if="isAppView">
       <slot name="app" v-bind="attrs" />
     </template>

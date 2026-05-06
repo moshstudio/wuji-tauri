@@ -182,7 +182,7 @@ const activeTabName = ref('');
             <template #title>
               <div
                 class="p-2"
-                :class="resource.id === playingResource?.id ? 'text-blue' : ''"
+                :class="resource.id === playingResource?.id ? 'text-blue-500' : ''"
               >
                 {{ resource.title }}
               </div>

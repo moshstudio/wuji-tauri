@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia';
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import WLoginButton from '@/components/button/WLoginButton.vue';
+import GlobalToastProgress from '@/components/GlobalToastProgress.vue';
 import { router } from '@/router';
 import { useDisplayStore, useServerStore } from '@/store';
 
@@ -267,12 +268,8 @@ watch(
     </div>
 
     <div class="absolute top-0 z-[999999999] w-screen">
-      <v-progress-linear
+      <GlobalToastProgress
         :active="displayStore.toastActive"
-        indeterminate
-        rounded
-        color="teal"
-        height="4"
         @click="() => displayStore.closeToast()"
       />
     </div>

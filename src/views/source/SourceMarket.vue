@@ -14,7 +14,7 @@ const serverStore = useServerStore();
 const subscribeStore = useSubscribeSourceStore();
 
 const { marketSource } = storeToRefs(serverStore);
-const sortType = ref<'createdAt' | 'thumbsUp'>('createdAt');
+const sortType = ref<'createdAt' | 'thumbsUp'>('thumbsUp');
 const searchValue = ref('');
 const isFreshing = ref(false);
 

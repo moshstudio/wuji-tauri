@@ -54,7 +54,7 @@ async function onRefresh() {
       v-model="isRefreshing"
       v-remember-scroll
       :head-height="100"
-      class="video-main-container main flex h-full w-full grow flex-col overflow-y-auto overflow-x-hidden"
+      class="video-main-container main flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden h-full w-full"
       @refresh="onRefresh"
     >
       <van-collapse v-model="displayStore.videoCollapse">

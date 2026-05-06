@@ -9,12 +9,18 @@ import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppVideoList from '@/layouts/app/video/VideoList.vue';
 import DesktopVideoList from '@/layouts/desktop/video/VideoList.vue';
 import { router } from '@/router';
-import { useDisplayStore, useStore, useVideoShelfStore } from '@/store';
+import {
+  useDisplayStore,
+  useStore,
+  useSubscribeSourceStore,
+  useVideoShelfStore,
+} from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 
 const store = useStore();
 const displayStore = useDisplayStore();
 const videoShelfStore = useVideoShelfStore();
+const subscribeStore = useSubscribeSourceStore();
 const { videoHistory } = storeToRefs(videoShelfStore);
 const { videoSources } = storeToRefs(store);
 
@@ -81,6 +87,11 @@ function toDetail(source: VideoSource, item: VideoItem) {
 }
 
 async function hisrotyToVideo(video: VideoHistory) {
+  const loaded = await subscribeStore.waitForLoaded();
+  if (!loaded) {
+    showToast('订阅源加载超时，请稍后重试');
+    return;
+  }
   const source = store.getVideoSource(video.video.sourceId);
   if (!source) {
     showToast('源不存在或未启用');

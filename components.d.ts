@@ -13,6 +13,7 @@ declare module 'vue' {
     BookSwitchSource: typeof import('./src/components/dialog/BookSwitchSource.vue')['default']
     ComicSwitchSource: typeof import('./src/components/dialog/ComicSwitchSource.vue')['default']
     DraggableSongBar: typeof import('./src/components/songbar/DraggableSongBar.vue')['default']
+    GlobalToastProgress: typeof import('./src/components/GlobalToastProgress.vue')['default']
     Guide: typeof import('./src/components/codeEditor/Guide.vue')['default']
     HorizonList: typeof import('./src/components/list/HorizonList.vue')['default']
     IEditor: typeof import('./src/components/codeEditor/IEditor.vue')['default']

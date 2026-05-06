@@ -31,7 +31,7 @@ const sourceContent = computed(() => {
 });
 
 async function save(source: MarketSource, sourceContent: MarketSourceContent) {
-  await serverStore.updateMarketSourceContent(source, sourceContent);
+  await serverStore.updateMarketSourceContent(sourceContent);
 }
 
 onMounted(() => {

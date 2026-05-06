@@ -25,6 +25,7 @@ const downloadStore = useDownloadStore();
 
 const store = useStore();
 const shelfStore = useComicShelfStore();
+const subscribeStore = useSubscribeSourceStore();
 const { comicShelf } = storeToRefs(shelfStore);
 
 const comic = ref<ComicItem>();
@@ -68,9 +69,17 @@ async function loadData() {
       return true;
     }
 
+    const loaded = await subscribeStore.waitForLoaded();
+    if (signal.aborted)
+      return true;
+    if (!loaded) {
+      showFailToast('订阅源加载超时，请稍后重试');
+      shouldReload.value = true;
+      return true;
+    }
+
     comicSource.value = store.getComicSource(sourceId);
     if (!comicSource.value) {
-      const subscribeStore = useSubscribeSourceStore();
       const subscribeSource = subscribeStore.subscribeSources.find(s =>
         s.detail.urls.some(u => u.id === sourceId),
       );

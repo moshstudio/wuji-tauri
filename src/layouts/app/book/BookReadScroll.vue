@@ -3,7 +3,7 @@ import type { BookChapter, BookItem, BookChapterList as ChapterList } from '@wuj
 import type { BookSource } from '@/types';
 import { Icon } from '@iconify/vue';
 import { showToast } from 'vant';
-import { computed, onActivated, onMounted, onUnmounted, watch } from 'vue';
+import { computed, nextTick, onActivated, onMounted, onUnmounted, watch } from 'vue';
 import BookScrollerContent from '@/components/book/BookScrollerContent.vue';
 import AddShelfButton from '@/components/button/AddShelfButton.vue';
 import MBookTTSButton from '@/components/button/MBookTTSButton.vue';
@@ -34,6 +34,7 @@ const props = withDefaults(
     prevChapter: (toLast?: boolean) => void;
     nextChapter: () => void;
     refreshChapter: () => Promise<void>;
+    refreshChapters: () => Promise<void>;
     loadChapterContent: (chapter: BookChapter) => Promise<string>;
     onDownload?: () => void;
   }>(),
@@ -87,6 +88,16 @@ function jumpToChapter(chapter: BookChapter) {
   props.toChapter(chapter);
 }
 
+async function showChapterList() {
+  showMenu.value = false;
+  displayStore.showChapters = true;
+  await nextTick();
+  document.querySelector('.reading-chapter')?.scrollIntoView({
+    block: 'center',
+    behavior: 'instant',
+  });
+}
+
 // ── 菜单主动翻章 ──
 function onPrevChapterClick() {
   const currentId = activeChapterId.value || props.chapter?.id;
@@ -114,6 +125,8 @@ function onNextChapterClick() {
 
 // ── 点击交互 ──
 function onClickContent(e: MouseEvent | TouchEvent) {
+  if ((e.target as HTMLElement)?.closest('.van-button'))
+    return;
   if (showMenu.value) {
     showMenu.value = false;
     return;
@@ -249,12 +262,27 @@ const activeChapterProgress = computed(() => {
       <div v-if="isLoadingNext" class="py-4 text-center text-sm opacity-50">
         加载下一章...
       </div>
-      <div v-if="noMoreNext && loadedChapters.length > 0" class="py-8 text-center text-sm opacity-40">
-        已经是最后一章了
+      <div
+        v-if="noMoreNext && loadedChapters.length > 0"
+        class="flex flex-col items-center justify-center py-16 text-center text-sm"
+      >
+        <div class="mb-6 opacity-40">
+          已经是最后一章了
+        </div>
+        <van-button
+          type="primary"
+          plain
+          round
+          icon="replay"
+          size="small"
+          @click.stop="props.refreshChapters"
+        >
+          检查更新
+        </van-button>
       </div>
 
       <!-- 底部留白 -->
-      <div class="h-[30vh]" />
+      <div class="h-[10vh]" />
     </div>
 
     <!-- 底部状态栏 -->
@@ -303,7 +331,7 @@ const activeChapterProgress = computed(() => {
           </div>
         </div>
         <div class="flex w-full items-center justify-between gap-1 text-sm pt-0">
-          <div class="flex flex-col items-center gap-1 p-2 cursor-pointer" @click="displayStore.showChapters = true; showMenu = false;">
+          <div class="flex flex-col items-center gap-1 p-2 cursor-pointer" @click="showChapterList">
             <Icon icon="tabler:list" width="20" height="20" />
             章节
           </div>
@@ -326,6 +354,7 @@ const activeChapterProgress = computed(() => {
       teleport="body"
       position="left"
       :style="{ height: '100%', maxWidth: '70%', backgroundColor: 'var(--van-background)' }"
+      class="scrollbar scrollbar-track-transparent scrollbar-thumb-gray-400/60"
     >
       <van-list>
         <template v-for="item in book?.chapters" :key="item.id">

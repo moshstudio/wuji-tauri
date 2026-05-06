@@ -26,6 +26,7 @@ const downloadStore = useDownloadStore();
 
 const store = useStore();
 const shelfStore = useBookShelfStore();
+const subscribeStore = useSubscribeSourceStore();
 const { bookShelf } = storeToRefs(shelfStore);
 
 const book = ref<BookItem>();
@@ -72,9 +73,17 @@ async function loadData() {
       return true;
     }
 
+    const loaded = await subscribeStore.waitForLoaded();
+    if (signal.aborted)
+      return true;
+    if (!loaded) {
+      showFailToast('订阅源加载超时，请稍后重试');
+      shouldReload.value = true;
+      return true;
+    }
+
     bookSource.value = store.getBookSource(sourceId!);
     if (!bookSource.value) {
-      const subscribeStore = useSubscribeSourceStore();
       const subscribeSource = subscribeStore.subscribeSources.find(s =>
         s.detail.urls.some(u => u.id === sourceId),
       );

@@ -142,7 +142,12 @@ if (Test-Path $updaterJsonPath) {
         }
         
         foreach ($key in $androidPlatforms.Keys) {
-            $jsonContent.platforms.$key = $androidPlatforms[$key]
+            $existingPlatform = $jsonContent.platforms.PSObject.Properties[$key]
+            if ($null -ne $existingPlatform) {
+                $jsonContent.platforms.$key = $androidPlatforms[$key]
+            } else {
+                $jsonContent.platforms | Add-Member -MemberType NoteProperty -Name $key -Value $androidPlatforms[$key]
+            }
         }
         
         # 保存 JSON (2 空格缩进)

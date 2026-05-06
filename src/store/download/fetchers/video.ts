@@ -137,16 +137,12 @@ export async function doRunVideoCollectionFetcher(
   const completedCount = finalTask?.completedChunks.length || 0;
 
   if (isTaskRunning(deps.getTasks(), taskId)) {
-    if (completedCount >= totalEpisodes) {
+    if (completedCount > 0) {
       await invokePlugin('finalize_collection_download', { taskId });
       console.log(`[VideoFetcher] Collection task ${taskId} fully completed.`);
     }
     else {
-      const errorMsg
-        = completedCount === 0
-          ? '所有剧集下载均失败，请检查网络或源站。'
-          : `下载完成，但有 ${totalEpisodes - completedCount} 个剧集失败。`;
-
+      const errorMsg = '所有剧集下载均失败，请检查网络或源站。';
       console.warn(`[VideoFetcher] ${errorMsg}`);
       await deps.markTaskError(taskId, errorMsg);
     }

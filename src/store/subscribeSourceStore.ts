@@ -26,10 +26,11 @@ import {
   showSuccessToast,
   showToast,
 } from 'vant';
-import { computed, markRaw, onMounted, triggerRef } from 'vue';
+import { computed, markRaw, onMounted, ref, triggerRef } from 'vue';
 import { router } from '@/router';
 import { SourceType } from '@/types';
 import { sleep } from '@/utils';
+import { normalizeMarketSourcePermissions } from '@/utils/marketSource';
 import { showVipDialog } from '@/utils/vip';
 import { useBookStore } from './bookStore';
 import { useComicStore } from './comicStore';
@@ -145,6 +146,11 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
   };
 
   const isEmpty = computed(() => subscribeSources.value.length === 0);
+  const isLoaded = ref(false);
+  const isLoading = ref(false);
+  let loadingPromise: Promise<void> | null = null;
+  let waitLoadingToast: { close: () => void } | null = null;
+  let waitLoadingUsers = 0;
 
   const _checkTs = useStorage('subscribeSourceUpdateCheckTs', 0);
 
@@ -260,24 +266,27 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
   ): Promise<boolean> => {
     let needPermission = true;
     const { userInfo } = storeToRefs(serverStore);
-    if (marketSource.permissions?.includes(MarketSourcePermission.NoLogin)) {
+    const permissions = normalizeMarketSourcePermissions(
+      marketSource.permissions,
+    );
+    if (permissions.includes(MarketSourcePermission.NoLogin)) {
       needPermission = false;
     }
     else {
       if (
-        marketSource.permissions?.includes(MarketSourcePermission.Login)
+        permissions.includes(MarketSourcePermission.Login)
         && userInfo.value
       ) {
         needPermission = false;
       }
       if (
-        marketSource.permissions?.includes(MarketSourcePermission.Vip)
+        permissions.includes(MarketSourcePermission.Vip)
         && serverStore.hasFeature('vip_market_source')
       ) {
         needPermission = false;
       }
       if (
-        marketSource.permissions?.includes(MarketSourcePermission.SuperVip)
+        permissions.includes(MarketSourcePermission.Pro)
         && serverStore.hasFeature('vip_market_source')
         && serverStore.isPro
       ) {
@@ -730,47 +739,109 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
   };
 
   const onLoaded = async () => {
-    const timeout = Date.now() + 8000;
-    while (!storage.loaded && Date.now() < timeout) {
-      await new Promise(r => setTimeout(r, 50));
+    if (isLoaded.value) {
+      return;
     }
-    await sleep(1000);
-    loadSubscribeSources(true);
+    if (loadingPromise) {
+      await loadingPromise;
+      return;
+    }
+    loadingPromise = (async () => {
+      isLoading.value = true;
+      const timeout = Date.now() + 8000;
+      while (!storage.loaded && Date.now() < timeout) {
+        await new Promise(r => setTimeout(r, 50));
+      }
+      await sleep(1000);
+      loadSubscribeSources(true);
 
-    if (subscribeSources.value.length === 0) {
-      showConfirmDialog({
-        title: '提示',
-        message: '需要添加订阅源才能使用, \n是否立即导入默认订阅源？',
-      })
-        .then(async (action) => {
-          if (action === 'confirm') {
-            const source = await serverStore.getDefaultMarketSource();
-            if (source) {
-              const success = await addMarketSource(source);
-              if (!success) {
-                showToast('请手动在 订阅源市场 导入');
+      if (subscribeSources.value.length === 0) {
+        showConfirmDialog({
+          title: '提示',
+          message: '需要添加订阅源才能使用, \n是否立即导入默认订阅源？',
+        })
+          .then(async (action) => {
+            if (action === 'confirm') {
+              const source = await serverStore.getDefaultMarketSource();
+              if (source) {
+                const success = await addMarketSource(source);
+                if (!success) {
+                  showToast('请手动在 订阅源市场 导入');
+                }
+                else {
+                  showSuccessToast('默认源已导入');
+                  showConfirmDialog({
+                    title: '提示',
+                    message: '您可以在 订阅源市场 添加更多订阅源',
+                    confirmButtonText: '去添加',
+                  })
+                    .then((action) => {
+                      if (action === 'confirm') {
+                        router.push({ name: 'SourceMarket' });
+                      }
+                    })
+                    .catch(() => {});
+                }
               }
               else {
-                showSuccessToast('默认源已导入');
-                showConfirmDialog({
-                  title: '提示',
-                  message: '您可以在 订阅源市场 添加更多订阅源',
-                  confirmButtonText: '去添加',
-                })
-                  .then((action) => {
-                    if (action === 'confirm') {
-                      router.push({ name: 'SourceMarket' });
-                    }
-                  })
-                  .catch(() => {});
+                await sleep(2000);
               }
             }
-            else {
-              await sleep(2000);
-            }
-          }
-        })
-        .catch(() => {});
+          })
+          .catch(() => {});
+      }
+      isLoaded.value = true;
+    })().finally(() => {
+      isLoading.value = false;
+      loadingPromise = null;
+    });
+    await loadingPromise;
+  };
+
+  const waitForLoaded = async (
+    timeoutMs = 10000,
+    withLoading = true,
+  ): Promise<boolean> => {
+    if (isLoaded.value) {
+      return true;
+    }
+    let loadingTimer: ReturnType<typeof setTimeout> | undefined;
+    if (withLoading) {
+      waitLoadingUsers += 1;
+      loadingTimer = setTimeout(() => {
+        if (!isLoaded.value && !waitLoadingToast) {
+          waitLoadingToast = showLoadingToast({
+            message: '正在加载订阅源...',
+            duration: 0,
+            closeOnClick: false,
+            closeOnClickOverlay: false,
+            forbidClick: true,
+          });
+        }
+      }, 200);
+    }
+
+    try {
+      const loadTask = onLoaded().then(() => isLoaded.value).catch(() => false);
+      if (timeoutMs <= 0) {
+        return await loadTask;
+      }
+      const timeoutTask = new Promise<boolean>((resolve) => {
+        setTimeout(() => resolve(false), timeoutMs);
+      });
+      return await Promise.race([loadTask, timeoutTask]);
+    }
+    finally {
+      if (loadingTimer) {
+        clearTimeout(loadingTimer);
+      }
+      if (withLoading) {
+        waitLoadingUsers = Math.max(0, waitLoadingUsers - 1);
+        if (waitLoadingUsers === 0 && waitLoadingToast) {
+          waitLoadingToast.close();
+          waitLoadingToast = null;
+        }
+      }
     }
   };
 
@@ -793,7 +864,10 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     syncData,
     loadSyncData,
     isEmpty,
+    isLoaded,
+    isLoading,
     onLoaded,
+    waitForLoaded,
     getSource,
     removeSource,
     addSubscribeSourceAction,

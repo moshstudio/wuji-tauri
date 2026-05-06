@@ -7,10 +7,11 @@ import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppBookShelf from '@/layouts/app/book/BookShelf.vue';
 import DesktopBookShelf from '@/layouts/desktop/book/BookShelf.vue';
 import { router } from '@/router';
-import { useBookShelfStore, useStore } from '@/store';
+import { useBookShelfStore, useStore, useSubscribeSourceStore } from '@/store';
 
 const store = useStore();
 const shelfStore = useBookShelfStore();
+const subscribeStore = useSubscribeSourceStore();
 const { bookShelf, tabIndex } = storeToRefs(shelfStore);
 
 const isChapterRefreshing = ref(false);
@@ -36,6 +37,11 @@ async function refreshChapters() {
 }
 
 async function toBook(book: BookItemInShelf, chapterId?: string) {
+  const loaded = await subscribeStore.waitForLoaded();
+  if (!loaded) {
+    showToast('订阅源加载超时，请稍后重试');
+    return;
+  }
   const source = store.getBookSource(book.book.sourceId);
   if (!source) {
     showToast('源不存在或未启用');

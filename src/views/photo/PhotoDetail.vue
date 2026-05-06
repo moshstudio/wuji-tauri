@@ -33,6 +33,7 @@ const store = useStore();
 const backStore = useBackStore();
 const displayStore = useDisplayStore();
 const shelfStore = usePhotoShelfStore();
+const subscribeStore = useSubscribeSourceStore();
 
 const photoSource = ref<PhotoSource>();
 const photoItem = ref<PhotoItem>();
@@ -82,9 +83,17 @@ async function toPage(pageNo?: number) {
       return true;
     }
 
+    const loaded = await subscribeStore.waitForLoaded();
+    if (signal.aborted)
+      return true;
+    if (!loaded) {
+      showFailToast('订阅源加载超时，请稍后重试');
+      shouldReload.value = true;
+      return true;
+    }
+
     photoSource.value = store.getPhotoSource(sourceId!);
     if (!photoSource.value) {
-      const subscribeStore = useSubscribeSourceStore();
       const subscribeSource = subscribeStore.subscribeSources.find(s =>
         s.detail.urls.some(u => u.id === sourceId),
       );
