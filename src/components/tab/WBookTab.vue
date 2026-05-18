@@ -2,12 +2,9 @@
 import type {
   BookItem,
   BookList,
-  BooksList,
 } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
 import { WBookCard } from '@wuji-tauri/components';
-import { debounce } from 'lodash';
-import { nanoid } from 'nanoid';
 import { storeToRefs } from 'pinia';
 import { ref, watch } from 'vue';
 import MPagination from '@/components/pagination/MPagination.vue';
@@ -27,7 +24,6 @@ const displayStore = useDisplayStore();
 const { paginationPosition } = storeToRefs(displayStore);
 
 const active = ref(0);
-const tabKey = ref(nanoid()); // 修改此值来重新渲染组件
 const loadingMap = new Set<number>();
 async function load(i: number | string) {
   if (!props.source.list || !Array.isArray(props.source.list))
@@ -70,11 +66,16 @@ function toDetail(item: BookItem) {
 
 watch(
   () => props.source.list,
-  debounce((list: BooksList | undefined) => {
-    if (list && Array.isArray(list)) {
-      tabKey.value = nanoid();
+  (list) => {
+    if (!Array.isArray(list))
+      return;
+    // 分类变化后，防止 active 指向无效索引导致内容区表现异常
+    if (active.value >= list.length) {
+      active.value = 0;
     }
-  }, 500),
+    load(active.value);
+  },
+  { immediate: true },
 );
 </script>
 
@@ -83,11 +84,9 @@ watch(
 
   <van-tabs
     v-else-if="Array.isArray(source.list)"
-    :key="tabKey"
     v-model:active="active"
     shrink
     animated
-    @rendered="(n) => load(n)"
     @change="(n) => load(n)"
   >
     <van-tab

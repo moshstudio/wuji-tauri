@@ -8,6 +8,7 @@ import type {
 } from '@wuji-tauri/source-extension';
 import type Fullscreen from 'xgplayer/es/plugins/fullscreen';
 import type FavoriteButtonPlugin from '@/components/media/plugins/favoriteButton';
+import type { FetchWebviewResult } from '@/utils/webview';
 import { onMountedOrActivated } from '@vant/use';
 import _ from 'lodash';
 import { storeToRefs } from 'pinia';
@@ -48,6 +49,7 @@ import {
   useVideoShelfStore,
 } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { fetWebview } from '@/utils/webview';
 import 'xgplayer/dist/index.min.css';
 
 const { videoId, sourceId } = defineProps<{
@@ -80,6 +82,84 @@ const shouldReload = ref(false);
 const playingResource = ref<VideoResource>();
 const playingEpisode = ref<VideoEpisode>();
 const videoSrc = ref<VideoUrlMap>();
+const webviewFallbackTriedUrls = new Set<string>();
+const webviewFallbackRunning = ref(false);
+
+function normalizeVideoTypeByUrl(url: string): VideoUrlMap['type'] {
+  const lower = url.toLowerCase();
+  if (lower.includes('.m3u8'))
+    return 'm3u8';
+  if (lower.includes('.mp4'))
+    return 'mp4';
+  if (lower.includes('.mpd'))
+    return 'dash';
+  return 'm3u8';
+}
+
+function extractPlayableUrlFromWebviewResult(ret: FetchWebviewResult): string | null {
+  const resources = Array.isArray(ret?.resources) ? ret.resources : [];
+  const mediaResource = resources.find((item) => {
+    const rawUrl = item.url;
+    if (typeof rawUrl !== 'string' || !rawUrl)
+      return false;
+    const lowerUrl = rawUrl.toLowerCase();
+    const contentType = String(item.contentType || '').toLowerCase();
+    return (
+      lowerUrl.includes('.m3u8')
+      || lowerUrl.includes('.mp4')
+      || lowerUrl.includes('.mpd')
+      || contentType.includes('application/x-mpegurl')
+      || contentType.includes('application/vnd.apple.mpegurl')
+      || contentType.includes('video/mp4')
+      || contentType.includes('application/dash+xml')
+    );
+  });
+  if (mediaResource?.url)
+    return mediaResource.url;
+
+  const content = String(ret?.content || '');
+  if (!content)
+    return null;
+  const match = content.match(/https?:\/\/[^\s"'<>\\]+?\.(m3u8|mp4|mpd)(\?[^\s"'<>\\]*)?/i);
+  return match?.[0] || null;
+}
+
+async function tryWebviewFallbackPlay(originalUrl?: string) {
+  if (!originalUrl || webviewFallbackRunning.value)
+    return;
+  if (webviewFallbackTriedUrls.has(originalUrl))
+    return;
+
+  webviewFallbackTriedUrls.add(originalUrl);
+  webviewFallbackRunning.value = true;
+  try {
+    const ret = await fetWebview(originalUrl, {
+      timeout: 15000,
+      waitForResources: 'video',
+      useSavedCookie: true,
+    });
+    if (!ret)
+      return;
+
+    const playableUrl = extractPlayableUrlFromWebviewResult(ret);
+    if (!playableUrl || playableUrl === originalUrl)
+      return;
+
+    const nextSrc: VideoUrlMap = {
+      ...(videoSrc.value || {}),
+      url: playableUrl,
+      type: normalizeVideoTypeByUrl(playableUrl),
+    };
+    console.log('[VideoDetail] webview fallback resolved url', nextSrc.url);
+    videoSrc.value = nextSrc;
+  }
+  catch (error) {
+    console.warn('[VideoDetail] webview fallback failed', error);
+  }
+  finally {
+    webviewFallbackRunning.value = false;
+  }
+}
 
 const { run: runLoader } = usePageDataLoader({
   onFailed: () => showFailToast('加载失败，请检查网络或订阅源状态'),
@@ -413,6 +493,7 @@ async function createPlayer(video?: VideoUrlMap) {
       '.xgplayer-container',
     ) as HTMLElement,
     url: video?.url,
+    videoType: video?.type,
     nullUrlStart: !video?.url,
     autoplay: true,
     loop: false,
@@ -513,6 +594,7 @@ async function createPlayer(video?: VideoUrlMap) {
 
   videoPlayer.value.on(Events.ERROR, (error) => {
     console.warn(`播放失败: ${JSON.stringify(error)}`);
+    tryWebviewFallbackPlay(video?.url);
   });
   videoPlayer.value.getPlugin('error').useHooks('errorRetry', () => {
     getPlayUrl();
@@ -564,6 +646,7 @@ let savedVideoSrc: VideoUrlMap | undefined;
 watch(
   [() => videoId, () => sourceId],
   async () => {
+    webviewFallbackTriedUrls.clear();
     savedVideoSrc = undefined;
     loadData();
   },

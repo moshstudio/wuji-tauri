@@ -166,6 +166,7 @@ watch(
       videoPlayer.value = new Player({
         el: videoElement.value,
         url: video?.url,
+        videoType: video?.type,
         autoplay: true,
         loop: false,
         playsinline: true,

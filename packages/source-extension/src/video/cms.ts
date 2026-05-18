@@ -547,8 +547,8 @@ abstract class CmsVideoExtension extends VideoExtension {
     if (!url)
       return null;
 
-    // 自动判断播放类型
-    let type: VideoUrlMap['type'];
+    // 自动判断播放类型，默认按 m3u8 处理
+    let type: VideoUrlMap['type'] = 'm3u8';
     if (url.includes('.m3u8')) {
       type = 'm3u8';
       if (this.proxyHeaders) {
@@ -563,7 +563,7 @@ abstract class CmsVideoExtension extends VideoExtension {
     }
     else {
       if (this.proxyHeaders) {
-        url = (await this.getProxyUrl(url, this.proxyHeaders)) || url;
+        url = (await this.getM3u8ProxyUrl(url, this.proxyHeaders)) || url;
       }
     }
 

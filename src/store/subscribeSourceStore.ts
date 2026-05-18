@@ -17,6 +17,7 @@ import {
   MarketSourcePermission,
 } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
+import pLimit from 'p-limit';
 import { defineStore, storeToRefs } from 'pinia';
 import {
   showConfirmDialog,
@@ -261,6 +262,40 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     }
   };
 
+  const removeFromSource = (itemId: string, sourceType: SourceType) => {
+    switch (sourceType) {
+      case SourceType.Photo:
+        _.remove(
+          photoStore.photoSources,
+          source => source.item.id === itemId,
+        );
+        triggerRef(photoSources);
+        break;
+      case SourceType.Song:
+        _.remove(songStore.songSources, source => source.item.id === itemId);
+        triggerRef(songSources);
+        break;
+      case SourceType.Book:
+        _.remove(bookStore.bookSources, source => source.item.id === itemId);
+        triggerRef(bookSources);
+        break;
+      case SourceType.Comic:
+        _.remove(
+          comicStore.comicSources,
+          source => source.item.id === itemId,
+        );
+        triggerRef(comicSources);
+        break;
+      case SourceType.Video:
+        _.remove(
+          videoStore.videoSources,
+          source => source.item.id === itemId,
+        );
+        triggerRef(videoSources);
+        break;
+    }
+  };
+
   const addMarketSource = async (
     marketSource: MarketSource,
   ): Promise<boolean> => {
@@ -322,11 +357,20 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
         },
         disable: oldSource?.disable || false,
       };
+      const addedForRollback: { id: string; type: SourceType }[] = [];
+      const abortImport = (message: string) => {
+        for (const { id, type } of addedForRollback) {
+          removeFromSource(id, type);
+        }
+        addedForRollback.length = 0;
+        showToast(message);
+        return false;
+      };
       for (const sourceContent of marketSource.sourceContents || []) {
         try {
           const sc = await extensionStore.getSourceClass(sourceContent);
           if (!sc) {
-            return false;
+            return abortImport(`添加 ${marketSource.name} 订阅源失败`);
           }
           const item = {
             id: sc.id,
@@ -341,12 +385,19 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
             },
             true,
           );
+          addedForRollback.push({ id: sc.id, type: sourceContent.type });
           source.detail.urls.push(item);
         }
         catch (error) {
-          showToast(`添加 ${marketSource.name} 订阅源失败`);
-          break;
+          return abortImport(`添加 ${marketSource.name} 订阅源失败`);
         }
+      }
+      if (source.detail.urls.length === 0) {
+        const message
+          = (marketSource.sourceContents?.length ?? 0) > 0
+            ? `添加 ${marketSource.name} 订阅源失败`
+            : '该订阅包没有可导入的源';
+        return abortImport(message);
       }
       if (source.detail.urls.every(item => item.disable)) {
         source.disable = true;
@@ -505,7 +556,10 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       }
     };
     if (!source) {
-      await Promise.all(subscribeSources.value.map(update));
+      const limit = pLimit(1);
+      await Promise.all(
+        subscribeSources.value.map(item => limit(() => update(item))),
+      );
       loadSubscribeSources(true);
     }
     else {
@@ -612,40 +666,6 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     }
   }
 
-  const removeFromSource = (itemId: string, sourceType: SourceType) => {
-    switch (sourceType) {
-      case SourceType.Photo:
-        _.remove(
-          photoStore.photoSources,
-          source => source.item.id === itemId,
-        );
-        triggerRef(photoSources);
-        break;
-      case SourceType.Song:
-        _.remove(songStore.songSources, source => source.item.id === itemId);
-        triggerRef(songSources);
-        break;
-      case SourceType.Book:
-        _.remove(bookStore.bookSources, source => source.item.id === itemId);
-        triggerRef(bookSources);
-        break;
-      case SourceType.Comic:
-        _.remove(
-          comicStore.comicSources,
-          source => source.item.id === itemId,
-        );
-        triggerRef(comicSources);
-        break;
-      case SourceType.Video:
-        _.remove(
-          videoStore.videoSources,
-          source => source.item.id === itemId,
-        );
-        triggerRef(videoSources);
-        break;
-    }
-  };
-
   function loadSubscribeSources(load?: boolean, loadDelay = 2000) {
     load ??= false;
     const added: string[] = [];
@@ -711,7 +731,6 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
               await videoStore.videoRecommendList(s);
           }),
         ]);
-        console.log('初始化加载完成');
       });
     }
   }

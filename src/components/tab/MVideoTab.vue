@@ -2,12 +2,9 @@
 import type {
   VideoItem,
   VideoList,
-  VideosList,
 } from '@wuji-tauri/source-extension';
 import type { VideoSource } from '@/types';
 import { MVideoCard } from '@wuji-tauri/components';
-import { debounce } from 'lodash';
-import { nanoid } from 'nanoid';
 import { storeToRefs } from 'pinia';
 import { ref, watch } from 'vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
@@ -27,7 +24,6 @@ const displayStore = useDisplayStore();
 const { paginationPosition } = storeToRefs(displayStore);
 
 const active = ref(0);
-const tabKey = ref(nanoid()); // 修改此值来重新渲染组件
 
 const loadingMap = new Set<number>();
 async function load(i: number | string) {
@@ -71,11 +67,16 @@ function toDetail(item: VideoItem) {
 
 watch(
   () => props.source.list,
-  debounce((list: VideosList | undefined) => {
-    if (list && Array.isArray(list)) {
-      tabKey.value = nanoid();
+  (list) => {
+    if (!Array.isArray(list))
+      return;
+    // 分类变化后，防止 active 指向无效索引导致内容区表现异常
+    if (active.value >= list.length) {
+      active.value = 0;
     }
-  }, 500),
+    load(active.value);
+  },
+  { immediate: true },
 );
 </script>
 
@@ -84,11 +85,9 @@ watch(
 
   <van-tabs
     v-else-if="Array.isArray(source.list)"
-    :key="tabKey"
     v-model:active="active"
     shrink
     animated
-    @rendered="(n) => load(n)"
     @change="(n) => load(n)"
   >
     <van-tab

@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import type { ComicList, ComicsList } from '@wuji-tauri/source-extension';
+import type { ComicItem, ComicsList } from '@wuji-tauri/source-extension';
 import type { FormItem } from '@/store/sourceCreateStore';
-import { MComicCard } from '@wuji-tauri/components';
-import { ComicExtension } from '@wuji-tauri/source-extension';
-import _ from 'lodash';
-import { showDialog, showFailToast } from 'vant';
-import { ref } from 'vue';
+import type { ComicSource } from '@/types';
+import { ComicExtension, SourceType } from '@wuji-tauri/source-extension';
+import { computed, ref } from 'vue';
 import COMIC_TEMPLATE from '@/components/codeEditor/templates/comicTemplate.txt?raw';
-import MPagination from '@/components/pagination/MPagination.vue';
 import SearchField from '@/components/search/SearchField.vue';
+import WComicTab from '@/components/tab/WComicTab.vue';
+import { CreateSourceRunStatus } from '../useCreateSourceListRunner';
+import { useCreateSourceSearchListRunner } from '../useCreateSourceSearchListRunner';
 
 const props = defineProps<{
   content: FormItem<ComicsList>;
@@ -19,103 +19,50 @@ const props = defineProps<{
     padded: boolean,
   ) => void;
   close: () => void;
-  log: (...args: any[]) => void;
+  log: (...args: unknown[]) => void;
 }>();
 
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
-const errorMessage = ref('运行失败');
-const result = ref<ComicsList>();
 const keyword = ref('你');
-
 const searchHistories = ref<string[]>([]);
 
-const tabActive = ref('');
-async function initLoad() {
-  result.value = undefined;
-  tabActive.value = '';
-  return await load(1);
+const { runStatus, errorMessage, result, load, initLoad }
+  = useCreateSourceSearchListRunner<ComicsList>({
+    getContent: () => props.content,
+    prereqDialogMessage: '请先执行通过《推荐漫画》',
+    updateResult: (r, p) => props.updateResult('comic', 'searchList', r, p),
+    buildAndFetch: async (findPage, pageNo) => {
+      const code = COMIC_TEMPLATE.replace(
+        '// @METHOD_CONSTRUCTOR',
+        findPage('constructor')!.code,
+      )
+        .replace('// @METHOD_LIST', findPage('list')!.code)
+        .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code);
+      const func = new Function('ComicExtension', code);
+      const ExtensionClass = func(ComicExtension);
+      const cls = new ExtensionClass() as ComicExtension;
+      if (cls.baseUrl === undefined) {
+        throw new Error('初始化中的baseUrl未定义!');
+      }
+      cls.log = props.log;
+      return (await cls.execSearch(keyword.value, pageNo)) ?? undefined;
+    },
+  });
+
+const previewSource = computed<ComicSource>(() => ({
+  item: {
+    id: props.content.id || 'preview',
+    name: props.content.name || 'preview',
+    type: SourceType.Comic,
+    url: '',
+  },
+  list: result.value,
+}));
+
+function toPage(_source: ComicSource, pageNo?: number, type?: string) {
+  return load(pageNo ?? 1, type);
 }
 
-async function load(pageNo?: number, type?: string) {
-  if (!findPage('constructor')?.code) {
-    showFailToast('《初始化》code未定义!');
-    return;
-  }
-  if (!findPage('list')?.passed) {
-    showDialog({
-      message: '请先执行通过《推荐漫画》',
-      showCancelButton: false,
-    });
-    return;
-  }
-  if (!findPage('searchList')?.code) {
-    showFailToast('code未定义!');
-    return;
-  }
-  const code = COMIC_TEMPLATE.replace(
-    '// @METHOD_CONSTRUCTOR',
-    findPage('constructor')!.code,
-  )
-    .replace('// @METHOD_LIST', findPage('list')!.code)
-    .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code);
-  runStatus.value = RunStatus.running;
-  try {
-    const func = new Function('ComicExtension', code);
-    const ExtensionClass = func(ComicExtension);
-    const cls = new ExtensionClass() as ComicExtension;
-    if (cls.baseUrl === undefined) {
-      throw new Error('初始化中的baseUrl未定义!');
-    }
-    cls.log = props.log;
-    const res = await cls?.execSearch(keyword.value, pageNo);
-    if (!res) {
-      throw new Error('获取搜索列表失败! 返回结果为空');
-    }
-    if (
-      result.value
-      && _.isArray(result.value)
-      && !_.isArray(res)
-      && result.value.find(item => item.type === res.type)
-    ) {
-      const index = result.value.findIndex(item => item.type === res.type);
-      Object.assign(result.value[index], res);
-    }
-    else {
-      result.value = res;
-    }
-    props.updateResult('comic', 'searchList', result.value, true);
-    runStatus.value = RunStatus.success;
-  }
-  catch (error) {
-    errorMessage.value = String(error);
-    runStatus.value = RunStatus.error;
-    props.updateResult('comic', 'searchList', result.value, false);
-  }
-}
-
-function loadTab(index: number, pageNo?: number) {
-  if (!result.value)
-    return;
-  let t: ComicList;
-  if (Array.isArray(result.value)) {
-    t = result.value[index];
-  }
-  else {
-    t = result.value;
-  }
-  load(pageNo ?? 1, t.type);
-}
-
-function findPage(name: string) {
-  return props.content.pages.find(page => page.type === name);
-}
+function toDetail(_source: ComicSource, _item: ComicItem) {}
 
 defineExpose({
   initLoad,
@@ -124,20 +71,20 @@ defineExpose({
 
 <template>
   <div>
-    <div v-if="runStatus === RunStatus.not_running">
+    <div v-if="runStatus === CreateSourceRunStatus.not_running">
       未运行
     </div>
     <div
-      v-else-if="runStatus === RunStatus.running"
+      v-else-if="runStatus === CreateSourceRunStatus.running"
       class="flex items-center justify-center"
     >
       <van-loading />
     </div>
-    <div v-else-if="runStatus === RunStatus.error" class="text-red-500">
+    <div v-else-if="runStatus === CreateSourceRunStatus.error" class="text-red-500">
       {{ errorMessage }}
     </div>
     <div
-      v-show="runStatus === RunStatus.success"
+      v-show="runStatus === CreateSourceRunStatus.success"
       class="flex flex-col overflow-auto"
     >
       <div class="flex items-center justify-center">
@@ -147,58 +94,12 @@ defineExpose({
           :search="() => initLoad()"
         />
       </div>
-      <div v-if="!result" />
-      <van-tabs
-        v-else-if="Array.isArray(result)"
-        v-model:active="tabActive"
-        shrink
-        animated
-        @rendered="(index) => loadTab(index)"
-      >
-        <van-tab
-          v-for="(item, index) in result"
-          :key="item.id || index"
-          :title="item.type"
-        >
-          <van-row
-            v-if="item.page && item.totalPage && item.totalPage > 1"
-            class="px-2 py-1"
-          >
-            <MPagination
-              :page-no="item.page"
-              :page-count="item.totalPage"
-              :to-page="(page: number) => loadTab(index, page)"
-            />
-          </van-row>
-          <van-loading v-if="!item.list.length" class="p-2" />
-          <div class="flex flex-col">
-            <MComicCard
-              v-for="comic in item.list"
-              :key="`${item.id}_${comic.id}`"
-              :comic="comic"
-              :click="() => {}"
-            />
-          </div>
-        </van-tab>
-      </van-tabs>
-
-      <template v-else>
-        <van-row
-          v-if="result?.page && result?.totalPage && result.totalPage > 1"
-        >
-          <MPagination
-            :page-no="result.page"
-            :page-count="result.totalPage"
-            :to-page="(page: number) => loadTab(0, page)"
-          />
-        </van-row>
-        <van-loading v-if="!result.list.length" class="p-2" />
-        <div class="flex flex-col">
-          <template v-for="comic in result.list" :key="comic.id">
-            <MComicCard :comic="comic" :click="() => {}" />
-          </template>
-        </div>
-      </template>
+      <WComicTab
+        v-if="result"
+        :source="previewSource"
+        :to-page="toPage"
+        :to-detail="toDetail"
+      />
     </div>
   </div>
 </template>
