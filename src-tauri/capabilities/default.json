@@ -49,6 +49,7 @@
     "os:allow-hostname",
     "commands:default",
     "mediasession:default",
+    "cast:default",
     "mywebview:default",
     "log:allow-log",
     "fs:default",

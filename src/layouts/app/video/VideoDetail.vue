@@ -7,6 +7,7 @@ import type {
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
 import type Player from 'xgplayer';
+import { Icon } from '@iconify/vue';
 import { useResizeObserver, useWindowSize } from '@vueuse/core';
 import { castArray } from 'lodash';
 import { computed, ref, watch } from 'vue';
@@ -24,6 +25,7 @@ const props = defineProps<{
   play: (resource: VideoResource, episode: VideoEpisode) => Promise<void>;
   addToShelf: (video: VideoItem) => void;
   onDownload?: (resource: VideoResource, episode: VideoEpisode) => void;
+  onCast?: () => void;
   showSearch: () => void;
 }>();
 const showPlaylist = defineModel<boolean>('showPlaylist', {
@@ -103,6 +105,13 @@ useResizeObserver(videoListElement, (entries) => {
             }
           "
         />
+        <div
+          v-if="displayStore.isAndroid"
+          class="van-haptics-feedback flex cursor-pointer items-center p-2"
+          @click="onCast?.()"
+        >
+          <Icon icon="mdi:cast" width="22" height="22" />
+        </div>
         <van-icon
           name="down"
           size="22"

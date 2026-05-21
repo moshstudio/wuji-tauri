@@ -5004,6 +5004,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-cast"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "tauri-plugin-commands"
 version = "0.1.0"
 dependencies = [
@@ -6996,6 +7006,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-autostart",
+ "tauri-plugin-cast",
  "tauri-plugin-commands",
  "tauri-plugin-dialog",
  "tauri-plugin-fs",

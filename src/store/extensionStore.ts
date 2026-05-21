@@ -7,6 +7,7 @@ import type {
   SongExtension,
   VideoExtension,
 } from '@wuji-tauri/source-extension';
+import type { SendRequestErrorContext } from './serverStore';
 import type { SubscribeItem } from '@/types';
 import { fetch } from '@wuji-tauri/fetch';
 import {
@@ -79,8 +80,15 @@ export const useExtensionStore = defineStore('extension', () => {
               const json = await response.json();
               item.code = json.code;
             },
-            async (response) => {
+            async (
+              response,
+              context?: SendRequestErrorContext,
+            ) => {
               if (response) {
+                if (context?.guestUnauthorized) {
+                  showFailToast('请先登录');
+                  return null;
+                }
                 const error = await response.json();
                 console.log(error);
                 showFailToast({

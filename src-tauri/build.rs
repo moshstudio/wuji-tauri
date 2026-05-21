@@ -13,7 +13,14 @@ fn main() {
             )
             .plugin(
                 "proxy-plugin",
-                tauri_build::InlinedPlugin::new().commands(&["get_m3u8_url", "get_proxy_url"]),
+                tauri_build::InlinedPlugin::new().commands(&[
+                    "get_m3u8_url",
+                    "get_proxy_url",
+                    "start_cast_proxy_server",
+                    "stop_cast_proxy_server",
+                    "get_cast_m3u8_url",
+                    "get_cast_proxy_url",
+                ]),
             )
             .plugin(
                 "websocket-plugin",

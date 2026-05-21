@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-cast-control"
+description = "Enables the cast_control command without any pre-configured scope."
+commands.allow = ["cast_control"]
+
+[[permission]]
+identifier = "deny-cast-control"
+description = "Denies the cast_control command without any pre-configured scope."
+commands.deny = ["cast_control"]

@@ -67,6 +67,7 @@
     "tauri-plugin-commands-api": "file:tauri-plugin-commands",
     "tauri-plugin-keep-screen-on-api": "^0.1.4",
     "tauri-plugin-mediasession-api": "file:tauri-plugin-mediasession",
+    "tauri-plugin-cast-api": "file:tauri-plugin-cast",
     "tauri-plugin-mywebview-api": "file:tauri-plugin-mywebview",
     "tinycolor2": "^1.6.0",
     "tunnel": "^0.0.6",

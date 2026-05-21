@@ -5,6 +5,7 @@ import type {
   MarketSourcePermission,
   PagedMarketSource,
 } from '@wuji-tauri/source-extension';
+import type { Announcement } from '@/types/announcement';
 import type { SyncTypes } from '@/types/sync';
 import type { Feature, MembershipPlan } from '@/types/user';
 import * as os from '@tauri-apps/plugin-os';
@@ -22,15 +23,26 @@ import {
   showNotify,
   showSuccessToast,
 } from 'vant';
-import { computed, onMounted, ref, triggerRef } from 'vue';
+import { computed, onMounted, ref, triggerRef, watch } from 'vue';
 import { isMembershipOrderValid, UserInfo } from '@/types/user';
 import { sleep } from '@/utils';
 import { getDeviceId } from '@/utils/device';
 import { showVipDialog } from '@/utils/vip';
 import { createKVStore, useDisplayStore } from '.';
 
-// let API_BASE_URL = 'http://10.80.1.22:3000/v1/api/';
-let API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
+/** 传给 sendRequest 的 errorHandler：表示未带 token 却收到 401 */
+export interface SendRequestErrorContext {
+  guestUnauthorized?: boolean;
+}
+
+type SendRequestOptions = RequestInit
+  & ClientOptions & {
+    /** 未登录收到 401 时不提示（仅用于后台拉取等场景） */
+    silentGuest401?: boolean;
+  };
+let API_BASE_URL: string;
+// API_BASE_URL = 'http://10.80.1.22:3000/v1/api/';
+API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
 
 if (import.meta.env.MODE !== 'development') {
   API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
@@ -143,40 +155,64 @@ export const useServerStore = defineStore('serverStore', () => {
     }
   };
 
+  const showRequestFailure = (
+    response?: Response,
+    fallback = '操作失败，请稍后再试',
+  ) => {
+    if (response && response.status !== 0) {
+      handleError(response);
+    }
+    else {
+      showFailToast(fallback);
+    }
+  };
+
   async function sendRequest<T>(
     endpoint: string,
-    options: RequestInit & ClientOptions,
+    options: SendRequestOptions,
     successHandler: (response: Response) => Promise<T>,
   ): Promise<T | undefined>;
 
   async function sendRequest<T>(
     endpoint: string,
-    options: RequestInit & ClientOptions,
+    options: SendRequestOptions,
     successHandler: (response: Response) => Promise<T>,
-    errorHandler: (response?: Response, error?: Error) => Promise<T>,
+    errorHandler: (
+      response?: Response,
+      context?: SendRequestErrorContext,
+    ) => Promise<T>,
   ): Promise<T>;
 
   async function sendRequest<T>(
     endpoint: string,
-    options: RequestInit & ClientOptions = {},
+    options: SendRequestOptions = {},
     successHandler: (response: Response) => Promise<T>,
     errorHandler?: (
       response?: Response,
-      error?: Error,
+      context?: SendRequestErrorContext,
     ) => Promise<T | undefined>,
   ): Promise<T | undefined> {
-    const response = await _request(endpoint, options);
+    const { silentGuest401 = false, ...fetchOptions } = options;
+    const sentWithAuth = !!(
+      accessToken.value && accessToken.value !== 'undefined'
+    );
+    const response = await _request(endpoint, fetchOptions);
     if (response.ok) {
       return await successHandler(response);
     }
     else {
-      handleError(response);
+      const guestUnauthorized = response.status === 401 && !sentWithAuth;
+      // 401：曾带 token（含过期）仍走 handleError；未带 token 的访客由 errorHandler 或默认「请先登录」处理
+      if (response.status !== 401 || sentWithAuth) {
+        handleError(response);
+      }
       if (errorHandler) {
-        return await errorHandler(response);
+        return await errorHandler(response, { guestUnauthorized });
       }
-      else {
-        return undefined;
+      if (guestUnauthorized && !silentGuest401) {
+        showFailToast('请先登录');
       }
+      return undefined;
     }
   }
 
@@ -191,7 +227,9 @@ export const useServerStore = defineStore('serverStore', () => {
         userInfo.value = plainToClass(UserInfo, json);
         console.log('用户信息:', userInfo.value);
       },
-      async () => {
+      async (_response, context) => {
+        if (context?.guestUnauthorized)
+          return;
         showFailToast('获取用户信息失败');
       },
     );
@@ -202,15 +240,48 @@ export const useServerStore = defineStore('serverStore', () => {
   const fetchFeatures = async (): Promise<void> => {
     return await sendRequest<void>(
       'feature',
-      {},
+      { silentGuest401: true },
       async (response) => {
         featureList.value = await response.json();
       },
     );
   };
 
+  const announcements = ref<Announcement[]>([]);
+  const dismissedAnnouncementIds = useStorageAsync<string[]>(
+    'dismissedAnnouncementIds',
+    [],
+    storage,
+  );
+
+  const currentAnnouncement = computed(() => {
+    return announcements.value.find(
+      item => !dismissedAnnouncementIds.value.includes(item._id),
+    );
+  });
+
+  const fetchAnnouncements = async (): Promise<void> => {
+    return await sendRequest<void>(
+      'announcement/current',
+      { silentGuest401: true },
+      async (response) => {
+        announcements.value = await response.json();
+      },
+    );
+  };
+
+  const dismissAnnouncement = (id: string) => {
+    if (!dismissedAnnouncementIds.value.includes(id)) {
+      dismissedAnnouncementIds.value = [
+        ...dismissedAnnouncementIds.value,
+        id,
+      ];
+    }
+  };
+
   onMounted(() => {
     fetchFeatures();
+    fetchAnnouncements();
     setTimeout(() => {
       fetchUserInfo();
     }, 2000);
@@ -221,6 +292,17 @@ export const useServerStore = defineStore('serverStore', () => {
       now.value = Date.now();
     }, 1000);
   });
+
+  watch(
+    [
+      accessToken,
+      () => userInfo.value?.vipMembershipPlan?._id,
+      () => userInfo.value?.proMembershipPlan?._id,
+    ],
+    () => {
+      fetchAnnouncements();
+    },
+  );
 
   const marketSource = ref<PagedMarketSource>();
   const myMarketSources = ref<MarketSource[]>([]);
@@ -257,18 +339,6 @@ export const useServerStore = defineStore('serverStore', () => {
         return true;
 
       return false;
-    };
-  });
-
-  /**
-   * 检查指定功能是否为 VIP 专属功能
-   */
-  const isFeatureVip = computed(() => {
-    return (featureKey: string): boolean => {
-      const feature = featureList.value.find(f => f.key === featureKey);
-      if (!feature)
-        return false;
-      return feature.enableVip || feature.enablePro;
     };
   });
 
@@ -335,7 +405,10 @@ export const useServerStore = defineStore('serverStore', () => {
         });
         return true;
       },
-      async () => {
+      async (response, context) => {
+        if (context?.guestUnauthorized) {
+          showRequestFailure(response, '注册失败，请稍后再试');
+        }
         return false;
       },
     );
@@ -366,7 +439,10 @@ export const useServerStore = defineStore('serverStore', () => {
         await fetchUserInfo();
         return true;
       },
-      async () => {
+      async (response, context) => {
+        if (context?.guestUnauthorized) {
+          showRequestFailure(response, '登录失败，请检查邮箱和密码');
+        }
         return false;
       },
     );
@@ -396,8 +472,11 @@ export const useServerStore = defineStore('serverStore', () => {
         });
         return true;
       },
-      async () => {
+      async (response, context) => {
         toast.close();
+        if (context?.guestUnauthorized) {
+          showRequestFailure(response, '发送重置邮件失败，请稍后再试');
+        }
         return false;
       },
     );
@@ -423,7 +502,10 @@ export const useServerStore = defineStore('serverStore', () => {
         });
         return true;
       },
-      async () => {
+      async (response, context) => {
+        if (context?.guestUnauthorized) {
+          showRequestFailure(response, '发送验证邮件失败，请稍后再试');
+        }
         return false;
       },
     );
@@ -468,8 +550,10 @@ export const useServerStore = defineStore('serverStore', () => {
         marketSource.value = json;
         return json;
       },
-      async () => {
-        showFailToast('获取源失败');
+      async (_response, context) => {
+        if (context?.guestUnauthorized) {
+          showFailToast('请先登录');
+        }
         return undefined;
       },
     );
@@ -500,8 +584,11 @@ export const useServerStore = defineStore('serverStore', () => {
         const json = await response.json();
         return json;
       },
-      async () => {
-        showFailToast('获取默认源失败');
+      async (_response, context) => {
+        t.close();
+        if (context?.guestUnauthorized) {
+          showFailToast('请先登录');
+        }
         return undefined;
       },
     );
@@ -519,8 +606,11 @@ export const useServerStore = defineStore('serverStore', () => {
         triggerRef(myMarketSources);
         return json;
       },
-      async () => {
+      async (_response, context) => {
         t.close();
+        if (context?.guestUnauthorized) {
+          showFailToast('请先登录');
+        }
         return undefined;
       },
     );
@@ -665,7 +755,7 @@ export const useServerStore = defineStore('serverStore', () => {
   const getAliPayUrl = async (plan: MembershipPlan) => {
     if (!userInfo.value?.email) {
       showFailToast('请先登录');
-      return;
+      return null;
     }
     const displayStore = useDisplayStore();
     return await sendRequest<string>(
@@ -763,7 +853,10 @@ export const useServerStore = defineStore('serverStore', () => {
         const json = await response.json();
         return json.status;
       },
-      async () => {
+      async (response, context) => {
+        if (context?.guestUnauthorized) {
+          showRequestFailure(response);
+        }
         return false;
       },
     );
@@ -789,8 +882,11 @@ export const useServerStore = defineStore('serverStore', () => {
         fetchUserInfo();
         return ret;
       },
-      async () => {
+      async (response, context) => {
         toast.close();
+        if (context?.guestUnauthorized) {
+          showRequestFailure(response, '领取失败');
+        }
         return '领取失败';
       },
     );
@@ -817,11 +913,14 @@ export const useServerStore = defineStore('serverStore', () => {
     isPro,
     isVipOrPro,
     hasFeature,
-    isFeatureVip,
     myMarketSources,
     membershipPlans,
     featureList,
     fetchFeatures,
+    announcements,
+    currentAnnouncement,
+    fetchAnnouncements,
+    dismissAnnouncement,
     fetchUserInfo,
     updateUserInfo,
     getDeviceInfo,

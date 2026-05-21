@@ -2,8 +2,9 @@
 import { getSourceTypeTheme } from '@wuji-tauri/components';
 import { storeToRefs } from 'pinia';
 import { set_screen_orientation } from 'tauri-plugin-commands-api';
-import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, onMounted, reactive, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import GlobalAnnouncementBar from '@/components/announcement/GlobalAnnouncementBar.vue';
 import GlobalToastProgress from '@/components/GlobalToastProgress.vue';
 import { useDisplayStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
@@ -11,8 +12,8 @@ import { useBackStore } from '@/store/backStore';
 const backStore = useBackStore();
 const displayStore = useDisplayStore();
 
-const activeKey = ref(0);
 const route = useRoute();
+const router = useRouter();
 
 const { photoPath, songPath, bookPath, comicPath, videoPath, tabBarPages }
   = storeToRefs(displayStore);
@@ -60,41 +61,73 @@ const pages = computed(() => {
     });
 });
 
-function updateActiveKey(newPath?: string) {
+function resolveTabIndex(pathName: string | symbol | undefined | null): number {
+  if (typeof pathName !== 'string') {
+    return 0;
+  }
+  if (pathName.startsWith('Photo')) {
+    return pages.value.findIndex(page => page.name === 'Photo');
+  }
+  if (pathName.startsWith('Song')) {
+    return pages.value.findIndex(page => page.name === 'Song');
+  }
+  if (pathName.startsWith('Book')) {
+    return pages.value.findIndex(page => page.name === 'Book');
+  }
+  if (pathName.startsWith('Comic')) {
+    return pages.value.findIndex(page => page.name === 'Comic');
+  }
+  if (pathName.startsWith('Video')) {
+    return pages.value.findIndex(page => page.name === 'Video');
+  }
+  return -1;
+}
+
+/** 仅由当前路由决定高亮，避免点击 tab 时路由被拦截但图标已切换 */
+const activeTabIndex = computed(() => {
+  const idx = resolveTabIndex(route.name);
+  return idx >= 0 ? idx : 0;
+});
+
+function syncTabPaths(newPath?: string) {
   newPath ||= route.path;
   displayStore.routerCurrPath = newPath;
   const pathName = route.name;
-  if (typeof pathName !== 'string')
+  if (typeof pathName !== 'string') {
     return;
+  }
   if (pathName !== 'BookRead' && pathName !== 'ComicRead') {
     displayStore.showTabBar = true;
   }
   if (pathName.startsWith('Photo')) {
     photoPath.value = newPath;
-    activeKey.value = pages.value.findIndex(page => page.name === 'Photo');
   }
   else if (pathName.startsWith('Song')) {
     songPath.value = newPath;
-    activeKey.value = pages.value.findIndex(page => page.name === 'Song');
   }
   else if (pathName.startsWith('Book')) {
     bookPath.value = newPath;
-    activeKey.value = pages.value.findIndex(page => page.name === 'Book');
   }
   else if (pathName.startsWith('Comic')) {
     comicPath.value = newPath;
-    activeKey.value = pages.value.findIndex(page => page.name === 'Comic');
   }
   else if (pathName.startsWith('Video')) {
     videoPath.value = newPath;
-    activeKey.value = pages.value.findIndex(page => page.name === 'Video');
   }
+}
+
+async function onTabItemClick(index: number) {
+  const page = pages.value[index];
+  if (!page || index === activeTabIndex.value) {
+    return;
+  }
+  await router.push(page.to);
 }
 
 watch(
   [() => route.path, pages],
-  async ([newPath, _newPages]) => {
-    updateActiveKey(newPath);
+  async ([newPath]) => {
+    syncTabPaths(newPath);
   },
   { immediate: true },
 );
@@ -116,8 +149,11 @@ window.androidBackCallback = async () => {
   <div
     class="flex h-screen w-screen flex-col overflow-hidden bg-[var(--van-background-2)]"
   >
-    <div class="content relative h-full w-full flex-grow overflow-hidden">
-      <slot />
+    <div class="content flex h-full w-full flex-grow flex-col overflow-hidden">
+      <GlobalAnnouncementBar />
+      <div class="min-h-0 min-w-0 flex-1 overflow-hidden">
+        <slot />
+      </div>
     </div>
     <transition
       enter-active-class="transition-all duration-100 ease-out"
@@ -129,25 +165,25 @@ window.androidBackCallback = async () => {
     >
       <van-tabbar
         v-show="showTabBar"
-        v-model="activeKey"
+        :model-value="activeTabIndex"
         placeholder
         class="mtabbar-root z-[1002] h-[50px] shrink-0"
       >
         <van-tabbar-item
           v-for="(page, index) in pages"
           :key="index"
-          :to="page.to"
+          @click="onTabItemClick(index)"
         >
           <template #icon>
             <van-icon
-              :name="activeKey === index ? page.selectedIcon : page.icon"
+              :name="activeTabIndex === index ? page.selectedIcon : page.icon"
               class="mtabbar-icon"
               :class="[
-                activeKey === index
+                activeTabIndex === index
                   ? 'mtabbar-icon--active'
                   : 'mtabbar-icon--inactive',
               ]"
-              :color="activeKey === index ? page.theme.textColor : 'inherit'"
+              :color="activeTabIndex === index ? page.theme.textColor : 'inherit'"
               size="20"
             />
           </template>

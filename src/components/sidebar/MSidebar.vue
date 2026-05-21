@@ -30,7 +30,6 @@ const options: SidebarOption[] = [
   },
   {
     text: '下载管理',
-    feature: 'download_management',
     onClick: () => {
       router.push({ name: 'DownloadManager' });
     },

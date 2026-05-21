@@ -4,11 +4,13 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import { showSuccessToast } from 'vant';
 import { onMounted, ref } from 'vue';
 import wujipng from '@/assets/wuji.png';
+import AnnouncementListSheet from '@/components/announcement/AnnouncementListSheet.vue';
 import WNavbar from '@/components/header/WNavbar.vue';
 import { checkAndUpdate } from '@/utils/update';
 
 const version = ref('');
 const checking = ref(false);
+const showAnnouncementSheet = ref(false);
 
 function openHomepage() {
   openUrl('https://moshangwangluo.com');
@@ -77,9 +79,13 @@ onMounted(async () => {
           <van-button plain type="primary" block round @click="openHomepage">
             访问官网
           </van-button>
+          <van-button plain block round @click="showAnnouncementSheet = true">
+            公告
+          </van-button>
         </div>
       </div>
     </div>
+    <AnnouncementListSheet v-model:show="showAnnouncementSheet" />
   </div>
 </template>
 

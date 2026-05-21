@@ -19,7 +19,11 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_m3u8_url,
-            commands::get_proxy_url
+            commands::get_proxy_url,
+            commands::start_cast_proxy_server,
+            commands::stop_cast_proxy_server,
+            commands::get_cast_m3u8_url,
+            commands::get_cast_proxy_url,
         ])
         .build()
 }

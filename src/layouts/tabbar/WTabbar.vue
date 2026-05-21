@@ -4,6 +4,7 @@ import { getSourceTypeTheme } from '@wuji-tauri/components';
 import { storeToRefs } from 'pinia';
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import GlobalAnnouncementBar from '@/components/announcement/GlobalAnnouncementBar.vue';
 import WLoginButton from '@/components/button/WLoginButton.vue';
 import GlobalToastProgress from '@/components/GlobalToastProgress.vue';
 import { router } from '@/router';
@@ -263,8 +264,11 @@ watch(
       </div>
     </transition>
 
-    <div class="content relative h-full w-full grow overflow-hidden">
-      <slot />
+    <div class="content flex h-full w-full grow flex-col overflow-hidden">
+      <GlobalAnnouncementBar />
+      <div class="min-h-0 min-w-0 flex-1 overflow-hidden">
+        <slot />
+      </div>
     </div>
 
     <div class="absolute top-0 z-[999999999] w-screen">

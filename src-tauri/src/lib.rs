@@ -42,6 +42,7 @@ pub fn run() {
         .plugin(tauri_plugin_commands::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_mediasession::init())
+        .plugin(tauri_plugin_cast::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_notification::init())

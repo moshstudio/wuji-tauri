@@ -15,7 +15,9 @@ use warp::{self, Filter};
 
 // Constants
 const HOST: &str = "http://127.0.0.1";
+const LAN_HOST_PLACEHOLDER: &str = "__LAN_HOST__";
 const DEFAULT_START_PORT: u16 = 1430;
+const CAST_DEFAULT_START_PORT: u16 = 2430;
 const PORT_SCAN_RANGE: u16 = 100;
 const REQUEST_TIMEOUT_SECS: u64 = 60;
 const CONNECT_TIMEOUT_SECS: u64 = 15;
@@ -23,6 +25,7 @@ const MAX_REDIRECT_COUNT: u8 = 10;
 
 // Store actual port
 static ACTUAL_PORT: AtomicU16 = AtomicU16::new(0);
+static CAST_ACTUAL_PORT: AtomicU16 = AtomicU16::new(0);
 
 // Helper function to parse headers from encoded string
 fn parse_encoded_headers(headers_part: &str) -> reqwest::header::HeaderMap {
@@ -802,13 +805,97 @@ pub(crate) fn get_proxy_url(
     ))
 }
 
-fn find_available_port(start_port: u16) -> Option<u16> {
+fn find_available_port(bind_host: &str, start_port: u16) -> Option<u16> {
     (start_port..=start_port + PORT_SCAN_RANGE)
-        .find(|port| TcpListener::bind(("127.0.0.1", *port)).is_ok())
+        .find(|port| TcpListener::bind((bind_host, *port)).is_ok())
+}
+
+fn build_proxy_cors() -> warp::cors::Builder {
+    warp::cors()
+        .allow_any_origin()
+        .allow_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+        .allow_headers(vec![
+            "Content-Type",
+            "Range",
+            "User-Agent",
+            "Referer",
+            "Origin",
+            "Accept",
+        ])
+        .expose_headers(vec!["Content-Length", "Content-Range", "Accept-Ranges"])
+}
+
+fn build_proxy_routers(
+    cors: warp::cors::Builder,
+) -> impl warp::Filter<Extract = impl warp::Reply> + Clone {
+    let m3u8_proxy_router = warp::path!("m3u8" / String / String)
+        .and(warp::header::headers_cloned())
+        .and_then(
+            |headers_part: String, url: String, headers: warp::http::HeaderMap| async move {
+                let decoded = decode(&url).expect("UTF-8");
+                get_m3u8_content_async(headers_part, decoded.to_string(), headers).await
+            },
+        );
+
+    let ts_proxy_router = warp::path!("ts" / String / String)
+        .and(warp::header::headers_cloned())
+        .and_then(
+            |headers_part: String, url: String, headers: warp::http::HeaderMap| async move {
+                let decoded = decode(&url).expect("UTF-8");
+                get_ts_content_async(headers_part, decoded.to_string(), headers).await
+            },
+        );
+
+    let proxy = warp::path!("proxy" / String / String)
+        .and(
+            warp::query::raw()
+                .map(Some)
+                .or(warp::any().map(|| None))
+                .unify(),
+        )
+        .and(warp::method())
+        .and(warp::header::headers_cloned())
+        .and(warp::body::bytes())
+        .and_then(
+            |headers_part: String,
+             encoded_url: String,
+             params: Option<String>,
+             method: warp::http::Method,
+             headers: warp::http::HeaderMap,
+             body: warp::hyper::body::Bytes| async move {
+                handle_proxy_request(&headers_part, &encoded_url, params, method, headers, body)
+                    .await
+            },
+        );
+
+    m3u8_proxy_router.or(ts_proxy_router).or(proxy).with(cors.build())
+}
+
+fn ensure_cast_proxy_server() -> Result<u16, String> {
+    let existing = CAST_ACTUAL_PORT.load(Ordering::SeqCst);
+    if existing > 0 {
+        return Ok(existing);
+    }
+
+    let port = find_available_port("0.0.0.0", CAST_DEFAULT_START_PORT).ok_or_else(|| {
+        format!(
+            "No available cast proxy port found in range {}-{}",
+            CAST_DEFAULT_START_PORT,
+            CAST_DEFAULT_START_PORT + PORT_SCAN_RANGE
+        )
+    })?;
+
+    CAST_ACTUAL_PORT.store(port, Ordering::SeqCst);
+    println!("[Cast Proxy Server] Starting on 0.0.0.0:{}", port);
+
+    let routers = build_proxy_routers(build_proxy_cors());
+    tauri::async_runtime::spawn(warp::serve(routers).run(([0, 0, 0, 0], port)));
+
+    Ok(port)
 }
 
 pub(crate) fn start_proxy_server() -> std::io::Result<()> {
-    let port = find_available_port(DEFAULT_START_PORT).ok_or_else(|| {
+    let port = find_available_port("127.0.0.1", DEFAULT_START_PORT).ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::AddrInUse,
             format!(
@@ -823,65 +910,49 @@ pub(crate) fn start_proxy_server() -> std::io::Result<()> {
 
     println!("[Proxy Server] Starting on port {}", port);
 
-    let cors = warp::cors()
-        .allow_any_origin()
-        .allow_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-        .allow_headers(vec![
-            "Content-Type",
-            "Range",
-            "User-Agent",
-            "Referer",
-            "Origin",
-            "Accept",
-        ])
-        .expose_headers(vec!["Content-Length", "Content-Range", "Accept-Ranges"]);
-
-    // M3U8 proxy route
-    let m3u8_proxy_router = warp::path!("m3u8" / String / String)
-        .and(warp::header::headers_cloned())
-        .and_then(
-            |headers_part: String, url: String, headers: warp::http::HeaderMap| async move {
-                let decoded = decode(&url).expect("UTF-8");
-                get_m3u8_content_async(headers_part, decoded.to_string(), headers).await
-            },
-        );
-
-    // TS proxy route
-    let ts_proxy_router = warp::path!("ts" / String / String)
-        .and(warp::header::headers_cloned())
-        .and_then(
-            |headers_part: String, url: String, headers: warp::http::HeaderMap| async move {
-                let decoded = decode(&url).expect("UTF-8");
-                get_ts_content_async(headers_part, decoded.to_string(), headers).await
-            },
-        );
-
-    // General proxy route
-    let proxy = warp::path!("proxy" / String / String)
-        .and(
-            warp::query::raw()
-                .map(Some)
-                .or(warp::any().map(|| None))
-                .unify(),
-        ) // 获取可选的查询参数
-        .and(warp::method()) // 获取 HTTP 方法
-        .and(warp::header::headers_cloned()) // 获取请求头
-        .and(warp::body::bytes()) // 获取请求体
-        .and_then(
-            |headers_part: String,
-             encoded_url: String,
-             params: Option<String>,
-             method: warp::http::Method,
-             headers: warp::http::HeaderMap,
-             body: warp::hyper::body::Bytes| async move {
-                handle_proxy_request(&headers_part, &encoded_url, params, method, headers, body)
-                    .await
-            },
-        );
-
-    let routers = m3u8_proxy_router.or(ts_proxy_router).or(proxy).with(cors);
-
+    let routers = build_proxy_routers(build_proxy_cors());
     tauri::async_runtime::spawn(warp::serve(routers).run(([127, 0, 0, 1], port)));
 
     Ok(())
+}
+
+#[tauri::command]
+pub(crate) fn start_cast_proxy_server() -> Result<u16, String> {
+    ensure_cast_proxy_server()
+}
+
+#[tauri::command]
+pub(crate) fn stop_cast_proxy_server() -> Result<(), String> {
+    CAST_ACTUAL_PORT.store(0, Ordering::SeqCst);
+    Ok(())
+}
+
+#[tauri::command]
+pub(crate) fn get_cast_m3u8_url(
+    original_url: String,
+    headers: HashMap<String, String>,
+) -> Result<String, String> {
+    let port = ensure_cast_proxy_server()?;
+    let encoded_url = encode(&original_url);
+    let headers_part = encode_headers_to_string(&headers);
+
+    Ok(format!(
+        "http://{}:{}/m3u8/{}/{}",
+        LAN_HOST_PLACEHOLDER, port, headers_part, encoded_url
+    ))
+}
+
+#[tauri::command]
+pub(crate) fn get_cast_proxy_url(
+    original_url: String,
+    headers: HashMap<String, String>,
+) -> Result<String, String> {
+    let port = ensure_cast_proxy_server()?;
+    let encoded_url = encode(&original_url);
+    let headers_part = encode_headers_to_string(&headers);
+
+    Ok(format!(
+        "http://{}:{}/proxy/{}/{}",
+        LAN_HOST_PLACEHOLDER, port, headers_part, encoded_url
+    ))
 }

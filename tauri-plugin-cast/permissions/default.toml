@@ -1,0 +1,10 @@
+[default]
+description = "Default permissions for the cast plugin"
+permissions = [
+  "allow-discover-devices",
+  "allow-cast-media",
+  "allow-cast-control",
+  "allow-get-cast-state",
+  "allow-stop-cast",
+  "allow-get-lan-ip",
+]

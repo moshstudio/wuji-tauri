@@ -9,10 +9,14 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AddShelfButton: typeof import('./src/components/button/AddShelfButton.vue')['default']
+    AnnouncementListSheet: typeof import('./src/components/announcement/AnnouncementListSheet.vue')['default']
     BookScrollerContent: typeof import('./src/components/book/BookScrollerContent.vue')['default']
     BookSwitchSource: typeof import('./src/components/dialog/BookSwitchSource.vue')['default']
+    CastDeviceSheet: typeof import('./src/components/media/CastDeviceSheet.vue')['default']
+    CastFloatingBubble: typeof import('./src/components/media/CastFloatingBubble.vue')['default']
     ComicSwitchSource: typeof import('./src/components/dialog/ComicSwitchSource.vue')['default']
     DraggableSongBar: typeof import('./src/components/songbar/DraggableSongBar.vue')['default']
+    GlobalAnnouncementBar: typeof import('./src/components/announcement/GlobalAnnouncementBar.vue')['default']
     GlobalToastProgress: typeof import('./src/components/GlobalToastProgress.vue')['default']
     Guide: typeof import('./src/components/codeEditor/Guide.vue')['default']
     HorizonList: typeof import('./src/components/list/HorizonList.vue')['default']
@@ -87,6 +91,7 @@ declare module 'vue' {
     VanTextEllipsis: typeof import('vant/es')['TextEllipsis']
     VideoSwiper: typeof import('./src/components/media/VideoSwiper.vue')['default']
     VipButton: typeof import('./src/components/button/VipButton.vue')['default']
+    VipFeatureBadge: typeof import('./src/components/badge/VipFeatureBadge.vue')['default']
     VolumeControl: typeof import('./src/components/songbar/VolumeControl.vue')['default']
     WBookTab: typeof import('./src/components/tab/WBookTab.vue')['default']
     WComicTab: typeof import('./src/components/tab/WComicTab.vue')['default']

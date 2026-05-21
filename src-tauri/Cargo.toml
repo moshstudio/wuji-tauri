@@ -46,6 +46,7 @@ urlpattern = "0.3"
 tauri-plugin-os = "2"
 tauri-plugin-commands = { path = "../tauri-plugin-commands/" }
 tauri-plugin-mediasession = { path = "../tauri-plugin-mediasession/" }
+tauri-plugin-cast = { path = "../tauri-plugin-cast/" }
 tauri-plugin-mywebview = { path = "../tauri-plugin-mywebview/" }
 tauri-plugin-log = "2"
 log = "0.4.25"

@@ -33,6 +33,10 @@
     @apply [box-shadow:0_-1px_3px_0_rgb(0,0,0,0.1),0_-1px_2px_-1px_rgb(0,0,0,0.1)];
   }
 }
+/*
+ * Vant 边距冲突（van-cell-group--inset / van-button）由 tailwind.vant-margin.plugin.js 处理。
+ * 在其它 Vant 根节点上若 mt/mb 仍不生效，请用 !mt-* / !mb-* 或父级 gap。
+ */
 @layer utilities {
   .mobile-scrollbar::-webkit-scrollbar {
     background-color: transparent;

@@ -8,12 +8,18 @@ import type {
 } from '@wuji-tauri/source-extension';
 import type Fullscreen from 'xgplayer/es/plugins/fullscreen';
 import type FavoriteButtonPlugin from '@/components/media/plugins/favoriteButton';
+import type { CastDevice } from '@/utils/cast';
 import type { FetchWebviewResult } from '@/utils/webview';
 import { onMountedOrActivated } from '@vant/use';
 import _ from 'lodash';
 import { storeToRefs } from 'pinia';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
-import { showConfirmDialog, showFailToast, showToast } from 'vant';
+import {
+  showConfirmDialog,
+  showFailToast,
+  showLoadingToast,
+  showToast,
+} from 'vant';
 import {
   computed,
   nextTick,
@@ -28,6 +34,8 @@ import Player, { Events } from 'xgplayer';
 import DefaultPreset from 'xgplayer/es/presets/default';
 import LivePreset from 'xgplayer/es/presets/live';
 import MobilePreset from 'xgplayer/es/presets/mobile';
+import CastDeviceSheet from '@/components/media/CastDeviceSheet.vue';
+import CastFloatingBubble from '@/components/media/CastFloatingBubble.vue';
 import BackButtonPlugin from '@/components/media/plugins/backButton';
 import PlaylistButtonPlugin from '@/components/media/plugins/playlistButton';
 import VideoJsPlugin from '@/components/media/plugins/videoJs';
@@ -44,11 +52,25 @@ import {
   useBackStore,
   useDisplayStore,
   useDownloadStore,
+  useServerStore,
   useStore,
   useSubscribeSourceStore,
   useVideoShelfStore,
 } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import {
+  activeCastDevice,
+  castContinueMedia,
+  endCastSession,
+  markCastReconnectHandledByAutoNext,
+  reconnectCast,
+  searchCastDevices,
+  setCastAutoNextHandler,
+  shouldSkipCastReconnectFromVideoSrc,
+  startDlnaCast,
+  warmupCastDiscovery,
+} from '@/utils/cast';
+import { showVipDialog } from '@/utils/vip';
 import { fetWebview } from '@/utils/webview';
 import 'xgplayer/dist/index.min.css';
 
@@ -58,6 +80,7 @@ const { videoId, sourceId } = defineProps<{
 }>();
 
 const downloadStore = useDownloadStore();
+const serverStore = useServerStore();
 
 const route = useRoute();
 const store = useStore();
@@ -333,6 +356,10 @@ const addShelfActions = computed(() => {
 const showSearchDialog = ref(false);
 const searchText = ref('');
 
+const showCastSheet = ref(false);
+const castDevices = ref<CastDevice[]>([]);
+const castSearching = ref(false);
+
 function onAddToShelf() {
   if (inShelf.value) {
     router.push({ name: 'VideoShelf' });
@@ -370,6 +397,107 @@ const filterVideoItems = computed(() => {
     );
   });
 });
+
+async function refreshCastDevices() {
+  castSearching.value = true;
+  try {
+    let result = await searchCastDevices();
+    let devices = Array.isArray(result?.devices) ? result.devices : [];
+    if (!devices.length && !result?.error) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      result = await searchCastDevices();
+      devices = Array.isArray(result?.devices) ? result.devices : [];
+    }
+    castDevices.value = devices;
+    if (result?.error) {
+      showFailToast(result.error);
+    }
+    else if (!devices.length) {
+      showToast({
+        message:
+          '未发现设备。请确认：①电视已开机并连接同一 Wi-Fi；②小米电视在「设置→投屏」中开启无线投屏/DLNA；③关闭路由器 AP 隔离',
+        duration: 5000,
+      });
+    }
+  }
+  catch (error) {
+    console.warn('search cast devices failed', error);
+    const msg = error instanceof Error ? error.message : '搜索投屏设备失败';
+    showFailToast(msg);
+    castDevices.value = [];
+  }
+  finally {
+    castSearching.value = false;
+  }
+}
+
+async function openCastSheet() {
+  if (!serverStore.hasFeature('video_cast')) {
+    showVipDialog('投屏功能为会员专属，是否前往查看会员方案？');
+    return;
+  }
+  if (!videoSrc.value?.url) {
+    showToast('请先等待视频加载');
+    return;
+  }
+  if (videoSrc.value.isLive) {
+    showToast('直播暂不支持投屏');
+    return;
+  }
+  showCastSheet.value = true;
+  await refreshCastDevices();
+}
+
+async function onStopCast() {
+  await endCastSession();
+  showCastSheet.value = false;
+  showToast('已停止投屏');
+}
+
+function getCastTitle() {
+  const item = videoItem.value;
+  const episode = playingEpisode.value;
+  if (item && episode) {
+    return `${item.title || ''} - ${episode.title || ''}`;
+  }
+  return item?.title;
+}
+
+async function onCastDeviceSelect(device: CastDevice) {
+  if (!videoSrc.value?.url) {
+    showToast('当前没有可投屏的地址');
+    return;
+  }
+  const item = videoItem.value;
+  const episode = playingEpisode.value;
+  const title = item && episode
+    ? `${item.title || ''} - ${episode.title || ''}`
+    : item?.title;
+
+  const loadingToast = showLoadingToast({
+    message: '正在连接电视…',
+    forbidClick: true,
+    duration: 0,
+  });
+  try {
+    const result = await startDlnaCast(device, videoSrc.value, title);
+    if (!result.success) {
+      showFailToast(result.error || '投屏失败，请重试');
+      return;
+    }
+    activeCastDevice.value = device;
+    videoPlayer.value?.pause();
+    showCastSheet.value = false;
+    showToast(`已投屏到 ${device.name}`);
+  }
+  catch (error) {
+    console.warn('cast failed', error);
+    showFailToast(error instanceof Error ? error.message : '投屏失败');
+  }
+  finally {
+    loadingToast.close();
+  }
+}
 
 function playSearchedVideo(resourceId: string, episodeId: string) {
   const resource = videoItem.value?.resources?.find(i => i.id === resourceId);
@@ -487,6 +615,7 @@ async function createPlayer(video?: VideoUrlMap) {
     : displayStore.isAndroid
       ? MobilePreset
       : DefaultPreset;
+  const casting = !!activeCastDevice.value;
   videoPlayer.value = new Player({
     el: videoElement.value,
     fullscreenTarget: document.querySelector(
@@ -495,7 +624,7 @@ async function createPlayer(video?: VideoUrlMap) {
     url: video?.url,
     videoType: video?.type,
     nullUrlStart: !video?.url,
-    autoplay: true,
+    autoplay: !casting,
     loop: false,
     playsinline: true,
     cssFullscreen: false,
@@ -537,6 +666,9 @@ async function createPlayer(video?: VideoUrlMap) {
     },
   });
   videoPlayer.value.controls?.show();
+  if (casting) {
+    videoPlayer.value.pause();
+  }
   if (item && resource && episode) {
     const videoName = `${item.title || ''} - ${episode.title || ''}`;
     videoPlayer.value.registerPlugin(VideoNamePlugin, {
@@ -546,8 +678,7 @@ async function createPlayer(video?: VideoUrlMap) {
       displayStore.fullScreenMode = isFullScreen;
     });
     videoPlayer.value.on(Events.PLAY, () => {
-      if (route.name !== 'VideoDetail') {
-        // 页面已切换
+      if (route.name !== 'VideoDetail' || activeCastDevice.value) {
         videoPlayer.value?.pause();
       }
     });
@@ -613,7 +744,7 @@ async function createPlayer(video?: VideoUrlMap) {
   });
 }
 
-watch(videoSrc, (newVideo) => {
+watch(videoSrc, async (newVideo) => {
   if (route.name !== 'VideoDetail') {
     // 页面已切换
     if (videoPlayer.value?.isPlaying) {
@@ -622,8 +753,40 @@ watch(videoSrc, (newVideo) => {
     return;
   }
   console.log('load video src:', newVideo);
-  createPlayer(newVideo);
+  await createPlayer(newVideo);
+  if (activeCastDevice.value) {
+    videoPlayer.value?.pause();
+  }
+  if (displayStore.isAndroid && newVideo?.url && !newVideo.isLive && serverStore.hasFeature('video_cast')) {
+    warmupCastDiscovery();
+  }
 });
+
+// 投屏中切集：自动向当前设备续投
+watch(
+  videoSrc,
+  async (newSrc) => {
+    if (!activeCastDevice.value?.id || !newSrc?.url || newSrc.isLive) {
+      return;
+    }
+    if (route.name !== 'VideoDetail') {
+      return;
+    }
+    if (shouldSkipCastReconnectFromVideoSrc()) {
+      return;
+    }
+    try {
+      const success = await reconnectCast(newSrc, getCastTitle());
+      if (success) {
+        videoPlayer.value?.pause();
+      }
+    }
+    catch (error) {
+      console.warn('reconnect cast failed', error);
+    }
+  },
+  { flush: 'post' },
+);
 
 watch(
   inShelf,
@@ -653,15 +816,42 @@ watch(
   { immediate: true },
 );
 
+function registerCastAutoNextHandler() {
+  setCastAutoNextHandler(async () => {
+    if (!nextEpisode.value || !playingResource.value || !videoItem.value) {
+      console.warn('[cast] auto next skipped: no next episode');
+      return false;
+    }
+    markCastReconnectHandledByAutoNext();
+    await play(playingResource.value, nextEpisode.value);
+    if (!videoSrc.value?.url || videoSrc.value.isLive) {
+      console.warn('[cast] auto next skipped: play url missing');
+      return false;
+    }
+    const continued = await castContinueMedia(videoSrc.value, getCastTitle());
+    if (continued) {
+      videoPlayer.value?.pause();
+    }
+    return continued;
+  });
+}
+
 onMounted(async () => {
+  registerCastAutoNextHandler();
   await nextTick();
   await createPlayer();
+});
+
+onUnmounted(() => {
+  setCastAutoNextHandler(null);
+  videoPlayer.value?.destroy();
 });
 
 // 声明式状态栏控制：视频详情页强制全黑背景
 useStatusBar('#000000', 'light');
 
 onMountedOrActivated(() => {
+  registerCastAutoNextHandler();
   if (displayStore.isAndroid) {
     keepScreenOn(true);
   }
@@ -691,6 +881,7 @@ onMountedOrActivated(() => {
 onDeactivated(() => {
   if (displayStore.isAndroid) {
     keepScreenOn(false);
+    void endCastSession();
   }
   // try {
   //   videoPlayer.value?.pause();
@@ -714,9 +905,6 @@ onDeactivated(() => {
   videoSrc.value = undefined;
 });
 
-onUnmounted(() => {
-  videoPlayer.value?.destroy();
-});
 async function onDownload() {
   const targetResource
     = playingResource.value || videoItem.value?.resources?.[0];
@@ -759,6 +947,7 @@ async function onDownload() {
         :add-to-shelf="onAddToShelf"
         :show-search="() => (showSearchDialog = true)"
         :on-download="onDownload"
+        :on-cast="openCastSheet"
       >
         <VideoSwiper
           :prev-episode="prevEpisode"
@@ -795,6 +984,7 @@ async function onDownload() {
         :add-to-shelf="onAddToShelf"
         :show-search="() => (showSearchDialog = true)"
         :on-download="onDownload"
+        :on-cast="openCastSheet"
       >
         <VideoSwiper
           :prev-episode="prevEpisode"
@@ -821,6 +1011,21 @@ async function onDownload() {
       v-model:show="showAddShelfSheet"
       title="添加到收藏"
       :actions="addShelfActions"
+    />
+    <CastFloatingBubble
+      v-if="displayStore.isAndroid && activeCastDevice && !showCastSheet"
+      @click="openCastSheet"
+    />
+    <CastDeviceSheet
+      v-if="displayStore.isAndroid"
+      v-model:show="showCastSheet"
+      :devices="castDevices"
+      :loading="castSearching"
+      :casting="!!activeCastDevice"
+      :casting-device-name="activeCastDevice?.name"
+      @select="onCastDeviceSelect"
+      @refresh="refreshCastDevices"
+      @stop="onStopCast"
     />
   </PlatformSwitch>
 </template>

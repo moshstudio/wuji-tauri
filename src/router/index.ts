@@ -3,6 +3,7 @@ import type {
   RouteRecordRaw,
 } from 'vue-router';
 import { createRouter, createWebHashHistory } from 'vue-router';
+import { activeCastDevice, confirmLeaveCastRoute } from '@/utils/cast';
 
 export const routes: RouteRecordRaw[] = [
   {
@@ -280,7 +281,19 @@ export const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes,
 });
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
+  if (
+    from.name === 'VideoDetail'
+    && activeCastDevice.value
+    && to.name !== 'VideoDetail'
+  ) {
+    const ok = await confirmLeaveCastRoute();
+    if (!ok) {
+      next(false);
+      return;
+    }
+  }
+
   if (to.query.transition) {
     to.meta.transition = to.query.transition;
   }

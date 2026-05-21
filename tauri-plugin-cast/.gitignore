@@ -1,0 +1,5 @@
+target/
+dist-js/
+node_modules/
+.gradle/
+local.properties

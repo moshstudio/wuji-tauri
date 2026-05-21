@@ -29,7 +29,11 @@ function isExist(
 
 async function genPayUrl(plan: MembershipPlan) {
   const url = await serverStore.getAliPayUrl(plan);
+  if (url === null)
+    return;
   if (!url) {
+    if (!userInfo.value?.email)
+      return;
     showDialog({
       title: '提示',
       message: '支付失败，请稍后再试',

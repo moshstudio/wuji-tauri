@@ -671,23 +671,18 @@ onDeactivated(() => {
           class="grid grid-cols-[repeat(auto-fill,minmax(46px,1fr))] gap-1 p-1"
         >
           <template v-for="font in webFonts" :key="font.family">
-            <van-badge color="#1989fa" :offset="[-8, 0]">
-              <template v-if="font.feature && serverStore.isFeatureVip(font.feature)" #content>
-                <van-icon name="diamond" class="badge-icon" />
-              </template>
-              <div
-                class="flex h-[46px] w-[46px] shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 text-center text-sm text-[--van-text-color]"
-                :class="[
-                  font.family === bookStore.fontFamily
-                    ? 'border-[var(--van-primary-color)]'
-                    : 'border-gray-300',
-                ]"
-                :style="{ fontFamily: font.family }"
-                @click="selectFont(font)"
-              >
-                {{ font.label }}
-              </div>
-            </van-badge>
+            <div
+              class="flex h-[46px] w-[46px] shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 text-center text-sm text-[--van-text-color]"
+              :class="[
+                font.family === bookStore.fontFamily
+                  ? 'border-[var(--van-primary-color)]'
+                  : 'border-gray-300',
+              ]"
+              :style="{ fontFamily: font.family }"
+              @click="selectFont(font)"
+            >
+              {{ font.label }}
+            </div>
           </template>
         </div>
         <div class="pb-1 pt-4 text-gray-400">
@@ -742,11 +737,6 @@ onDeactivated(() => {
 </template>
 
 <style scoped lang="less">
-.badge-icon {
-  display: block;
-  font-size: 10px;
-  line-height: 16px;
-}
 :deep(.van-dialog__header) {
   padding-top: 8px;
 }

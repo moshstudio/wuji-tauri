@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-discover-devices"
+description = "Enables the discover_devices command without any pre-configured scope."
+commands.allow = ["discover_devices"]
+
+[[permission]]
+identifier = "deny-discover-devices"
+description = "Denies the discover_devices command without any pre-configured scope."
+commands.deny = ["discover_devices"]

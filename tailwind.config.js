@@ -1,13 +1,14 @@
 /** @type {import('tailwindcss').Config} */
 import tailwindScrollBar from 'tailwind-scrollbar';
 import scrollbarHide from 'tailwind-scrollbar-hide';
+import vantMarginPlugin from './tailwind.vant-margin.plugin.js';
 
 export default {
   darkMode: 'selector',
   content: [
     './index.html',
     './src/**/*.{vue,js,ts,jsx,tsx}',
-    './packages/**/!(*.stories|node_modules)/*.{vue,js,ts}',
+    './packages/**/*.{vue,js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {
@@ -36,7 +37,7 @@ export default {
       '6xl': '3840px',
     },
   },
-  plugins: [tailwindScrollBar, scrollbarHide],
+  plugins: [tailwindScrollBar, scrollbarHide, vantMarginPlugin],
   safelist: [
     // 预生成1-12列的所有可能组合
     ...Array.from({ length: 12 }, (_, i) => `grid-cols-${i + 1}`),

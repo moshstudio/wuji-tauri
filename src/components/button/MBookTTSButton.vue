@@ -32,7 +32,11 @@ function onShowDialog() {
   showDialog.value = true;
 }
 
-function selectVoice(voice: any) {
+function selectVoice(voice: (typeof ttsStore.voices)[number]) {
+  if (voice.feature && !serverStore.hasFeature(voice.feature)) {
+    showVipDialog('您选择的语音为会员专属哦\n是否立即开通会员?');
+    return;
+  }
   ttsStore.selectedVoice = voice;
   displayStore.showVoiceSelectSheet = false;
 }
@@ -191,27 +195,22 @@ const remainingTime = computed(() => {
       :max-width="100"
     >
       <template v-for="voice in ttsStore.voices" :key="voice.ChineseName">
-        <van-badge color="#1989fa" :offset="[0, 0]">
-          <template v-if="voice.feature && serverStore.isFeatureVip(voice.feature)" #content>
-            <van-icon name="diamond" class="badge-icon" />
-          </template>
-          <div
-            class="flex shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 text-center text-sm text-[--van-text-color]"
-            :class="[
-              voice.ChineseName === ttsStore.selectedVoice.ChineseName
-                ? 'border-[var(--van-primary-color)]'
-                : 'border-gray-300',
-            ]"
-            @click="selectVoice(voice)"
-          >
-            <div class="flex flex-col items-center gap-1 p-1">
-              <p>{{ voice.ChineseName }}</p>
-              <p class="text-xs text-gray-500">
-                {{ voice.Gender === 'Female' ? '女声' : '男声' }}
-              </p>
-            </div>
+        <div
+          class="flex shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 text-center text-sm text-[--van-text-color]"
+          :class="[
+            voice.ChineseName === ttsStore.selectedVoice.ChineseName
+              ? 'border-[var(--van-primary-color)]'
+              : 'border-gray-300',
+          ]"
+          @click="selectVoice(voice)"
+        >
+          <div class="flex flex-col items-center gap-1 p-1">
+            <p>{{ voice.ChineseName }}</p>
+            <p class="text-xs text-gray-500">
+              {{ voice.Gender === 'Female' ? '女声' : '男声' }}
+            </p>
           </div>
-        </van-badge>
+        </div>
       </template>
     </ResponsiveGrid2>
   </van-action-sheet>

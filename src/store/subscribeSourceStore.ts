@@ -148,6 +148,8 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
 
   const isEmpty = computed(() => subscribeSources.value.length === 0);
   const isLoaded = ref(false);
+  /** 首次启动「导入默认订阅源」等引导弹窗进行中，其它 overlay 应延后展示 */
+  const startupDialogActive = ref(false);
   const isLoading = ref(false);
   let loadingPromise: Promise<void> | null = null;
   let waitLoadingToast: { close: () => void } | null = null;
@@ -775,7 +777,8 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       loadSubscribeSources(true);
 
       if (subscribeSources.value.length === 0) {
-        showConfirmDialog({
+        startupDialogActive.value = true;
+        void showConfirmDialog({
           title: '提示',
           message: '需要添加订阅源才能使用, \n是否立即导入默认订阅源？',
         })
@@ -789,17 +792,19 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
                 }
                 else {
                   showSuccessToast('默认源已导入');
-                  showConfirmDialog({
-                    title: '提示',
-                    message: '您可以在 订阅源市场 添加更多订阅源',
-                    confirmButtonText: '去添加',
-                  })
-                    .then((action) => {
-                      if (action === 'confirm') {
-                        router.push({ name: 'SourceMarket' });
-                      }
-                    })
-                    .catch(() => {});
+                  try {
+                    const followUp = await showConfirmDialog({
+                      title: '提示',
+                      message: '您可以在 订阅源市场 添加更多订阅源',
+                      confirmButtonText: '去添加',
+                    });
+                    if (followUp === 'confirm') {
+                      router.push({ name: 'SourceMarket' });
+                    }
+                  }
+                  catch {
+                    // 用户取消二次提示
+                  }
                 }
               }
               else {
@@ -807,7 +812,10 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
               }
             }
           })
-          .catch(() => {});
+          .catch(() => {})
+          .finally(() => {
+            startupDialogActive.value = false;
+          });
       }
       isLoaded.value = true;
     })().finally(() => {
@@ -884,6 +892,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     loadSyncData,
     isEmpty,
     isLoaded,
+    startupDialogActive,
     isLoading,
     onLoaded,
     waitForLoaded,
