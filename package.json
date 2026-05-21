@@ -1,7 +1,7 @@
 {
   "name": "wuji-app",
   "type": "module",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -64,10 +64,10 @@
     "semver": "^7.7.3",
     "swiper": "^11.2.10",
     "tailwind-scrollbar-hide": "^2.0.0",
+    "tauri-plugin-cast-api": "file:tauri-plugin-cast",
     "tauri-plugin-commands-api": "file:tauri-plugin-commands",
     "tauri-plugin-keep-screen-on-api": "^0.1.4",
     "tauri-plugin-mediasession-api": "file:tauri-plugin-mediasession",
-    "tauri-plugin-cast-api": "file:tauri-plugin-cast",
     "tauri-plugin-mywebview-api": "file:tauri-plugin-mywebview",
     "tinycolor2": "^1.6.0",
     "tunnel": "^0.0.6",
