@@ -1,10 +1,10 @@
-import { invoke } from '@tauri-apps/api/core';
 import type {
   CastControlAction,
   CastMediaResult,
   CastState,
   DiscoverDevicesResult,
 } from './types';
+import { invoke } from '@tauri-apps/api/core';
 
 export type {
   CastControlAction,

@@ -5,6 +5,7 @@ import { defineStore } from 'pinia';
 import { onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { router } from '@/router';
+import { tryDismissOverlay } from '@/utils/overlayBack';
 import { useDisplayStore } from './displayStore';
 
 type CatelogName = 'book' | 'photo' | 'song' | 'comic' | 'video';
@@ -73,7 +74,10 @@ export const useBackStore = defineStore('back', () => {
     }
     return undefined;
   };
-  const back = async (buttonClick = false) => {
+  const back = async (buttonClick = false): Promise<boolean> => {
+    if (displayStore.isAndroid && tryDismissOverlay())
+      return true;
+
     if (displayStore.showLeftPopup) {
       if (
         ['Photo', 'Song', 'Book', 'Comic', 'Video'].includes(
@@ -81,33 +85,14 @@ export const useBackStore = defineStore('back', () => {
         )
       ) {
         displayStore.showLeftPopup = false;
-        return;
-      }
-    }
-    // 检查并关闭书籍阅读相关弹窗
-    if (route.name === 'BookRead') {
-      if (displayStore.showVoiceSelectSheet) {
-        displayStore.showVoiceSelectSheet = false;
-        return;
-      }
-      if (displayStore.showChapters) {
-        displayStore.showChapters = false;
-        return;
-      }
-      if (displayStore.showSettingDialog) {
-        displayStore.showSettingDialog = false;
-        return;
-      }
-      if (displayStore.showViewSettingDialog) {
-        displayStore.showViewSettingDialog = false;
-        return;
+        return true;
       }
     }
 
     if (route.name === 'VideoDetail') {
       if (!buttonClick && displayStore.showVideoPlaylist) {
         displayStore.showVideoPlaylist = false;
-        return;
+        return true;
       }
       else {
         if (displayStore.fullScreenMode) {
@@ -126,7 +111,7 @@ export const useBackStore = defineStore('back', () => {
           else {
             displayStore.fullScreenMode = false;
           }
-          return;
+          return true;
         }
       }
     }
@@ -167,7 +152,7 @@ export const useBackStore = defineStore('back', () => {
       && displayStore.showSongPlayingList
     ) {
       displayStore.showSongPlayingList = false;
-      return;
+      return true;
     }
 
     const prevPath = getPrevPath();
@@ -195,6 +180,7 @@ export const useBackStore = defineStore('back', () => {
         query: prevPath.query,
       });
     }
+    return false;
   };
 
   onMounted(() => {
@@ -218,6 +204,6 @@ export const useBackStore = defineStore('back', () => {
       { immediate: true },
     );
   });
-  window.androidBackCallback = back;
+  window.androidBackCallback = () => back();
   return { back };
 });

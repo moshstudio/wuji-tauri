@@ -181,6 +181,7 @@ function songAddToShelf(song: SongInfo, shelf: SongShelf) {
     </div>
     <van-popup
       v-model:show="showSongPlayingList"
+      close-on-popstate
       position="right"
       :style="{ width: '200px', height: '100%' }"
     >

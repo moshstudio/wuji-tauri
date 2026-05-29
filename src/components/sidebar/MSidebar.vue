@@ -58,6 +58,7 @@ const options: SidebarOption[] = [
     />
     <van-popup
       v-model:show="displayStore.showLeftPopup"
+      close-on-popstate
       z-index="1004"
       position="left"
       teleport="body"

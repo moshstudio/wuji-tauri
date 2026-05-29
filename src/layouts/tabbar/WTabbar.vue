@@ -144,7 +144,11 @@ function updateActiveKey(newPath?: string) {
   const pathName = route.name;
   if (typeof pathName !== 'string')
     return;
-  if (pathName !== 'BookRead' && pathName !== 'ComicRead') {
+  if (
+    pathName !== 'BookRead'
+    && pathName !== 'ComicRead'
+    && !displayStore.fullScreenMode
+  ) {
     displayStore.showTabBar = true;
   }
   if (pathName.startsWith('Home')) {
@@ -266,7 +270,7 @@ watch(
 
     <div class="content flex h-full w-full grow flex-col overflow-hidden">
       <GlobalAnnouncementBar />
-      <div class="min-h-0 min-w-0 flex-1 overflow-hidden">
+      <div class="relative min-h-0 min-w-0 flex-1 overflow-hidden">
         <slot />
       </div>
     </div>

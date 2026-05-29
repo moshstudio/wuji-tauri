@@ -11,6 +11,8 @@ import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
 import { showFailToast, showToast } from 'vant';
 import { computed, onActivated, onDeactivated, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import MembershipCornerBadge from '@/components/badge/MembershipCornerBadge.vue';
+import BookThemePicker from '@/components/book/BookThemePicker.vue';
 import BookSwitchSourceDialog from '@/components/dialog/BookSwitchSource.vue';
 import { router } from '@/router';
 import {
@@ -26,6 +28,7 @@ import {
 import { useBackStore } from '@/store/backStore';
 import { retryOnFalse } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { showMembershipBadge } from '@/utils/membershipBadge';
 import { showVipDialog } from '@/utils/vip';
 import BookReadScroller from './BookReadScroller.vue';
 
@@ -630,41 +633,12 @@ onDeactivated(() => {
       :show-confirm-button="false"
       class="setting-dialog"
     >
-      <div class="flex max-h-[80vh] flex-col overflow-y-auto p-2 text-sm">
-        <div class="pb-1 text-gray-400">
-          文字颜色和背景
+      <div class="flex max-h-[80vh] flex-col overflow-y-auto px-4 py-2 text-sm">
+        <div class="pb-1 text-[var(--van-text-color-2)]">
+          主题
         </div>
-        <div
-          class="grid grid-cols-[repeat(auto-fill,minmax(46px,1fr))] gap-1 p-2"
-        >
-          <div
-            v-for="theme in bookStore.themes"
-            :key="JSON.stringify(theme)"
-            class="flex h-[46px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 text-center text-[10px]"
-            :class="[
-              theme.name === bookStore.currTheme.name
-                ? 'border-[var(--van-primary-color)]'
-                : 'border-gray-300',
-            ]"
-            :style="{
-              color: theme.color || '#333',
-              backgroundColor: theme.bgColor || '#fff',
-              backgroundImage:
-                theme.bgGradient
-                || (theme.bgImage ? `url(${theme.bgImage})` : ''),
-              backgroundRepeat: theme.bgRepeat || 'repeat',
-              backgroundSize: theme.bgSize || 'auto',
-              backgroundPosition: theme.bgPosition || 'center',
-              textShadow: theme.textShadow,
-              boxShadow: theme.boxShadow,
-              ...(theme.customStyle || {}),
-            }"
-            @click="bookStore.currTheme = theme"
-          >
-            <span class="font-medium">{{ theme.name }}</span>
-          </div>
-        </div>
-        <div class="pb-1 text-gray-400">
+        <BookThemePicker />
+        <div class="pb-1 text-[var(--van-text-color-2)]">
           字体
         </div>
         <div
@@ -672,20 +646,21 @@ onDeactivated(() => {
         >
           <template v-for="font in webFonts" :key="font.family">
             <div
-              class="flex h-[46px] w-[46px] shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 text-center text-sm text-[--van-text-color]"
+              class="relative flex h-[46px] w-[46px] shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 text-center text-sm text-[--van-text-color]"
               :class="[
                 font.family === bookStore.fontFamily
                   ? 'border-[var(--van-primary-color)]'
-                  : 'border-gray-300',
+                  : 'border-[var(--van-border-color)]',
               ]"
               :style="{ fontFamily: font.family }"
               @click="selectFont(font)"
             >
               {{ font.label }}
+              <MembershipCornerBadge v-if="showMembershipBadge(font.feature)" />
             </div>
           </template>
         </div>
-        <div class="pb-1 pt-4 text-gray-400">
+        <div class="pb-1 pt-4 text-[var(--van-text-color-2)]">
           字体和样式
         </div>
         <van-cell-group>

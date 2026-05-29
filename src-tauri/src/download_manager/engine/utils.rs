@@ -1,8 +1,20 @@
+use crate::download_manager::task::TaskStatus;
+use crate::download_manager::DownloadManager;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue, ORIGIN, REFERER, USER_AGENT};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::{Duration, SystemTime};
 use url::Url;
+
+/// 任务仍存在且处于下载中（已删除/暂停则返回 false，供 M3U8 分片协程及时退出）
+pub async fn is_task_downloading(manager: &DownloadManager, task_id: &str) -> bool {
+    let inner = manager.lock().await;
+    inner
+        .tasks
+        .get(task_id)
+        .map(|t| matches!(t.status, TaskStatus::Downloading))
+        .unwrap_or(false)
+}
 
 pub fn map_to_header_map(headers: &HashMap<String, String>, url_hint: Option<&str>) -> HeaderMap {
     let mut map = HeaderMap::new();

@@ -112,10 +112,26 @@ impl DownloadManagerInner {
         }
     }
 
-    pub fn remove_task(&mut self, id: &str) -> Option<DownloadTask> {
+    /// 中止主任务及合集子分片 worker（M3U8 内部分片 spawn 需配合任务状态检查）
+    pub fn stop_task_workers(&mut self, id: &str) {
         if let Some(handle) = self.active_workers.remove(id) {
             handle.abort();
         }
+        let chunk_keys: Vec<String> = self
+            .active_workers
+            .keys()
+            .filter(|k| k.starts_with(&format!("{}_chunk_", id)))
+            .cloned()
+            .collect();
+        for key in chunk_keys {
+            if let Some(handle) = self.active_workers.remove(&key) {
+                handle.abort();
+            }
+        }
+    }
+
+    pub fn remove_task(&mut self, id: &str) -> Option<DownloadTask> {
+        self.stop_task_workers(id);
         let task = self.tasks.remove(id);
         self.save_tasks();
         task

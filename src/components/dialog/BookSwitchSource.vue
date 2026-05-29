@@ -36,7 +36,7 @@ const store = useStore();
           <p class="text-base">
             {{ book?.title }}
           </p>
-          <p v-if="book?.author" class="text-xs text-gray-500">
+          <p v-if="book?.author" class="text-xs text-[var(--van-text-color-2)]">
             {{ book.author }}
           </p>
         </div>

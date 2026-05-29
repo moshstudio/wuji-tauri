@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import type { CastDevice } from '@/utils/cast';
 
 const props = withDefaults(

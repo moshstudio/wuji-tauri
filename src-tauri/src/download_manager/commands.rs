@@ -301,24 +301,7 @@ pub async fn pause_task<R: Runtime>(
 ) -> Result<()> {
     let mut inner = manager.lock().await;
 
-    // 停止主任务 worker
-    if let Some(handle) = inner.active_workers.remove(&id) {
-        handle.abort();
-    }
-
-    // 停止所有子分片 worker (针对合集任务)
-    let keys_to_stop: Vec<String> = inner
-        .active_workers
-        .keys()
-        .filter(|k| k.starts_with(&format!("{}_chunk_", id)))
-        .cloned()
-        .collect();
-
-    for key in keys_to_stop {
-        if let Some(handle) = inner.active_workers.remove(&key) {
-            handle.abort();
-        }
-    }
+    inner.stop_task_workers(&id);
 
     inner.update_task_status(&id, TaskStatus::Paused)?;
     if let Some(task) = inner.tasks.get(&id) {

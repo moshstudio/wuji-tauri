@@ -7,11 +7,21 @@ import type { BookSource } from '@/types';
 import type { ReadTheme } from '@/types/book';
 import { debounceFilter, useStorageAsync } from '@vueuse/core';
 import _ from 'lodash';
+import { nanoid } from 'nanoid';
 import { defineStore } from 'pinia';
-import { showFailToast } from 'vant';
-import { computed, onMounted, ref, triggerRef } from 'vue';
+import { showFailToast, showToast } from 'vant';
+import { computed, onMounted, ref, triggerRef, watch } from 'vue';
 import { sleep } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import {
+  findThemeInList,
+  generateCustomThemeName,
+  isCustomTheme,
+  isThemeSelected,
+  MAX_CUSTOM_THEMES,
+  migrateCustomThemes,
+  normalizeThemeColor,
+} from '@/utils/readTheme';
 import { useBookChapterStore } from './bookChaptersStore';
 import { useBookShelfStore } from './bookShelfStore';
 import { useExtensionStore } from './extensionStore';
@@ -162,6 +172,93 @@ export const useBookStore = defineStore('book', () => {
   const customThemes = useStorageAsync<ReadTheme[]>('customReadThemes', []);
   const themes = computed(() => [...defaultThemes, ...customThemes.value]);
   const currTheme = useStorageAsync<ReadTheme>('readTheme', defaultThemes[0]);
+
+  // 迁移旧版自定义主题数据
+  if (customThemes.value.some(t => !t.id || !t.isCustom)) {
+    customThemes.value = migrateCustomThemes(customThemes.value);
+  }
+
+  function selectTheme(theme: ReadTheme) {
+    const resolved = findThemeInList(themes.value, theme) || theme;
+    currTheme.value = { ...resolved };
+  }
+
+  function syncCurrThemeIfNeeded(id: string, patch: Partial<ReadTheme>) {
+    if (currTheme.value.id === id) {
+      currTheme.value = { ...currTheme.value, ...patch };
+    }
+  }
+
+  function addCustomTheme(colors: { color: string; bgColor: string }) {
+    if (customThemes.value.length >= MAX_CUSTOM_THEMES) {
+      showToast(`最多创建 ${MAX_CUSTOM_THEMES} 个自定义主题`);
+      return;
+    }
+    const theme: ReadTheme = {
+      id: nanoid(),
+      isCustom: true,
+      name: generateCustomThemeName(customThemes.value),
+      color: normalizeThemeColor(colors.color),
+      bgColor: normalizeThemeColor(colors.bgColor),
+    };
+    customThemes.value = [...customThemes.value, theme];
+    selectTheme(theme);
+    return theme;
+  }
+
+  function updateCustomTheme(
+    id: string,
+    patch: { color?: string; bgColor?: string },
+  ) {
+    const index = customThemes.value.findIndex(t => t.id === id);
+    if (index < 0)
+      return;
+    const updated: ReadTheme = {
+      ...customThemes.value[index],
+      ...(patch.color !== undefined
+        ? { color: normalizeThemeColor(patch.color) }
+        : {}),
+      ...(patch.bgColor !== undefined
+        ? { bgColor: normalizeThemeColor(patch.bgColor) }
+        : {}),
+    };
+    const next = [...customThemes.value];
+    next[index] = updated;
+    customThemes.value = next;
+    syncCurrThemeIfNeeded(id, {
+      color: updated.color,
+      bgColor: updated.bgColor,
+    });
+    if (isThemeSelected(currTheme.value, updated)) {
+      selectTheme(updated);
+    }
+  }
+
+  function removeCustomTheme(id: string) {
+    const removed = customThemes.value.find(t => t.id === id);
+    if (!removed)
+      return;
+    customThemes.value = customThemes.value.filter(t => t.id !== id);
+    if (isThemeSelected(currTheme.value, removed)) {
+      selectTheme(defaultThemes[0]);
+    }
+  }
+
+  // 启动时若当前主题为已删除的自定义主题，回退默认
+  watch(
+    customThemes,
+    () => {
+      if (currTheme.value.isCustom && currTheme.value.id) {
+        const exists = customThemes.value.some(
+          t => t.id === currTheme.value.id,
+        );
+        if (!exists)
+          selectTheme(defaultThemes[0]);
+      }
+    },
+    { immediate: true },
+  );
+
   const fullScreenClickToNext = useStorageAsync(
     'readFullScreenClickToNext',
     false,
@@ -407,7 +504,13 @@ export const useBookStore = defineStore('book', () => {
     paddingBottom,
 
     themes,
+    customThemes,
     currTheme,
+    isCustomTheme,
+    selectTheme,
+    addCustomTheme,
+    updateCustomTheme,
+    removeCustomTheme,
 
     fullScreenClickToNext,
 

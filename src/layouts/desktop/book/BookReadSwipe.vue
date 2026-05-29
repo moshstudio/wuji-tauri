@@ -732,6 +732,7 @@ onDeactivated(() => {
 
     <van-popup
       v-model:show="isShowChapterList"
+      close-on-popstate
       teleport="body"
       position="right"
       :style="{
@@ -778,7 +779,7 @@ onDeactivated(() => {
               icon="material-symbols-light:download-done-rounded"
               width="20"
               height="20"
-              class="text-gray-400"
+              class="text-[var(--van-text-color-3)]"
             />
           </div>
         </template>

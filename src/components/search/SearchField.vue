@@ -122,7 +122,7 @@ function clearHistory() {
         </van-cell-group>
       </div>
       <div
-        class="van-haptics-feedback sticky bottom-0 border-gray-200 px-4 py-2 text-center text-sm text-gray-500"
+        class="van-haptics-feedback sticky bottom-0 border-t border-[var(--van-border-color)] px-4 py-2 text-center text-sm text-[var(--van-text-color-2)]"
         @click="clearHistory"
       >
         清空历史记录

@@ -241,6 +241,7 @@ onDeactivated(() => {
     </div>
     <van-popup
       v-model:show="isShowChapterList"
+      close-on-popstate
       teleport="body"
       position="left"
       :style="{

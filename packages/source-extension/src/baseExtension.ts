@@ -14,9 +14,15 @@ import forge from 'node-forge';
 import pLimit from 'p-limit';
 import * as uuid from 'uuid';
 import {
+  isAbsoluteUrl,
   maxPageNoFromElements,
   urlJoin as myUrlJoin,
 } from './utils/element.ts';
+import {
+  decodeBuffer,
+  detectCharset,
+  normalizeCharset,
+} from './utils/encoding.ts';
 import { getM3u8ProxyUrl, getProxyUrl } from './utils/proxy.ts';
 import { fetchWebview } from './utils/webview.ts';
 
@@ -225,7 +231,11 @@ abstract class Extension {
         }
         else {
           const buffer = await response.arrayBuffer();
-          const text = new TextDecoder(encoding || 'utf8').decode(buffer);
+          const contentType = response.headers.get('content-type');
+          const resolvedEncoding = encoding
+            ? normalizeCharset(encoding)
+            : detectCharset(buffer, contentType, this.iconv);
+          const text = decodeBuffer(buffer, resolvedEncoding, this.iconv);
           return new DOMParser().parseFromString(text, domType || 'text/html');
         }
       }
@@ -262,7 +272,10 @@ abstract class Extension {
         const img = element.querySelector(cover);
         let coverE
           = img?.getAttribute('data-original')
+            || img?.getAttribute('data-original-src')
+            || img?.getAttribute('lazy-src')
             || img?.getAttribute('data-lazy-src')
+            || img?.getAttribute('data-lazy-original-src')
             || img?.getAttribute('data-img')
             || img?.getAttribute('data-src')
             || img?.getAttribute('src')
@@ -273,7 +286,7 @@ abstract class Extension {
             );
 
         if (coverE) {
-          if (!coverE.startsWith('http')) {
+          if (!isAbsoluteUrl(coverE)) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
             }
@@ -313,7 +326,7 @@ abstract class Extension {
           id: this.urlJoin(this.baseUrl, urlE),
           title: titleE.trim(),
           intro: introE?.trim() || undefined,
-          cover: coverE ? this.urlJoin(this.baseUrl, coverE) : undefined,
+          cover: coverE || undefined,
           coverHeaders,
           author: authorE?.trim() || undefined,
           tags: tagsE.length
@@ -359,6 +372,9 @@ abstract class Extension {
         const img = element.querySelector(cover);
         let coverE
           = img?.getAttribute('data-original')
+            || img?.getAttribute('data-original-src')
+            || img?.getAttribute('data-lazy-original-src')
+            || img?.getAttribute('lazy-src')
             || img?.getAttribute('data-lazy-src')
             || img?.getAttribute('data-img')
             || img?.getAttribute('data-src')
@@ -370,7 +386,7 @@ abstract class Extension {
             );
 
         if (coverE) {
-          if (!coverE.startsWith('http')) {
+          if (!isAbsoluteUrl(coverE)) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
             }
@@ -415,9 +431,7 @@ abstract class Extension {
           id: this.urlJoin(baseUrl ?? this.baseUrl, urlE),
           title: titleE.trim(),
           intro: introE?.trim() || undefined,
-          cover: coverE
-            ? this.urlJoin(baseUrl ?? this.baseUrl, coverE)
-            : undefined,
+          cover: coverE || undefined,
           coverHeaders,
           releaseDate: releaseDateE?.trim() || undefined,
           country: countryE?.trim() || undefined,
@@ -459,6 +473,9 @@ abstract class Extension {
         const img = element.querySelector(cover);
         let coverE
           = img?.getAttribute('data-original')
+            || img?.getAttribute('data-original-src')
+            || img?.getAttribute('data-lazy-original-src')
+            || img?.getAttribute('lazy-src')
             || img?.getAttribute('data-lazy-src')
             || img?.getAttribute('data-img')
             || img?.getAttribute('data-src')
@@ -469,7 +486,7 @@ abstract class Extension {
               '$1',
             );
         if (coverE) {
-          if (!coverE.startsWith('http')) {
+          if (!isAbsoluteUrl(coverE)) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
             }
@@ -510,9 +527,7 @@ abstract class Extension {
           id: this.urlJoin(this.baseUrl, urlE),
           title: titleE?.trim() || '',
           desc: descE?.trim() || undefined,
-          cover: coverE
-            ? this.urlJoin(coverDomain ?? this.baseUrl, coverE)
-            : '',
+          cover: coverE || '',
           coverHeaders,
           author: authorE?.trim() || undefined,
           datetime: datetimeE?.trim() || undefined,
@@ -545,6 +560,9 @@ abstract class Extension {
         const img = element.querySelector(picUrl);
         let coverE
           = img?.getAttribute('data-original')
+            || img?.getAttribute('data-original-src')
+            || img?.getAttribute('data-lazy-original-src')
+            || img?.getAttribute('lazy-src')
             || img?.getAttribute('data-lazy-src')
             || img?.getAttribute('data-img')
             || img?.getAttribute('data-src')
@@ -555,7 +573,7 @@ abstract class Extension {
               '$1',
             );
         if (coverE) {
-          if (!coverE.startsWith('http')) {
+          if (!isAbsoluteUrl(coverE)) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
             }
@@ -595,9 +613,7 @@ abstract class Extension {
           id: this.urlJoin(this.baseUrl, urlE),
           name: titleE.trim(),
           desc: descE?.trim() || undefined,
-          picUrl: coverE
-            ? this.urlJoin(coverDomain ?? this.baseUrl, coverE)
-            : '',
+          picUrl: coverE || '',
           picHeaders,
           creator: authorE?.trim() ? { name: authorE.trim() } : undefined,
           createTime: datetimeE?.trim() || undefined,
@@ -629,6 +645,9 @@ abstract class Extension {
         const img = element.querySelector(picUrl);
         let coverE
           = img?.getAttribute('data-original')
+            || img?.getAttribute('data-original-src')
+            || img?.getAttribute('data-lazy-original-src')
+            || img?.getAttribute('lazy-src')
             || img?.getAttribute('data-lazy-src')
             || img?.getAttribute('data-img')
             || img?.getAttribute('data-src')
@@ -639,7 +658,7 @@ abstract class Extension {
               '$1',
             );
         if (coverE) {
-          if (!coverE.startsWith('http')) {
+          if (!isAbsoluteUrl(coverE)) {
             if (coverE.startsWith('//')) {
               coverE = `https:${coverE}`;
             }
@@ -681,9 +700,7 @@ abstract class Extension {
         list.push({
           id: this.urlJoin(this.baseUrl, urlE),
           name: titleE.trim(),
-          picUrl: coverE
-            ? this.urlJoin(coverDomain ?? this.baseUrl, coverE)
-            : '',
+          picUrl: coverE || '',
           picHeaders,
           artists: authorE
             ? authorE.map(a => a.textContent || '')

@@ -11,8 +11,10 @@ import { Icon } from '@iconify/vue';
 import { useResizeObserver, useWindowSize } from '@vueuse/core';
 import { castArray } from 'lodash';
 import { computed, ref, watch } from 'vue';
+import MembershipFeatureWrap from '@/components/badge/MembershipFeatureWrap.vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import { useDisplayStore } from '@/store';
+import { MembershipFeature } from '@/utils/membershipBadge';
 
 const props = defineProps<{
   player?: Player;
@@ -105,13 +107,14 @@ useResizeObserver(videoListElement, (entries) => {
             }
           "
         />
-        <div
+        <MembershipFeatureWrap
           v-if="displayStore.isAndroid"
-          class="van-haptics-feedback flex cursor-pointer items-center p-2"
+          :feature="MembershipFeature.VideoCast"
+          class="van-haptics-feedback cursor-pointer p-2"
           @click="onCast?.()"
         >
           <Icon icon="mdi:cast" width="22" height="22" />
-        </div>
+        </MembershipFeatureWrap>
         <van-icon
           name="down"
           size="22"

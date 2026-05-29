@@ -76,6 +76,92 @@ export interface ClientConfig {
 }
 
 const ERROR_REQUEST_CANCELLED = 'Request canceled';
+const WUJI_CACHE_FRAGMENT = '#wuji-cache=';
+const WUJI_CACHE_FP_HEADER = 'x-wuji-cache-fp';
+
+/** 将 HeadersInit 规范化为稳定字符串（用于缓存 fingerprint） */
+function serializeHeaders(headers?: HeadersInit): string {
+  if (!headers) {
+    return '';
+  }
+  const normalized = new Headers(headers);
+  const entries: [string, string][] = [];
+  normalized.forEach((value, name) => {
+    entries.push([name.toLowerCase(), value]);
+  });
+  entries.sort(([a], [b]) => a.localeCompare(b));
+  return JSON.stringify(entries);
+}
+
+/** 汇总会影响响应内容的请求参数 */
+function buildCacheFingerprint(
+  input: URL | Request | string,
+  init?: RequestInit & ClientOptions,
+  imageAndCompress = false,
+): string {
+  const method
+    = init?.method ?? (input instanceof Request ? input.method : 'GET');
+  const headers
+    = init?.headers ?? (input instanceof Request ? input.headers : undefined);
+
+  return JSON.stringify({
+    method: method.toUpperCase(),
+    headers: serializeHeaders(headers),
+    maxRedirections: init?.maxRedirections ?? null,
+    connectTimeout: init?.connectTimeout ?? null,
+    verify: init?.verify ?? null,
+    noProxy: init?.noProxy ?? null,
+    compress: imageAndCompress,
+  });
+}
+
+async function hashString(text: string): Promise<string> {
+  const data = new TextEncoder().encode(text);
+  if (globalThis.crypto?.subtle) {
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  let hash = 5381;
+  for (let i = 0; i < text.length; i++) {
+    hash = ((hash << 5) + hash) ^ text.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(16);
+}
+
+/** 每个资源 URL 固定一个 cache key（仅区分是否压缩） */
+function buildCacheStorageKey(url: string, imageAndCompress: boolean): string {
+  return `${url}${WUJI_CACHE_FRAGMENT}${imageAndCompress ? '1' : '0'}`;
+}
+
+async function buildCacheFingerprintHash(
+  input: URL | Request | string,
+  init?: RequestInit & ClientOptions,
+  imageAndCompress = false,
+): Promise<string> {
+  const fingerprint = buildCacheFingerprint(input, init, imageAndCompress);
+  const hash = await hashString(fingerprint);
+  return hash.slice(0, 16);
+}
+
+function withCacheFingerprint(response: Response, fingerprint: string): Response {
+  const headers = new Headers(response.headers);
+  headers.set(WUJI_CACHE_FP_HEADER, fingerprint);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+/** 直接删除已知的旧版 cache key（无需遍历 cache） */
+async function deleteLegacyCacheKeys(cache: Cache, url: string): Promise<void> {
+  await Promise.all([
+    cache.delete(`${url}true`),
+    cache.delete(`${url}false`),
+  ]);
+}
 
 async function formatClientConfig(
   input: URL | Request | string,
@@ -293,13 +379,23 @@ export async function cachedFetch(
     = inputUrl.startsWith('http://') || inputUrl.startsWith('https://');
 
   if ('caches' in window && isSupportedScheme) {
-    const cacheKey = inputUrl + imageAndCompress.toString();
+    const cacheKey = buildCacheStorageKey(inputUrl, imageAndCompress);
+    const fingerprint = await buildCacheFingerprintHash(
+      input,
+      init,
+      imageAndCompress,
+    );
     const cache = await caches.open('wuji-cache');
 
     const cachedResponse = await cache.match(cacheKey);
     if (cachedResponse) {
-      return cachedResponse;
+      if (cachedResponse.headers.get(WUJI_CACHE_FP_HEADER) === fingerprint) {
+        return cachedResponse;
+      }
+      await cache.delete(cacheKey);
     }
+    await deleteLegacyCacheKeys(cache, inputUrl);
+
     let response = await fetch(input, init);
 
     if (response.ok) {
@@ -320,7 +416,10 @@ export async function cachedFetch(
             libURL: imageCompressionUrl,
           });
           response = new Response(compressedFile);
-          cache.put(cacheKey, response.clone());
+          await cache.put(
+            cacheKey,
+            withCacheFingerprint(response.clone(), fingerprint),
+          );
         }
         catch (error) {
           console.warn(
@@ -333,7 +432,10 @@ export async function cachedFetch(
         }
       }
       else {
-        cache.put(cacheKey, response.clone());
+        await cache.put(
+          cacheKey,
+          withCacheFingerprint(response.clone(), fingerprint),
+        );
       }
     }
     return response;

@@ -24,7 +24,6 @@ import {
   computed,
   nextTick,
   onDeactivated,
-  onMounted,
   onUnmounted,
   ref,
   watch,
@@ -219,8 +218,6 @@ const getPlayUrl = createCancellableFunction(async (signal: AbortSignal) => {
 
 async function loadData() {
   await runLoader(async (signal) => {
-    createPlayer();
-
     videoSource.value = undefined;
     videoItem.value = undefined;
     videoSrc.value = undefined;
@@ -601,12 +598,19 @@ const nextEpisode = computed(() => {
   return playingResource.value.episodes[index + 1];
 });
 
+/** 播放器重建代数，用于忽略 destroy/初始化阶段的全屏事件 */
+let playerSetupGen = 0;
+
 async function createPlayer(video?: VideoUrlMap) {
+  const setupGen = ++playerSetupGen;
   const volume = videoVolume.value || 1;
   const rate = videoPlaybackRate.value || 1;
   videoPlayer.value?.destroy();
   videoPlayer.value?.offAll();
   await nextTick();
+  if (setupGen !== playerSetupGen) {
+    return;
+  }
   const item = videoItem.value;
   const resource = playingResource.value;
   const episode = playingEpisode.value;
@@ -674,9 +678,15 @@ async function createPlayer(video?: VideoUrlMap) {
     videoPlayer.value.registerPlugin(VideoNamePlugin, {
       videoName,
     });
-    videoPlayer.value.on(Events.FULLSCREEN_CHANGE, (isFullScreen) => {
-      displayStore.fullScreenMode = isFullScreen;
-    });
+    // Android 使用下方 fullscreen hook 驱动布局全屏，避免与 FULLSCREEN_CHANGE 冲突
+    if (!displayStore.isAndroid) {
+      videoPlayer.value.on(Events.FULLSCREEN_CHANGE, (isFullScreen) => {
+        if (setupGen !== playerSetupGen) {
+          return;
+        }
+        displayStore.fullScreenMode = isFullScreen;
+      });
+    }
     videoPlayer.value.on(Events.PLAY, () => {
       if (route.name !== 'VideoDetail' || activeCastDevice.value) {
         videoPlayer.value?.pause();
@@ -735,8 +745,12 @@ async function createPlayer(video?: VideoUrlMap) {
     videoPlayer.value
       .getPlugin('fullscreen')
       .useHooks('fullscreenChange', (plugin: Fullscreen) => {
-        displayStore.fullScreenMode = !displayStore.fullScreenMode;
-        plugin.animate(displayStore.fullScreenMode);
+        if (setupGen !== playerSetupGen) {
+          return false;
+        }
+        const next = !displayStore.fullScreenMode;
+        displayStore.fullScreenMode = next;
+        plugin.animate(next);
       });
   }
   videoPlayer.value.getPlugin('error').useHooks('showError', () => {
@@ -836,21 +850,18 @@ function registerCastAutoNextHandler() {
   });
 }
 
-onMounted(async () => {
-  registerCastAutoNextHandler();
-  await nextTick();
-  await createPlayer();
-});
-
 onUnmounted(() => {
+  playerSetupGen++;
   setCastAutoNextHandler(null);
   videoPlayer.value?.destroy();
+  displayStore.fullScreenMode = false;
 });
 
 // 声明式状态栏控制：视频详情页强制全黑背景
 useStatusBar('#000000', 'light');
 
 onMountedOrActivated(() => {
+  displayStore.fullScreenMode = false;
   registerCastAutoNextHandler();
   if (displayStore.isAndroid) {
     keepScreenOn(true);
@@ -862,10 +873,6 @@ onMountedOrActivated(() => {
       keyboard.config.disable = false;
     }
   }
-  // if (savedVideoSrc && savedVideoSrc.isLive) {
-  //   videoSrc.value = savedVideoSrc;
-  //   savedVideoSrc = undefined;
-  // }
   if (shouldReload.value) {
     loadData();
   }
@@ -873,12 +880,11 @@ onMountedOrActivated(() => {
     videoSrc.value = savedVideoSrc;
     savedVideoSrc = undefined;
   }
-  else {
-    createPlayer();
-  }
 });
 
 onDeactivated(() => {
+  playerSetupGen++;
+  displayStore.fullScreenMode = false;
   if (displayStore.isAndroid) {
     keepScreenOn(false);
     void endCastSession();

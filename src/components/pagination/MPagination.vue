@@ -124,6 +124,7 @@ function changePage(params: PickerConfirmEventParams) {
       </van-button> -->
       <van-popup
         v-model:show="showPicker"
+        close-on-popstate
         destroy-on-close
         round
         position="bottom"

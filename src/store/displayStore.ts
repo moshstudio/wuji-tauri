@@ -43,9 +43,10 @@ export const useDisplayStore = defineStore('display', () => {
   watch(
     fullScreenMode,
     async (val) => {
-      fullScreenMode.value = val;
       if (val) {
-        showTabBar.value = false;
+        if (showTabBar.value) {
+          showTabBar.value = false;
+        }
         if (isAndroid.value) {
           // 横屏
           await commands.set_screen_orientation('landscape');
@@ -55,7 +56,9 @@ export const useDisplayStore = defineStore('display', () => {
         }
       }
       else {
-        showTabBar.value = true;
+        if (!showTabBar.value) {
+          showTabBar.value = true;
+        }
         if (isAndroid.value) {
           await commands.set_screen_orientation('portrait');
         }

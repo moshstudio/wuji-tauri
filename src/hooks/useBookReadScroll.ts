@@ -534,11 +534,13 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
         bookStore.currTheme.bgGradient || bookStore.currTheme.bgImage || '',
       backgroundRepeat: bookStore.currTheme.bgRepeat || 'repeat',
       backgroundSize: bookStore.currTheme.bgSize || 'auto',
+      backgroundPosition: bookStore.currTheme.bgPosition || '0 0',
       backgroundAttachment: bookStore.currTheme.bgAttachment,
       backgroundBlendMode: bookStore.currTheme.bgBlendMode,
       textShadow: bookStore.currTheme.textShadow,
       boxShadow: bookStore.currTheme.boxShadow,
       border: bookStore.currTheme.border,
+      textDecoration: bookStore.underline ? 'underline solid 0.5px' : 'none',
     };
 
     if (bookStore.currTheme.customStyle) {

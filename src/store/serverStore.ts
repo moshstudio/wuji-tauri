@@ -342,6 +342,16 @@ export const useServerStore = defineStore('serverStore', () => {
     };
   });
 
+  /** 功能是否标注为 VIP 或 Pro 会员专属（用于展示角标等） */
+  const isMembershipGatedFeature = computed(() => {
+    return (featureKey: string): boolean => {
+      const feature = featureList.value.find(f => f.key === featureKey);
+      if (!feature)
+        return false;
+      return feature.enableVip || feature.enablePro;
+    };
+  });
+
   const getDeviceInfo = async () => {
     const family = os.family();
     const osType = os.type();
@@ -913,6 +923,7 @@ export const useServerStore = defineStore('serverStore', () => {
     isPro,
     isVipOrPro,
     hasFeature,
+    isMembershipGatedFeature,
     myMarketSources,
     membershipPlans,
     featureList,

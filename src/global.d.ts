@@ -1,6 +1,6 @@
 // Global Window interface extension
 interface Window {
-  androidBackCallback?: () => void;
+  androidBackCallback?: () => boolean | void | Promise<boolean | void>;
   sendGreeting?: () => void;
 }
 

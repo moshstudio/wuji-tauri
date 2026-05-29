@@ -1,5 +1,15 @@
 import _urlJoin from 'url-join';
 
+export function isAbsoluteUrl(url: string): boolean {
+  return (
+    url.startsWith('http://')
+    || url.startsWith('https://')
+    || url.startsWith('blob:')
+    || url.startsWith('data:')
+    || url.startsWith('//')
+  );
+}
+
 export function maxPageNoFromElements(
   elements?: NodeListOf<Element> | null,
   onlyKeepNumbers = true,

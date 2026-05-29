@@ -36,7 +36,7 @@ const store = useStore();
           <p class="text-base">
             {{ comic?.title }}
           </p>
-          <p v-if="comic?.author" class="text-xs text-gray-500">
+          <p v-if="comic?.author" class="text-xs text-[var(--van-text-color-2)]">
             {{ comic.author }}
           </p>
         </div>

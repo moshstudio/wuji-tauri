@@ -1,4 +1,6 @@
-use crate::download_manager::engine::utils::{map_to_header_map, normalize_url};
+use crate::download_manager::engine::utils::{
+    is_task_downloading, map_to_header_map, normalize_url,
+};
 use crate::download_manager::error::{Error, Result};
 use crate::download_manager::task::TaskStatus;
 use crate::download_manager::DownloadManager;
@@ -151,11 +153,16 @@ pub async fn start_m3u8_download<R: Runtime>(
     .await;
 
     if let Err(e) = res {
+        if matches!(e, Error::TaskStopped) {
+            return Ok(());
+        }
         log::error!("[M3U8] Download failed: {}", e);
         let mut inner = manager.lock().await;
-        let _ = inner.update_task_status(&task_id, TaskStatus::Error(e.to_user_message()));
-        if let Some(task) = inner.tasks.get(&task_id) {
-            let _ = app.emit("download-progress", task.clone());
+        if inner.tasks.contains_key(&task_id) {
+            let _ = inner.update_task_status(&task_id, TaskStatus::Error(e.to_user_message()));
+            if let Some(task) = inner.tasks.get(&task_id) {
+                let _ = app.emit("download-progress", task.clone());
+            }
         }
         return Err(e);
     }
@@ -410,6 +417,11 @@ pub async fn download_m3u8_to_path<R: Runtime>(
 
         segment_futures.push(tokio::spawn(async move {
             let _permit = semaphore.acquire().await.unwrap();
+
+            if !is_task_downloading(&manager, &task_id).await {
+                return Err(Error::TaskStopped);
+            }
+
             let temp_file = temp_dir.join(format!("{:06}.ts", i));
             let temp_file_dl = temp_dir.join(format!("{:06}.ts.dl", i));
 
@@ -419,8 +431,19 @@ pub async fn download_m3u8_to_path<R: Runtime>(
                 let mut success = false;
 
                 while retry_count <= max_retries {
+                    if !is_task_downloading(&manager, &task_id).await {
+                        return Err(Error::TaskStopped);
+                    }
+
                     let mut bytes_in_this_attempt = 0;
                     let download_res = async {
+                        if !temp_dir.exists() {
+                            if !is_task_downloading(&manager, &task_id).await {
+                                return Err(Error::TaskStopped);
+                            }
+                            fs::create_dir_all(&temp_dir).await?;
+                        }
+
                         let mut resp = client
                             .get(segment_url.as_str())
                             .headers(map_to_header_map(&headers, Some(segment_url.as_str())))
@@ -430,12 +453,22 @@ pub async fn download_m3u8_to_path<R: Runtime>(
                         if resp.status().is_success() {
                             let total_seg_size = resp.content_length();
                             let mut seg_data_len = 0;
-                            let mut file = OpenOptions::new()
+                            let mut file = match OpenOptions::new()
                                 .write(true)
                                 .create(true)
                                 .truncate(true)
                                 .open(&temp_file_dl)
-                                .await?;
+                                .await
+                            {
+                                Ok(f) => f,
+                                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                                    if !is_task_downloading(&manager, &task_id).await {
+                                        return Err(Error::TaskStopped);
+                                    }
+                                    return Err(Error::Io(e));
+                                }
+                                Err(e) => return Err(Error::Io(e)),
+                            };
 
                             while let Some(chunk) = resp.chunk().await? {
                                 file.write_all(&chunk).await?;
@@ -474,6 +507,8 @@ pub async fn download_m3u8_to_path<R: Runtime>(
                                         inner.last_update_times.insert(task_id.clone(), now);
                                         let _ = app.emit("download-progress", task_clone);
                                     }
+                                } else {
+                                    return Err(Error::TaskStopped);
                                 }
                             }
                             file.flush().await?;
@@ -490,9 +525,10 @@ pub async fn download_m3u8_to_path<R: Runtime>(
                         break;
                     } else {
                         let err = download_res.unwrap_err();
-                        // 如果是人为暂停引发的停止，直接退出不再重试
-                        if matches!(err, Error::TaskStopped) {
-                            // 失败回滚当前尝试的下载量
+                        // 任务已删除/暂停，或临时目录被清理：静默退出，避免删除后仍刷屏重试
+                        if matches!(err, Error::TaskStopped)
+                            || (!is_task_downloading(&manager, &task_id).await)
+                        {
                             let mut inner = manager.lock().await;
                             if let Some(task) = inner.get_task_mut(&task_id) {
                                 task.downloaded_size =
@@ -501,7 +537,7 @@ pub async fn download_m3u8_to_path<R: Runtime>(
                                     task.chunk_progress.remove(&(i as u32));
                                 }
                             }
-                            return Err(err);
+                            return Err(Error::TaskStopped);
                         }
 
                         // 失败回滚当前尝试的下载量
@@ -581,8 +617,17 @@ pub async fn download_m3u8_to_path<R: Runtime>(
         }));
     }
 
+    let mut stopped = false;
     for result in futures_util::future::join_all(segment_futures).await {
-        result.map_err(|e| Error::Other(format!("线程执行失败: {}", e)))??;
+        match result {
+            Ok(Ok(())) => {}
+            Ok(Err(Error::TaskStopped)) => stopped = true,
+            Ok(Err(e)) => return Err(e),
+            Err(e) => return Err(Error::Other(format!("线程执行失败: {}", e))),
+        }
+    }
+    if stopped {
+        return Err(Error::TaskStopped);
     }
 
     // 4. 合并分片 (并执行解密)

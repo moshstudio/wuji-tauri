@@ -15,13 +15,15 @@ function shouldExclude() {
 </script>
 
 <template>
-  <router-view v-slot="{ Component }">
-    <transition :name="(route.meta.transition as string) || ''">
-      <keep-alive :exclude="shouldExclude()">
-        <component :is="Component" />
-      </keep-alive>
-    </transition>
-  </router-view>
+  <div class="router-transition-host relative h-full w-full overflow-hidden">
+    <router-view v-slot="{ Component }">
+      <transition :name="(route.meta.transition as string) || ''">
+        <keep-alive :exclude="shouldExclude()">
+          <component :is="Component" />
+        </keep-alive>
+      </transition>
+    </router-view>
+  </div>
 </template>
 
 <style scoped lang="less">
@@ -29,8 +31,7 @@ function shouldExclude() {
 .fade-leave-active {
   transition: opacity 0.5s ease;
   position: absolute;
-  width: 100%;
-  height: 100%;
+  inset: 0;
 }
 
 .fade-enter-from {
@@ -52,8 +53,7 @@ function shouldExclude() {
 .slide-left-leave-active {
   transition: all 0.5s ease;
   position: absolute;
-  width: 100%;
-  height: 100%;
+  inset: 0;
 }
 
 .slide-right-enter-from {

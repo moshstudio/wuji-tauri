@@ -241,6 +241,7 @@ onDeactivated(() => {
     </div>
     <van-popup
       v-model:show="isShowChapterList"
+      close-on-popstate
       position="right"
       :style="{
         minWidth: '30%',

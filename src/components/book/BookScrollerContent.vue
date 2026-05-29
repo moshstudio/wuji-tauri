@@ -30,14 +30,15 @@ const ttsStore = useTTSStore();
         index === 0 ? 'text-2xl font-bold text-center' : '',
       ]"
       :style="{
-        fontSize: index === 0 ? `${bookStore.fontSize * 1.5}px` : `${bookStore.fontSize}px`,
+        fontSize: index === 0 ? `${bookStore.fontSize * 1.3}px` : `${bookStore.fontSize}px`,
         fontWeight: index === 0 ? Math.min(bookStore.fontWeight + 200, 900) : bookStore.fontWeight,
         fontFamily: bookStore.fontFamily,
         lineHeight: index === 0 ? bookStore.lineHeight * 1.3 : bookStore.lineHeight,
-        paddingTop: index === 0 ? '24px' : `${bookStore.readPGap}px`,
-        paddingBottom: index === 0 ? '24px' : '0px',
+        paddingTop: index === 0 ? '0px' : `${bookStore.readPGap}px`,
+        paddingBottom: index === 0 ? `${bookStore.readPGap * 1.3}px` : '0px',
         textIndent: index === 0 ? '0' : '2em',
         textAlign: index === 0 ? 'center' : 'justify',
+        textAlignLast: 'auto',
         backgroundColor:
           ttsStore.isReading
           && ttsStore.scrollReadingContent?.chapterId === lc.chapter.id

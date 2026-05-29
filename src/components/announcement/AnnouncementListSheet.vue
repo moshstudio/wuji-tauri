@@ -58,6 +58,7 @@ async function openLink(link: string) {
 <template>
   <van-popup
     v-model:show="show"
+    close-on-popstate
     position="bottom"
     round
     teleport="body"
@@ -67,7 +68,7 @@ async function openLink(link: string) {
   >
     <div class="flex max-h-[75vh] flex-col overflow-hidden">
       <div
-        class="shrink-0 border-b border-[var(--van-border-color)] px-4 py-3 text-center text-base font-semibold"
+        class="shrink-0 border-b border-[var(--van-border-color)] px-4 py-3 text-center text-base font-semibold text-[var(--van-text-color)]"
       >
         全部公告
       </div>
@@ -128,7 +129,7 @@ async function openLink(link: string) {
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   line-height: 1.5;
-  color: var(--van-gray-6);
+  color: var(--van-text-color-2);
 }
 
 .announcement-body {
@@ -150,14 +151,14 @@ async function openLink(link: string) {
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.4;
-  color: var(--van-gray-6);
+  color: var(--van-text-color-2);
 }
 
 .announcement-link-hint {
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.4;
-  color: var(--van-gray-6);
+  color: var(--van-text-color-2);
 }
 
 :deep(.announcement-cell.van-cell) {

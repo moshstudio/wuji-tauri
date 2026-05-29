@@ -1,6 +1,10 @@
 import type { BookChapter, BookItem } from '@wuji-tauri/source-extension';
 
 export interface ReadTheme {
+  /** 自定义主题唯一标识 */
+  id?: string;
+  /** 是否为用户创建的自定义主题 */
+  isCustom?: boolean;
   name: string;
   color?: string;
   bgColor?: string;

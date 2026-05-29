@@ -225,7 +225,7 @@ const activeChapterProgress = computed(() => {
     <!-- 滚动内容区 —— 多章节无限滚动 -->
     <div
       ref="scrollContainer"
-      class="h-full w-full overflow-y-auto relative"
+      class="h-full w-full overflow-y-auto relative underline-offset-[6px]"
       :style="[computedStyle, { overflowAnchor: 'none' }]"
       @click="onClickContent"
     >
@@ -337,6 +337,7 @@ const activeChapterProgress = computed(() => {
     <!-- 桌面端章节侧边栏 -->
     <van-popup
       v-model:show="displayStore.showChapters"
+      close-on-popstate
       teleport="body"
       position="right"
       :style="{ height: '100%', maxWidth: '70%', backgroundColor: 'var(--van-background)' }"
@@ -352,7 +353,7 @@ const activeChapterProgress = computed(() => {
             <span class="flex-grow truncate" :class="activeChapterId === item.id ? 'text-[var(--van-primary-color)]' : 'text-[var(--van-text-color)]'">
               {{ item.title }}
             </span>
-            <Icon v-if="book && bookCacheStore.chapterInCache(book, item)" icon="material-symbols-light:download-done-rounded" width="20" height="20" class="text-gray-400" />
+            <Icon v-if="book && bookCacheStore.chapterInCache(book, item)" icon="material-symbols-light:download-done-rounded" width="20" height="20" class="text-[var(--van-text-color-3)]" />
           </div>
         </template>
       </van-list>

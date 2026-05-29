@@ -18,13 +18,13 @@ export interface CastState {
   hasFinished?: boolean;
 }
 
-export type CastControlAction =
-  | 'play'
-  | 'pause'
-  | 'stop'
-  | 'seek'
-  | 'setVolume'
-  | 'mute';
+export type CastControlAction
+  = | 'play'
+    | 'pause'
+    | 'stop'
+    | 'seek'
+    | 'setVolume'
+    | 'mute';
 
 export interface DiscoverDevicesResult {
   devices: CastDevice[];
