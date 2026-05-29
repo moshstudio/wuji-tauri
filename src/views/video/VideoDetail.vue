@@ -26,6 +26,7 @@ import {
   onDeactivated,
   onUnmounted,
   ref,
+  toRefs,
   watch,
 } from 'vue';
 import { useRoute } from 'vue-router';
@@ -73,10 +74,11 @@ import { showVipDialog } from '@/utils/vip';
 import { fetWebview } from '@/utils/webview';
 import 'xgplayer/dist/index.min.css';
 
-const { videoId, sourceId } = defineProps<{
+const props = defineProps<{
   videoId: string;
   sourceId: string;
 }>();
+const { videoId, sourceId } = toRefs(props);
 
 const downloadStore = useDownloadStore();
 const serverStore = useServerStore();
@@ -217,6 +219,8 @@ const getPlayUrl = createCancellableFunction(async (signal: AbortSignal) => {
 });
 
 async function loadData() {
+  pinControls();
+  await initPlayerShell();
   await runLoader(async (signal) => {
     videoSource.value = undefined;
     videoItem.value = undefined;
@@ -225,7 +229,7 @@ async function loadData() {
     playingEpisode.value = undefined;
     shouldReload.value = false;
 
-    if (!videoId || !sourceId) {
+    if (!videoId.value || !sourceId.value) {
       showFailToast('跳转参数错误');
       shouldReload.value = true;
       return true;
@@ -240,12 +244,12 @@ async function loadData() {
       return true;
     }
 
-    const source = store.getVideoSource(sourceId);
+    const source = store.getVideoSource(sourceId.value);
     if (!source) {
       const subscribeSource = subscribeStore.subscribeSources.find(s =>
-        s.detail.urls.some(u => u.id === sourceId),
+        s.detail.urls.some(u => u.id === sourceId.value),
       );
-      const urlItem = subscribeSource?.detail.urls.find(u => u.id === sourceId);
+      const urlItem = subscribeSource?.detail.urls.find(u => u.id === sourceId.value);
 
       if (urlItem && (urlItem.disable || subscribeSource?.disable)) {
         showFailToast('视频源已禁用，请在订阅源管理中启用');
@@ -261,7 +265,7 @@ async function loadData() {
     }
 
     videoSource.value = source;
-    videoItem.value = store.getVideoItem(source, videoId!);
+    videoItem.value = store.getVideoItem(source, videoId.value!);
     if (!videoItem.value) {
       shouldReload.value = true;
       return false;
@@ -319,6 +323,7 @@ async function loadData() {
 }
 
 async function play(resource: VideoResource, episode: VideoEpisode) {
+  pinControls();
   videoSrc.value = undefined;
   playingResource.value = resource;
   playingEpisode.value = episode;
@@ -326,12 +331,13 @@ async function play(resource: VideoResource, episode: VideoEpisode) {
     resource,
     episode,
   });
+  await initPlayerShell();
   await getPlayUrl();
 }
 
 const inShelf = computed(() => {
   const result = videoShelf.value.some(shelf =>
-    shelf.videos.some(video => video.video.id === videoId),
+    shelf.videos.some(video => video.video.id === videoId.value),
   );
   return result;
 });
@@ -601,12 +607,60 @@ const nextEpisode = computed(() => {
 /** 播放器重建代数，用于忽略 destroy/初始化阶段的全屏事件 */
 let playerSetupGen = 0;
 
+/** 加载/切源至正式播放前，强制保持 controls 可见（含返回按钮） */
+const controlsPinned = ref(false);
+
+function applyControlsVisibility() {
+  const player = videoPlayer.value;
+  if (!player)
+    return;
+  const controls = player.controls;
+  const autoHide = !controlsPinned.value && !!videoSrc.value?.url;
+  // controls.root 在播放器销毁后会变为 null，需防止访问空指针
+  if (controls?.root) {
+    controls.config.autoHide = autoHide;
+    if (controlsPinned.value) {
+      controls.pauseAutoHide?.();
+    }
+    else {
+      controls.recoverAutoHide?.();
+    }
+    try {
+      controls.show();
+    }
+    catch { /* controls.root 可能在 destroy 后短暂为 null */ }
+  }
+  try {
+    player.focus({ autoHide });
+  }
+  catch { /* 播放器销毁过渡期忽略 */ }
+}
+
+function pinControls() {
+  controlsPinned.value = true;
+  applyControlsVisibility();
+}
+
+function unpinControls() {
+  controlsPinned.value = false;
+  applyControlsVisibility();
+}
+
+async function initPlayerShell() {
+  await nextTick();
+  if (route.name !== 'VideoDetail' || !videoElement.value) {
+    return;
+  }
+  await createPlayer(undefined);
+}
+
 async function createPlayer(video?: VideoUrlMap) {
   const setupGen = ++playerSetupGen;
   const volume = videoVolume.value || 1;
   const rate = videoPlaybackRate.value || 1;
   videoPlayer.value?.destroy();
   videoPlayer.value?.offAll();
+  videoPlayer.value = undefined;
   await nextTick();
   if (setupGen !== playerSetupGen) {
     return;
@@ -656,7 +710,7 @@ async function createPlayer(video?: VideoUrlMap) {
     },
     controls: {
       initShow: true,
-      autoHide: !!video?.url,
+      autoHide: !controlsPinned.value && !!video?.url,
     },
   });
   videoPlayer.value.registerPlugin(BackButtonPlugin, {
@@ -669,15 +723,20 @@ async function createPlayer(video?: VideoUrlMap) {
       showPlaylist.value = !showPlaylist.value;
     },
   });
-  videoPlayer.value.controls?.show();
+  applyControlsVisibility();
   if (casting) {
     videoPlayer.value.pause();
   }
-  if (item && resource && episode) {
-    const videoName = `${item.title || ''} - ${episode.title || ''}`;
+  // 无论是否已有 episode，都先注册 VideoNamePlugin，保证空壳期间也有标题显示
+  {
+    const initialName = item && episode
+      ? `${item.title || ''} - ${episode.title || ''}`
+      : item?.title || '';
     videoPlayer.value.registerPlugin(VideoNamePlugin, {
-      videoName,
+      videoName: initialName,
     });
+  }
+  if (item && resource && episode) {
     // Android 使用下方 fullscreen hook 驱动布局全屏，避免与 FULLSCREEN_CHANGE 冲突
     if (!displayStore.isAndroid) {
       videoPlayer.value.on(Events.FULLSCREEN_CHANGE, (isFullScreen) => {
@@ -690,7 +749,9 @@ async function createPlayer(video?: VideoUrlMap) {
     videoPlayer.value.on(Events.PLAY, () => {
       if (route.name !== 'VideoDetail' || activeCastDevice.value) {
         videoPlayer.value?.pause();
+        return;
       }
+      unpinControls();
     });
     videoPlayer.value.on(Events.PLAYNEXT, () => {
       playNext();
@@ -754,7 +815,7 @@ async function createPlayer(video?: VideoUrlMap) {
       });
   }
   videoPlayer.value.getPlugin('error').useHooks('showError', () => {
-    videoPlayer.value?.controls?.show();
+    pinControls();
   });
 }
 
@@ -766,7 +827,6 @@ watch(videoSrc, async (newVideo) => {
     }
     return;
   }
-  console.log('load video src:', newVideo);
   await createPlayer(newVideo);
   if (activeCastDevice.value) {
     videoPlayer.value?.pause();
@@ -802,6 +862,23 @@ watch(
   { flush: 'post' },
 );
 
+// 监听视频标题/集数变化，立即刷新 controls 顶栏显示的名称
+watch(
+  [videoItem, playingEpisode],
+  ([newItem, newEpisode]) => {
+    const namePlugin = videoPlayer.value?.getPlugin(
+      'videoNamePlugin',
+    ) as VideoNamePlugin | undefined;
+    if (!namePlugin)
+      return;
+    const name = newItem && newEpisode
+      ? `${newItem.title || ''} - ${newEpisode.title || ''}`
+      : newItem?.title || '';
+    namePlugin.setVideoName(name);
+  },
+  { flush: 'post' },
+);
+
 watch(
   inShelf,
   (newInShelf) => {
@@ -818,14 +895,20 @@ watch(
   { flush: 'post' },
 );
 
-let savedVideoSrc: VideoUrlMap | undefined;
+interface SavedPlayback {
+  videoId: string;
+  sourceId: string;
+  src: VideoUrlMap;
+}
+
+let savedPlayback: SavedPlayback | undefined;
 
 watch(
-  [() => videoId, () => sourceId],
+  [videoId, sourceId],
   async () => {
     webviewFallbackTriedUrls.clear();
-    savedVideoSrc = undefined;
-    loadData();
+    savedPlayback = undefined;
+    await loadData();
   },
   { immediate: true },
 );
@@ -854,6 +937,7 @@ onUnmounted(() => {
   playerSetupGen++;
   setCastAutoNextHandler(null);
   videoPlayer.value?.destroy();
+  videoPlayer.value = undefined;
   displayStore.fullScreenMode = false;
 });
 
@@ -874,26 +958,35 @@ onMountedOrActivated(() => {
     }
   }
   if (shouldReload.value) {
-    loadData();
+    void loadData();
   }
-  else if (savedVideoSrc) {
-    videoSrc.value = savedVideoSrc;
-    savedVideoSrc = undefined;
+  else if (
+    savedPlayback
+    && savedPlayback.videoId === videoId.value
+    && savedPlayback.sourceId === sourceId.value
+  ) {
+    pinControls();
+    videoSrc.value = savedPlayback.src;
+    savedPlayback = undefined;
+  }
+  else if (savedPlayback) {
+    savedPlayback = undefined;
+    void loadData();
+  }
+  else if (route.name === 'VideoDetail' && !videoPlayer.value) {
+    pinControls();
+    void initPlayerShell();
   }
 });
 
 onDeactivated(() => {
   playerSetupGen++;
+  controlsPinned.value = false;
   displayStore.fullScreenMode = false;
   if (displayStore.isAndroid) {
     keepScreenOn(false);
     void endCastSession();
   }
-  // try {
-  //   videoPlayer.value?.pause();
-  // } catch (error) {
-  //   console.warn('video player pause error', error);
-  // }
   if (videoPlayer.value) {
     const keyboard = videoPlayer.value.getPlugin('keyboard');
     if (keyboard) {
@@ -901,13 +994,18 @@ onDeactivated(() => {
       keyboard.config.disable = true;
     }
   }
-  // if (videoSrc.value?.isLive) {
-  //   savedVideoSrc = videoSrc.value;
-  //   videoPlayer.value?.destroy();
-  //   videoSrc.value = undefined;
-  // }
-  savedVideoSrc = videoSrc.value;
+  if (videoSrc.value) {
+    savedPlayback = {
+      videoId: videoId.value,
+      sourceId: sourceId.value,
+      src: videoSrc.value,
+    };
+  }
+  else {
+    savedPlayback = undefined;
+  }
   videoPlayer.value?.destroy();
+  videoPlayer.value = undefined;
   videoSrc.value = undefined;
 });
 
