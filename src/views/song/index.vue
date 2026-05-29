@@ -6,6 +6,7 @@ import {
   SongSelectShelfSheet,
 } from '@wuji-tauri/components';
 import { storeToRefs } from 'pinia';
+import { showLoadingToast } from 'vant';
 import { ref } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppSongList from '@/layouts/app/song/SongList.vue';
@@ -80,19 +81,41 @@ async function recommend(force: boolean = false) {
 }
 
 async function playlistToPage(source: SongSource, pageNo: number) {
-  if (!searchValue.value) {
-    await store.songRecommendPlayist(source, pageNo);
+  const toast = showLoadingToast({
+    message: '加载中',
+    duration: 0,
+    closeOnClick: true,
+    closeOnClickOverlay: false,
+  });
+  try {
+    if (!searchValue.value) {
+      await store.songRecommendPlayist(source, pageNo);
+    }
+    else {
+      await store.songSearchPlaylist(source, searchValue.value, pageNo);
+    }
   }
-  else {
-    await store.songSearchPlaylist(source, searchValue.value, pageNo);
+  finally {
+    toast.close();
   }
 }
 async function songToPage(source: SongSource, pageNo: number) {
-  if (!searchValue.value) {
-    await store.songRecommendSong(source, pageNo);
+  const toast = showLoadingToast({
+    message: '加载中',
+    duration: 0,
+    closeOnClick: true,
+    closeOnClickOverlay: false,
+  });
+  try {
+    if (!searchValue.value) {
+      await store.songRecommendSong(source, pageNo);
+    }
+    else {
+      await store.songSearchSong(source, searchValue.value, pageNo);
+    }
   }
-  else {
-    await store.songSearchSong(source, searchValue.value, pageNo);
+  finally {
+    toast.close();
   }
 }
 

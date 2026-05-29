@@ -3,7 +3,7 @@ import type { VideoItem } from '@wuji-tauri/source-extension';
 import type { VideoSource } from '@/types';
 import type { VideoHistory } from '@/types/video';
 import { storeToRefs } from 'pinia';
-import { showConfirmDialog, showToast } from 'vant';
+import { showConfirmDialog, showLoadingToast, showToast } from 'vant';
 import { ref, triggerRef } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppVideoList from '@/layouts/app/video/VideoList.vue';
@@ -68,11 +68,22 @@ const toPage = createCancellableFunction(
     pageNo?: number,
     type?: string,
   ) => {
-    if (!searchValue.value) {
-      await store.videoRecommendList(source, pageNo, type);
+    const toast = showLoadingToast({
+      message: '加载中',
+      duration: 0,
+      closeOnClick: true,
+      closeOnClickOverlay: false,
+    });
+    try {
+      if (!searchValue.value) {
+        await store.videoRecommendList(source, pageNo, type);
+      }
+      else {
+        await store.videoSearch(source, searchValue.value, pageNo);
+      }
     }
-    else {
-      await store.videoSearch(source, searchValue.value, pageNo);
+    finally {
+      toast.close();
     }
   },
 );

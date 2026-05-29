@@ -66,11 +66,22 @@ const toPage = createCancellableFunction(
     pageNo?: number,
     type?: string,
   ) => {
-    if (!searchValue.value) {
-      await store.comicRecommendList(source, pageNo, type);
+    const toast = showLoadingToast({
+      message: '加载中',
+      duration: 0,
+      closeOnClick: true,
+      closeOnClickOverlay: false,
+    });
+    try {
+      if (!searchValue.value) {
+        await store.comicRecommendList(source, pageNo, type);
+      }
+      else {
+        await store.comicSearch(source, searchValue.value, pageNo);
+      }
     }
-    else {
-      await store.comicSearch(source, searchValue.value, pageNo);
+    finally {
+      toast.close();
     }
   },
 );

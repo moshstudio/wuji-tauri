@@ -66,11 +66,22 @@ const toPage = createCancellableFunction(
     pageNo?: number,
     type?: string,
   ) => {
-    if (!searchValue.value) {
-      await store.bookRecommendList(source, pageNo, type);
+    const toast = showLoadingToast({
+      message: '加载中',
+      duration: 0,
+      closeOnClick: true,
+      closeOnClickOverlay: false,
+    });
+    try {
+      if (!searchValue.value) {
+        await store.bookRecommendList(source, pageNo, type);
+      }
+      else {
+        await store.bookSearch(source, searchValue.value, pageNo);
+      }
     }
-    else {
-      await store.bookSearch(source, searchValue.value, pageNo);
+    finally {
+      toast.close();
     }
   },
 );
