@@ -18,7 +18,7 @@ const props = defineProps<{
   bookHistory: BookHistory[];
   recommend: (force?: boolean) => void;
   search: (keyword: string) => void;
-  toPage: (source: BookSource, pageNo?: number, type?: string) => void;
+  toPage: (source: BookSource, pageNo?: number, type?: string, showLoading?: boolean) => void;
   toDetail: (source: BookSource, item: BookItem) => void;
   historyToBook: (book: BookHistory) => void;
   clearHistory: () => void;

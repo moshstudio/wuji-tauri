@@ -18,7 +18,7 @@ const props = defineProps<{
   comicHistory: ComicHistory[];
   recommend: (force?: boolean) => void;
   search: (keyword: string) => void;
-  toPage: (source: ComicSource, pageNo?: number, type?: string) => void;
+  toPage: (source: ComicSource, pageNo?: number, type?: string, showLoading?: boolean) => void;
   toDetail: (source: ComicSource, item: ComicItem) => void;
   historyToComic: (comic: ComicHistory) => void;
   clearHistory: () => void;

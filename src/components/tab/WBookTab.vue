@@ -17,6 +17,7 @@ const props = defineProps<{
     source: BookSource,
     pageNo?: number,
     type?: string,
+    showLoading?: boolean,
   ) => Promise<any> | void;
   toDetail: (source: BookSource, item: BookItem) => void;
 }>();
@@ -57,7 +58,7 @@ function changePage(index: number, pageNo?: number) {
   else {
     t = props.source.list;
   }
-  props.toPage(props.source, pageNo, t.type);
+  props.toPage(props.source, pageNo, t.type, true);
 }
 
 function toDetail(item: BookItem) {

@@ -17,6 +17,7 @@ import CMS_VIDEO_TEMPLATE from '@/components/codeEditor/templates/cmsVideoTempla
 import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import VideoJsPlugin from '@/components/media/plugins/videoJs';
+import { resolveVideoUrlMap } from '@/utils/videoMediaType';
 import 'xgplayer/dist/index.min.css';
 
 const props = defineProps<{
@@ -141,8 +142,8 @@ async function load() {
     if (!res) {
       throw new Error('获取播放地址失败!');
     }
-    result.value = res;
-    videoSrc.value = res;
+    result.value = await resolveVideoUrlMap(res);
+    videoSrc.value = result.value;
     props.updateResult('video', 'playUrl', result.value, true);
     runStatus.value = RunStatus.success;
   }

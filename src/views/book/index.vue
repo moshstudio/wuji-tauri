@@ -65,13 +65,16 @@ const toPage = createCancellableFunction(
     source: BookSource,
     pageNo?: number,
     type?: string,
+    showLoading = false,
   ) => {
-    const toast = showLoadingToast({
-      message: '加载中',
-      duration: 0,
-      closeOnClick: true,
-      closeOnClickOverlay: false,
-    });
+    const toast = showLoading
+      ? showLoadingToast({
+          message: '加载中',
+          duration: 0,
+          closeOnClick: true,
+          closeOnClickOverlay: false,
+        })
+      : null;
     try {
       if (!searchValue.value) {
         await store.bookRecommendList(source, pageNo, type);
@@ -81,7 +84,7 @@ const toPage = createCancellableFunction(
       }
     }
     finally {
-      toast.close();
+      toast?.close();
     }
   },
 );

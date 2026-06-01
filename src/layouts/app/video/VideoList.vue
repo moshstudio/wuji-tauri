@@ -18,7 +18,7 @@ const props = defineProps<{
   videoHistory: VideoHistory[];
   recommend: (force?: boolean) => void;
   search: (keyword: string) => void;
-  toPage: (source: VideoSource, pageNo?: number, type?: string) => void;
+  toPage: (source: VideoSource, pageNo?: number, type?: string, showLoading?: boolean) => void;
   toDetail: (source: VideoSource, item: VideoItem) => void;
   historyToVideo: (video: VideoHistory) => void;
   clearHistory: () => void;

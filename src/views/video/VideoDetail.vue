@@ -9,6 +9,7 @@ import type {
 import type Fullscreen from 'xgplayer/es/plugins/fullscreen';
 import type FavoriteButtonPlugin from '@/components/media/plugins/favoriteButton';
 import type { CastDevice } from '@/utils/cast';
+import type { PlayableVideoMediaType } from '@/utils/videoMediaType';
 import type { FetchWebviewResult } from '@/utils/webview';
 import { onMountedOrActivated } from '@vant/use';
 import _ from 'lodash';
@@ -70,6 +71,11 @@ import {
   startDlnaCast,
   warmupCastDiscovery,
 } from '@/utils/cast';
+import {
+  canonicalizeVideoType,
+  getVideoTypeRetryCandidates,
+  resolveVideoUrlMap,
+} from '@/utils/videoMediaType';
 import { showVipDialog } from '@/utils/vip';
 import { fetWebview } from '@/utils/webview';
 import 'xgplayer/dist/index.min.css';
@@ -108,16 +114,36 @@ const playingEpisode = ref<VideoEpisode>();
 const videoSrc = ref<VideoUrlMap>();
 const webviewFallbackTriedUrls = new Set<string>();
 const webviewFallbackRunning = ref(false);
+/** 按播放 URL 记录已尝试过的媒体类型（播放失败时轮换） */
+const playbackTypeTriedByUrl = new Map<string, Set<PlayableVideoMediaType>>();
 
-function normalizeVideoTypeByUrl(url: string): VideoUrlMap['type'] {
-  const lower = url.toLowerCase();
-  if (lower.includes('.m3u8'))
-    return 'm3u8';
-  if (lower.includes('.mp4'))
-    return 'mp4';
-  if (lower.includes('.mpd'))
-    return 'dash';
-  return 'm3u8';
+function getPlaybackTypeTried(url: string) {
+  let tried = playbackTypeTriedByUrl.get(url);
+  if (!tried) {
+    tried = new Set();
+    playbackTypeTriedByUrl.set(url, tried);
+  }
+  return tried;
+}
+
+function resetPlaybackTypeRetries(url?: string) {
+  if (url)
+    playbackTypeTriedByUrl.delete(url);
+  else
+    playbackTypeTriedByUrl.clear();
+}
+
+async function applyResolvedVideoSrc(
+  src: VideoUrlMap,
+  signal?: AbortSignal,
+) {
+  const resolved = await resolveVideoUrlMap(src, { signal });
+  if (signal?.aborted)
+    return;
+  const canonical = canonicalizeVideoType(resolved.type);
+  if (canonical)
+    getPlaybackTypeTried(resolved.url).add(canonical);
+  videoSrc.value = resolved;
 }
 
 function extractPlayableUrlFromWebviewResult(ret: FetchWebviewResult): string | null {
@@ -172,10 +198,10 @@ async function tryWebviewFallbackPlay(originalUrl?: string) {
     const nextSrc: VideoUrlMap = {
       ...(videoSrc.value || {}),
       url: playableUrl,
-      type: normalizeVideoTypeByUrl(playableUrl),
     };
     console.log('[VideoDetail] webview fallback resolved url', nextSrc.url);
-    videoSrc.value = nextSrc;
+    resetPlaybackTypeRetries();
+    await applyResolvedVideoSrc(nextSrc);
   }
   catch (error) {
     console.warn('[VideoDetail] webview fallback failed', error);
@@ -211,7 +237,8 @@ const getPlayUrl = createCancellableFunction(async (signal: AbortSignal) => {
   if (signal.aborted)
     return;
   if (url) {
-    videoSrc.value = url;
+    resetPlaybackTypeRetries(url.url);
+    await applyResolvedVideoSrc(url, signal);
   }
   else {
     showFailToast('播放地址获取失败');
@@ -220,11 +247,17 @@ const getPlayUrl = createCancellableFunction(async (signal: AbortSignal) => {
 
 async function loadData() {
   pinControls();
+  destroyVideoPlayer();
+  withoutVideoSrcWatch(() => {
+    videoSrc.value = undefined;
+  });
   await initPlayerShell();
   await runLoader(async (signal) => {
     videoSource.value = undefined;
     videoItem.value = undefined;
-    videoSrc.value = undefined;
+    withoutVideoSrcWatch(() => {
+      videoSrc.value = undefined;
+    });
     playingResource.value = undefined;
     playingEpisode.value = undefined;
     shouldReload.value = false;
@@ -324,12 +357,15 @@ async function loadData() {
 
 async function play(resource: VideoResource, episode: VideoEpisode) {
   pinControls();
-  videoSrc.value = undefined;
+  destroyVideoPlayer();
   playingResource.value = resource;
   playingEpisode.value = episode;
   shelfStore.updateVideoPlayInfo(videoItem.value!, {
     resource,
     episode,
+  });
+  withoutVideoSrcWatch(() => {
+    videoSrc.value = undefined;
   });
   await initPlayerShell();
   await getPlayUrl();
@@ -607,6 +643,63 @@ const nextEpisode = computed(() => {
 /** 播放器重建代数，用于忽略 destroy/初始化阶段的全屏事件 */
 let playerSetupGen = 0;
 
+/** 程序化更新 videoSrc 时跳过 watch，避免与 initPlayerShell 重复 createPlayer */
+let videoSrcWatchLock = 0;
+
+function withoutVideoSrcWatch<T>(fn: () => T): T {
+  videoSrcWatchLock++;
+  try {
+    return fn();
+  }
+  finally {
+    videoSrcWatchLock--;
+  }
+}
+
+function cleanupMediaElements() {
+  if (!videoElement.value)
+    return;
+  videoElement.value.querySelectorAll('video, audio').forEach((el) => {
+    const media = el as HTMLMediaElement;
+    media.pause();
+    media.removeAttribute('src');
+    try {
+      media.load();
+    }
+    catch { /* 忽略 load 失败 */ }
+  });
+}
+
+function stopVideoPlayer() {
+  const player = videoPlayer.value;
+  if (player) {
+    try {
+      player.pause();
+    }
+    catch { /* 忽略 */ }
+    try {
+      (player.getPlugin('VideoJsPlugin') as { destroy?: () => void } | undefined)
+        ?.destroy?.();
+    }
+    catch { /* 忽略 */ }
+    try {
+      player.destroy();
+    }
+    catch { /* 忽略 */ }
+    try {
+      player.offAll();
+    }
+    catch { /* 忽略 */ }
+  }
+  videoPlayer.value = undefined;
+  cleanupMediaElements();
+}
+
+function destroyVideoPlayer() {
+  playerSetupGen++;
+  stopVideoPlayer();
+}
+
 /** 加载/切源至正式播放前，强制保持 controls 可见（含返回按钮） */
 const controlsPinned = ref(false);
 
@@ -658,9 +751,7 @@ async function createPlayer(video?: VideoUrlMap) {
   const setupGen = ++playerSetupGen;
   const volume = videoVolume.value || 1;
   const rate = videoPlaybackRate.value || 1;
-  videoPlayer.value?.destroy();
-  videoPlayer.value?.offAll();
-  videoPlayer.value = undefined;
+  stopVideoPlayer();
   await nextTick();
   if (setupGen !== playerSetupGen) {
     return;
@@ -796,7 +887,25 @@ async function createPlayer(video?: VideoUrlMap) {
 
   videoPlayer.value.on(Events.ERROR, (error) => {
     console.warn(`播放失败: ${JSON.stringify(error)}`);
-    tryWebviewFallbackPlay(video?.url);
+    const currentSrc = videoSrc.value;
+    const playUrl = currentSrc?.url ?? video?.url;
+    if (playUrl && currentSrc && !currentSrc.isLive && currentSrc.type !== 'rtmp') {
+      const tried = getPlaybackTypeTried(playUrl);
+      const currentType = canonicalizeVideoType(currentSrc.type);
+      if (currentType)
+        tried.add(currentType);
+      const [nextType] = getVideoTypeRetryCandidates(currentSrc.type, tried);
+      if (nextType) {
+        tried.add(nextType);
+        console.warn(
+          `[VideoDetail] 类型 ${currentSrc.type ?? '(none)'} 播放失败，重试 ${nextType}`,
+        );
+        pinControls();
+        videoSrc.value = { ...currentSrc, type: nextType };
+        return;
+      }
+    }
+    tryWebviewFallbackPlay(playUrl);
   });
   videoPlayer.value.getPlugin('error').useHooks('errorRetry', () => {
     getPlayUrl();
@@ -820,6 +929,9 @@ async function createPlayer(video?: VideoUrlMap) {
 }
 
 watch(videoSrc, async (newVideo) => {
+  if (videoSrcWatchLock > 0) {
+    return;
+  }
   if (route.name !== 'VideoDetail') {
     // 页面已切换
     if (videoPlayer.value?.isPlaying) {
@@ -907,6 +1019,7 @@ watch(
   [videoId, sourceId],
   async () => {
     webviewFallbackTriedUrls.clear();
+    resetPlaybackTypeRetries();
     savedPlayback = undefined;
     await loadData();
   },
@@ -934,10 +1047,8 @@ function registerCastAutoNextHandler() {
 }
 
 onUnmounted(() => {
-  playerSetupGen++;
   setCastAutoNextHandler(null);
-  videoPlayer.value?.destroy();
-  videoPlayer.value = undefined;
+  destroyVideoPlayer();
   displayStore.fullScreenMode = false;
 });
 
@@ -980,7 +1091,6 @@ onMountedOrActivated(() => {
 });
 
 onDeactivated(() => {
-  playerSetupGen++;
   controlsPinned.value = false;
   displayStore.fullScreenMode = false;
   if (displayStore.isAndroid) {
@@ -1004,9 +1114,10 @@ onDeactivated(() => {
   else {
     savedPlayback = undefined;
   }
-  videoPlayer.value?.destroy();
-  videoPlayer.value = undefined;
-  videoSrc.value = undefined;
+  destroyVideoPlayer();
+  withoutVideoSrcWatch(() => {
+    videoSrc.value = undefined;
+  });
 });
 
 async function onDownload() {

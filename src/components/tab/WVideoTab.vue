@@ -5,7 +5,7 @@ import MVideoTab from './MVideoTab.vue';
 
 defineProps<{
   source: VideoSource;
-  toPage: (source: VideoSource, pageNo?: number, type?: string) => void;
+  toPage: (source: VideoSource, pageNo?: number, type?: string, showLoading?: boolean) => void;
   toDetail: (source: VideoSource, item: VideoItem) => void;
 }>();
 </script>

@@ -1,8 +1,10 @@
+import type { VideoUrlMap } from '@wuji-tauri/source-extension';
 import type { IBasePluginOptions } from 'xgplayer';
 import VideoJs from 'video.js';
 import { BasePlugin, Events } from 'xgplayer';
+import { toVideoJsMimeType } from '@/utils/videoMediaType';
 
-type VideoSourceType = 'm3u8' | 'mp4' | 'hls' | 'dash' | 'rtmp';
+type VideoSourceType = NonNullable<VideoUrlMap['type']>;
 
 class VideoJsPlugin extends BasePlugin {
   url?: string;
@@ -22,24 +24,10 @@ class VideoJsPlugin extends BasePlugin {
     super(args);
   }
 
-  private getVideoJsMimeType(type?: VideoSourceType): string | undefined {
-    switch (type) {
-      case 'm3u8':
-      case 'hls':
-        return 'application/x-mpegURL';
-      case 'mp4':
-        return 'video/mp4';
-      case 'dash':
-        return 'application/dash+xml';
-      default:
-        return undefined;
-    }
-  }
-
   private loadSource(url?: string, type?: VideoSourceType) {
     if (!url)
       return;
-    const mimeType = this.getVideoJsMimeType(type);
+    const mimeType = toVideoJsMimeType(type);
     console.log('videojs load url', url, type ? `(type: ${type})` : '');
     if (mimeType) {
       this.videoPlayer?.src({
@@ -70,6 +58,8 @@ class VideoJsPlugin extends BasePlugin {
     this.sourceType = (this.player.config as any).videoType;
     this.on(Events.URL_CHANGE, (url: string) => {
       this.url = url;
+      this.sourceType = (this.player.config as { videoType?: VideoSourceType })
+        .videoType;
       this.loadSource(this.url, this.sourceType);
     });
   }

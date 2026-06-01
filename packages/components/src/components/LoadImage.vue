@@ -47,8 +47,6 @@ async function processSrc(
   src: string,
   headers?: Record<string, string>,
 ): Promise<string> {
-  console.log(src, headers);
-
   if (!src || src.trim() === '') {
     return '';
   }
