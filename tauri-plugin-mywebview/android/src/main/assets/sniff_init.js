@@ -15,33 +15,73 @@
         if (item && item.url) resourceMap.set(item.url, index);
     });
 
-    // 强制静音媒体元素（优化：只定义一次，避免循环重定义）
+    // 保存原始描述符，用于在 native 层实际设置静音
+    var origMutedDesc, origVolumeDesc;
+    try {
+        origMutedDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'muted');
+        origVolumeDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'volume');
+    } catch (e) {}
+
+    // --- 0.5 劫持 Image.src，尽早捕获图片请求 ---
+    try {
+        var imgSrcDescriptor = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+        if (imgSrcDescriptor) {
+            Object.defineProperty(HTMLImageElement.prototype, 'src', {
+                set: function(val) {
+                    if (val) addResource(val, 'Property (img.src)', { type: 'image' });
+                    return imgSrcDescriptor.set.apply(this, arguments);
+                },
+                get: function() { return imgSrcDescriptor.get.apply(this, arguments); },
+                configurable: true
+            });
+        }
+    } catch (e) {}
+
+    function nativeMute(elem) {
+        try {
+            if (origMutedDesc && origMutedDesc.set) origMutedDesc.set.call(elem, true);
+            if (origVolumeDesc && origVolumeDesc.set) origVolumeDesc.set.call(elem, 0);
+            elem.setAttribute('muted', 'muted');
+        } catch (e) {}
+    }
+
     try {
         if (!HTMLMediaElement.prototype._mutedPatched) {
-            var origMutedDescriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'muted');
             Object.defineProperty(HTMLMediaElement.prototype, 'muted', {
                 get: function() { return true; },
-                set: function() { },
+                set: function() { nativeMute(this); },
                 configurable: true
             });
             Object.defineProperty(HTMLMediaElement.prototype, 'volume', {
                 get: function() { return 0; },
-                set: function() { },
+                set: function() { nativeMute(this); },
                 configurable: true
             });
+
+            var origPlay = HTMLMediaElement.prototype.play;
+            HTMLMediaElement.prototype.play = function() {
+                nativeMute(this);
+                return origPlay.apply(this, arguments);
+            };
+
             HTMLMediaElement.prototype._mutedPatched = true;
         }
     } catch (e) {}
 
     function forceMute(elem) {
         try {
-            // 优化：检查属性值，避免重复触发样式重算
-            if (elem.getAttribute('muted') !== 'muted') elem.setAttribute('muted', 'muted');
+            nativeMute(elem);
             if (elem.getAttribute('autoplay') !== 'autoplay') elem.setAttribute('autoplay', 'autoplay');
-            if (!elem.muted) elem.muted = true;
-            if (elem.volume !== 0) elem.volume = 0;
         } catch (e) {}
     }
+
+    // 捕获所有 play/volumechange 事件，确保始终静音
+    document.addEventListener('play', function(e) {
+        if (e.target && e.target.tagName && (e.target.tagName === 'VIDEO' || e.target.tagName === 'AUDIO')) nativeMute(e.target);
+    }, true);
+    document.addEventListener('volumechange', function(e) {
+        if (e.target && e.target.tagName && (e.target.tagName === 'VIDEO' || e.target.tagName === 'AUDIO')) nativeMute(e.target);
+    }, true);
 
     // 工具：推断类型
     function guessType(url, ct) {
@@ -86,6 +126,15 @@
         return isTarget && isSmall;
     }
 
+    // 判断 URL 是否为流媒体分片（HLS .ts / DASH .m4s），而非主资源（m3u8/mpd/mp4）
+    function isStreamSegment(url) {
+        if (!url) return false;
+        var u = url.toLowerCase().split('?')[0].split('#')[0];
+        if (/\.m4s$/.test(u)) return true;
+        if (/\.ts$/.test(u)) return true;
+        return false;
+    }
+
     function addResource(url, source, details) {
         if (!url || typeof url !== 'string' || url.length > 2048 || url.startsWith('data:') || url.startsWith('blob:')) return;
         
@@ -109,6 +158,8 @@
                 return;
             }
 
+            var segment = (type === 'video' || type === 'audio') && isStreamSegment(absoluteUrl);
+
             var newItem = {
                 url: absoluteUrl,
                 type: type,
@@ -119,6 +170,7 @@
                 size: details.size || null,
                 requestData: details.requestData || null,
                 responseBody: details.responseBody || null,
+                isSegment: segment,
                 timestamp: Date.now()
             };
 
@@ -180,7 +232,8 @@
         }
     } catch(e) {}
 
-    // --- 1. 劫持 XHR (使用原型拦截，性能更好) ---
+    // --- 1. 劫持 XHR ---
+    // 在 send() 时立即记录 URL，load 时仅补充元数据，不阻塞 URL 的发现
     try {
         var XHRProto = XMLHttpRequest.prototype;
         var origOpen = XHRProto.open;
@@ -193,22 +246,26 @@
         };
 
         XHRProto.send = function(data) {
-            if (data && typeof data === 'string') this._wuji_reqData = data.substring(0, 2000);
+            var reqData = (data && typeof data === 'string') ? data.substring(0, 2000) : null;
+            this._wuji_reqData = reqData;
+            // 立即记录请求 URL，不等待响应完成
+            addResource(this._wuji_url, 'XHR', {
+                method: this._wuji_method,
+                requestData: reqData
+            });
+            // 响应完成后补充 contentType / size / responseBody
             this.addEventListener('load', function() {
                 try {
                     var ct = this.getResponseHeader('Content-Type');
                     var cl = this.getResponseHeader('Content-Length');
                     var size = cl ? parseInt(cl, 10) : (this.response ? (this.response.length || this.response.byteLength) : null);
-                    var responseBody = null;
-                    if (shouldCaptureBody(ct, size)) responseBody = this.responseText;
-                    
-                    addResource(this._wuji_url, 'XHR', {
-                        method: this._wuji_method,
-                        contentType: ct,
-                        size: size,
-                        requestData: this._wuji_reqData,
-                        responseBody: responseBody
-                    });
+                    var absUrl = this._wuji_url ? (this._wuji_url.startsWith('http') ? this._wuji_url : new URL(this._wuji_url, window.location.href).href) : null;
+                    var item = absUrl ? sniffed[resourceMap.get(absUrl)] : null;
+                    if (item) {
+                        if (ct) item.contentType = ct;
+                        if (size) item.size = size;
+                        if (!item.responseBody && shouldCaptureBody(ct, size)) item.responseBody = this.responseText;
+                    }
                 } catch (err) {}
             });
             return origSend.apply(this, arguments);
@@ -216,25 +273,28 @@
     } catch (e) {}
 
     // --- 2. 劫持 Fetch API ---
+    // fetch() 调用时立即记录 URL，响应到达后补充元数据
     if (window.fetch) {
         var origFetch = window.fetch;
         window.fetch = function(input, init) {
             var url = typeof input === 'string' ? input : (input && input.url) || '';
             var method = (init && init.method) || (input && input.method) || 'GET';
             var requestData = (init && init.body && typeof init.body === 'string') ? init.body.substring(0, 2000) : null;
-
+            // 立即记录请求 URL
+            addResource(url, 'Fetch', { method: method, requestData: requestData });
             return origFetch.apply(this, arguments).then(function(response) {
                 try {
                     var ct = response.headers.get('Content-Type');
                     var cl = response.headers.get('Content-Length');
                     var size = cl ? parseInt(cl, 10) : null;
-
-                    if (shouldCaptureBody(ct, size)) {
-                        response.clone().text().then(function(text) {
-                            addResource(url, 'Fetch', { method: method, contentType: ct, size: size, requestData: requestData, responseBody: text });
-                        }).catch(function() {});
-                    } else {
-                        addResource(url, 'Fetch', { method: method, contentType: ct, size: size, requestData: requestData });
+                    var absUrl = url.startsWith('http') ? url : new URL(url, window.location.href).href;
+                    var item = sniffed[resourceMap.get(absUrl)];
+                    if (item) {
+                        if (ct) item.contentType = ct;
+                        if (size) item.size = size;
+                        if (!item.responseBody && shouldCaptureBody(ct, size)) {
+                            response.clone().text().then(function(text) { item.responseBody = text; }).catch(function() {});
+                        }
                     }
                 } catch (e) {}
                 return response;
@@ -263,6 +323,33 @@
 
     // --- 4. DOM 监控优化 ---
     var _scanProcessing = false;
+    function captureImageFromNode(node, source) {
+        if (!node || !node.tagName) return;
+        var tag = node.tagName.toLowerCase();
+        if (tag === 'img') {
+            var imgSrc = node.currentSrc || node.src;
+            if (imgSrc) addResource(imgSrc, source, { type: 'image' });
+            var srcset = node.getAttribute && node.getAttribute('srcset');
+            if (srcset) {
+                srcset.split(',').forEach(function(candidate) {
+                    var item = candidate.trim().split(/\s+/)[0];
+                    if (item) addResource(item, source + ' (srcset)', { type: 'image' });
+                });
+            }
+            return;
+        }
+        if (tag === 'source') {
+            var sourceSrc = node.src || (node.getAttribute && node.getAttribute('src'));
+            if (sourceSrc) addResource(sourceSrc, source, { type: guessType(sourceSrc) });
+            return;
+        }
+        if (node.querySelectorAll) {
+            node.querySelectorAll('img,source').forEach(function(child) {
+                captureImageFromNode(child, source);
+            });
+        }
+    }
+
     function scanAndMute() {
         if (_scanProcessing) return;
         _scanProcessing = true;
@@ -273,6 +360,10 @@
                 forceMute(el);
                 var src = el.currentSrc || el.src;
                 if (src) addResource(src, 'DOM', { type: el.tagName.toLowerCase() });
+            }
+            var images = document.querySelectorAll('img, source');
+            for (var j = 0; j < images.length; j++) {
+                captureImageFromNode(images[j], 'DOM');
             }
             if (isTop) injectIntoIframes();
         } finally {
@@ -333,12 +424,21 @@
                 if (tn === 'video' || tn === 'audio') {
                     forceMute(node);
                     if (node.src) addResource(node.src, 'Mutation');
+                } else if (tn === 'img' || tn === 'source' || (node.querySelectorAll && node.querySelector('img,source'))) {
+                    captureImageFromNode(node, 'Mutation');
                 } else if (tn === 'iframe') {
                     setTimeout(injectIntoIframes, 1000);
                 }
             }
         }
     });
-    if (document.documentElement) _mo.observe(document.documentElement, { childList: true, subtree: true });
+    if (document.documentElement) {
+        _mo.observe(document.documentElement, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['src', 'srcset']
+        });
+    }
 
 })();

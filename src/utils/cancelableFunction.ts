@@ -1,11 +1,14 @@
-type CancellableFunction<T, Args extends any[]> = (...args: Args) => Promise<T>;
+type CancellableFunction<T, Args extends any[]> = {
+  (...args: Args): Promise<T>;
+  cancel: () => void;
+};
 
 function createCancellableFunction<T, Args extends any[]>(
   fn: (signal: AbortSignal, ...args: Args) => Promise<T>,
 ): CancellableFunction<T, Args> {
   let abortController: AbortController | null = null;
 
-  return async (...args: Args) => {
+  const wrapped = async (...args: Args) => {
     // 如果之前有调用在进行，中断它
     const temp = abortController;
     temp?.abort();
@@ -45,6 +48,12 @@ function createCancellableFunction<T, Args extends any[]>(
       // abortController = null;
     }
   };
+
+  wrapped.cancel = () => {
+    abortController?.abort();
+  };
+
+  return wrapped;
 }
 
 export { createCancellableFunction };

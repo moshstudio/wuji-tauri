@@ -3,6 +3,7 @@ import { showDialog, showFailToast } from 'vant';
 import { ref } from 'vue';
 import {
   CreateSourceRunStatus,
+  isIncrementalCreateSourceLoad,
   mergeCategoryListResult,
 } from './useCreateSourceListRunner';
 
@@ -15,6 +16,7 @@ export function useCreateSourceSearchListRunner<TResult>(options: {
   buildAndFetch: (
     findPage: (name: string) => PageRow | undefined,
     pageNo?: number,
+    type?: string,
   ) => Promise<TResult | undefined>;
 }) {
   const runStatus = ref<CreateSourceRunStatus>(
@@ -27,7 +29,7 @@ export function useCreateSourceSearchListRunner<TResult>(options: {
     return options.getContent().pages.find(p => p.type === name);
   }
 
-  async function load(pageNo?: number, _type?: string) {
+  async function load(pageNo?: number, type?: string) {
     if (!findPage('constructor')?.code) {
       showFailToast('《初始化》code未定义!');
       return;
@@ -43,9 +45,18 @@ export function useCreateSourceSearchListRunner<TResult>(options: {
       showFailToast('code未定义!');
       return;
     }
-    runStatus.value = CreateSourceRunStatus.running;
+
+    const silent = isIncrementalCreateSourceLoad(
+      result.value !== undefined,
+      pageNo,
+      type,
+    );
+
+    if (!silent) {
+      runStatus.value = CreateSourceRunStatus.running;
+    }
     try {
-      const res = await options.buildAndFetch(findPage, pageNo);
+      const res = await options.buildAndFetch(findPage, pageNo, type);
       if (!res) {
         throw new Error('获取搜索列表失败! 返回结果为空');
       }

@@ -68,6 +68,54 @@ fn get_collection_item_filename(title: &str, category: &Category, index: u32) ->
     }
 }
 
+async fn write_collection_chunk_to_disk(
+    save_path: &std::path::Path,
+    category: &Category,
+    index: u32,
+    title: &str,
+    data: &[u8],
+) -> Result<()> {
+    match category {
+        Category::Image | Category::Comic | Category::Music => {
+            let base_path = if *category == Category::Comic && index >= 1_000_000 {
+                get_temp_dir(save_path)?
+            } else {
+                save_path.to_path_buf()
+            };
+
+            if !base_path.exists() {
+                fs::create_dir_all(&base_path).await?;
+            }
+
+            let file_name = get_collection_item_filename(title, category, index);
+            let final_path = base_path.join(&file_name);
+            if let Some(parent) = final_path.parent() {
+                if !parent.exists() {
+                    fs::create_dir_all(parent).await?;
+                }
+            }
+            fs::write(final_path.clone(), data).await?;
+            set_collection_item_mtime(&final_path, index);
+            log::info!(
+                "[Backend] Saved collection item {} to {:?}",
+                file_name,
+                base_path
+            );
+        }
+        _ => {
+            // 所有非直接落盘的类型（如 Book, Video, 以及其他）统一使用 temp mode
+            let temp_dir = get_temp_dir(save_path)?;
+            if !temp_dir.exists() {
+                fs::create_dir_all(&temp_dir).await?;
+            }
+            let chunk_file = temp_dir.join(format!("{:06}.chunk", index));
+            fs::write(chunk_file, data).await?;
+            log::info!("[Backend] Saved temp chunk {}", index);
+        }
+    }
+    Ok(())
+}
+
 pub async fn append_collection_chunk<R: Runtime>(
     app: AppHandle<R>,
     manager: DownloadManager,
@@ -129,47 +177,7 @@ pub async fn append_collection_chunk<R: Runtime>(
     }
 
     // 2. 实时保存
-    match category {
-        Category::Image | Category::Comic | Category::Music => {
-            // 漫画图片块 (index >= 1,000_000) 保存到临时目录，其他保存到目的目录
-            let base_path = if category == Category::Comic && index >= 1_000_000 {
-                get_temp_dir(&save_path)?
-            } else {
-                save_path.clone()
-            };
-
-            if !base_path.exists() {
-                fs::create_dir_all(&base_path).await?;
-            }
-
-            let file_name = get_collection_item_filename(&title, &category, index);
-
-            let final_path = base_path.join(&file_name);
-            if let Some(parent) = final_path.parent() {
-                if !parent.exists() {
-                    fs::create_dir_all(parent).await?;
-                }
-            }
-            fs::write(final_path.clone(), &data).await?;
-            set_collection_item_mtime(&final_path, index);
-            log::info!(
-                "[Backend] Saved collection item {} to {:?} for {}",
-                file_name,
-                base_path,
-                task_id
-            );
-        }
-        _ => {
-            // 所有非直接落盘的类型（如 Book, Video, 以及其他）统一使用 temp mode
-            let temp_dir = get_temp_dir(&save_path)?;
-            if !temp_dir.exists() {
-                fs::create_dir_all(&temp_dir).await?;
-            }
-            let chunk_file = temp_dir.join(format!("{:06}.chunk", index));
-            fs::write(chunk_file, &data).await?;
-            log::info!("[Backend] Saved temp chunk {} for {}", index, task_id);
-        }
-    }
+    write_collection_chunk_to_disk(&save_path, &category, index, &title, &data).await?;
 
     // 3. 更新 UI 和保存元数据
     if should_update {
@@ -408,36 +416,7 @@ pub async fn save_collection_chunk_data<R: Runtime>(
         (task.save_path.clone(), task.category.clone())
     };
 
-    // 保存文件逻辑 (与原来的 append_collection_chunk 相同)
-    match category {
-        Category::Image | Category::Comic | Category::Music => {
-            let base_path = if category == Category::Comic && index >= 1_000_000 {
-                get_temp_dir(&save_path)?
-            } else {
-                save_path.clone()
-            };
-            if !base_path.exists() {
-                fs::create_dir_all(&base_path).await?;
-            }
-            let file_name = get_collection_item_filename(&title, &category, index);
-            let final_path = base_path.join(&file_name);
-            if let Some(parent) = final_path.parent() {
-                if !parent.exists() {
-                    fs::create_dir_all(parent).await?;
-                }
-            }
-            fs::write(final_path.clone(), &data).await?;
-            set_collection_item_mtime(&final_path, index);
-        }
-        _ => {
-            let temp_dir = get_temp_dir(&save_path)?;
-            if !temp_dir.exists() {
-                fs::create_dir_all(&temp_dir).await?;
-            }
-            let chunk_file = temp_dir.join(format!("{:06}.chunk", index));
-            fs::write(chunk_file, &data).await?;
-        }
-    }
+    write_collection_chunk_to_disk(&save_path, &category, index, &title, &data).await?;
 
     // 最终 Emit 一次
     let mut inner = manager.lock().await;

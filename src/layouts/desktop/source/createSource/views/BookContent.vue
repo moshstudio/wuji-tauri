@@ -3,8 +3,10 @@ import type { BookItem } from '@wuji-tauri/source-extension';
 import type { FormItem } from '@/store/sourceCreateStore';
 import { BookExtension } from '@wuji-tauri/source-extension';
 import { showDialog } from 'vant';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
+import CreateSourcePreviewShell from '../CreateSourcePreviewShell.vue';
+import { CreateSourceRunStatus } from '../useCreateSourceListRunner';
 
 const props = defineProps<{
   content: FormItem<BookItem>;
@@ -15,19 +17,18 @@ const props = defineProps<{
     padded: boolean,
   ) => void;
   close: () => void;
-  log: (...args: any[]) => void;
+  log: (...args: unknown[]) => void;
 }>();
 
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
+const runStatus = ref<CreateSourceRunStatus>(
+  CreateSourceRunStatus.not_running,
+);
 const errorMessage = ref('运行失败');
 const result = ref<string>();
+
+const paragraphs = computed(() =>
+  result.value?.split('\n').filter(line => line.trim()),
+);
 
 async function initLoad() {
   result.value = undefined;
@@ -64,7 +65,7 @@ async function load() {
     .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
     .replace('// @METHOD_DETAIL', findPage('detail')!.code)
     .replace('// @METHOD_CONTENT', findPage('content')!.code);
-  runStatus.value = RunStatus.running;
+  runStatus.value = CreateSourceRunStatus.running;
   try {
     const func = new Function('BookExtension', code);
     const ExtensionClass = func(BookExtension);
@@ -83,11 +84,11 @@ async function load() {
     }
     result.value = res;
     props.updateResult('book', 'content', result.value, true);
-    runStatus.value = RunStatus.success;
+    runStatus.value = CreateSourceRunStatus.success;
   }
   catch (error) {
     errorMessage.value = String(error);
-    runStatus.value = RunStatus.error;
+    runStatus.value = CreateSourceRunStatus.error;
     props.updateResult('book', 'content', result.value, false);
   }
 }
@@ -102,25 +103,20 @@ defineExpose({
 </script>
 
 <template>
-  <div>
-    <div v-if="runStatus === RunStatus.not_running">
-      未运行
-    </div>
-    <div
-      v-else-if="runStatus === RunStatus.running"
-      class="flex items-center justify-center"
+  <CreateSourcePreviewShell
+    :run-status="runStatus"
+    :error-message="errorMessage"
+  >
+    <main
+      class="book-content-preview flex flex-col gap-3 p-3 text-[--van-text-color]"
     >
-      <van-loading />
-    </div>
-    <div v-else-if="runStatus === RunStatus.error" class="text-red-500">
-      {{ errorMessage }}
-    </div>
-    <div v-else class="flex flex-col overflow-auto">
-      <p v-for="(line, index) in result?.split('\n')" :key="index">
+      <p
+        v-for="(line, index) in paragraphs"
+        :key="index"
+        class="text-justify text-sm leading-relaxed"
+      >
         {{ line }}
       </p>
-    </div>
-  </div>
+    </main>
+  </CreateSourcePreviewShell>
 </template>
-
-<style scoped lang="less"></style>

@@ -56,15 +56,71 @@ export function guessTypeFromContentType(
   return undefined;
 }
 
-export function guessTypeFromSniff(sample: string): PlayableVideoMediaType | undefined {
+function isNonMediaContentType(contentType: string): boolean {
+  const ct = contentType.toLowerCase();
+  return (
+    ct.includes('text/html')
+    || ct.includes('application/json')
+    || ct.includes('text/plain')
+    || ct.startsWith('text/')
+  );
+}
+
+function looksLikeHtmlBody(sample: string): boolean {
+  const head = sample.trim().slice(0, 512).toLowerCase();
+  return head.startsWith('<!doctype') || head.startsWith('<html') || head.includes('<head');
+}
+
+export function guessTypeFromSniff(
+  sample: string,
+  contentType?: string,
+): PlayableVideoMediaType | undefined {
+  if (contentType && isNonMediaContentType(contentType)) {
+    return undefined;
+  }
   const head = sample.trim().slice(0, SNIFF_BYTE_LENGTH);
-  if (head.includes('#EXTM3U'))
+  if (looksLikeHtmlBody(head)) {
+    return undefined;
+  }
+  if (head.includes('#EXTM3U')) {
     return 'm3u8';
-  if (head.includes('<MPD') || head.includes('urn:mpeg:dash:schema:mpd'))
+  }
+  if (head.includes('<MPD') || head.includes('urn:mpeg:dash:schema:mpd')) {
     return 'dash';
-  if (head.includes('ftyp'))
+  }
+  if (head.includes('ftyp')) {
     return 'mp4';
+  }
   return undefined;
+}
+
+/** URL 无媒体扩展名时，浏览器内轮换类型无法解决 CORS/404，应优先 WebView 解析 */
+export function shouldFastPathWebviewFallback(url: string): boolean {
+  return !guessTypeFromUrl(url);
+}
+
+/** 无路径扩展名时不应采用 dash（多为订阅源误标或 HTML 页） */
+export function sanitizeResolvedType(
+  url: string,
+  type: PlayableVideoMediaType | undefined,
+): PlayableVideoMediaType {
+  const fromUrl = guessTypeFromUrl(url);
+  if (fromUrl) {
+    return fromUrl;
+  }
+  if (type === 'dash' && !url.toLowerCase().includes('.mpd')) {
+    return 'm3u8';
+  }
+  return type ?? 'm3u8';
+}
+
+/** video.js 跨域模式：有明确媒体扩展名时用 anonymous，否则保留凭证 */
+export function resolveVideoJsCrossOrigin(
+  url: string,
+): 'anonymous' | 'use-credentials' | undefined {
+  if (!url)
+    return undefined;
+  return guessTypeFromUrl(url) ? 'anonymous' : 'use-credentials';
 }
 
 export function toVideoJsMimeType(
@@ -135,7 +191,7 @@ export async function probeVideoType(
       const sample = new TextDecoder('utf-8', { fatal: false }).decode(
         buffer.slice(0, SNIFF_BYTE_LENGTH),
       );
-      return guessTypeFromSniff(sample);
+      return guessTypeFromSniff(sample, contentType);
     }
     catch {
       return undefined;
@@ -211,7 +267,7 @@ export async function resolveVideoUrlMap(
   const declared = canonicalizeVideoType(src.type);
 
   if (fromUrl) {
-    return { ...src, type: fromUrl };
+    return { ...src, type: sanitizeResolvedType(src.url, fromUrl) };
   }
 
   if (!probe) {
@@ -227,16 +283,10 @@ export async function resolveVideoUrlMap(
     declaredType: src.type,
   });
 
-  const resolved = probed ?? declared ?? 'm3u8';
-  if (resolved !== src.type) {
-    console.log(
-      '[videoMediaType] resolved type',
-      src.type ?? '(none)',
-      '→',
-      resolved,
-      src.url,
-    );
-  }
+  const resolved = sanitizeResolvedType(
+    src.url,
+    probed ?? declared ?? 'm3u8',
+  );
   return { ...src, type: resolved };
 }
 

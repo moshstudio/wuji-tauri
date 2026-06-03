@@ -2,7 +2,10 @@ import type { VideoUrlMap } from '@wuji-tauri/source-extension';
 import type { IBasePluginOptions } from 'xgplayer';
 import VideoJs from 'video.js';
 import { BasePlugin, Events } from 'xgplayer';
-import { toVideoJsMimeType } from '@/utils/videoMediaType';
+import {
+  resolveVideoJsCrossOrigin,
+  toVideoJsMimeType,
+} from '@/utils/videoMediaType';
 
 type VideoSourceType = NonNullable<VideoUrlMap['type']>;
 
@@ -39,12 +42,31 @@ class VideoJsPlugin extends BasePlugin {
     this.videoPlayer?.src(url);
   }
 
+  private applyCrossOrigin(url?: string) {
+    const mode = resolveVideoJsCrossOrigin(url || '');
+    if (mode && this.videoPlayer) {
+      this.videoPlayer.crossOrigin(mode);
+    }
+  }
+
+  private bindVideoJsErrors() {
+    this.videoPlayer?.on('error', () => {
+      const mediaError = this.videoPlayer?.error();
+      this.player.emit(Events.ERROR, {
+        errorType: 'media',
+        errorCode: mediaError?.code ?? 4,
+        message: mediaError?.message ?? 'video.js playback error',
+      });
+    });
+  }
+
   beforePlayerInit() {
     this.videoPlayer = VideoJs(this.player.video as Element, {
       controlBar: false,
       controls: false,
     });
-    this.videoPlayer.crossOrigin('anonymous');
+    this.applyCrossOrigin(this.url);
+    this.bindVideoJsErrors();
     this.loadSource(this.url, this.sourceType);
   }
 
@@ -60,6 +82,7 @@ class VideoJsPlugin extends BasePlugin {
       this.url = url;
       this.sourceType = (this.player.config as { videoType?: VideoSourceType })
         .videoType;
+      this.applyCrossOrigin(url);
       this.loadSource(this.url, this.sourceType);
     });
   }

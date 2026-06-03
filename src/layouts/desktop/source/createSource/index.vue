@@ -798,4 +798,15 @@ async function handleSaveMarket(data: { id: string; name: string }) {
     flex-shrink: 0;
   }
 }
+
+:deep(.code-preview-page) {
+  height: 100%;
+  min-height: 0;
+
+  .create-source-preview,
+  .relative.flex.h-full {
+    height: 100%;
+    min-height: 0;
+  }
+}
 </style>

@@ -25,7 +25,12 @@ const displayStore = useDisplayStore();
 const { paginationPosition } = storeToRefs(displayStore);
 
 const active = ref(0);
-const loadingMap = new Set<number>();
+const tabLoading = ref<Record<number, boolean>>({});
+
+function isTabLoading(index: number) {
+  return !!tabLoading.value[index];
+}
+
 async function load(i: number | string) {
   if (!props.source.list || !Array.isArray(props.source.list))
     return;
@@ -36,15 +41,17 @@ async function load(i: number | string) {
   const t = props.source.list[index];
   if (t.list && t.list.length)
     return;
-  if (loadingMap.has(index))
+  if (tabLoading.value[index])
     return;
 
-  loadingMap.add(index);
+  tabLoading.value = { ...tabLoading.value, [index]: true };
   try {
     await props.toPage(props.source, 1, t.type);
   }
   finally {
-    loadingMap.delete(index);
+    const next = { ...tabLoading.value };
+    delete next[index];
+    tabLoading.value = next;
   }
 }
 
@@ -92,7 +99,8 @@ watch(
   >
     <van-tab
       v-for="(item, index) in source.list"
-      :key="source.item.id + index.toString() + item.type"
+      :key="`${source.item.id}-${item.type ?? index}`"
+      :name="index"
       :title="item.type"
     >
       <div
@@ -111,7 +119,13 @@ watch(
         />
       </div>
 
-      <van-loading v-if="item.list.length === 0" class="p-2" size="24px" />
+      <van-loading v-if="isTabLoading(index)" class="p-2" size="24px" />
+      <div
+        v-else-if="!item.list?.length"
+        class="p-4 text-center text-sm text-[var(--van-text-color-2)]"
+      >
+        暂无数据
+      </div>
       <ResponsiveGrid2 v-else>
         <template
           v-for="(book, bookIndex) in item.list"

@@ -16,6 +16,16 @@ use tokio::{
 
 use crate::models::*;
 
+/// JS 资源稳定等待上限（毫秒），与前端 fetchWebview 默认 20s 一致
+const DEFAULT_SCRAPE_TIMEOUT_MS: u64 = 20_000;
+/// 在 JS 超时之外留给导航/抢救的 Rust 层宽限（与 Android SCRAPING_GRACE_MS 对齐）
+const SCRAPING_GRACE_MS: u64 = 10_000;
+/// 超时后抢救脚本等待回调的上限
+const RESCUE_WAIT_MS: u64 = 3_000;
+const PAGE_STARTED_INJECT_DELAY_MS: u64 = 1_400;
+const PAGE_FINISHED_INJECT_DELAY_MS: u64 = 500;
+const REDIRECT_EXTRA_DELAY_MS: u64 = 1_500;
+
 // 使用HashMap来管理多个窗口，key是窗口ID
 type WindowMap = Arc<Mutex<HashMap<String, oneshot::Sender<String>>>>;
 
@@ -46,20 +56,10 @@ impl<R: Runtime> Mywebview<R> {
 
     pub async fn fetch(&self, payload: FetchRequest) -> crate::Result<FetchResponse> {
         let app_handle = self.0.clone();
-        let response = match scrap_text_by_url(app_handle, payload).await {
-            Ok(content) => content,
-            Err(e) => {
-                eprintln!("Scraping failed: {}", e);
-                FetchResponse {
-                    content: String::new(),
-                    url: String::new(),
-                    cookie: String::new(),
-                    title: String::new(),
-                    resources: vec![],
-                }
-            }
-        };
-        Ok(response)
+        scrap_text_by_url(app_handle, payload).await.map_err(|e| {
+            eprintln!("Scraping failed: {}", e);
+            crate::Error::Scraping(e)
+        })
     }
 }
 
@@ -74,8 +74,26 @@ async fn get_available_window_id() -> Option<String> {
             return Some(window_name);
         }
     }
-    dbg!(manager.keys().cloned().collect::<Vec<String>>());
+    eprintln!(
+        "[mywebview] No available scrap window slot. Active: {:?}",
+        manager.keys().collect::<Vec<_>>()
+    );
     None
+}
+
+fn hard_timeout_ms(js_timeout_ms: u64) -> u64 {
+    js_timeout_ms.saturating_add(SCRAPING_GRACE_MS)
+}
+
+fn build_scraping_script(window_name: &str, timeout_ms: u64, target_type: Option<&str>) -> String {
+    SCRAPING_SCRIPT
+        .replace("{{window_id}}", window_name)
+        .replace("{{timeout}}", &timeout_ms.to_string())
+        .replace("{{target_type}}", target_type.unwrap_or(""))
+}
+
+fn scrape_event_name(window_name: &str) -> String {
+    format!("wuji_event_scrap_{}", window_name)
 }
 
 async fn scrap_text_by_url<R: Runtime>(
@@ -84,8 +102,12 @@ async fn scrap_text_by_url<R: Runtime>(
 ) -> Result<FetchResponse, String> {
     let url = payload.url;
     let use_saved_cookie = payload.use_saved_cookie;
-    let timeout = payload.timeout.unwrap_or(20) * 1000; // 默认 20s
-    let wait_for_resources = payload.wait_for_resources; // Option<String>
+    let timeout = payload
+        .timeout
+        .map(|s| s.saturating_mul(1000))
+        .unwrap_or(DEFAULT_SCRAPE_TIMEOUT_MS);
+    let wait_for_resources = payload.wait_for_resources;
+    let hard_timeout = hard_timeout_ms(timeout);
 
     // 1. 获取信号量许可（带超时）
     let semaphore = CONCURRENT_SEMAPHORE.clone();
@@ -127,6 +149,18 @@ async fn scrap_text_by_url<R: Runtime>(
     )
     .await?;
     let window_ref = Arc::new(window);
+
+    // 每个抓取会话只注册一次结果监听，避免 Started/Finished 重复注入时重复注册
+    let listener_window_name = window_name.clone();
+    window_ref.once(scrape_event_name(&window_name), move |event| {
+        let payload = process_payload(event.payload());
+        let window_name_inner = listener_window_name;
+        tauri::async_runtime::spawn(async move {
+            if let Some(tx) = WINDOW_MANAGER.lock().await.remove(&window_name_inner) {
+                let _ = tx.send(payload);
+            }
+        });
+    });
 
     window_ref.on_window_event({
         // 手动关闭窗口
@@ -179,10 +213,14 @@ async fn scrap_text_by_url<R: Runtime>(
                 Err(_) => Err("Channel receive error".to_string())
             }
         }
-        // 超时情况：需要结合 JavaScript 的超时来防止悬挂。
-        // 这里设置为比 JS 超时稍微长一点。
-        _ = tokio::time::sleep(Duration::from_millis(timeout + 5000)) => {
-            Err("Operation timed out at Rust level".to_string())
+        // Rust 兜底超时：JS 完全挂死从未 emit 时触发。
+        // 此时窗口仍然存活，尝试通过 eval 主动抢救已收集的资源。
+        _ = tokio::time::sleep(Duration::from_millis(hard_timeout)) => {
+            eprintln!(
+                "[mywebview] Rust-level timeout after {}ms for {}, attempting data rescue...",
+                hard_timeout, window_name
+            );
+            rescue_partial_data(window_clone.as_ref(), &window_name).await
         }
     };
 
@@ -190,6 +228,85 @@ async fn scrap_text_by_url<R: Runtime>(
     cleanup_scrap_session(&window_name, window_ref, permit).await;
 
     result
+}
+
+/// Rust 超时后主动抢救：eval 一段 JS 立即读取窗口现有数据并 emit 回来
+async fn rescue_partial_data<R: Runtime>(
+    window: &WebviewWindow<R>,
+    window_name: &str,
+) -> Result<FetchResponse, String> {
+    let rescue_event = format!("wuji_event_scrap_{}_rescue", window_name);
+
+    // 建立临时 oneshot 通道
+    let (rescue_tx, rescue_rx) = oneshot::channel::<String>();
+    let rescue_tx_holder = Arc::new(tokio::sync::Mutex::new(Some(rescue_tx)));
+
+    // 注册一次性事件监听，等待 eval 结果回调
+    window.once(rescue_event.clone(), {
+        let holder = rescue_tx_holder.clone();
+        move |event| {
+            let payload = process_payload(event.payload());
+            let holder = holder.clone();
+            tauri::async_runtime::spawn(async move {
+                if let Some(tx) = holder.lock().await.take() {
+                    let _ = tx.send(payload);
+                }
+            });
+        }
+    });
+
+    // 注入抢救脚本：立即收集现有数据并 emit
+    let rescue_script = format!(
+        r#"(function(){{
+            try{{
+                var r=(window.__wuji_sniffed__||[]).map(function(x){{
+                    return{{url:x.url,type:x.type||'other',resourceType:x.type||'other',method:x.method||'GET',contentType:x.contentType||null,size:x.size||null}};
+                }});
+                var d=JSON.stringify({{
+                    content:document.documentElement?document.documentElement.innerHTML:'',
+                    title:document.title||'',
+                    resources:r
+                }});
+                window.__TAURI__.event.emit('{}',d);
+            }}catch(e){{
+                window.__TAURI__.event.emit('{}',JSON.stringify({{content:'',title:'',resources:[]}}));
+            }}
+        }})()"#,
+        rescue_event, rescue_event
+    );
+
+    if window.eval(&rescue_script).is_err() {
+        return Err("Rust timeout: eval rescue script failed".to_string());
+    }
+
+    // 最多等 3 秒
+    match tokio::time::timeout(Duration::from_millis(RESCUE_WAIT_MS), rescue_rx).await {
+        Ok(Ok(data)) if !data.is_empty() => {
+            eprintln!("[mywebview] Rescued partial data successfully.");
+            let cookie_string = window
+                .cookies()
+                .map(|c| {
+                    c.iter()
+                        .map(|ck| format!("{}={}", ck.name(), ck.value()))
+                        .collect::<Vec<_>>()
+                        .join("; ")
+                })
+                .unwrap_or_default();
+            let (content, title, resources) =
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&data) {
+                    (
+                        v["content"].as_str().unwrap_or("").to_string(),
+                        v["title"].as_str().unwrap_or("").to_string(),
+                        parse_sniffed_resources(&v["resources"]),
+                    )
+                } else {
+                    (String::new(), String::new(), vec![])
+                };
+            let url = window.url().map(|u| u.to_string()).unwrap_or_default();
+            Ok(FetchResponse { content, url, cookie: cookie_string, title, resources })
+        }
+        _ => Err("Operation timed out at Rust level".to_string()),
+    }
 }
 
 /// 从 JSON 中解析嗅探到的资源列表
@@ -244,13 +361,13 @@ async fn create_scraping_window<R: Runtime>(
     wait_for_resources: Option<String>,
 ) -> Result<WebviewWindow<R>, String> {
     let redirect_times = Arc::new(AtomicUsize::new(0));
-    let load_finish_times = Arc::new(AtomicUsize::new(0));
+    // 统一的加载事件序号（Started/Finished 共用），用于防止重复注入。
+    let page_load_event_seq = Arc::new(AtomicUsize::new(0));
 
     let builder = WebviewWindowBuilder::new(app_handle, window_name, WebviewUrl::External(url))
         // 注入嗅探初始化脚本（拦截 XHR/Fetch、扫描媒体标签）
         .initialization_script(SNIFF_INIT_SCRIPT)
         .on_navigation({
-            println!("on_navigation");
             let counter = redirect_times.clone();
             move |_url| {
                 counter.fetch_add(1, Ordering::Relaxed);
@@ -259,24 +376,39 @@ async fn create_scraping_window<R: Runtime>(
         })
         .on_page_load({
             let window_name = window_name.to_string();
-            let app_handle = app_handle.clone();
             let redirect_times = redirect_times.clone();
-            let load_finish_times = load_finish_times.clone();
+            let page_load_event_seq = page_load_event_seq.clone();
             let timeout = timeout;
             let target_type = wait_for_resources.clone();
 
             move |window, payload| {
-                if let PageLoadEvent::Finished = payload.event() {
-                    println!("Page finished loading: {}", payload.url());
-                    handle_page_load_finished(
-                        window,
-                        &window_name,
-                        &app_handle,
-                        &redirect_times,
-                        &load_finish_times,
-                        timeout,
-                        target_type.clone(),
-                    );
+                match payload.event() {
+                    PageLoadEvent::Started => {
+                        #[cfg(debug_assertions)]
+                        eprintln!("[mywebview] Page load started: {}", payload.url());
+                        handle_page_load_event(
+                            window,
+                            &window_name,
+                            &redirect_times,
+                            &page_load_event_seq,
+                            timeout,
+                            target_type.clone(),
+                            true,
+                        );
+                    }
+                    PageLoadEvent::Finished => {
+                        #[cfg(debug_assertions)]
+                        eprintln!("[mywebview] Page finished loading: {}", payload.url());
+                        handle_page_load_event(
+                            window,
+                            &window_name,
+                            &redirect_times,
+                            &page_load_event_seq,
+                            timeout,
+                            target_type.clone(),
+                            false,
+                        );
+                    }
                 }
             }
         })
@@ -289,91 +421,76 @@ async fn create_scraping_window<R: Runtime>(
         .build()
         .map_err(|e| format!("Failed to create window: {}", e))?;
     if let Some(cookie_str) = &cookie {
-        let cookie = Cookie::parse(cookie_str).unwrap();
-        let _ = window.set_cookie(cookie);
+        if let Ok(cookie) = Cookie::parse(cookie_str) {
+            let _ = window.set_cookie(cookie);
+        } else {
+            eprintln!("[mywebview] Invalid cookie string for domain, skipping set_cookie");
+        }
     }
 
     Ok(window)
 }
 
-// 处理页面加载完成事件
-fn handle_page_load_finished<R: Runtime>(
+// 处理页面加载事件（Started/Finished）
+fn handle_page_load_event<R: Runtime>(
     window: WebviewWindow<R>,
     window_name: &str,
-    _app_handle: &AppHandle<R>,
     redirect_times: &Arc<AtomicUsize>,
-    load_finish_times: &Arc<AtomicUsize>,
+    page_load_event_seq: &Arc<AtomicUsize>,
     timeout: u64,
     target_type: Option<String>,
+    from_started_event: bool,
 ) {
-    let current_load_id = load_finish_times.fetch_add(1, Ordering::Relaxed) + 1;
+    let current_event_seq = page_load_event_seq.fetch_add(1, Ordering::Relaxed) + 1;
 
     tauri::async_runtime::spawn({
         let window = Arc::new(window);
         let window_name = window_name.to_string();
         let redirect_count = redirect_times.load(Ordering::Relaxed);
-        let load_finish_times = load_finish_times.clone();
+        let page_load_event_seq = page_load_event_seq.clone();
 
         async move {
             // 在注入前等待基础稳定期
-            let additional_delay = if redirect_count > 0 {
-                Duration::from_millis(1500)
+            let redirect_delay = if redirect_count > 0 {
+                Duration::from_millis(REDIRECT_EXTRA_DELAY_MS)
             } else {
                 Duration::ZERO
             };
-            sleep(Duration::from_millis(500) + additional_delay).await;
+            // Started 场景给更多缓冲，避免过早采集；Finished 则尽快注入。
+            let base_delay = if from_started_event {
+                Duration::from_millis(PAGE_STARTED_INJECT_DELAY_MS)
+            } else {
+                Duration::from_millis(PAGE_FINISHED_INJECT_DELAY_MS)
+            };
+            sleep(base_delay + redirect_delay).await;
 
             // 检查在这期间是否有新的页面加载触发，如果有，说明当前这个已经过时，放弃执行
-            if load_finish_times.load(Ordering::Relaxed) != current_load_id {
-                println!(
-                    "[Desktop] Obsolete page load event for {}, skipping script injection.",
+            if page_load_event_seq.load(Ordering::Relaxed) != current_event_seq {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "[mywebview] Obsolete page load event for {}, skipping script injection",
                     window_name
                 );
                 return;
             }
 
-            // 注入脚本并替换动态配置
-            let script = SCRAPING_SCRIPT
-                .replace("{{window_id}}", &window_name)
-                .replace("{{timeout}}", &timeout.to_string())
-                .replace("{{target_type}}", &target_type.unwrap_or_default());
-
-            // 设置监听器（一次性）
-            let window_name_inner = window_name.clone();
-            window.once(format!("wuji_event_scrap_{}", window_name), move |event| {
-                let payload = event.payload();
-                let scraped_str = process_payload(payload);
-                tauri::async_runtime::spawn(async move {
-                    if let Some(tx) = WINDOW_MANAGER.lock().await.remove(&window_name_inner) {
-                        let _ = tx.send(scraped_str);
-                    }
-                });
-            });
+            let script = build_scraping_script(
+                &window_name,
+                timeout,
+                target_type.as_deref(),
+            );
 
             if window.eval(&script).is_err() {
+                eprintln!(
+                    "[mywebview] Failed to eval scraping script for {}",
+                    window_name
+                );
                 send_empty_result(&window_name).await;
-                return;
             }
         }
     });
 }
 
-// 监听爬取结果
-async fn listen_for_scraping_result<R: Runtime>(
-    window: Arc<WebviewWindow<R>>,
-    window_name: String,
-) {
-    window.once(format!("wuji_event_scrap_{}", window_name), move |event| {
-        let payload = event.payload();
-        let scraped_str = process_payload(payload);
-
-        tauri::async_runtime::spawn(async move {
-            if let Some(tx) = WINDOW_MANAGER.lock().await.remove(&window_name) {
-                let _ = tx.send(scraped_str);
-            }
-        });
-    });
-}
 
 // 处理payload
 fn process_payload(payload: &str) -> String {
@@ -398,28 +515,29 @@ async fn send_empty_result(window_name: &str) {
 const SNIFF_INIT_SCRIPT: &str = include_str!("../scripts/sniff_init.js");
 
 // ============================================================
-// 爬取脚本（页面加载完成后执行）：
-//   获取页面 HTML 内容 + 收集嗅探到的资源列表，一并通过事件返回
+// 桌面端爬取脚本（Tauri 事件回传，与 Android assets/scraping.js 轮询版分离）
 // ============================================================
 const SCRAPING_SCRIPT: &str = include_str!("../scripts/scraping.js");
 
-/// 清理scrap session：关闭窗口并从管理器中移除
+/// 清理 scrap session：停止页面、卸载 WebView 并释放并发槽位
 async fn cleanup_scrap_session<R: Runtime>(
     window_name: &str,
     window: Arc<tauri::WebviewWindow<R>>,
     permit: tokio::sync::SemaphorePermit<'_>,
 ) {
-    // 从管理器中移除（如果还存在）
     WINDOW_MANAGER.lock().await.remove(window_name);
 
-    // 关闭窗口
+    let _ = window.eval(
+        r#"(function(){try{if(window.stop)window.stop();}catch(e){}})();"#,
+    );
+
     if let Err(e) = window.destroy() {
-        dbg!("Failed to close scrap window {}: {}", window_name, e);
-    } else {
-        dbg!("Successfully closed scrap window: {}", window_name);
+        eprintln!(
+            "[mywebview] Failed to destroy scrap window {}: {}",
+            window_name, e
+        );
     }
 
-    // permit 在这里自动释放，信号量计数增加
     drop(permit);
 }
 
@@ -433,11 +551,13 @@ pub async fn cleanup_all_scrap_sessions<R: Runtime>(
 
     for window_name in window_names {
         if let Some(window) = app_handle.get_webview_window(&window_name) {
-            if let Err(e) = window.close() {
-                dbg!(
-                    "Failed to close window {} during cleanup: {}",
-                    window_name.clone(),
-                    e
+            let _ = window.eval(
+                r#"(function(){try{if(window.stop)window.stop();}catch(e){}})();"#,
+            );
+            if let Err(e) = window.destroy() {
+                eprintln!(
+                    "[mywebview] Failed to destroy window {} during cleanup: {}",
+                    window_name, e
                 );
             }
         }

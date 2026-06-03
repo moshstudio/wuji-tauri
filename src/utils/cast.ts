@@ -1,5 +1,6 @@
 import type { VideoUrlMap } from '@wuji-tauri/source-extension';
 import type { CastDevice, DiscoverDevicesResult } from 'tauri-plugin-cast-api';
+import type { PlaybackProxyAlignOptions } from '@/utils/videoPlaybackProxy';
 import { invoke } from '@tauri-apps/api/core';
 import {
   discoverDevices,
@@ -9,7 +10,15 @@ import {
 } from 'tauri-plugin-cast-api';
 import { showConfirmDialog, showToast } from 'vant';
 import { ref, watch } from 'vue';
+import {
+  buildPlaybackAlignedProxyHeaders,
+  isHlsVideoSource,
+  isLocalPlayerProxyUrl,
+  needsPlaybackAlignedProxy,
+  unwrapLocalPlayerProxyUrl,
+} from '@/utils/videoPlaybackProxy';
 
+export type { PlaybackProxyAlignOptions as CastProxyAlignOptions };
 export type { CastDevice, DiscoverDevicesResult };
 
 export interface CastMediaResult {
@@ -357,64 +366,6 @@ export async function stopCastProxyServer(): Promise<void> {
   await invoke('plugin:proxy-plugin|stop_cast_proxy_server');
 }
 
-function needsProxy(videoSrc: VideoUrlMap): boolean {
-  const headers = videoSrc.headers;
-  return !!headers && Object.keys(headers).length > 0;
-}
-
-function isHlsSource(videoSrc: VideoUrlMap): boolean {
-  const type = videoSrc.type;
-  const url = videoSrc.url?.toLowerCase() || '';
-  return type === 'm3u8' || type === 'hls' || url.includes('.m3u8');
-}
-
-function isLocalPlayerProxyUrl(url: string): boolean {
-  try {
-    const host = new URL(url).hostname;
-    return (host === '127.0.0.1' || host === 'localhost')
-      && /\/(?:proxy|m3u8)\//.test(url);
-  }
-  catch {
-    return false;
-  }
-}
-
-function unwrapLocalPlayerProxyUrl(url: string): {
-  url: string;
-  headers: Record<string, string>;
-  wasM3u8: boolean;
-} | null {
-  try {
-    const parsed = new URL(url);
-    const match = parsed.pathname.match(/^\/(proxy|m3u8)\/([^/]+)\/(.+)$/);
-    if (!match) {
-      return null;
-    }
-    const kind = match[1];
-    const headersRaw = decodeURIComponent(match[2]);
-    const originalUrl = decodeURIComponent(match[3]);
-
-    const headers: Record<string, string> = {};
-    if (headersRaw && headersRaw !== '_') {
-      for (const pair of headersRaw.split(',')) {
-        const colon = pair.indexOf(':');
-        if (colon > 0) {
-          headers[pair.slice(0, colon).trim()] = pair.slice(colon + 1).trim();
-        }
-      }
-    }
-
-    return {
-      url: originalUrl,
-      headers,
-      wasM3u8: kind === 'm3u8',
-    };
-  }
-  catch {
-    return null;
-  }
-}
-
 function applyLanHostToCastUrl(castUrl: string, lanIp: string): string {
   return castUrl
     .replace(new RegExp(LAN_HOST_PLACEHOLDER, 'g'), lanIp)
@@ -424,6 +375,7 @@ function applyLanHostToCastUrl(castUrl: string, lanIp: string): string {
 
 export async function resolveCastPlayableUrl(
   videoSrc: VideoUrlMap,
+  alignOpts?: PlaybackProxyAlignOptions,
 ): Promise<string> {
   const lanIp = await getLanIp();
   if (!lanIp) {
@@ -437,7 +389,7 @@ export async function resolveCastPlayableUrl(
 
   let headers = videoSrc.headers ? { ...videoSrc.headers } : undefined;
   let forceProxy = false;
-  let preferM3u8 = isHlsSource(videoSrc);
+  let preferM3u8 = isHlsVideoSource(videoSrc);
 
   if (isLocalPlayerProxyUrl(url)) {
     const unwrapped = unwrapLocalPlayerProxyUrl(url);
@@ -450,13 +402,19 @@ export async function resolveCastPlayableUrl(
     preferM3u8 = preferM3u8 || unwrapped.wasM3u8;
   }
 
-  const shouldProxy = forceProxy || needsProxy({ ...videoSrc, url, headers });
+  const urlMapForProxy: VideoUrlMap = { ...videoSrc, url, headers };
+  const shouldProxy = forceProxy
+    || needsPlaybackAlignedProxy(urlMapForProxy, alignOpts);
 
   let castUrl: string | null;
   if (shouldProxy) {
+    const proxyHeaders = buildPlaybackAlignedProxyHeaders(
+      urlMapForProxy,
+      alignOpts?.pageUrl,
+    );
     castUrl = preferM3u8
-      ? await getCastM3u8ProxyUrl(url, headers ?? {})
-      : await getCastProxyUrl(url, headers ?? {});
+      ? await getCastM3u8ProxyUrl(url, proxyHeaders)
+      : await getCastProxyUrl(url, proxyHeaders);
   }
   else {
     castUrl = url;
@@ -505,8 +463,9 @@ export async function startDlnaCast(
   device: CastDevice,
   videoSrc: VideoUrlMap,
   title?: string,
+  alignOpts?: PlaybackProxyAlignOptions,
 ): Promise<CastMediaResult> {
-  const url = await resolveCastPlayableUrl(videoSrc);
+  const url = await resolveCastPlayableUrl(videoSrc, alignOpts);
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(
@@ -592,13 +551,14 @@ export async function isCastingActive(): Promise<boolean> {
 export async function castContinueMedia(
   videoSrc: VideoUrlMap,
   title?: string,
+  alignOpts?: PlaybackProxyAlignOptions,
 ): Promise<boolean> {
   const device = activeCastDevice.value;
   if (!device?.id || !videoSrc.url || videoSrc.isLive) {
     return false;
   }
   markCastReconnectHandledByAutoNext();
-  const success = (await startDlnaCast(device, videoSrc, title)).success;
+  const success = (await startDlnaCast(device, videoSrc, title, alignOpts)).success;
   if (success) {
     resetCastSyncContext();
   }
@@ -608,8 +568,9 @@ export async function castContinueMedia(
 export async function reconnectCast(
   videoSrc: VideoUrlMap,
   title?: string,
+  alignOpts?: PlaybackProxyAlignOptions,
 ): Promise<boolean> {
-  return await castContinueMedia(videoSrc, title);
+  return await castContinueMedia(videoSrc, title, alignOpts);
 }
 
 export { getCastState, stopCast };

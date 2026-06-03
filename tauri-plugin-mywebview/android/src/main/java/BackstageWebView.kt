@@ -2,6 +2,7 @@ package wuji.plugin.mywebview
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.net.http.SslError
 import android.os.Build
 import android.os.Handler
@@ -60,6 +61,36 @@ class BackstageWebView(
     private val mHandler = Handler(Looper.getMainLooper())
     private var callback: Callback? = null
     private var mWebView: WebView? = null
+    private val assetCache = mutableMapOf<String, String>()
+
+    /** 页面导航 + 资源稳定等待之外的硬超时宽限（毫秒） */
+    private val hardTimeoutMs: Long
+        get() = timeout + SCRAPING_GRACE_MS
+
+    private fun isDebugBuild(): Boolean {
+        return (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+    }
+
+    private fun handleSslError(handler: SslErrorHandler?, error: SslError?) {
+        if (handler == null) return
+        if (isDebugBuild()) {
+            Log.w(
+                "BackstageWebView",
+                "SSL error in debug build, proceeding: primary=${error?.primaryError}"
+            )
+            handler.proceed()
+        } else {
+            Log.e(
+                "BackstageWebView",
+                "SSL error in release build, canceling: primary=${error?.primaryError}"
+            )
+            handler.cancel()
+            callback?.onError(
+                NoStackTraceException("SSL certificate error")
+            )
+            destroy()
+        }
+    }
 
     fun getStrResponse(
         onResult: (StrResponse) -> Unit,
@@ -76,10 +107,10 @@ class BackstageWebView(
                 runOnUI {
                     destroy()
                 }
-                onError(TimeoutException("Request timeout after ${timeout + 10000}ms"))
+                onError(TimeoutException("Request timeout after ${hardTimeoutMs}ms"))
             }
         }
-        timeoutHandler.postDelayed(timeoutRunnable, timeout + 10000L)
+        timeoutHandler.postDelayed(timeoutRunnable, hardTimeoutMs)
 
         callback = object : Callback() {
             override fun onResult(response: StrResponse) {
@@ -196,16 +227,36 @@ class BackstageWebView(
 
     private fun destroy() {
         mHandler.removeCallbacksAndMessages(null)
-        mWebView?.stopLoading()
-        mWebView?.destroy()
+        val webView = mWebView ?: return
         mWebView = null
+        try {
+            webView.stopLoading()
+            webView.loadUrl("about:blank")
+            webView.webViewClient = WebViewClient()
+            webView.webChromeClient = null
+            webView.clearHistory()
+            webView.removeAllViews()
+            (webView.parent as? android.view.ViewGroup)?.removeView(webView)
+            webView.destroy()
+        } catch (e: Exception) {
+            Log.w("BackstageWebView", "destroy failed", e)
+        }
     }
 
     private fun getJs(): String {
-        val rawJs = (javaScript?.takeIf { it.isNotEmpty() } ?: readAsset("scraping.js"))
+        val rawJs = (javaScript?.takeIf { it.isNotEmpty() } ?: readAssetCached("scraping.js"))
         return rawJs
             .replace("{{timeout}}", timeout.toString())
             .replace("{{target_type}}", waitForResources ?: "")
+    }
+
+    private fun readAssetCached(fileName: String): String {
+        assetCache[fileName]?.let { return it }
+        val content = readAsset(fileName)
+        if (content.isNotEmpty()) {
+            assetCache[fileName] = content
+        }
+        return content
     }
 
     private fun readAsset(fileName: String): String {
@@ -217,6 +268,14 @@ class BackstageWebView(
         }
     }
 
+    private fun injectSniffInit(webView: WebView) {
+        webView.evaluateJavascript(readAssetCached("sniff_init.js"), null)
+    }
+
+    private fun injectSpoof(webView: WebView) {
+        webView.evaluateJavascript(readAssetCached("spoof.js"), null)
+    }
+
     private fun setCookie(url: String) {
         CookieStore.saveCookie(context, url)
     }
@@ -224,30 +283,69 @@ class BackstageWebView(
     private inner class HtmlWebViewClient : WebViewClient() {
 
         private var runnable: EvalJsRunnable? = null
+        private var pageLoadSeq: Int = 0
+
+        private fun scheduleEvalJs(
+            view: WebView,
+            currentUrl: String?,
+            baseDelayMs: Long,
+            reason: String,
+            expectedSeq: Int
+        ) {
+            runnable?.let { mHandler.removeCallbacks(it) }
+            val safeUrl = currentUrl ?: (view.url ?: "")
+            val evalRunnable = EvalJsRunnable(view, safeUrl, getJs())
+            runnable = evalRunnable
+            mHandler.postDelayed({
+                if (expectedSeq != pageLoadSeq) {
+                    Log.e(
+                        "WujiWebView",
+                        "[HtmlWebViewClient] Skip obsolete schedule reason=$reason expectedSeq=$expectedSeq currentSeq=$pageLoadSeq"
+                    )
+                    return@postDelayed
+                }
+                evalRunnable.run()
+            }, baseDelayMs + delayTime)
+        }
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
             super.onPageStarted(view, url, favicon)
+            pageLoadSeq += 1
+            val currentSeq = pageLoadSeq
             view?.let {
                 injectMinimalRenderingCss(it)
-                it.evaluateJavascript(readAsset("sniff_init.js"), null)
+                injectSniffInit(it)
+                // 兜底：有些页面会被慢资源卡住，onPageFinished 长时间不回调。
+                // 这里先预排一次 scraping.js 启动，若后续 Finished 到达会由更近一次调度覆盖。
+                scheduleEvalJs(
+                    view = it,
+                    currentUrl = url,
+                    baseDelayMs = 1800L,
+                    reason = "pageStarted",
+                    expectedSeq = currentSeq
+                )
             }
         }
 
         override fun onPageFinished(view: WebView, url: String) {
             setCookie(url)
-            view.evaluateJavascript(readAsset("spoof.js"), null)
-            runnable?.let { mHandler.removeCallbacks(it) }
-            runnable = EvalJsRunnable(view, url, getJs())
-            mHandler.postDelayed(runnable!!, 1000 + delayTime)
+            injectSpoof(view)
+            val currentSeq = pageLoadSeq
+            scheduleEvalJs(
+                view = view,
+                currentUrl = url,
+                baseDelayMs = 1000L,
+                reason = "pageFinished",
+                expectedSeq = currentSeq
+            )
         }
 
-        @SuppressLint("WebViewClientOnReceivedSslError")
         override fun onReceivedSslError(
             view: WebView?,
             handler: SslErrorHandler?,
             error: SslError?
         ) {
-            handler?.proceed()
+            handleSslError(handler, error)
         }
 
         override fun shouldInterceptRequest(
@@ -255,12 +353,7 @@ class BackstageWebView(
             request: WebResourceRequest?
         ): WebResourceResponse? {
             val reqUrl = request?.url?.toString() ?: return super.shouldInterceptRequest(view, request)
-            if (isMediaUrl(reqUrl)) {
-                runOnUI {
-                    val script = "if(window.addResource){window.addResource('${reqUrl}', 'Native (Intercept)', {type: '${guessType(reqUrl)}'});}"
-                    view?.evaluateJavascript(script, null)
-                }
-            }
+            notifyMediaResource(view, reqUrl)
             return super.shouldInterceptRequest(view, request)
         }
 
@@ -440,26 +533,25 @@ class BackstageWebView(
             super.onPageStarted(view, url, favicon)
             view?.let {
                 injectMinimalRenderingCss(it)
-                it.evaluateJavascript(readAsset("sniff_init.js"), null)
+                injectSniffInit(it)
             }
         }
 
         override fun onPageFinished(webView: WebView, url: String) {
             setCookie(url)
-            webView.evaluateJavascript(readAsset("spoof.js"), null)
+            injectSpoof(webView)
             if (!javaScript.isNullOrEmpty()) {
                 val runnable = LoadJsRunnable(webView, javaScript)
                 mHandler.postDelayed(runnable, 500L + delayTime)
             }
         }
 
-        @SuppressLint("WebViewClientOnReceivedSslError")
         override fun onReceivedSslError(
             view: WebView?,
             handler: SslErrorHandler?,
             error: SslError?
         ) {
-            handler?.proceed()
+            handleSslError(handler, error)
         }
 
         override fun shouldInterceptRequest(
@@ -467,12 +559,7 @@ class BackstageWebView(
             request: WebResourceRequest?
         ): WebResourceResponse? {
             val reqUrl = request?.url?.toString() ?: return super.shouldInterceptRequest(view, request)
-            if (isMediaUrl(reqUrl)) {
-                runOnUI {
-                    val script = "if(window.addResource){window.addResource('${reqUrl}', 'Native (Intercept)', {type: '${guessType(reqUrl)}'});}"
-                    view?.evaluateJavascript(script, null)
-                }
-            }
+            notifyMediaResource(view, reqUrl)
             return super.shouldInterceptRequest(view, request)
         }
 
@@ -487,7 +574,19 @@ class BackstageWebView(
         }
     }
 
+    private fun notifyMediaResource(view: WebView?, reqUrl: String) {
+        if (!isMediaUrl(reqUrl)) return
+        val escapedUrl = JSONObject.quote(reqUrl)
+        val mediaType = guessType(reqUrl)
+        runOnUI {
+            val script =
+                "if(window.addResource){window.addResource($escapedUrl,'Native (Intercept)',{type:'$mediaType'});}"
+            view?.evaluateJavascript(script, null)
+        }
+    }
+
     companion object {
+        private const val SCRAPING_GRACE_MS = 10_000L
         private val quoteRegex = "^\"|\"$".toRegex()
         private val mediaRegex = """\.(mp4|m3u8|m4v|mkv|webm|ts|mpd|m4s|mp3|aac|ogg|flac|wav|m4a|opus)($|\?|&|%|#)""".toRegex(RegexOption.IGNORE_CASE)
 

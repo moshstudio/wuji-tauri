@@ -10,13 +10,14 @@ const props = withDefaults(
     photoItem?: PhotoItem;
     photoDetail?: PhotoDetail;
     pageNo?: number;
-    back: () => void;
+    preview?: boolean;
+    back?: () => void;
     toPage: (pageNo?: number) => void;
-    toShelf: (item: PhotoItem) => void;
-    savePic: (url: string, headers?: Record<string, string>) => void;
+    toShelf?: (item: PhotoItem) => void;
+    savePic?: (url: string, headers?: Record<string, string>) => void;
     onDownload?: () => void;
   }>(),
-  { pageNo: 1 },
+  { pageNo: 1, preview: false },
 );
 
 const pageNo = computed({
@@ -44,7 +45,7 @@ const navbarActions = computed(() => [
     name: '收藏',
     callback: () => {
       if (props.photoItem) {
-        props.toShelf(props.photoItem);
+        props.toShelf?.(props.photoItem);
       }
     },
   },
@@ -68,14 +69,14 @@ watch(
 
 <template>
   <div class="relative flex h-full flex-col overflow-hidden">
-    <MNavBar :title="photoItem?.title || '图片详情'">
+    <MNavBar v-if="!preview" :title="photoItem?.title || '图片详情'">
       <template #right>
         <van-icon name="ellipsis" size="20" @click="showNavbarOptions = true" />
       </template>
     </MNavBar>
 
     <main
-      v-remember-scroll
+      v-remember-scroll="!preview"
       class="photo-detail flex grow select-none flex-col overflow-y-auto bg-[--van-background-3]"
     >
       <template v-if="photoItem && photoDetail">
@@ -92,6 +93,7 @@ watch(
             :lazy-load="true"
             @click="
               () => {
+                if (preview) return;
                 clickedItem = item;
                 showClickImageOptions = true;
               }
@@ -121,11 +123,13 @@ watch(
     </main>
   </div>
   <MoreOptionsSheet
+    v-if="!preview"
     v-model="showNavbarOptions"
     :actions="navbarActions"
     @select="showNavbarOptions = false"
   />
   <MoreOptionsSheet
+    v-if="!preview"
     v-model="showClickImageOptions"
     :actions="[
       {
@@ -134,7 +138,7 @@ watch(
         callback: async () => {
           if (!clickedItem) return;
           showClickImageOptions = false;
-          savePic(clickedItem, photoDetail?.photosHeaders || undefined);
+          savePic?.(clickedItem, photoDetail?.photosHeaders || undefined);
         },
       },
     ]"

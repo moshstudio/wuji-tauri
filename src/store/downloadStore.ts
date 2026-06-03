@@ -64,6 +64,8 @@ import {
   getVideoSavePath,
   getVideoTaskId,
 } from './download/fetchers/video';
+import { alignVideoUrlForDownload } from '@/utils/videoDownloadProxy';
+import { resolveVideoEpisodeUrl } from '@/utils/videoPlayResolver';
 import { useServerStore } from './serverStore';
 import { useSettingStore } from './settingStore';
 import { useSongCacheStore } from './songCacheStore';
@@ -519,15 +521,24 @@ export const useDownloadStore = defineStore('download', () => {
         const episode = resource.episodes?.find(e => e.id === episodeId) || resource.episodes?.[0];
 
         if (episode) {
-          const urlMap = await store.videoPlay(source, video, resource, episode);
-          if (urlMap?.url) {
-            await addTask({
-              ...task,
-              url: urlMap.url,
-              headers: { ...(task.headers || {}), ...(urlMap.headers || {}) },
-            });
-            console.log(`[VideoFetcher] URL refreshed for ${task.title}`);
-          }
+          const { raw, resolved: urlMap, webviewUsed } = await resolveVideoEpisodeUrl({
+            source,
+            video,
+            resource,
+            episode,
+            videoPlay: (s, v, r, e) => store.videoPlay(s, v, r, e),
+            allowWebviewFallback: true,
+          });
+          const downloadTarget = await alignVideoUrlForDownload(urlMap, {
+            pageUrl: raw.url,
+            webviewUsed,
+          });
+          console.log(`[VideoFetcher] URL refreshed for ${task.title}`);
+          await addTask({
+            ...task,
+            url: downloadTarget.url,
+            headers: { ...(task.headers || {}), ...(downloadTarget.headers || {}) },
+          });
         }
       }
     });

@@ -44,6 +44,20 @@ android {
     }
 }
 
+// scripts/ 为 WebView 注入脚本单一来源；构建前同步到 assets
+val syncWebviewScripts = tasks.register<Copy>("syncWebviewScripts") {
+    from("../scripts") {
+        include("sniff_init.js")
+        include("scraping.android.js")
+        rename("scraping.android.js", "scraping.js")
+    }
+    into(layout.projectDirectory.dir("src/main/assets"))
+}
+
+tasks.named("preBuild") {
+    dependsOn(syncWebviewScripts)
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.9.0")
     implementation("androidx.appcompat:appcompat:1.6.0")

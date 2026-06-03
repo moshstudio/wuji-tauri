@@ -868,7 +868,10 @@ fn build_proxy_routers(
             },
         );
 
-    m3u8_proxy_router.or(ts_proxy_router).or(proxy).with(cors.build())
+    m3u8_proxy_router
+        .or(ts_proxy_router)
+        .or(proxy)
+        .with(cors.build())
 }
 
 fn ensure_cast_proxy_server() -> Result<u16, String> {

@@ -11,13 +11,15 @@ import {
   VideoExtension,
 } from '@wuji-tauri/source-extension';
 import { showDialog } from 'vant';
-import { computed, nextTick, onDeactivated, ref, watch } from 'vue';
+import { computed, nextTick, onDeactivated, ref, watchEffect } from 'vue';
 import Player, { Events } from 'xgplayer';
 import CMS_VIDEO_TEMPLATE from '@/components/codeEditor/templates/cmsVideoTemplate.txt?raw';
 import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import VideoJsPlugin from '@/components/media/plugins/videoJs';
+import AppVideoDetail from '@/layouts/app/video/VideoDetail.vue';
 import { resolveVideoUrlMap } from '@/utils/videoMediaType';
+import CreateSourcePreviewShell from '../CreateSourcePreviewShell.vue';
+import { CreateSourceRunStatus } from '../useCreateSourceListRunner';
 import 'xgplayer/dist/index.min.css';
 
 const props = defineProps<{
@@ -32,14 +34,10 @@ const props = defineProps<{
   log: (...args: any[]) => void;
 }>();
 
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
+const runStatus = ref<CreateSourceRunStatus>(
+  CreateSourceRunStatus.not_running,
+);
+const showPlaylist = ref(true);
 const errorMessage = ref('运行失败');
 const result = ref<VideoUrlMap>();
 const selectedResource = ref<VideoResource>();
@@ -48,6 +46,7 @@ const sourceItem = computed(() => findPage('detail')?.result);
 const videoElement = ref<HTMLElement>();
 const videoPlayer = ref<Player>();
 const videoSrc = ref<VideoUrlMap>();
+const playUrlFetching = ref(false);
 
 async function initLoad() {
   result.value = undefined;
@@ -57,7 +56,7 @@ async function initLoad() {
   return await load();
 }
 
-async function load() {
+async function load(silent = false) {
   if (!findPage('constructor')?.code) {
     showDialog({
       message: '《初始化》code未定义!',
@@ -105,7 +104,12 @@ async function load() {
     .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
     .replace('// @METHOD_DETAIL', findPage('detail')!.code)
     .replace('// @METHOD_PLAY_URL', findPage('playUrl')!.code);
-  runStatus.value = RunStatus.running;
+  if (silent) {
+    playUrlFetching.value = true;
+  }
+  else {
+    runStatus.value = CreateSourceRunStatus.running;
+  }
   try {
     const func = new Function('VideoExtension', 'CmsVideoExtension', code);
     const ExtensionClass = func(VideoExtension, CmsVideoExtension);
@@ -145,59 +149,69 @@ async function load() {
     result.value = await resolveVideoUrlMap(res);
     videoSrc.value = result.value;
     props.updateResult('video', 'playUrl', result.value, true);
-    runStatus.value = RunStatus.success;
+    runStatus.value = CreateSourceRunStatus.success;
   }
   catch (error) {
     errorMessage.value = String(error);
-    runStatus.value = RunStatus.error;
+    runStatus.value = CreateSourceRunStatus.error;
     props.updateResult('video', 'playUrl', result.value, false);
   }
+  finally {
+    playUrlFetching.value = false;
+  }
+}
+
+function onPreviewResource(resource: VideoResource) {
+  selectedResource.value = resource;
 }
 
 function findPage(name: string) {
   return props.content.pages.find(page => page.type === name);
 }
 
-watch(
-  videoSrc,
-  async (video) => {
-    if (videoSrc.value) {
-      videoPlayer.value?.destroy();
-      await nextTick();
-      videoPlayer.value = new Player({
-        el: videoElement.value,
-        url: video?.url,
-        videoType: video?.type,
-        autoplay: true,
-        loop: false,
-        playsinline: true,
-        cssFullscreen: false,
-        volume: 1,
-        isLive: videoSrc.value?.isLive || false,
-        height: '100%',
-        width: '100%',
-        keyShortcuts: false,
-        plugins: [VideoJsPlugin],
-        ignores: ['fullscreen', 'keyboard'],
-        videoAttributes: {
-          crossOrigin: 'anonymous',
-        },
-      });
-
-      videoPlayer.value.on(Events.ERROR, (error) => {
-        console.warn(`播放失败: ${JSON.stringify(error)}`);
-      });
-
-      videoPlayer.value.getPlugin('error').useHooks('showError', () => {
-        videoPlayer.value?.controls?.show();
-      });
-    }
-    else {
-      videoPlayer.value?.reset();
-    }
-  },
-  { immediate: true },
-);
+watchEffect(async (onCleanup) => {
+  const video = videoSrc.value;
+  const el = videoElement.value;
+  if (!video?.url || !el) {
+    videoPlayer.value?.destroy();
+    videoPlayer.value = undefined;
+    return;
+  }
+  await nextTick();
+  if (!videoElement.value) {
+    return;
+  }
+  videoPlayer.value?.destroy();
+  const player = new Player({
+    el: videoElement.value,
+    url: video.url,
+    videoType: video.type,
+    autoplay: true,
+    loop: false,
+    playsinline: true,
+    cssFullscreen: false,
+    volume: 1,
+    isLive: video.isLive || false,
+    height: '100%',
+    width: '100%',
+    keyShortcuts: false,
+    plugins: [VideoJsPlugin],
+    ignores: ['fullscreen', 'keyboard'],
+    videoAttributes: {
+      crossOrigin: 'anonymous',
+    },
+  });
+  videoPlayer.value = player;
+  player.on(Events.ERROR, (error) => {
+    console.warn(`播放失败: ${JSON.stringify(error)}`);
+  });
+  player.getPlugin('error').useHooks('showError', () => {
+    player.controls?.show();
+  });
+  onCleanup(() => {
+    player.destroy();
+  });
+});
 
 onDeactivated(() => {
   if (videoPlayer.value) {
@@ -206,9 +220,13 @@ onDeactivated(() => {
   }
 });
 
-function loadEpisode(episode: VideoEpisode) {
+function loadEpisode(
+  resource: VideoResource,
+  episode: VideoEpisode,
+) {
+  selectedResource.value = resource;
   selectedEpisode.value = episode;
-  load();
+  load(true);
 }
 
 defineExpose({
@@ -217,83 +235,31 @@ defineExpose({
 </script>
 
 <template>
-  <div>
-    <div v-if="runStatus === RunStatus.not_running">
-      未运行
-    </div>
-    <div
-      v-else-if="runStatus === RunStatus.running"
-      class="flex items-center justify-center"
+  <CreateSourcePreviewShell
+    :run-status="runStatus"
+    :error-message="errorMessage"
+  >
+    <AppVideoDetail
+      v-if="sourceItem"
+      v-model:show-playlist="showPlaylist"
+      preview
+      :video-item="sourceItem"
+      :playing-resource="selectedResource"
+      :playing-episode="selectedEpisode"
+      :on-preview-episode="loadEpisode"
+      :on-preview-resource="onPreviewResource"
     >
-      <van-loading />
-    </div>
-    <div v-else-if="runStatus === RunStatus.error" class="text-red-500">
-      {{ errorMessage }}
-    </div>
-    <div v-else>
-      <div class="flex grow select-none flex-col overflow-y-auto">
+      <div class="relative shrink-0">
         <div ref="videoElement" class="!relative !h-[200px] !w-full" />
         <div
-          class="flex w-full flex-shrink-0 items-center justify-start gap-2 overflow-hidden"
+          v-if="playUrlFetching"
+          class="absolute inset-0 z-10 flex items-center justify-center bg-black/40"
         >
-          <h2 class="font-bold">
-            {{ sourceItem?.title }}
-          </h2>
-        </div>
-        <div
-          class="flex flex-shrink-0 gap-2 overflow-x-auto overflow-y-hidden pb-2"
-        >
-          <van-button
-            v-for="resource in sourceItem?.resources"
-            :key="`resource${resource.id}`"
-            class="flex-shrink-0"
-            size="small"
-            :type="resource.id === selectedResource?.id ? 'primary' : 'default'"
-            :class="
-              resource.id === selectedResource?.id
-                ? 'video-playing-resource'
-                : ''
-            "
-            @click="
-              (e) => {
-                selectedResource = resource;
-                e.target.scrollIntoView({
-                  behavior: 'smooth', // 可选：平滑滚动
-                  block: 'nearest', // 垂直方向不强制滚动
-                  inline: 'center', // 水平方向居中
-                });
-              }
-            "
-          >
-            {{ resource.title }}
-          </van-button>
-        </div>
-
-        <ResponsiveGrid2
-          min-width="40"
-          class="episode-show-list flex w-full flex-col overflow-y-auto overflow-x-hidden"
-        >
-          <van-button
-            v-for="episode in selectedResource?.episodes"
-            :key="`episode${episode.id}`"
-            class="flex-shrink-0"
-            size="small"
-            :type="selectedEpisode?.id !== episode.id ? 'default' : 'success'"
-            @click="
-              () => {
-                loadEpisode(episode);
-              }
-            "
-          >
-            {{ episode.title }}
-          </van-button>
-        </ResponsiveGrid2>
-        <div v-if="!result" class="flex w-full items-center justify-center">
-          <van-loading />
+          <van-loading color="#fff" />
         </div>
       </div>
-    </div>
-  </div>
+    </AppVideoDetail>
+  </CreateSourcePreviewShell>
 </template>
 
 <style scoped lang="less"></style>

@@ -1,25 +1,25 @@
 {
-  "version": "0.2.4",
-  "notes": "修复已知bug",
-  "pub_date": "2026-05-29T17:59:09+08:00",
+  "version": "0.2.5",
+  "notes": "修复已知问题",
+  "pub_date": "2026-06-03T20:44:07+08:00",
   "platforms": {
     "cloudpan": {
       "url": "https://wwtn.lanzout.com/s/WUJI"
     },
     "android-aarch64": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.4-aarch64.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.5-aarch64.apk"
     },
     "android-x86_64": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.4-x86_64.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.5-x86_64.apk"
     },
     "android-universal": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.4-universal.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.5-universal.apk"
     },
     "android-armv7": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.4-armv7.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.5-armv7.apk"
     },
     "android-i686": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.4-i686.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.5-i686.apk"
     }
   }
 }

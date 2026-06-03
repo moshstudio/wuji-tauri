@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import type { BookItem, BooksList } from '@wuji-tauri/source-extension';
 import type { FormItem } from '@/store/sourceCreateStore';
-import { LoadImage } from '@wuji-tauri/components';
 import { BookExtension } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
 import { showDialog } from 'vant';
 import { ref } from 'vue';
 import BOOK_TEMPLATE from '@/components/codeEditor/templates/bookTemplate.txt?raw';
-import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
+import AppBookDetail from '@/layouts/app/book/BookDetail.vue';
+import CreateSourcePreviewShell from '../CreateSourcePreviewShell.vue';
+import { CreateSourceRunStatus } from '../useCreateSourceListRunner';
 
 const props = defineProps<{
   content: FormItem<BooksList>;
@@ -18,17 +19,12 @@ const props = defineProps<{
     padded: boolean,
   ) => void;
   close: () => void;
-  log: (...args: any[]) => void;
+  log: (...args: unknown[]) => void;
 }>();
 
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
+const runStatus = ref<CreateSourceRunStatus>(
+  CreateSourceRunStatus.not_running,
+);
 const errorMessage = ref('运行失败');
 const result = ref<BookItem>();
 
@@ -73,7 +69,7 @@ async function load() {
     .replace('// @METHOD_LIST', findPage('list')!.code)
     .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
     .replace('// @METHOD_DETAIL', findPage('detail')!.code);
-  runStatus.value = RunStatus.running;
+  runStatus.value = CreateSourceRunStatus.running;
   try {
     const func = new Function('BookExtension', code);
     const ExtensionClass = func(BookExtension);
@@ -93,13 +89,13 @@ async function load() {
       }
     }
     if (!item) {
-      const page = findPage('searchList');
-      if (page?.result) {
-        if (_.isArray(page.result)) {
-          item = page.result[0]?.list[0];
+      const searchPage = findPage('searchList');
+      if (searchPage?.result) {
+        if (_.isArray(searchPage.result)) {
+          item = searchPage.result[0]?.list[0];
         }
         else {
-          item = page.result.list[0];
+          item = searchPage.result.list[0];
         }
       }
     }
@@ -115,11 +111,11 @@ async function load() {
     }
     result.value = res;
     props.updateResult('book', 'detail', result.value, true);
-    runStatus.value = RunStatus.success;
+    runStatus.value = CreateSourceRunStatus.success;
   }
   catch (error) {
     errorMessage.value = String(error);
-    runStatus.value = RunStatus.error;
+    runStatus.value = CreateSourceRunStatus.error;
     props.updateResult('book', 'detail', result.value, false);
   }
 }
@@ -134,102 +130,10 @@ defineExpose({
 </script>
 
 <template>
-  <div>
-    <div v-if="runStatus === RunStatus.not_running">
-      未运行
-    </div>
-    <div
-      v-else-if="runStatus === RunStatus.running"
-      class="flex items-center justify-center"
-    >
-      <van-loading />
-    </div>
-    <div v-else-if="runStatus === RunStatus.error" class="text-red-500">
-      {{ errorMessage }}
-    </div>
-    <div v-else>
-      <div class="flex grow select-none flex-col overflow-y-auto">
-        <div
-          v-if="result"
-          class="flex w-full flex-col gap-1 rounded p-2 shadow-md"
-        >
-          <div class="flex flex-nowrap items-center justify-center gap-2">
-            <div v-if="result.cover" class="h-[100px] w-[80px]">
-              <LoadImage
-                width="80px"
-                height="100px"
-                radius="4"
-                :src="result.cover"
-                :headers="result.coverHeaders"
-                class="mr-4"
-              />
-            </div>
-
-            <div
-              class="flex flex-col justify-start gap-1 text-sm text-[--van-text-color]"
-            >
-              <div class="font-bold">
-                {{ result.title }}
-              </div>
-              <p class="flex gap-2 text-xs">
-                <span>{{ result.author }}</span>
-                <span>{{ _.castArray(result.tags)?.join(',') }}</span>
-                <span>{{ result.status }}</span>
-              </p>
-
-              <p>
-                <span class="text-xs">{{ result.latestChapter }}</span>
-              </p>
-            </div>
-          </div>
-          <van-text-ellipsis
-            :content="result.intro"
-            class="self-center text-xs text-gray-400"
-            rows="3"
-            expand-text="展开"
-            collapse-text="收起"
-          />
-        </div>
-
-        <div
-          v-if="result?.chapters"
-          class="mt-4 w-full text-[--van-text-color]"
-        >
-          <div class="flex w-full items-center justify-between">
-            <p class="font-bold">
-              共有{{ result.chapters.length }} 章
-            </p>
-          </div>
-          <van-tabs shrink animated>
-            <van-tab
-              v-for="index of Array(
-                Math.ceil(result.chapters.length / 200),
-              ).keys()"
-              :key="index"
-              :title="`${index * 200 + 1}-${Math.min(result.chapters.length, (index + 1) * 200)}`"
-            >
-              <ResponsiveGrid2>
-                <p
-                  v-for="chapter in result.chapters.slice(
-                    index * 200,
-                    Math.min(result.chapters.length, (index + 1) * 200 - 1),
-                  )"
-                  :key="chapter.id"
-                  class="van-haptics-feedback cursor-pointer select-none truncate rounded-lg text-sm"
-                  @click="() => {}"
-                >
-                  {{ chapter.title }}
-                </p>
-              </ResponsiveGrid2>
-            </van-tab>
-          </van-tabs>
-        </div>
-        <div v-if="!result" class="flex w-full items-center justify-center">
-          <van-loading />
-        </div>
-      </div>
-    </div>
-  </div>
+  <CreateSourcePreviewShell
+    :run-status="runStatus"
+    :error-message="errorMessage"
+  >
+    <AppBookDetail v-if="result" preview :book="result" />
+  </CreateSourcePreviewShell>
 </template>
-
-<style scoped lang="less"></style>

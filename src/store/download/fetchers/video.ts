@@ -1,8 +1,50 @@
 import type { VideoItem, VideoResource, VideoSource } from '@wuji-tauri/source-extension';
 import type { DownloadTask } from '../types';
 import { sanitizePathName } from '@/utils';
+import { alignVideoUrlForDownload } from '@/utils/videoDownloadProxy';
+import { resolveVideoEpisodeUrl } from '@/utils/videoPlayResolver';
 import { useStore } from '../../store';
 import { invokePlugin, isTaskRunning, TASK_PREFIX } from '../utils';
+
+async function dispatchEpisodeChunkDownload(params: {
+  taskId: string;
+  index: number;
+  episodeTitle: string;
+  saveRootPath: string;
+  url: string;
+  headers?: Record<string, string>;
+}) {
+  const { taskId, index, episodeTitle, saveRootPath, url, headers = {} } = params;
+  const safeEpisodeTitle = sanitizePathName(episodeTitle, {
+    removeSpaces: false,
+  });
+
+  if (url.toLowerCase().includes('.m3u8')) {
+    console.log(
+      `[VideoFetcher] Dispatching M3U8 chunk download for: ${episodeTitle}`,
+    );
+    const subSavePath = `${saveRootPath}/${safeEpisodeTitle}.ts`;
+    await invokePlugin('download_m3u8_chunk', {
+      taskId,
+      index,
+      url,
+      savePath: subSavePath,
+      headers,
+    });
+    return;
+  }
+
+  console.log(
+    `[VideoFetcher] Dispatching HTTP chunk for: ${episodeTitle}`,
+  );
+  await invokePlugin('download_remote_chunk', {
+    taskId,
+    index,
+    title: safeEpisodeTitle,
+    url,
+    headers,
+  });
+}
 
 export async function doRunVideoCollectionFetcher(
   video: VideoItem,
@@ -69,58 +111,97 @@ export async function doRunVideoCollectionFetcher(
     );
 
     try {
-      // 1. 实时解析地址
-      const urlMap = await store.videoPlay(source, video, resource, episode);
-      if (!urlMap?.url)
-        throw new Error('解析地址失败');
+      // 1) 首次：按初始链接下载（不走 WebView，避免额外开销）
+      const {
+        raw: firstRaw,
+        resolved: firstAttemptUrlMap,
+        webviewUsed: firstWebviewUsed,
+      } = await resolveVideoEpisodeUrl({
+        source,
+        video,
+        resource,
+        episode,
+        videoPlay: (s, v, r, e) => store.videoPlay(s, v, r, e),
+        allowWebviewFallback: false,
+      });
 
-      if (urlMap.isLive) {
+      if (firstAttemptUrlMap.isLive) {
         console.warn(`[VideoFetcher] Skipping live stream: ${episode.title}`);
         await invokePlugin('mark_chunk_completed', { taskId, index: i });
         continue;
       }
 
-      const safeEpisodeTitle = sanitizePathName(episode.title, {
-        removeSpaces: false,
-      });
-
-      // 2. 调度下载
-      if (urlMap.url.toLowerCase().includes('.m3u8')) {
-        console.log(
-          `[VideoFetcher] Dispatching M3U8 chunk download for: ${episode.title}`,
+      let downloaded = false;
+      try {
+        const firstDownloadTarget = await alignVideoUrlForDownload(
+          firstAttemptUrlMap,
+          {
+            pageUrl: firstRaw.url,
+            webviewUsed: firstWebviewUsed,
+          },
         );
-        const subSavePath = `${taskInStore?.savePath}/${safeEpisodeTitle}.ts`;
+        await dispatchEpisodeChunkDownload({
+          taskId,
+          index: i,
+          episodeTitle: episode.title,
+          saveRootPath: taskInStore?.savePath || video.title || 'video',
+          url: firstDownloadTarget.url,
+          headers: firstDownloadTarget.headers || {},
+        });
+        downloaded = true;
+      }
+      catch (firstError) {
+        if (!isTaskRunning(deps.getTasks(), taskId))
+          return; // 如果是由于暂停导致的，直接停止 fetcher
+        console.warn(
+          `[VideoFetcher] First attempt failed for ${episode.title}, refetching playable url...`,
+          firstError,
+        );
 
+        // 2) 失败后：重新获取 URL，并走完整播放解析链路（含 WebView）
         try {
-          await invokePlugin('download_m3u8_chunk', {
-            taskId,
-            index: i,
-            url: urlMap.url,
-            savePath: subSavePath,
-            headers: urlMap.headers || {},
+          const {
+            raw: retryRaw,
+            resolved: retryUrlMap,
+            webviewUsed: retryWebviewUsed,
+          } = await resolveVideoEpisodeUrl({
+            source,
+            video,
+            resource,
+            episode,
+            videoPlay: (s, v, r, e) => store.videoPlay(s, v, r, e),
+            allowWebviewFallback: true,
           });
 
-          if (isTaskRunning(deps.getTasks(), taskId)) {
-            await invokePlugin('mark_chunk_completed', { taskId, index: i });
-          }
+          const retryDownloadTarget = await alignVideoUrlForDownload(
+            retryUrlMap,
+            {
+              pageUrl: retryRaw.url,
+              webviewUsed: retryWebviewUsed,
+            },
+          );
+          await dispatchEpisodeChunkDownload({
+            taskId,
+            index: i,
+            episodeTitle: episode.title,
+            saveRootPath: taskInStore?.savePath || video.title || 'video',
+            url: retryDownloadTarget.url,
+            headers: retryDownloadTarget.headers || {},
+          });
+          downloaded = true;
         }
-        catch (e) {
-          console.error(`[VideoFetcher] M3U8 chunk ${i} failed/aborted:`, e);
+        catch (retryError) {
+          console.error(
+            `[VideoFetcher] Retry attempt failed for episode ${episode.title}:`,
+            retryError,
+          );
           if (!isTaskRunning(deps.getTasks(), taskId))
             return; // 如果是由于暂停导致的，直接停止 fetcher
         }
       }
-      else {
-        console.log(
-          `[VideoFetcher] Dispatching HTTP chunk for: ${episode.title}`,
-        );
-        await invokePlugin('download_remote_chunk', {
-          taskId,
-          index: i,
-          title: safeEpisodeTitle,
-          url: urlMap.url,
-          headers: urlMap.headers || {},
-        });
+
+      if (downloaded && isTaskRunning(deps.getTasks(), taskId)) {
+        // 分片落盘成功后后端已写入 completed_chunks，这里不重复标记
       }
     }
     catch (e) {

@@ -58,7 +58,7 @@ class Semaphore {
 // 创建最大并发数为3的信号量实例
 const semaphore = new Semaphore(3);
 
-export async function fetWebview(
+export async function fetchWebview(
   url: string,
   options?: {
     timeout?: number;
@@ -72,7 +72,6 @@ export async function fetWebview(
     useSavedCookie?: boolean;
   },
 ): Promise<FetchWebviewResult | null> {
-  // 尝试获取信号量许可，最多等待20秒
   const acquired = await semaphore.acquire(20000);
 
   if (!acquired) {
@@ -80,11 +79,12 @@ export async function fetWebview(
   }
 
   try {
-    const ret = await _fetchWebview(url, options);
-    return ret;
+    return await _fetchWebview(url, options);
   }
   finally {
-    // 无论成功还是失败，都要释放信号量
     semaphore.release();
   }
 }
+
+/** @deprecated 使用 fetchWebview */
+export const fetWebview = fetchWebview;

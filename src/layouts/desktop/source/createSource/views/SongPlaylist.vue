@@ -8,6 +8,7 @@ import { ref } from 'vue';
 import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
 import HorizonList from '@/components/list/HorizonList.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
+import { isIncrementalCreateSourceLoad } from '../useCreateSourceListRunner';
 
 const props = defineProps<{
   content: FormItem<PlaylistList>;
@@ -50,7 +51,9 @@ async function load(pageNo: number) {
     '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
   ).replace('// @METHOD_PLAYLIST', findPage('playlist')!.code);
-  runStatus.value = RunStatus.running;
+  if (!isIncrementalCreateSourceLoad(result.value !== undefined, pageNo)) {
+    runStatus.value = RunStatus.running;
+  }
   try {
     const func = new Function('SongExtension', code);
     const ExtensionClass = func(SongExtension);

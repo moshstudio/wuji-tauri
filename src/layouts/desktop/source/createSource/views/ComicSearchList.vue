@@ -30,7 +30,7 @@ const { runStatus, errorMessage, result, load, initLoad }
     getContent: () => props.content,
     prereqDialogMessage: '请先执行通过《推荐漫画》',
     updateResult: (r, p) => props.updateResult('comic', 'searchList', r, p),
-    buildAndFetch: async (findPage, pageNo) => {
+    buildAndFetch: async (findPage, pageNo, type) => {
       const code = COMIC_TEMPLATE.replace(
         '// @METHOD_CONSTRUCTOR',
         findPage('constructor')!.code,
@@ -44,6 +44,9 @@ const { runStatus, errorMessage, result, load, initLoad }
         throw new Error('初始化中的baseUrl未定义!');
       }
       cls.log = props.log;
+      if (type) {
+        return (await cls.execGetRecommendComics(pageNo, type)) ?? undefined;
+      }
       return (await cls.execSearch(keyword.value, pageNo)) ?? undefined;
     },
   });

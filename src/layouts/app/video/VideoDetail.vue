@@ -10,29 +10,43 @@ import type Player from 'xgplayer';
 import { Icon } from '@iconify/vue';
 import { useResizeObserver, useWindowSize } from '@vueuse/core';
 import { castArray } from 'lodash';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, useSlots, watch } from 'vue';
 import MembershipFeatureWrap from '@/components/badge/MembershipFeatureWrap.vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import { useDisplayStore } from '@/store';
 import { MembershipFeature } from '@/utils/membershipBadge';
 
-const props = defineProps<{
-  player?: Player;
-  videoItem?: VideoItem;
-  videoSource?: VideoSource;
-  playingResource?: VideoResource;
-  playingEpisode?: VideoEpisode;
-  videoSrc?: VideoUrlMap;
-  inShelf?: boolean;
-  play: (resource: VideoResource, episode: VideoEpisode) => Promise<void>;
-  addToShelf: (video: VideoItem) => void;
-  onDownload?: (resource: VideoResource, episode: VideoEpisode) => void;
-  onCast?: () => void;
-  showSearch: () => void;
-}>();
+const props = withDefaults(
+  defineProps<{
+    player?: Player;
+    videoItem?: VideoItem;
+    videoSource?: VideoSource;
+    playingResource?: VideoResource;
+    playingEpisode?: VideoEpisode;
+    videoSrc?: VideoUrlMap;
+    inShelf?: boolean;
+    preview?: boolean;
+    play?: (resource: VideoResource, episode: VideoEpisode) => Promise<void>;
+    addToShelf?: (video: VideoItem) => void;
+    onDownload?: (resource: VideoResource, episode: VideoEpisode) => void;
+    onCast?: () => void;
+    showSearch?: () => void;
+    onPreviewEpisode?: (
+      resource: VideoResource,
+      episode: VideoEpisode,
+    ) => void;
+    onPreviewResource?: (resource: VideoResource) => void;
+  }>(),
+  {
+    inShelf: false,
+    preview: false,
+  },
+);
 const showPlaylist = defineModel<boolean>('showPlaylist', {
   default: false,
 });
+const slots = useSlots();
+const hasPlayerSlot = computed(() => !!slots.default);
 const displayStore = useDisplayStore();
 const _selectedResource = ref<VideoResource>();
 const selectedResource = computed({
@@ -58,7 +72,34 @@ watch(
 const { height: windowHeight } = useWindowSize();
 const videoListElement = ref<HTMLElement>();
 const videoListElementHeight = ref(0);
-const activeTabName = ref('');
+const activeTab = ref<number | string>(0);
+
+watch(
+  () => props.playingResource?.id,
+  () => {
+    const resources = props.videoItem?.resources;
+    if (!resources?.length) {
+      activeTab.value = 0;
+      return;
+    }
+    const idx = resources.findIndex(r => r.id === props.playingResource?.id);
+    activeTab.value = idx >= 0 ? idx : 0;
+  },
+  { immediate: true },
+);
+
+function onTabChange(name: string | number) {
+  const index = typeof name === 'number' ? name : Number(name);
+  const resource = props.videoItem?.resources?.[index];
+  if (!resource) {
+    return;
+  }
+  selectedResource.value = resource;
+  if (props.preview) {
+    props.onPreviewResource?.(resource);
+  }
+}
+
 const tabOffsetTop = computed(() => {
   if (displayStore.fullScreenMode) {
     return '50px';
@@ -75,25 +116,40 @@ useResizeObserver(videoListElement, (entries) => {
 
 <template>
   <div
-    class="xgplayer-container grid h-full w-full overflow-hidden bg-black transition-all duration-300"
-    :class="
-      displayStore.fullScreenMode
-        ? showPlaylist
-          ? 'grid-cols-[0.65fr_0.35fr]'
-          : 'grid-cols-[1fr_0fr]'
-        : showPlaylist
-          ? 'grid-rows-[0.35fr_0.65fr]'
-          : 'grid-rows-[1fr_0fr]'
-    "
+    class="xgplayer-container grid h-full w-full overflow-hidden transition-all duration-300"
+    :class="[
+      preview ? 'bg-[var(--van-background-2)]' : 'bg-black',
+      preview
+        ? hasPlayerSlot
+          ? 'grid-rows-[auto_1fr] min-h-0'
+          : 'grid-rows-[1fr]'
+        : displayStore.fullScreenMode
+          ? showPlaylist
+            ? 'grid-cols-[0.65fr_0.35fr]'
+            : 'grid-cols-[1fr_0fr]'
+          : showPlaylist
+            ? 'grid-rows-[0.35fr_0.65fr]'
+            : 'grid-rows-[1fr_0fr]',
+    ]"
   >
     <slot />
 
     <div
+      v-if="preview || showPlaylist"
       ref="videoListElement"
       class="video-list flex h-full w-full cursor-auto flex-col overflow-hidden bg-[var(--van-background-2)] text-[var(--van-text-color)]"
-      :class="displayStore.fullScreenMode ? 'rounded-l-lg' : 'rounded-t-lg'"
+      :class="
+        preview
+          ? ''
+          : displayStore.fullScreenMode
+            ? 'rounded-l-lg'
+            : 'rounded-t-lg'
+      "
     >
-      <div class="flex h-[38px] flex-shrink-0 items-center justify-end gap-2">
+      <div
+        v-if="!preview"
+        class="flex h-[38px] flex-shrink-0 items-center justify-end gap-2"
+      >
         <van-icon
           :name="inShelf ? 'like' : 'like-o'"
           :color="inShelf ? 'red' : ''"
@@ -102,7 +158,7 @@ useResizeObserver(videoListElement, (entries) => {
           @click="
             () => {
               if (videoItem) {
-                addToShelf(videoItem);
+                addToShelf?.(videoItem);
               }
             }
           "
@@ -131,7 +187,7 @@ useResizeObserver(videoListElement, (entries) => {
           name="search"
           size="22"
           class="van-haptics-feedback p-2"
-          @click="showSearch"
+          @click="() => showSearch?.()"
         />
         <van-icon
           name="cross"
@@ -200,19 +256,25 @@ useResizeObserver(videoListElement, (entries) => {
           介绍: {{ videoItem?.intro }}
         </div>
         <van-tabs
-          v-model:active="activeTabName"
+          v-model:active="activeTab"
           swipe-threshold="3"
           sticky
-          :offset-top="tabOffsetTop"
+          :offset-top="preview ? 0 : tabOffsetTop"
+          @change="onTabChange"
         >
           <van-tab
             v-for="(resource, index) in videoItem?.resources"
             :key="resource.id + index"
+            :name="index"
           >
             <template #title>
               <div
                 class="p-2"
-                :class="resource.id === playingResource?.id ? 'text-blue-500' : ''"
+                :class="
+                  index === activeTab || resource.id === selectedResource?.id
+                    ? 'text-blue-500'
+                    : ''
+                "
               >
                 {{ resource.title }}
               </div>
@@ -227,16 +289,24 @@ useResizeObserver(videoListElement, (entries) => {
                 class="flex-shrink-0"
                 size="small"
                 :type="
-                  episode.id === playingEpisode?.id ? 'success' : 'default'
+                  resource.id === playingResource?.id
+                    && episode.id === playingEpisode?.id
+                    ? 'success'
+                    : 'default'
                 "
                 :class="
-                  episode.id === playingEpisode?.id
+                  resource.id === playingResource?.id
+                    && episode.id === playingEpisode?.id
                     ? 'video-playing-episode'
                     : ''
                 "
                 @click="
                   () => {
-                    play(resource, episode);
+                    if (preview) {
+                      onPreviewEpisode?.(resource, episode);
+                      return;
+                    }
+                    play?.(resource, episode);
                   }
                 "
               >

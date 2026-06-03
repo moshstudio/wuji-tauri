@@ -1,42 +1,54 @@
 <script setup lang="ts">
-import type { PhotoDetail, PhotoList } from '@wuji-tauri/source-extension';
+import type {
+  PhotoDetail as PhotoDetailData,
+  PhotoItem,
+  PhotoList,
+} from '@wuji-tauri/source-extension';
 import type { FormItem } from '@/store/sourceCreateStore';
-import { LoadImage } from '@wuji-tauri/components';
 import { PhotoExtension } from '@wuji-tauri/source-extension';
 import { showDialog } from 'vant';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
-import MPagination from '@/components/pagination/MPagination.vue';
+import AppPhotoDetail from '@/layouts/app/photo/PhotoDetail.vue';
+import CreateSourcePreviewShell from '../CreateSourcePreviewShell.vue';
+import {
+  CreateSourceRunStatus,
+  isIncrementalCreateSourceLoad,
+} from '../useCreateSourceListRunner';
 
 const props = defineProps<{
   content: FormItem<PhotoList>;
   updateResult: (
     type: 'photo',
     page: 'detail',
-    result: PhotoDetail | undefined,
+    result: PhotoDetailData | undefined,
     padded: boolean,
   ) => void;
   close: () => void;
-  log: (...args: any[]) => void;
+  log: (...args: unknown[]) => void;
 }>();
 
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
+const runStatus = ref<CreateSourceRunStatus>(
+  CreateSourceRunStatus.not_running,
+);
 const errorMessage = ref('运行失败');
-const result = ref<PhotoDetail>();
+const result = ref<PhotoDetailData>();
+const pageNo = ref(1);
+
+const photoItem = computed<PhotoItem | undefined>(() => {
+  return (
+    findPage('list')?.result?.list?.[0]
+    || findPage('searchList')?.result?.list?.[0]
+  );
+});
 
 async function initLoad() {
   result.value = undefined;
+  pageNo.value = 1;
   return await load(1);
 }
 
-async function load(pageNo: number) {
+async function load(nextPage: number) {
   if (!findPage('constructor')?.code) {
     showDialog({
       message: '《初始化》code未定义!',
@@ -65,6 +77,14 @@ async function load(pageNo: number) {
     });
     return;
   }
+  const item = photoItem.value;
+  if (!item) {
+    showDialog({
+      message: '请先保证《推荐图片》或《搜索图片》执行不为空',
+      showCancelButton: false,
+    });
+    return;
+  }
   const code = PHOTO_TEMPLATE.replace(
     '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
@@ -72,7 +92,13 @@ async function load(pageNo: number) {
     .replace('// @METHOD_LIST', findPage('list')!.code)
     .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
     .replace('// @METHOD_DETAIL', findPage('detail')!.code);
-  runStatus.value = RunStatus.running;
+  const silent = isIncrementalCreateSourceLoad(
+    result.value !== undefined,
+    nextPage,
+  );
+  if (!silent) {
+    runStatus.value = CreateSourceRunStatus.running;
+  }
   try {
     const func = new Function('PhotoExtension', code);
     const ExtensionClass = func(PhotoExtension);
@@ -81,23 +107,18 @@ async function load(pageNo: number) {
       throw new Error('初始化中的baseUrl未定义!');
     }
     cls.log = props.log;
-    const item
-      = findPage('list')?.result?.list?.[0]
-        || findPage('searchList')?.result?.list?.[0];
-    if (!item) {
-      throw new Error('请先保证《推荐图片》或《搜索图片》执行不为空');
-    }
-    const res = await cls?.execGetPhotoDetail(item, pageNo);
+    const res = await cls?.execGetPhotoDetail(item, nextPage);
     if (!res) {
       throw new Error('获取详情失败! 返回结果为空');
     }
     result.value = res;
+    pageNo.value = nextPage;
     props.updateResult('photo', 'detail', result.value, true);
-    runStatus.value = RunStatus.success;
+    runStatus.value = CreateSourceRunStatus.success;
   }
   catch (error) {
     errorMessage.value = String(error);
-    runStatus.value = RunStatus.error;
+    runStatus.value = CreateSourceRunStatus.error;
     props.updateResult('photo', 'detail', result.value, false);
   }
 }
@@ -112,39 +133,17 @@ defineExpose({
 </script>
 
 <template>
-  <div>
-    <div v-if="runStatus === RunStatus.not_running">
-      未运行
-    </div>
-    <div
-      v-else-if="runStatus === RunStatus.running"
-      class="flex items-center justify-center"
-    >
-      <van-loading />
-    </div>
-    <div v-else-if="runStatus === RunStatus.error" class="text-red-500">
-      {{ errorMessage }}
-    </div>
-    <div v-else>
-      <div class="flex grow select-none flex-col overflow-y-auto">
-        <div class="flex flex-nowrap px-2">
-          <MPagination
-            v-if="result && result.totalPage"
-            :page-no="result.page"
-            :page-count="result.totalPage"
-            :to-page="(page) => load(page)"
-          />
-        </div>
-        <template v-for="(item, index) in result?.photos" :key="index">
-          <LoadImage
-            :src="item"
-            :headers="result?.photosHeaders"
-            fit="contain"
-          />
-        </template>
-      </div>
-    </div>
-  </div>
+  <CreateSourcePreviewShell
+    :run-status="runStatus"
+    :error-message="errorMessage"
+  >
+    <AppPhotoDetail
+      v-if="photoItem && result"
+      preview
+      :photo-item="photoItem"
+      :photo-detail="result"
+      :page-no="pageNo"
+      :to-page="(page) => load(page ?? 1)"
+    />
+  </CreateSourcePreviewShell>
 </template>
-
-<style scoped lang="less"></style>

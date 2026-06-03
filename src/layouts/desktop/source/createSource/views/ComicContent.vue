@@ -6,6 +6,8 @@ import { ComicExtension } from '@wuji-tauri/source-extension';
 import { showDialog } from 'vant';
 import { ref } from 'vue';
 import COMIC_TEMPLATE from '@/components/codeEditor/templates/comicTemplate.txt?raw';
+import CreateSourcePreviewShell from '../CreateSourcePreviewShell.vue';
+import { CreateSourceRunStatus } from '../useCreateSourceListRunner';
 
 const props = defineProps<{
   content: FormItem<ComicItem>;
@@ -16,17 +18,12 @@ const props = defineProps<{
     padded: boolean,
   ) => void;
   close: () => void;
-  log: (...args: any[]) => void;
+  log: (...args: unknown[]) => void;
 }>();
 
-enum RunStatus {
-  not_running = 'not_running',
-  running = 'running',
-  success = 'success',
-  error = 'error',
-}
-
-const runStatus = ref<RunStatus>(RunStatus.not_running);
+const runStatus = ref<CreateSourceRunStatus>(
+  CreateSourceRunStatus.not_running,
+);
 const errorMessage = ref('运行失败');
 const result = ref<ComicContent>();
 
@@ -45,14 +42,14 @@ async function load() {
   }
   if (!findPage('detail')?.passed) {
     showDialog({
-      message: '请先执行通过《书籍详情》',
+      message: '请先执行通过《漫画详情》',
       showCancelButton: false,
     });
     return;
   }
   if (!findPage('detail')?.result?.chapters?.length) {
     showDialog({
-      message: '请先保证《书籍详情》执行结果不为空',
+      message: '请先保证《漫画详情》执行结果不为空',
       showCancelButton: false,
     });
     return;
@@ -65,7 +62,7 @@ async function load() {
     .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
     .replace('// @METHOD_DETAIL', findPage('detail')!.code)
     .replace('// @METHOD_CONTENT', findPage('content')!.code);
-  runStatus.value = RunStatus.running;
+  runStatus.value = CreateSourceRunStatus.running;
   try {
     const func = new Function('ComicExtension', code);
     const ExtensionClass = func(ComicExtension);
@@ -76,7 +73,7 @@ async function load() {
     cls.log = props.log;
     const item = findPage('detail')?.result;
     if (!item?.chapters?.length) {
-      throw new Error('请先保证《书籍详情》中章节不为空');
+      throw new Error('请先保证《漫画详情》中章节不为空');
     }
     const res = await cls?.execGetContent(item, item.chapters[0]);
     if (!res) {
@@ -84,11 +81,11 @@ async function load() {
     }
     result.value = res;
     props.updateResult('comic', 'content', result.value, true);
-    runStatus.value = RunStatus.success;
+    runStatus.value = CreateSourceRunStatus.success;
   }
   catch (error) {
     errorMessage.value = String(error);
-    runStatus.value = RunStatus.error;
+    runStatus.value = CreateSourceRunStatus.error;
     props.updateResult('comic', 'content', result.value, false);
   }
 }
@@ -103,29 +100,25 @@ defineExpose({
 </script>
 
 <template>
-  <div>
-    <div v-if="runStatus === RunStatus.not_running">
-      未运行
-    </div>
-    <div
-      v-else-if="runStatus === RunStatus.running"
-      class="flex items-center justify-center"
+  <CreateSourcePreviewShell
+    :run-status="runStatus"
+    :error-message="errorMessage"
+  >
+    <main
+      class="comic-content-preview flex flex-col items-center bg-[--van-background-3]"
     >
-      <van-loading />
-    </div>
-    <div v-else-if="runStatus === RunStatus.error" class="text-red-500">
-      {{ errorMessage }}
-    </div>
-    <div v-else class="flex flex-col overflow-auto">
       <div
         v-for="(item, index) in result?.photos"
         :key="index"
         class="min-h-[50px] w-full text-center leading-[0]"
       >
-        <LoadImage :src="item" :headers="result?.photosHeaders" fit="contain" />
+        <LoadImage
+          :src="item"
+          :headers="result?.photosHeaders"
+          fit="contain"
+          :compress="false"
+        />
       </div>
-    </div>
-  </div>
+    </main>
+  </CreateSourcePreviewShell>
 </template>
-
-<style scoped lang="less"></style>

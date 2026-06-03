@@ -9,6 +9,7 @@ import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?ra
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
 import SearchField from '@/components/search/SearchField.vue';
+import { isIncrementalCreateSourceLoad } from '../useCreateSourceListRunner';
 
 const props = defineProps<{
   content: FormItem<SongList>;
@@ -53,7 +54,9 @@ async function load(pageNo: number) {
     '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
   ).replace('// @METHOD_SEARCH_SONG_LIST', findPage('searchSongList')!.code);
-  runStatus.value = RunStatus.running;
+  if (!isIncrementalCreateSourceLoad(result.value !== undefined, pageNo)) {
+    runStatus.value = RunStatus.running;
+  }
   try {
     const func = new Function('SongExtension', code);
     const ExtensionClass = func(SongExtension);

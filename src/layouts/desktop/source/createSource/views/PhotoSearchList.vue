@@ -9,6 +9,7 @@ import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
 import SearchField from '@/components/search/SearchField.vue';
+import { isIncrementalCreateSourceLoad } from '../useCreateSourceListRunner';
 
 const props = defineProps<{
   content: FormItem<PhotoList>;
@@ -63,7 +64,9 @@ async function load(pageNo: number) {
   )
     .replace('// @METHOD_LIST', findPage('list')!.code)
     .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code);
-  runStatus.value = RunStatus.running;
+  if (!isIncrementalCreateSourceLoad(result.value !== undefined, pageNo)) {
+    runStatus.value = RunStatus.running;
+  }
   try {
     const func = new Function('PhotoExtension', code);
     const ExtensionClass = func(PhotoExtension);

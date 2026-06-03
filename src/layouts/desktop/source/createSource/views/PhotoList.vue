@@ -8,6 +8,7 @@ import { ref } from 'vue';
 import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?raw';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
+import { isIncrementalCreateSourceLoad } from '../useCreateSourceListRunner';
 
 const props = defineProps<{
   content: FormItem<PhotoList>;
@@ -52,7 +53,9 @@ async function load(pageNo: number) {
     '// @METHOD_CONSTRUCTOR',
     findPage('constructor')!.code,
   ).replace('// @METHOD_LIST', findPage('list')!.code);
-  runStatus.value = RunStatus.running;
+  if (!isIncrementalCreateSourceLoad(result.value !== undefined, pageNo)) {
+    runStatus.value = RunStatus.running;
+  }
 
   try {
     if (!cls) {

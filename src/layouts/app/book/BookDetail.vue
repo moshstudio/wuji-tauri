@@ -14,12 +14,16 @@ withDefaults(
   defineProps<{
     book?: BookItem;
     bookSource?: BookSource;
-    inShelf: boolean;
+    inShelf?: boolean;
+    preview?: boolean;
     toChapter?: (book: BookItem, chapter: BookChapter) => void;
     addToShelf?: (book: BookItem) => void;
     onDownload?: () => void;
   }>(),
-  {},
+  {
+    inShelf: false,
+    preview: false,
+  },
 );
 
 const getRandomColor = () => tinycolor.random().toRgbString();
@@ -30,9 +34,9 @@ function joinTags(tags: string | string[] | undefined) {
 
 <template>
   <div class="relative flex h-full w-full flex-col">
-    <MNavBar title="书籍详情" />
+    <MNavBar v-if="!preview" title="书籍详情" />
     <main
-      v-remember-scroll
+      v-remember-scroll="!preview"
       class="flex w-full grow select-none flex-col items-center overflow-y-auto bg-[--van-background-2] p-2"
     >
       <div v-if="book" class="flex w-full flex-col gap-1 rounded p-2 shadow-md">
@@ -88,7 +92,7 @@ function joinTags(tags: string | string[] | undefined) {
           <p class="font-bold">
             共有{{ book.chapters.length }} 章
           </p>
-          <div class="flex items-center gap-2">
+          <div v-if="!preview" class="flex items-center gap-2">
             <van-button
               size="small"
               type="primary"
@@ -129,10 +133,13 @@ function joinTags(tags: string | string[] | undefined) {
                   Math.min(book.chapters.length, (index + 1) * 200 - 1),
                 )"
                 :key="chapter.id"
-                class="van-haptics-feedback cursor-pointer select-none truncate rounded-lg text-sm"
+                class="select-none truncate rounded-lg text-sm"
+                :class="
+                  preview ? '' : 'van-haptics-feedback cursor-pointer'
+                "
                 @click="
                   () => {
-                    if (book) {
+                    if (!preview && book) {
                       toChapter?.(book, chapter);
                     }
                   }
@@ -147,7 +154,7 @@ function joinTags(tags: string | string[] | undefined) {
       <div v-if="!book" class="flex w-full items-center justify-center">
         <van-loading />
       </div>
-      <van-back-top bottom="60" right="10">
+      <van-back-top v-if="!preview" bottom="60" right="10">
         <LiquidGlassContainer
           :width="40"
           :height="40"
