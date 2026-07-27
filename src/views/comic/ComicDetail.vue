@@ -15,6 +15,7 @@ import {
   useStore,
   useSubscribeSourceStore,
 } from '@/store';
+import { ensureSource } from '@/utils/sourceAccess';
 
 const { comicId, sourceId } = defineProps({
   comicId: String,
@@ -78,25 +79,12 @@ async function loadData() {
       return true;
     }
 
-    comicSource.value = store.getComicSource(sourceId);
-    if (!comicSource.value) {
-      const subscribeSource = subscribeStore.subscribeSources.find(s =>
-        s.detail.urls.some(u => u.id === sourceId),
-      );
-      const urlItem = subscribeSource?.detail.urls.find(u => u.id === sourceId);
-
-      if (urlItem && (urlItem.disable || subscribeSource?.disable)) {
-        showFailToast('漫画源已禁用，请在订阅源管理中启用');
-      }
-      else if (!urlItem) {
-        showFailToast('漫画源不存在或已删除');
-      }
-      else {
-        showFailToast('漫画源加载失败，请检查订阅源配置');
-      }
+    const ensured = await ensureSource(sourceId!, 'comic');
+    if (!ensured.ok) {
       shouldReload.value = true;
       return true;
     }
+    comicSource.value = ensured.source;
 
     comic.value = store.getComicItem(comicSource.value, comicId);
     if (!comic.value) {

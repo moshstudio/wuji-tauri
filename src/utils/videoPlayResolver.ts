@@ -32,7 +32,7 @@ export type AllowWebviewFallbackOption
 export async function resolveUrlViaWebview(
   originalUrl: string,
   signal?: AbortSignal,
-  timeout = 15000,
+  timeout = 15,
 ): Promise<string | null> {
   const ret = await fetchWebview(originalUrl, {
     timeout,
@@ -99,7 +99,7 @@ export async function resolvePlayableVideoUrl(
 ): Promise<ResolvePlayableVideoUrlResult> {
   const {
     signal,
-    webviewTimeout = 15000,
+    webviewTimeout = 15,
     allowWebviewFallback = true,
   } = options;
   let srcToResolve = src;

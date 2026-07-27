@@ -21,6 +21,7 @@ import {
 } from '@/store';
 import { useBackStore } from '@/store/backStore';
 import { downloadFile } from '@/utils';
+import { ensureSource } from '@/utils/sourceAccess';
 
 const { id, sourceId } = defineProps({
   id: String,
@@ -92,25 +93,12 @@ async function toPage(pageNo?: number) {
       return true;
     }
 
-    photoSource.value = store.getPhotoSource(sourceId!);
-    if (!photoSource.value) {
-      const subscribeSource = subscribeStore.subscribeSources.find(s =>
-        s.detail.urls.some(u => u.id === sourceId),
-      );
-      const urlItem = subscribeSource?.detail.urls.find(u => u.id === sourceId);
-
-      if (urlItem && (urlItem.disable || subscribeSource?.disable)) {
-        showFailToast('图源已禁用，请在订阅源管理中启用');
-      }
-      else if (!urlItem) {
-        showFailToast('图源不存在或已删除');
-      }
-      else {
-        showFailToast('图源加载失败，请检查订阅源配置');
-      }
+    const ensured = await ensureSource(sourceId!, 'photo');
+    if (!ensured.ok) {
       shouldReload.value = true;
       return true;
     }
+    photoSource.value = ensured.source;
 
     photoItem.value = store.getPhotoItem(photoSource.value, id!);
     if (!photoItem.value) {

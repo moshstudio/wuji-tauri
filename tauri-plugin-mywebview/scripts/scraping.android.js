@@ -19,15 +19,32 @@
     var foundMasterTarget = false;
     var lastMasterChangeTime = Date.now();
 
+    var targetTypes = TARGET_TYPE
+        ? TARGET_TYPE.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return !!t; })
+        : [];
+    var wantsVideo = targetTypes.indexOf('video') !== -1;
+
+    function tryTriggerVideoPlay(force) {
+        if (!wantsVideo || typeof window.__wuji_tryClickPlayButtons__ !== 'function') return;
+        window.__wuji_tryClickPlayButtons__({ force: !!force });
+    }
+
+    if (wantsVideo) {
+        tryTriggerVideoPlay(true);
+    }
+
     function checkResources() {
         var sniffed = window.__wuji_sniffed__ || [];
         var currentCount = sniffed.length;
         var elapsed = Date.now() - startTime;
 
         if (TARGET_TYPE) {
-            var targetTypes = TARGET_TYPE.split(',').map(function(t) { return t.trim(); });
             var imageOnlyTarget = targetTypes.length > 0 && targetTypes.every(function(t) { return t === 'image'; });
             var settleMs = imageOnlyTarget ? IMAGE_SETTLE_MS : DEFAULT_SETTLE_MS;
+
+            if (wantsVideo && !foundMasterTarget) {
+                tryTriggerVideoPlay(false);
+            }
 
             // 检查新增资源：只有非分片的主资源才重置稳定计时器
             if (currentCount > lastCheckedCount) {
@@ -106,21 +123,29 @@
         try { _safeContent = document.documentElement.innerHTML; } catch(e) {}
         try { _safeTitle = document.title; } catch(e) {}
 
+        var payload;
         try {
-            window.__wuji_scraping_result__ = JSON.stringify({
+            payload = JSON.stringify({
                 content: _safeContent,
                 title: _safeTitle,
                 resources: _safeResources
             });
         } catch(e) {
             // 序列化失败时只保留 URL 列表
-            window.__wuji_scraping_result__ = JSON.stringify({
+            payload = JSON.stringify({
                 content: _safeContent,
                 title: _safeTitle,
                 resources: _safeResources.map(function(r) { return { url: r.url, type: r.type, resourceType: r.type }; })
             });
         }
+        window.__wuji_scraping_result__ = payload;
         window.__wuji_scraping_ready__ = true;
+        // 优先通过 Native Bridge 回传，避免 evaluateJavascript 返回值大小限制
+        try {
+            if (window.WujiScrapBridge && typeof window.WujiScrapBridge.onScrapingResult === 'function') {
+                window.WujiScrapBridge.onScrapingResult(payload);
+            }
+        } catch (e) {}
     }
 
     checkResources();

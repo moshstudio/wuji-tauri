@@ -8,6 +8,7 @@ import { storeToRefs } from 'pinia';
 import { ref } from 'vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MHeader from '@/components/header/MHeader.vue';
+import NoEnabledSourceEmpty from '@/components/source/NoEnabledSourceEmpty.vue';
 import MComicTab from '@/components/tab/MComicTab.vue';
 import { router } from '@/router';
 import { useDisplayStore } from '@/store';
@@ -78,6 +79,7 @@ async function onRefresh() {
             />
           </ResponsiveGrid2>
         </van-collapse-item>
+        <NoEnabledSourceEmpty v-if="!comicSources.length" type="comic" />
         <div
           v-for="(item, sourceIndex) in comicSources"
           :key="`${item.item.id}_${sourceIndex}`"

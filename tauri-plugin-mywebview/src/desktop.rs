@@ -1,10 +1,10 @@
 // https://github.com/sopaco/saga-reader/blob/main/crates/scrap/src/simulator.rs
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use tauri::plugin::PluginApi;
-use tauri::webview::{Cookie, PageLoadEvent};
+use tauri::webview::{Cookie, NewWindowResponse, PageLoadEvent};
 use tauri::{
     AppHandle, Listener, Manager, Runtime, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
@@ -143,6 +143,7 @@ async fn scrap_text_by_url<R: Runtime>(
         &app_handle,
         &window_name,
         parsed_url,
+        use_saved_cookie,
         cookie,
         timeout,
         wait_for_resources,
@@ -303,7 +304,13 @@ async fn rescue_partial_data<R: Runtime>(
                     (String::new(), String::new(), vec![])
                 };
             let url = window.url().map(|u| u.to_string()).unwrap_or_default();
-            Ok(FetchResponse { content, url, cookie: cookie_string, title, resources })
+            Ok(FetchResponse {
+                content,
+                url,
+                cookie: cookie_string,
+                title,
+                resources,
+            })
         }
         _ => Err("Operation timed out at Rust level".to_string()),
     }
@@ -351,38 +358,76 @@ async fn acquire_semaphore_with_timeout(
         .map_err(|_| "Failed to acquire semaphore".to_string())
 }
 
+fn clear_cookies_for_url<R: Runtime>(window: &WebviewWindow<R>, url: &Url) -> Result<(), String> {
+    let cookies = window
+        .cookies_for_url(url.clone())
+        .map_err(|e| format!("Failed to read cookies: {}", e))?;
+    for cookie in cookies {
+        let _ = window.delete_cookie(cookie);
+    }
+    Ok(())
+}
+
+fn inject_saved_cookies<R: Runtime>(window: &WebviewWindow<R>, cookie_str: &str) {
+    for part in cookie_str.split(';') {
+        let part = part.trim();
+        if part.is_empty() {
+            continue;
+        }
+        if let Ok(cookie) = Cookie::parse(part) {
+            let _ = window.set_cookie(cookie);
+        } else {
+            eprintln!("[mywebview] Invalid cookie segment, skipping: {}", part);
+        }
+    }
+}
+
 // 创建爬取窗口（同时注入嗅探脚本）
 async fn create_scraping_window<R: Runtime>(
     app_handle: &AppHandle<R>,
     window_name: &str,
     url: Url,
-    cookie: Option<String>,
+    use_saved_cookie: bool,
+    saved_cookie: Option<String>,
     timeout: u64,
     wait_for_resources: Option<String>,
 ) -> Result<WebviewWindow<R>, String> {
     let redirect_times = Arc::new(AtomicUsize::new(0));
-    // 统一的加载事件序号（Started/Finished 共用），用于防止重复注入。
-    let page_load_event_seq = Arc::new(AtomicUsize::new(0));
+    // 采集脚本是否已成功注入（注入后忽略 iframe/广告触发的后续加载事件）
+    let scraping_script_injected = Arc::new(AtomicBool::new(false));
+    let target_host = url.host_str().map(|host| host.to_string());
+    let blank_url = Url::parse("about:blank").map_err(|e| format!("URL parse error: {}", e))?;
 
-    let builder = WebviewWindowBuilder::new(app_handle, window_name, WebviewUrl::External(url))
-        // 注入嗅探初始化脚本（拦截 XHR/Fetch、扫描媒体标签）
-        .initialization_script(SNIFF_INIT_SCRIPT)
-        .on_navigation({
-            let counter = redirect_times.clone();
-            move |_url| {
-                counter.fetch_add(1, Ordering::Relaxed);
-                true
-            }
-        })
-        .on_page_load({
-            let window_name = window_name.to_string();
-            let redirect_times = redirect_times.clone();
-            let page_load_event_seq = page_load_event_seq.clone();
-            let timeout = timeout;
-            let target_type = wait_for_resources.clone();
+    let builder =
+        WebviewWindowBuilder::new(app_handle, window_name, WebviewUrl::External(blank_url))
+            // 注入嗅探初始化脚本（拦截 XHR/Fetch、扫描媒体标签）
+            .initialization_script(SNIFF_INIT_SCRIPT)
+            // 阻止 window.open 弹出的广告页，避免抢走 WebView 焦点或干扰采集
+            .on_new_window(|_url, _features| NewWindowResponse::Deny)
+            .on_navigation({
+                let counter = redirect_times.clone();
+                let target_host = target_host.clone();
+                move |nav_url| {
+                    // WebView2 会对 iframe 导航也回调；仅统计目标站内的主文档跳转，避免广告 iframe 拉长等待
+                    let is_same_site = target_host
+                        .as_deref()
+                        .zip(nav_url.host_str())
+                        .map(|(a, b)| a == b)
+                        .unwrap_or(false);
+                    if is_same_site {
+                        counter.fetch_add(1, Ordering::Relaxed);
+                    }
+                    true
+                }
+            })
+            .on_page_load({
+                let window_name = window_name.to_string();
+                let redirect_times = redirect_times.clone();
+                let scraping_script_injected = scraping_script_injected.clone();
+                let timeout = timeout;
+                let target_type = wait_for_resources.clone();
 
-            move |window, payload| {
-                match payload.event() {
+                move |window, payload| match payload.event() {
                     PageLoadEvent::Started => {
                         #[cfg(debug_assertions)]
                         eprintln!("[mywebview] Page load started: {}", payload.url());
@@ -390,7 +435,7 @@ async fn create_scraping_window<R: Runtime>(
                             window,
                             &window_name,
                             &redirect_times,
-                            &page_load_event_seq,
+                            &scraping_script_injected,
                             timeout,
                             target_type.clone(),
                             true,
@@ -403,30 +448,34 @@ async fn create_scraping_window<R: Runtime>(
                             window,
                             &window_name,
                             &redirect_times,
-                            &page_load_event_seq,
+                            &scraping_script_injected,
                             timeout,
                             target_type.clone(),
                             false,
                         );
                     }
                 }
-            }
-        })
-        .disable_drag_drop_handler()
-        .title(window_name)
-        .inner_size(1920.0, 1080.0)
-        .visible(false);
+            })
+            .disable_drag_drop_handler()
+            .title(window_name)
+            .inner_size(1920.0, 1080.0)
+            .visible(false);
 
     let window = builder
         .build()
         .map_err(|e| format!("Failed to create window: {}", e))?;
-    if let Some(cookie_str) = &cookie {
-        if let Ok(cookie) = Cookie::parse(cookie_str) {
-            let _ = window.set_cookie(cookie);
-        } else {
-            eprintln!("[mywebview] Invalid cookie string for domain, skipping set_cookie");
+
+    if use_saved_cookie {
+        if let Some(cookie_str) = &saved_cookie {
+            inject_saved_cookies(&window, cookie_str);
         }
+    } else {
+        clear_cookies_for_url(&window, &url)?;
     }
+
+    window
+        .navigate(url)
+        .map_err(|e| format!("Failed to navigate scrap window: {}", e))?;
 
     Ok(window)
 }
@@ -436,18 +485,20 @@ fn handle_page_load_event<R: Runtime>(
     window: WebviewWindow<R>,
     window_name: &str,
     redirect_times: &Arc<AtomicUsize>,
-    page_load_event_seq: &Arc<AtomicUsize>,
+    scraping_script_injected: &Arc<AtomicBool>,
     timeout: u64,
     target_type: Option<String>,
     from_started_event: bool,
 ) {
-    let current_event_seq = page_load_event_seq.fetch_add(1, Ordering::Relaxed) + 1;
+    if scraping_script_injected.load(Ordering::Relaxed) {
+        return;
+    }
 
     tauri::async_runtime::spawn({
         let window = Arc::new(window);
         let window_name = window_name.to_string();
         let redirect_count = redirect_times.load(Ordering::Relaxed);
-        let page_load_event_seq = page_load_event_seq.clone();
+        let scraping_script_injected = scraping_script_injected.clone();
 
         async move {
             // 在注入前等待基础稳定期
@@ -456,7 +507,7 @@ fn handle_page_load_event<R: Runtime>(
             } else {
                 Duration::ZERO
             };
-            // Started 场景给更多缓冲，避免过早采集；Finished 则尽快注入。
+            // Started 作为兜底（部分页面 onPageFinished 迟迟不回调）；Finished 尽快启动采集。
             let base_delay = if from_started_event {
                 Duration::from_millis(PAGE_STARTED_INJECT_DELAY_MS)
             } else {
@@ -464,23 +515,15 @@ fn handle_page_load_event<R: Runtime>(
             };
             sleep(base_delay + redirect_delay).await;
 
-            // 检查在这期间是否有新的页面加载触发，如果有，说明当前这个已经过时，放弃执行
-            if page_load_event_seq.load(Ordering::Relaxed) != current_event_seq {
-                #[cfg(debug_assertions)]
-                eprintln!(
-                    "[mywebview] Obsolete page load event for {}, skipping script injection",
-                    window_name
-                );
+            if scraping_script_injected.load(Ordering::Relaxed) {
                 return;
             }
 
-            let script = build_scraping_script(
-                &window_name,
-                timeout,
-                target_type.as_deref(),
-            );
+            let script = build_scraping_script(&window_name, timeout, target_type.as_deref());
 
-            if window.eval(&script).is_err() {
+            if window.eval(&script).is_ok() {
+                scraping_script_injected.store(true, Ordering::Relaxed);
+            } else {
                 eprintln!(
                     "[mywebview] Failed to eval scraping script for {}",
                     window_name
@@ -490,7 +533,6 @@ fn handle_page_load_event<R: Runtime>(
         }
     });
 }
-
 
 // 处理payload
 fn process_payload(payload: &str) -> String {
@@ -517,7 +559,11 @@ const SNIFF_INIT_SCRIPT: &str = include_str!("../scripts/sniff_init.js");
 // ============================================================
 // 桌面端爬取脚本（Tauri 事件回传，与 Android assets/scraping.js 轮询版分离）
 // ============================================================
-const SCRAPING_SCRIPT: &str = include_str!("../scripts/scraping.js");
+const SCRAPING_SCRIPT: &str = concat!(
+    include_str!("../scripts/play_trigger.js"),
+    "\n",
+    include_str!("../scripts/scraping.js"),
+);
 
 /// 清理 scrap session：停止页面、卸载 WebView 并释放并发槽位
 async fn cleanup_scrap_session<R: Runtime>(
@@ -527,9 +573,7 @@ async fn cleanup_scrap_session<R: Runtime>(
 ) {
     WINDOW_MANAGER.lock().await.remove(window_name);
 
-    let _ = window.eval(
-        r#"(function(){try{if(window.stop)window.stop();}catch(e){}})();"#,
-    );
+    let _ = window.eval(r#"(function(){try{if(window.stop)window.stop();}catch(e){}})();"#);
 
     if let Err(e) = window.destroy() {
         eprintln!(
@@ -551,9 +595,7 @@ pub async fn cleanup_all_scrap_sessions<R: Runtime>(
 
     for window_name in window_names {
         if let Some(window) = app_handle.get_webview_window(&window_name) {
-            let _ = window.eval(
-                r#"(function(){try{if(window.stop)window.stop();}catch(e){}})();"#,
-            );
+            let _ = window.eval(r#"(function(){try{if(window.stop)window.stop();}catch(e){}})();"#);
             if let Err(e) = window.destroy() {
                 eprintln!(
                     "[mywebview] Failed to destroy window {} during cleanup: {}",

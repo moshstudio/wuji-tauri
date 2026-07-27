@@ -7,6 +7,7 @@ import { ref } from 'vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MHeader from '@/components/header/MHeader.vue';
 import HorizonList from '@/components/list/HorizonList.vue';
+import NoEnabledSourceEmpty from '@/components/source/NoEnabledSourceEmpty.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
 import MSongBar from '@/components/songbar/MSongBar.vue';
 import { router } from '@/router';
@@ -52,12 +53,13 @@ async function onRefresh() {
         }
       "
     />
-    <div class="relative flex min-h-0 flex-1 flex-col">
+    <div class="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <van-pull-refresh
+        v-if="songSources.length"
         v-model="isRefreshing"
         v-remember-scroll
         :head-height="100"
-        class="main flex-grow overflow-y-auto overflow-x-hidden"
+        class="main min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
         @refresh="onRefresh"
       >
         <van-tabs
@@ -148,8 +150,11 @@ async function onRefresh() {
           </van-tab>
         </van-tabs>
       </van-pull-refresh>
+      <div v-else class="min-h-0 flex-1 overflow-y-auto">
+        <NoEnabledSourceEmpty type="song" />
+      </div>
     </div>
-    <MSongBar />
+    <MSongBar class="shrink-0" />
   </div>
 </template>
 

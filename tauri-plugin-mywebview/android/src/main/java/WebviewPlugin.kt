@@ -18,8 +18,10 @@ class PingArgs {
 @InvokeArg
 class FetchArgs {
     var url: String? = null
+    /** 超时时长（秒），与桌面端及前端 API 一致，默认 20 秒 */
     var timeout: Long? = null
     var waitForResources: String? = null
+    var useSavedCookie: Boolean? = null
 }
 
 @TauriPlugin
@@ -39,17 +41,23 @@ class WebviewPlugin(private val activity: Activity) : Plugin(activity) {
     @Command
     fun fetch(invoke: Invoke) {
         val args = invoke.parseArgs(FetchArgs::class.java)
-        Log.e("WujiWebView", "[fetch] url=${args.url}, timeout=${args.timeout}, waitForResources=${args.waitForResources}")
+        val timeoutMs = (args.timeout ?: 20L) * 1000L
+        val useSavedCookie = args.useSavedCookie ?: true
+        Log.e(
+            "WujiWebView",
+            "[fetch] url=${args.url}, timeoutSec=${args.timeout ?: 20}, timeoutMs=$timeoutMs, waitForResources=${args.waitForResources}, useSavedCookie=$useSavedCookie"
+        )
         if (args.url == null) {
             val ret = JSObject()
             ret.put("error", "URL is required")
             invoke.resolve(ret)
         } else {
             val backstageWebView = BackstageWebView(
-                activity, 
-                args.url, 
-                timeout = args.timeout ?: 20000L, 
-                waitForResources = args.waitForResources
+                activity,
+                args.url,
+                timeout = timeoutMs,
+                waitForResources = args.waitForResources,
+                useSavedCookie = useSavedCookie,
             )
             backstageWebView.getStrResponse(
                 onResult = { response ->

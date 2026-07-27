@@ -14,6 +14,10 @@ import PHOTO_TEMPLATE from '@/components/codeEditor/templates/photoTemplate.txt?
 import SONG_TEMPLATE from '@/components/codeEditor/templates/songTemplate.txt?raw';
 import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 
+function versionSuffix(version?: string) {
+  return version ? `\n  version = '${version}';` : '';
+}
+
 export async function generateCode(
   content: FormItem,
   id: string,
@@ -22,13 +26,14 @@ export async function generateCode(
   const findPage = (name: string) => {
     return content.pages.find(page => page.type === name);
   };
+  const versionLine = versionSuffix(content.version);
 
   let code = '';
   switch (content.type) {
     case 'photo':
       code = PHOTO_TEMPLATE.replace('id = \'testPhoto\';', `id = '${id}';`)
         .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
-        .replace('name = \'测试\';', `name = '${name}';`)
+        .replace('name = \'测试\';', `name = '${name}';${versionLine}`)
         .replace('// @METHOD_LIST', findPage('list')!.code)
         .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
         .replace('// @METHOD_DETAIL', findPage('detail')!.code);
@@ -36,7 +41,7 @@ export async function generateCode(
     case 'song':
       code = SONG_TEMPLATE.replace('id = \'testSong\';', `id = '${id}';`)
         .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
-        .replace('name = \'测试\';', `name = '${name}';`)
+        .replace('name = \'测试\';', `name = '${name}';${versionLine}`)
         .replace('// @METHOD_PLAYLIST', findPage('playlist')!.code)
         .replace('// @METHOD_SONG_LIST', findPage('songList')!.code)
         .replace('// @METHOD_SEARCH_PLAYLIST', findPage('searchPlaylist')!.code)
@@ -51,7 +56,7 @@ export async function generateCode(
     case 'book':
       code = BOOK_TEMPLATE.replace('id = \'testBook\';', `id = '${id}';`)
         .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
-        .replace('name = \'测试\';', `name = '${name}';`)
+        .replace('name = \'测试\';', `name = '${name}';${versionLine}`)
         .replace('// @METHOD_LIST', findPage('list')!.code)
         .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
         .replace('// @METHOD_DETAIL', findPage('detail')!.code)
@@ -60,7 +65,7 @@ export async function generateCode(
     case 'comic':
       code = COMIC_TEMPLATE.replace('id = \'testComic\';', `id = '${id}';`)
         .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
-        .replace('name = \'测试\';', `name = '${name}';`)
+        .replace('name = \'测试\';', `name = '${name}';${versionLine}`)
         .replace('// @METHOD_LIST', findPage('list')!.code)
         .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
         .replace('// @METHOD_DETAIL', findPage('detail')!.code)
@@ -75,7 +80,7 @@ export async function generateCode(
       code = tpl
         .replace(idPlaceholder, `id = '${id}';`)
         .replace('// @METHOD_CONSTRUCTOR', findPage('constructor')!.code)
-        .replace('name = \'测试\';', `name = '${name}';`)
+        .replace('name = \'测试\';', `name = '${name}';${versionLine}`)
         .replace('// @METHOD_LIST', findPage('list')!.code)
         .replace('// @METHOD_SEARCH_LIST', findPage('searchList')!.code)
         .replace('// @METHOD_DETAIL', findPage('detail')!.code)

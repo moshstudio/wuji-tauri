@@ -21,6 +21,7 @@ import {
   useStore,
   useSubscribeSourceStore,
 } from '@/store';
+import { ensureSource } from '@/utils/sourceAccess';
 
 const { playlistId, sourceId } = defineProps({
   playlistId: String,
@@ -71,25 +72,12 @@ async function toPage(pageNo?: number) {
       return true;
     }
 
-    songSource.value = store.getSongSource(sourceId);
-    if (!songSource.value) {
-      const subscribeSource = subscribeStore.subscribeSources.find(s =>
-        s.detail.urls.some(u => u.id === sourceId),
-      );
-      const urlItem = subscribeSource?.detail.urls.find(u => u.id === sourceId);
-
-      if (urlItem && (urlItem.disable || subscribeSource?.disable)) {
-        showFailToast('音乐源已禁用，请在订阅源管理中启用');
-      }
-      else if (!urlItem) {
-        showFailToast('音乐源不存在或已删除');
-      }
-      else {
-        showFailToast('音乐源加载失败，请检查订阅源配置');
-      }
+    const ensured = await ensureSource(sourceId!, 'song');
+    if (!ensured.ok) {
       shouldReload.value = true;
       return true;
     }
+    songSource.value = ensured.source;
 
     playlist.value = store.getPlaylistInfo(songSource.value, playlistId);
     if (!playlist.value) {

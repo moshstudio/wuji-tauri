@@ -3,6 +3,7 @@ import _ from 'lodash';
 import { createRequest, CryptoType } from './request';
 
 export { createRequest, CryptoType };
+export { extractNeteasePlaylistId } from './playlistLink';
 export async function search(keyword: string) {
   return await createRequest('/api/search/get', {
     s: keyword,

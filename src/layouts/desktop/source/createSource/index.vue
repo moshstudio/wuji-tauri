@@ -11,6 +11,7 @@ import { nanoid } from 'nanoid';
 import { storeToRefs } from 'pinia';
 import { showConfirmDialog, showLoadingToast, showToast } from 'vant';
 import { computed, nextTick, ref, watch } from 'vue';
+import ImportSourceCodeDialog from '@/components/codeEditor/dialogs/ImportSourceCode.vue';
 import LocalSaveDialog from '@/components/codeEditor/dialogs/LocalSave.vue';
 import Guide from '@/components/codeEditor/Guide.vue';
 import { guideExamplesMD } from '@/components/codeEditor/guides';
@@ -429,6 +430,13 @@ async function handleRun() {
 const showButtonMoreOptions = ref(false);
 const showLocalSaveDialog = ref(false);
 const showMarketSaveDialog = ref(false);
+const showImportCodeDialog = ref(false);
+
+function onCodeImported(type: string) {
+  const sourceType = type as Type;
+  selectedPage.value = form.value[sourceType].pages[0].type;
+}
+
 async function generateSaveCode(data: {
   id: string;
   name: string;
@@ -640,6 +648,9 @@ async function handleSaveMarket(data: { id: string; name: string }) {
           <van-button size="small" type="success" plain @click="showMarketSave">
             添加到订阅源
           </van-button>
+          <van-button size="small" plain @click="showImportCodeDialog = true">
+            导入代码
+          </van-button>
           <van-button size="small" @click="showGuide = true">
             教程
           </van-button>
@@ -749,6 +760,10 @@ async function handleSaveMarket(data: { id: string; name: string }) {
           callback: backDefaultCode,
         },
       ]"
+    />
+    <ImportSourceCodeDialog
+      v-model:show="showImportCodeDialog"
+      @imported="onCodeImported"
     />
     <LocalSaveDialog
       v-model:show="showLocalSaveDialog"

@@ -102,9 +102,8 @@ export async function fetchWebview(
       document.title = ret.title;
     }
 
-    if (ret.url) {
-      (document as any)._customUrl = ret.url;
-    }
+    const pageUrl = ret.url || url;
+    (document as any)._customUrl = pageUrl;
 
     // 存储嗅探到的资源列表
     (document as any)._sniffedResources = ret.resources || [];
@@ -114,10 +113,10 @@ export async function fetchWebview(
         if (prop === 'cookie') {
           return (target as any)._customCookies || '';
         }
-        if (prop === 'URL' && (target as any)._customUrl) {
+        if (prop === 'URL') {
           return (target as any)._customUrl;
         }
-        if (prop === 'location' && (target as any)._customUrl) {
+        if (prop === 'location') {
           try {
             return new URL((target as any)._customUrl);
           }

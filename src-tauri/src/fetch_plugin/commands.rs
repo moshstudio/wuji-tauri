@@ -238,9 +238,11 @@ fn build_request(
             } else {
             }
 
-            if let Some(timeout) = connect_timeout {
-                builder = builder.connect_timeout(Duration::from_millis(timeout));
-            }
+            let connect_ms = connect_timeout.unwrap_or(15_000);
+            let request_ms = connect_ms.max(30_000);
+            builder = builder.connect_timeout(Duration::from_millis(connect_ms));
+            builder = builder.timeout(Duration::from_millis(request_ms));
+
             if let Some(max_redirections) = max_redirections {
                 builder = builder.redirect(if max_redirections == 0 {
                     Policy::none()
@@ -252,7 +254,6 @@ fn build_request(
             }
 
             if no_proxy.unwrap_or(false) {
-                dbg!("no_proxy", true);
                 builder = builder.no_proxy();
             } else {
                 if let Some(proxy_config) = proxy {
@@ -356,7 +357,6 @@ pub async fn fetch<R: Runtime>(
             // };
             let fut = async move { request.send().await.map_err(Into::into) };
 
-            // let fut = async move { request.send().await.map_err(Into::into) };
             let mut resources_table = webview.resources_table();
             let rid = resources_table.add_request(Box::pin(fut));
 

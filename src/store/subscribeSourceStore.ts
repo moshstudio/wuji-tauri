@@ -89,6 +89,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     );
     if (index !== -1) {
       subscribeSources.value.splice(index, 1);
+      loadSubscribeSources(true, 200);
     }
   };
 
@@ -99,6 +100,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     const source = subscribeSources.value.find(s => s.detail.id === sourceId);
     if (source) {
       _.remove(source.detail.urls, item => item.id === itemId);
+      loadSubscribeSources(true, 200);
     }
   };
 
@@ -221,6 +223,9 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       };
       for (const item of res.urls) {
         try {
+          if (item.id) {
+            extensionStore.deleteSourceClass(item.id);
+          }
           const sc = await extensionStore.getSourceClass(item);
           if (!sc) {
             showToast(`添加 ${item.name} 订阅源失败`);
@@ -265,6 +270,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
   };
 
   const removeFromSource = (itemId: string, sourceType: SourceType) => {
+    extensionStore.deleteSourceClass(itemId);
     switch (sourceType) {
       case SourceType.Photo:
         _.remove(
@@ -370,6 +376,9 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       };
       for (const sourceContent of marketSource.sourceContents || []) {
         try {
+          if (sourceContent._id) {
+            extensionStore.deleteSourceClass(sourceContent._id);
+          }
           const sc = await extensionStore.getSourceClass(sourceContent);
           if (!sc) {
             return abortImport(`添加 ${marketSource.name} 订阅源失败`);
@@ -566,6 +575,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     }
     else {
       await update(source);
+      loadSubscribeSources(true);
     }
 
     if (failed.length > 0) {
@@ -675,18 +685,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       if (source.detail) {
         for (const item of source.detail.urls) {
           if (!item.disable) {
-            const found = getSource(item);
-            if (found) {
-              found.item = item;
-            }
-            else {
-              addToSource(
-                {
-                  item,
-                },
-                false,
-              );
-            }
+            addToSource({ item }, false);
             added.push(item.id);
           }
         }
@@ -710,28 +709,14 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     if (load) {
       sleep(loadDelay).then(async () => {
         await Promise.all([
-          ...photoStore.photoSources.map(async (s) => {
-            if (!s.list?.list.length)
-              await photoStore.photoRecommendList(s);
-          }),
+          ...photoStore.photoSources.map(s => photoStore.photoRecommendList(s)),
           ...songStore.songSources.map(async (s) => {
-            if (!s.playlist?.list.length)
-              await songStore.songRecommendPlayist(s);
-            if (!s.songList?.list.length)
-              await songStore.songRecommendSong(s);
+            await songStore.songRecommendPlayist(s);
+            await songStore.songRecommendSong(s);
           }),
-          ...bookStore.bookSources.map(async (s) => {
-            if (!s.list)
-              await bookStore.bookRecommendList(s);
-          }),
-          ...comicStore.comicSources.map(async (s) => {
-            if (!s.list)
-              await comicStore.comicRecommendList(s);
-          }),
-          ...videoStore.videoSources.map(async (s) => {
-            if (!s.list)
-              await videoStore.videoRecommendList(s);
-          }),
+          ...bookStore.bookSources.map(s => bookStore.bookRecommendList(s)),
+          ...comicStore.comicSources.map(s => comicStore.comicRecommendList(s)),
+          ...videoStore.videoSources.map(s => videoStore.videoRecommendList(s)),
         ]);
       });
     }

@@ -8,6 +8,7 @@ import { storeToRefs } from 'pinia';
 import { ref } from 'vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import MHeader from '@/components/header/MHeader.vue';
+import NoEnabledSourceEmpty from '@/components/source/NoEnabledSourceEmpty.vue';
 import MBookTab from '@/components/tab/MBookTab.vue';
 import { router } from '@/router';
 import { useDisplayStore } from '@/store';
@@ -78,6 +79,7 @@ async function onRefresh() {
             />
           </ResponsiveGrid2>
         </van-collapse-item>
+        <NoEnabledSourceEmpty v-if="!bookSources.length" type="book" />
         <div
           v-for="(item, sourceIndex) in bookSources"
           :key="`${item.item.id}_${sourceIndex}`"

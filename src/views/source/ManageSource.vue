@@ -18,6 +18,10 @@ const sourceStore = useSubscribeSourceStore();
 
 const showImportSubscribeDialog = ref(false);
 
+function syncSubscribeSources() {
+  store.loadSubscribeSources(true, 200);
+}
+
 function sourceDisabled(source: SubscribeSource) {
   return source.detail?.urls.every(url => url.disable === true) || false;
 }
@@ -34,6 +38,7 @@ function enableSource(source: SubscribeSource, enable: boolean) {
       url.disable = false;
     });
   }
+  syncSubscribeSources();
 }
 function enableItem(
   source: SubscribeSource,
@@ -52,6 +57,7 @@ function enableItem(
     item.disable = false;
     source.disable = false;
   }
+  syncSubscribeSources();
 }
 
 function importSource() {

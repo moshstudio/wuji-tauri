@@ -10,7 +10,7 @@ import _ from 'lodash';
 import { storeToRefs } from 'pinia';
 import { nextTick, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import Player, { Events } from 'xgplayer';
+import Player, { Events, STATE_CLASS } from 'xgplayer';
 import DefaultPreset from 'xgplayer/es/presets/default';
 import LivePreset from 'xgplayer/es/presets/live';
 import MobilePreset from 'xgplayer/es/presets/mobile';
@@ -117,10 +117,11 @@ export function useXgVideoPlayer(deps: VideoPlayerDeps) {
     if (!player)
       return;
     const controls = player.controls;
-    const autoHide = !controlsPinned.value;
+    const pinned = controlsPinned.value;
+    const autoHide = !pinned;
     if (controls?.root) {
       controls.config.autoHide = autoHide;
-      if (controlsPinned.value) {
+      if (pinned) {
         controls.pauseAutoHide?.();
       }
       else {
@@ -132,7 +133,20 @@ export function useXgVideoPlayer(deps: VideoPlayerDeps) {
       catch { /* ignore */ }
     }
     try {
-      player.focus({ autoHide });
+      player.removeClass(STATE_CLASS.INACTIVE);
+      const innerStates = (player as typeof player & {
+        innerStates?: { isActiveLocked?: boolean };
+      }).innerStates;
+      if (pinned) {
+        if (innerStates)
+          innerStates.isActiveLocked = true;
+        player.focus({ autoHide: false, isLock: true });
+      }
+      else {
+        if (innerStates)
+          innerStates.isActiveLocked = false;
+        player.focus({ autoHide: true, isLock: false });
+      }
     }
     catch { /* ignore */ }
   }
@@ -212,6 +226,14 @@ export function useXgVideoPlayer(deps: VideoPlayerDeps) {
     });
     applyControlsVisibility();
 
+    // 底部 controls 与顶部 xg-top-bar 走不同隐藏机制，需在 blur 后重新固定
+    videoPlayer.value.on(Events.PLAYER_BLUR, () => {
+      if (isStaleSetup(setupGen))
+        return;
+      if (controlsPinned.value)
+        applyControlsVisibility();
+    });
+
     if (casting) {
       videoPlayer.value.pause();
     }
@@ -226,18 +248,55 @@ export function useXgVideoPlayer(deps: VideoPlayerDeps) {
         });
       }
 
+      let lastPlaybackTime: number | undefined;
+
+      function maybeUnpinControlsOnProgress(currentTime: number | undefined) {
+        if (
+          currentTime === undefined
+          || !videoPlayer.value?.isPlaying
+          || activeCastDevice.value
+          || !controlsPinned.value
+        ) {
+          return;
+        }
+        if (
+          lastPlaybackTime !== undefined
+          && currentTime > lastPlaybackTime
+        ) {
+          unpinControls();
+        }
+        lastPlaybackTime = currentTime;
+      }
+
       videoPlayer.value.on(Events.PLAY, () => {
         if (isStaleSetup(setupGen) || route.name !== 'VideoDetail' || activeCastDevice.value) {
           videoPlayer.value?.pause();
           return;
         }
-        unpinControls();
+        lastPlaybackTime = undefined;
+        // xgplayer 内置 onPlay 会 focus 并触发 top-bar 自动隐藏，需重新固定
+        if (controlsPinned.value)
+          applyControlsVisibility();
       });
 
       videoPlayer.value.on(Events.PAUSE, () => {
         if (isStaleSetup(setupGen))
           return;
         pinControls();
+        lastPlaybackTime = undefined;
+      });
+
+      // 直播等 currentTime 可能不递增，退化为画面真正开始播放时再允许自动隐藏
+      videoPlayer.value.on(Events.PLAYING, () => {
+        if (
+          isStaleSetup(setupGen)
+          || route.name !== 'VideoDetail'
+          || activeCastDevice.value
+          || !video?.isLive
+        ) {
+          return;
+        }
+        unpinControls();
       });
 
       videoPlayer.value.on(Events.PLAYNEXT, () => deps.callbacks.onPlayNext());
@@ -264,7 +323,9 @@ export function useXgVideoPlayer(deps: VideoPlayerDeps) {
           videoPlayer.value?.pause();
           return;
         }
-        updateTime(videoPlayer.value?.currentTime);
+        const currentTime = videoPlayer.value?.currentTime;
+        updateTime(currentTime);
+        maybeUnpinControlsOnProgress(currentTime);
       });
 
       videoPlayer.value.on(Events.ENDED, () => {

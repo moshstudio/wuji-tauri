@@ -2,18 +2,17 @@
 import type {
   BookChapter,
   BookItem,
-  BookList,
 } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
-import _ from 'lodash';
 import { storeToRefs } from 'pinia';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
-import { showFailToast, showToast } from 'vant';
+import { showToast } from 'vant';
 import { computed, onActivated, onDeactivated, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import MembershipCornerBadge from '@/components/badge/MembershipCornerBadge.vue';
 import BookThemePicker from '@/components/book/BookThemePicker.vue';
 import BookSwitchSourceDialog from '@/components/dialog/BookSwitchSource.vue';
+import { useBookSwitchSource } from '@/hooks/useBookSwitchSource';
 import { router } from '@/router';
 import {
   useBookShelfStore,
@@ -27,7 +26,11 @@ import {
 } from '@/store';
 import { useBackStore } from '@/store/backStore';
 import { retryOnFalse } from '@/utils';
-import { createCancellableFunction } from '@/utils/cancelableFunction';
+import {
+  confirmSwitchSource,
+  ensureBookSource,
+  findBookItemById,
+} from '@/utils/bookSourceAccess';
 import { showMembershipBadge } from '@/utils/membershipBadge';
 import { showVipDialog } from '@/utils/vip';
 import BookReadScroller from './BookReadScroller.vue';
@@ -144,73 +147,55 @@ function addToShelf() {
 /**
  * 实现切换源功能
  */
-const showSwitchSourceDialog = ref(false);
-const allSourceResults = ref<BookItem[]>([]);
+const {
+  showSwitchSourceDialog,
+  allSourceResults,
+  searchAllSources,
+  openSwitchSource,
+  switchSource: navigateSwitchSource,
+  isSearching,
+  searchProgress,
+} = useBookSwitchSource();
+let isPromptingSwitchSource = false;
 
-const searchAllSources = createCancellableFunction(
-  async (signal: AbortSignal, targetBook?: BookItem) => {
-    allSourceResults.value = [];
-    if (!targetBook)
+function openCurrentSwitchSource() {
+  openSwitchSource(book.value);
+}
+
+async function offerSwitchSource(
+  message = '当前源无法获取本章内容，是否换源搜索并继续阅读？',
+) {
+  if (!book.value) {
+    showToast('本章内容为空');
+    return;
+  }
+  if (isPromptingSwitchSource || showSwitchSourceDialog.value)
+    return;
+
+  const hasOtherSources = store.bookSources.some(
+    source => source.item.id !== book.value?.sourceId,
+  );
+  if (!hasOtherSources) {
+    showToast('本章内容为空');
+    return;
+  }
+
+  isPromptingSwitchSource = true;
+  try {
+    if (!(await confirmSwitchSource(message)))
       return;
-    await Promise.all(
-      store.bookSources.map(async (bookSource) => {
-        await store.bookSearch(bookSource, targetBook.title);
-        if (signal.aborted)
-          return;
-        if (bookSource.list) {
-          for (const b of _.castArray<BookList>(bookSource.list)[0].list) {
-            if (b.title === targetBook.title) {
-              if (signal.aborted)
-                return;
-              const detailedBook = await store.bookDetail(bookSource, b);
-              if (detailedBook) {
-                allSourceResults.value.push(detailedBook);
-                return;
-              }
-            }
-          }
-        }
-      }),
-    );
-  },
-);
+    openCurrentSwitchSource();
+  }
+  finally {
+    isPromptingSwitchSource = false;
+  }
+}
 
 async function switchSource(newBookItem: BookItem) {
-  if (!readingChapter.value) {
-    showToast('请重新加载章节');
-    return;
-  }
-  if (!newBookItem.chapters) {
-    showToast('章节为空');
-    return;
-  }
-  const chapter
-    = newBookItem.chapters?.find(chapter => chapter.id === chapterId)
-      || newBookItem.chapters?.find(
-        chapter => chapter.title === readingChapter.value?.title,
-      )
-      || newBookItem.chapters?.[
-        book.value?.chapters?.findIndex(chapter => chapter.id === chapterId)
-        || 0
-      ];
-
-  if (!chapter) {
-    showToast('章节不存在');
-    return;
-  }
-
-  chapter.readingPage = readingChapter.value.readingPage;
-
-  showSwitchSourceDialog.value = false;
-
-  router.push({
-    // name: 'BookRead',
-    params: {
-      chapterId: chapter.id,
-      bookId: newBookItem.id,
-      sourceId: newBookItem.sourceId,
-      isPrev: 'false',
-    },
+  await navigateSwitchSource(newBookItem, {
+    chapterId,
+    readingChapter: readingChapter.value,
+    originalChapters: book.value?.chapters,
   });
 }
 
@@ -231,9 +216,20 @@ const loadData = retryOnFalse({ onFailed: backStore.back })(async () => {
     return false;
   }
 
-  bookSource.value = store.getBookSource(sourceId!);
-  if (!bookSource.value) {
-    showToast('源不存在或未启用');
+  const ensured = await ensureBookSource(sourceId!);
+  if (ensured.ok) {
+    bookSource.value = ensured.source;
+  }
+  else {
+    bookSource.value = undefined;
+    book.value = findBookItemById(bookId);
+    if (ensured.action === 'switch') {
+      if (book.value) {
+        openCurrentSwitchSource();
+        return true;
+      }
+      showToast('无法换源：找不到书籍信息');
+    }
     return false;
   }
 
@@ -251,19 +247,27 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
     backStore.back();
     return;
   }
+  // 源不可用时已打开换源对话框，跳过章节加载
+  if (!bookSource.value) {
+    return;
+  }
   // 如果当前已经在读这一章，且由于路由参数微调触发（URL 跟随滚动），则静默跳过
   if (!refresh && !chapter && readingChapter.value?.id === chapterId) {
     return;
   }
 
   if (!book.value.chapters?.length) {
-    if (!bookSource.value) {
-      showFailToast('源不存在或未启用');
-      return;
-    }
-    const ret = await store.bookDetail(bookSource.value, book.value);
+    const ret = await store.bookDetail(bookSource.value, book.value, {
+      silent: true,
+    });
     if (ret) {
       Object.assign(book.value, ret);
+    }
+    if (!book.value.chapters?.length) {
+      readingChapter.value
+        = chapter || ({ id: chapterId, title: '' } as BookChapter);
+      await offerSwitchSource('获取章节列表失败，是否换源搜索并继续阅读？');
+      return;
     }
   }
   if (!chapter) {
@@ -289,7 +293,8 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
   readingChapterContent.value = content;
   displayStore.closeToast(t);
   if (!readingChapterContent.value) {
-    showToast('本章内容为空');
+    await offerSwitchSource();
+    return;
   }
 
   // 载入上一章和下一章
@@ -450,7 +455,11 @@ async function refreshChapters() {
 async function loadChapterContent(chapter: BookChapter): Promise<string> {
   if (!bookSource.value || !book.value)
     return '';
-  return (await store.bookRead(bookSource.value, book.value, chapter)) || '';
+  const content
+    = (await store.bookRead(bookSource.value, book.value, chapter)) || '';
+  if (!content)
+    void offerSwitchSource();
+  return content;
 }
 function toChapter(chapter: BookChapter) {
   chapter.readingPage = undefined;
@@ -544,12 +553,7 @@ onDeactivated(() => {
     :add-to-shelf="addToShelf"
     :show-view-setting="() => (displayStore.showViewSettingDialog = true)"
     :show-setting="() => (displayStore.showSettingDialog = true)"
-    :show-switch-source="
-      () => {
-        showSwitchSourceDialog = true;
-        searchAllSources(book);
-      }
-    "
+    :show-switch-source="openCurrentSwitchSource"
     :to-chapter="toChapter"
     :prev-chapter="prevChapter"
     :next-chapter="nextChapter"
@@ -563,6 +567,9 @@ onDeactivated(() => {
       v-model:show="showSwitchSourceDialog"
       :book="book"
       :search-result="allSourceResults"
+      :searching="isSearching"
+      :search-progress="searchProgress"
+      :current-chapter="readingChapter"
       :search="searchAllSources"
       :select="switchSource"
     />

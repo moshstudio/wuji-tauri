@@ -10,7 +10,7 @@ import { onMountedOrActivated } from '@vant/use';
 import _ from 'lodash';
 import { storeToRefs } from 'pinia';
 import { keepScreenOn } from 'tauri-plugin-keep-screen-on-api';
-import { showFailToast, showToast } from 'vant';
+import { showToast } from 'vant';
 import { computed, onDeactivated, ref, watch } from 'vue';
 import ComicSwitchSourceDialog from '@/components/dialog/ComicSwitchSource.vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
@@ -28,6 +28,7 @@ import {
 import { useBackStore } from '@/store/backStore';
 import { retryOnFalse } from '@/utils';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { ensureSource } from '@/utils/sourceAccess';
 
 const { chapterId, comicId, sourceId } = defineProps<{
   sourceId: string;
@@ -137,11 +138,11 @@ const loadData = retryOnFalse({ onFailed: backStore.back })(async () => {
     return false;
   }
 
-  comicSource.value = store.getComicSource(sourceId);
-  if (!comicSource.value) {
-    showToast('源不存在或未启用');
+  const ensured = await ensureSource(sourceId, 'comic');
+  if (!ensured.ok) {
     return false;
   }
+  comicSource.value = ensured.source;
   comic.value = store.getComicItem(comicSource.value, comicId);
   if (!comic.value) {
     return false;
@@ -157,8 +158,10 @@ async function loadChapter(chapter?: ComicChapter) {
   }
   if (!comic.value.chapters?.length) {
     if (!comicSource.value) {
-      showFailToast('源不存在或未启用');
-      return;
+      const ensured = await ensureSource(sourceId, 'comic');
+      if (!ensured.ok)
+        return;
+      comicSource.value = ensured.source;
     }
     const ret = await store.comicDetail(comicSource.value, comic.value);
     if (ret) {

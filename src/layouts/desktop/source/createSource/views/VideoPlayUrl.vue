@@ -6,18 +6,24 @@ import type {
   VideoUrlMap,
 } from '@wuji-tauri/source-extension';
 import type { FormItem } from '@/store/sourceCreateStore';
+import type { RetryAction } from '@/views/video/composables/useRetryStrategy';
 import {
   CmsVideoExtension,
   VideoExtension,
 } from '@wuji-tauri/source-extension';
 import { showDialog } from 'vant';
-import { computed, nextTick, onDeactivated, ref, watchEffect } from 'vue';
+import { computed, nextTick, onDeactivated, ref, shallowRef, watchEffect } from 'vue';
 import Player, { Events } from 'xgplayer';
 import CMS_VIDEO_TEMPLATE from '@/components/codeEditor/templates/cmsVideoTemplate.txt?raw';
 import VIDEO_TEMPLATE from '@/components/codeEditor/templates/videoTemplate.txt?raw';
 import VideoJsPlugin from '@/components/media/plugins/videoJs';
 import AppVideoDetail from '@/layouts/app/video/VideoDetail.vue';
-import { resolveVideoUrlMap } from '@/utils/videoMediaType';
+import { shouldFastPathWebviewFallback } from '@/utils/videoMediaType';
+import {
+  resolvePlayableVideoUrl,
+  resolveUrlViaWebview,
+} from '@/utils/videoPlayResolver';
+import { RetryStrategy } from '@/views/video/composables/useRetryStrategy';
 import CreateSourcePreviewShell from '../CreateSourcePreviewShell.vue';
 import { CreateSourceRunStatus } from '../useCreateSourceListRunner';
 import 'xgplayer/dist/index.min.css';
@@ -47,8 +53,96 @@ const videoElement = ref<HTMLElement>();
 const videoPlayer = ref<Player>();
 const videoSrc = ref<VideoUrlMap>();
 const playUrlFetching = ref(false);
+const retryStrategy = shallowRef(new RetryStrategy());
+let resolveAbort: AbortController | null = null;
+
+function shouldAllowWebviewFallback(raw: VideoUrlMap): boolean {
+  return !!(
+    raw.url
+    && !raw.isLive
+    && shouldFastPathWebviewFallback(raw.url)
+    && !retryStrategy.value.hasWebviewTried(raw.url)
+  );
+}
+
+async function applyResolvedPlayUrl(
+  raw: VideoUrlMap,
+  options: { allowWebviewFallback?: boolean; signal?: AbortSignal } = {},
+): Promise<VideoUrlMap> {
+  const { resolved, webviewUsed } = await resolvePlayableVideoUrl(raw, {
+    signal: options.signal,
+    allowWebviewFallback: options.allowWebviewFallback ?? shouldAllowWebviewFallback(raw),
+  });
+  if (options.signal?.aborted) {
+    return resolved;
+  }
+  if (webviewUsed && raw.url) {
+    retryStrategy.value.markWebviewTried(raw.url);
+  }
+  retryStrategy.value.markResolvedType(resolved.url, resolved.type);
+  return resolved;
+}
+
+async function retryPlayback(action: RetryAction) {
+  resolveAbort?.abort();
+  const abort = new AbortController();
+  resolveAbort = abort;
+  const signal = abort.signal;
+
+  switch (action.type) {
+    case 'switch-media-type': {
+      const current = videoSrc.value;
+      if (!current)
+        return;
+      const newSrc: VideoUrlMap = { ...current, type: action.nextType };
+      console.warn(
+        `[CreateSource] type ${current.type ?? '(none)'} failed, retry ${action.nextType}`,
+      );
+      const resolved = await applyResolvedPlayUrl(newSrc, { signal });
+      if (signal.aborted)
+        return;
+      videoSrc.value = resolved;
+      result.value = resolved;
+      break;
+    }
+    case 'webview-fallback': {
+      try {
+        const playableUrl = await resolveUrlViaWebview(action.originalUrl, signal);
+        if (signal.aborted)
+          return;
+        retryStrategy.value.markWebviewTried(action.originalUrl);
+        if (!playableUrl) {
+          return;
+        }
+        const nextSrc: VideoUrlMap = {
+          ...(videoSrc.value || {}),
+          url: playableUrl,
+        };
+        const resolved = await applyResolvedPlayUrl(nextSrc, {
+          signal,
+          allowWebviewFallback: false,
+        });
+        if (signal.aborted)
+          return;
+        videoSrc.value = resolved;
+        result.value = resolved;
+      }
+      catch {
+        /* ignore */
+      }
+      break;
+    }
+    case 'refetch-url': {
+      await load(true);
+      break;
+    }
+  }
+}
 
 async function initLoad() {
+  resolveAbort?.abort();
+  resolveAbort = null;
+  retryStrategy.value.reset();
   result.value = undefined;
   selectedResource.value = undefined;
   selectedEpisode.value = undefined;
@@ -135,19 +229,25 @@ async function load(silent = false) {
     ) {
       throw new Error('请先保证《影视详情》执行不为空');
     }
+    resolveAbort?.abort();
+    const abort = new AbortController();
+    resolveAbort = abort;
+
     const res = await cls?.execGetPlayUrl(
       sourceItem.value,
       selectedResource.value,
       selectedEpisode.value,
     );
-    if (!res) {
-      throw new Error('获取详情失败! 返回结果为空');
+    if (!res?.url) {
+      throw new Error('获取播放地址失败! 返回结果为空');
     }
-    if (!res) {
-      throw new Error('获取播放地址失败!');
+    retryStrategy.value.resetForNewUrl(res.url);
+    const resolved = await applyResolvedPlayUrl(res, { signal: abort.signal });
+    if (abort.signal.aborted) {
+      return;
     }
-    result.value = await resolveVideoUrlMap(res);
-    videoSrc.value = result.value;
+    result.value = resolved;
+    videoSrc.value = resolved;
     props.updateResult('video', 'playUrl', result.value, true);
     runStatus.value = CreateSourceRunStatus.success;
   }
@@ -204,6 +304,14 @@ watchEffect(async (onCleanup) => {
   videoPlayer.value = player;
   player.on(Events.ERROR, (error) => {
     console.warn(`播放失败: ${JSON.stringify(error)}`);
+    const action = retryStrategy.value.decideOnError(videoSrc.value);
+    if (action) {
+      void retryPlayback(action);
+    }
+  });
+  player.getPlugin('error').useHooks('errorRetry', () => {
+    void retryPlayback({ type: 'refetch-url' });
+    return false;
   });
   player.getPlugin('error').useHooks('showError', () => {
     player.controls?.show();
@@ -214,6 +322,8 @@ watchEffect(async (onCleanup) => {
 });
 
 onDeactivated(() => {
+  resolveAbort?.abort();
+  resolveAbort = null;
   if (videoPlayer.value) {
     videoPlayer.value.pause();
     videoPlayer.value.reset();

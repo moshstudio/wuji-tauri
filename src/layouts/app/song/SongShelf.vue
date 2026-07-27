@@ -3,13 +3,11 @@ import { MPlaylistShelfCard } from '@wuji-tauri/components';
 import MNavBar from '@/components/header/MNavBar.vue';
 import MSongBar from '@/components/songbar/MSongBar.vue';
 import { router } from '@/router';
-import { useDisplayStore, useSongShelfStore } from '@/store';
-import { showPromptDialog } from '@/utils/usePromptDialog';
+import { useSongShelfStore } from '@/store';
 
 defineProps<{
-  createShelf: (name: string) => void;
+  openAddMenu: () => void;
 }>();
-const displayStore = useDisplayStore();
 const shelfStore = useSongShelfStore();
 
 function toDetail(shelfId: string) {
@@ -23,22 +21,7 @@ function toDetail(shelfId: string) {
       <template #right>
         <van-icon
           name="plus"
-          @click="
-            () => {
-              showPromptDialog({
-                title: '创建歌单',
-                message: '请输入歌单名称',
-                placeholder: '请输入歌单名称',
-                defaultValue: '',
-                confirmText: '创建',
-                cancelText: '取消',
-              }).then((name) => {
-                if (name) {
-                  createShelf(name);
-                }
-              });
-            }
-          "
+          @click="openAddMenu"
         />
       </template>
     </MNavBar>

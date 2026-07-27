@@ -5,7 +5,9 @@ import { storeToRefs } from 'pinia';
 
 import { showFailToast, showLoadingToast, showToast } from 'vant';
 import { computed, onActivated, ref, watch } from 'vue';
+import BookSwitchSourceDialog from '@/components/dialog/BookSwitchSource.vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
+import { useBookSwitchSource } from '@/hooks/useBookSwitchSource';
 import { usePageDataLoader } from '@/hooks/usePageDataLoader';
 import AppBookDetail from '@/layouts/app/book/BookDetail.vue';
 import DesktopBookDetail from '@/layouts/desktop/book/BookDetail.vue';
@@ -16,6 +18,11 @@ import {
   useStore,
   useSubscribeSourceStore,
 } from '@/store';
+import {
+  confirmSwitchSource,
+  ensureBookSource,
+  findBookItemById,
+} from '@/utils/bookSourceAccess';
 
 const { bookId, sourceId } = defineProps({
   bookId: String,
@@ -54,6 +61,16 @@ const addShelfActions = computed(() => {
   }));
 });
 
+const {
+  showSwitchSourceDialog,
+  allSourceResults,
+  switchTargetBook,
+  searchAllSources,
+  openSwitchSource,
+  isSearching,
+  searchProgress,
+} = useBookSwitchSource();
+
 const { run: loadPage } = usePageDataLoader({
   onFailed: () => showFailToast('加载失败，请检查网络或订阅源状态'),
 });
@@ -82,25 +99,19 @@ async function loadData() {
       return true;
     }
 
-    bookSource.value = store.getBookSource(sourceId!);
-    if (!bookSource.value) {
-      const subscribeSource = subscribeStore.subscribeSources.find(s =>
-        s.detail.urls.some(u => u.id === sourceId),
-      );
-      const urlItem = subscribeSource?.detail.urls.find(u => u.id === sourceId);
-
-      if (urlItem && (urlItem.disable || subscribeSource?.disable)) {
-        showFailToast('书籍源已禁用，请在订阅源管理中启用');
-      }
-      else if (!urlItem) {
-        showFailToast('书籍源不存在或已删除');
-      }
-      else {
-        showFailToast('书籍源加载失败，请检查订阅源配置');
+    const ensured = await ensureBookSource(sourceId!);
+    if (!ensured.ok) {
+      book.value = findBookItemById(bookId);
+      if (ensured.action === 'switch') {
+        if (book.value)
+          openSwitchSource(book.value);
+        else
+          showToast('无法换源：找不到书籍信息');
       }
       shouldReload.value = true;
       return true;
     }
+    bookSource.value = ensured.source;
 
     book.value = store.getBookItem(bookSource.value, bookId);
     if (!book.value) {
@@ -114,7 +125,9 @@ async function loadData() {
       closeOnClick: true,
       closeOnClickOverlay: false,
     });
-    const detail = await store.bookDetail(bookSource.value, book.value, { silent: true });
+    const detail = await store.bookDetail(bookSource.value, book.value, {
+      silent: true,
+    });
     toast.close();
 
     if (signal.aborted)
@@ -124,7 +137,10 @@ async function loadData() {
       book.value = detail;
     }
     if (!detail?.chapters?.length) {
-      showToast('章节列表为空');
+      if (await confirmSwitchSource('获取章节列表失败，是否换源搜索？'))
+        openSwitchSource(book.value);
+      else
+        showToast('章节列表为空');
     }
 
     shouldReload.value = !detail || !detail.chapters?.length;
@@ -139,6 +155,21 @@ function toChapter(_book: BookItem, chapter: BookChapter) {
       bookId,
       sourceId,
       chapterId: chapter.id,
+    },
+  });
+}
+
+async function onSelectSwitchSource(newBookItem: BookItem) {
+  if (!newBookItem.chapters?.length) {
+    showToast('章节为空');
+    return;
+  }
+  showSwitchSourceDialog.value = false;
+  router.push({
+    name: 'BookDetail',
+    params: {
+      bookId: newBookItem.id,
+      sourceId: newBookItem.sourceId,
     },
   });
 }
@@ -194,6 +225,16 @@ onActivated(() => {
       v-model:show="showAddShelfSheet"
       title="添加到书架"
       :actions="addShelfActions"
+    />
+    <BookSwitchSourceDialog
+      v-model:show="showSwitchSourceDialog"
+      :book="switchTargetBook || book"
+      :search-result="allSourceResults"
+      :searching="isSearching"
+      :search-progress="searchProgress"
+      :current-chapter="book?.chapters?.[0]"
+      :search="searchAllSources"
+      :select="onSelectSwitchSource"
     />
   </PlatformSwitch>
 </template>

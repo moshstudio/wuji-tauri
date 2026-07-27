@@ -16,6 +16,7 @@ import {
   useSubscribeSourceStore,
 } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { ensureSource } from '@/utils/sourceAccess';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -104,11 +105,10 @@ async function hisrotyToComic(comic: ComicHistory) {
     showToast('订阅源加载超时，请稍后重试');
     return;
   }
-  const source = store.getComicSource(comic.comic.sourceId);
-  if (!source) {
-    showToast('源不存在或未启用');
+  const ensured = await ensureSource(comic.comic.sourceId, 'comic');
+  if (!ensured.ok)
     return;
-  }
+  const source = ensured.source;
   if (!comic.comic.chapters?.length) {
     // 章节为空，获取章节
     const t = showLoadingToast({

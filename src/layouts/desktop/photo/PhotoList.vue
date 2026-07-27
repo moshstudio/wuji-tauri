@@ -6,6 +6,7 @@ import { storeToRefs } from 'pinia';
 import { ref } from 'vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import WHeader from '@/components/header/WHeader.vue';
+import NoEnabledSourceEmpty from '@/components/source/NoEnabledSourceEmpty.vue';
 import MPagination from '@/components/pagination/MPagination.vue';
 import { router } from '@/router';
 import { useDisplayStore } from '@/store';
@@ -52,6 +53,7 @@ async function onRefresh() {
       @refresh="onRefresh"
     >
       <van-collapse v-model="displayStore.photoCollapse">
+        <NoEnabledSourceEmpty v-if="!photoSources.length" type="photo" />
         <div v-for="(item, index) in photoSources" :key="item.item.id">
           <van-collapse-item
             v-if="!!item.list?.list.length"

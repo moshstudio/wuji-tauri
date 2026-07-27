@@ -17,14 +17,31 @@
         let foundMasterTarget = false;
         let lastMasterChangeTime = Date.now();
 
+        const targetTypes = TARGET_TYPE
+            ? TARGET_TYPE.split(',').map(t => t.trim()).filter(Boolean)
+            : [];
+        const wantsVideo = targetTypes.includes('video');
+
+        function tryTriggerVideoPlay(force) {
+            if (!wantsVideo || typeof window.__wuji_tryClickPlayButtons__ !== 'function') return;
+            window.__wuji_tryClickPlayButtons__({ force: !!force });
+        }
+
+        if (wantsVideo) {
+            tryTriggerVideoPlay(true);
+        }
+
         while (Date.now() - startTime < MAX_WAIT_MS) {
             const sniffed = window.__wuji_sniffed__ || [];
             const sniffedCount = sniffed.length;
             
             if (TARGET_TYPE) {
-                const targetTypes = TARGET_TYPE.split(',').map(t => t.trim());
                 const imageOnlyTarget = targetTypes.length > 0 && targetTypes.every(t => t === 'image');
                 const settleMs = imageOnlyTarget ? IMAGE_SETTLE_MS : DEFAULT_SETTLE_MS;
+
+                if (wantsVideo && !foundMasterTarget) {
+                    tryTriggerVideoPlay(false);
+                }
 
                 if (sniffedCount > lastCheckedCount) {
                     for (let i = lastCheckedCount; i < sniffedCount; i++) {
@@ -44,7 +61,13 @@
                     break;
                 }
             } else {
-                if ((document.readyState === 'complete' || document.readyState === 'interactive') && Date.now() - startTime > DEFAULT_SETTLE_MS) {
+                const waitSelector = window.__wuji_wait_selector__;
+                if (waitSelector) {
+                    if (document.querySelector(waitSelector)
+                        && Date.now() - startTime > DEFAULT_SETTLE_MS) {
+                        break;
+                    }
+                } else if ((document.readyState === 'complete' || document.readyState === 'interactive') && Date.now() - startTime > DEFAULT_SETTLE_MS) {
                     break;
                 }
             }

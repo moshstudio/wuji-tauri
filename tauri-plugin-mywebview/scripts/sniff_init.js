@@ -83,23 +83,42 @@
         if (e.target && e.target.tagName && (e.target.tagName === 'VIDEO' || e.target.tagName === 'AUDIO')) nativeMute(e.target);
     }, true);
 
-    // 工具：推断类型
+    function urlPathWithoutQuery(url) {
+        return (url || '').toLowerCase().split('?')[0].split('#')[0];
+    }
+
+    // 工具：推断类型（优先 Content-Type，其次文件扩展名；避免把 /video/m3u8/ 目录当成 m3u8 流）
     function guessType(url, ct) {
         if (ct) {
             ct = ct.toLowerCase();
+            if (ct.includes('image')) return 'image';
             if (ct.includes('video') || ct.includes('mpegurl') || ct.includes('application/vnd.apple.mpegurl') || ct.includes('ms-sstr+xml')) return 'video';
             if (ct.includes('audio')) return 'audio';
-            if (ct.includes('image')) return 'image';
         }
         if (url) {
-            var u = url.toLowerCase();
+            var path = urlPathWithoutQuery(url);
+            if (/\.(jpe?g|png|gif|webp|bmp|avif|svg|ico)$/.test(path)) {
+                return 'image';
+            }
             var mediaRegex = /\.(mp4|m3u8|m4v|mkv|webm|ts|mpd|m4s|mp3|aac|ogg|flac|wav|m4a|opus)($|\?|&|%|#)/;
-            if (mediaRegex.test(u)) return /\.(mp3|aac|ogg|flac|wav|m4a|opus)/.test(u) ? 'audio' : 'video';
-            if (u.includes('filename') && (u.includes('.mp4') || u.includes('.m3u8') || u.includes('.m4s') || u.includes('.ts'))) return 'video';
-            if (u.includes('/hls/') || u.includes('/m3u8') || u.includes('playlist.m3u8') || u.includes('.isml')) return 'video';
-            if (u.includes('video-content') || u.includes('media-source')) return 'video';
+            if (mediaRegex.test(path)) return /\.(mp3|aac|ogg|flac|wav|m4a|opus)($|\?|&|%|#)/.test(path) ? 'audio' : 'video';
+            if (path.includes('filename') && (path.includes('.mp4') || path.includes('.m3u8') || path.includes('.m4s') || path.includes('.ts'))) return 'video';
+            if (/\.m3u8$/.test(path) || path.endsWith('.isml') || path.includes('playlist.m3u8')) return 'video';
+            if (/\/hls\//.test(path)) return 'video';
+            if (path.includes('video-content') || path.includes('media-source')) return 'video';
         }
         return 'other';
+    }
+
+    function applyContentType(item, contentType) {
+        if (!item || !contentType) return;
+        item.contentType = contentType;
+        var corrected = guessType(item.url, contentType);
+        if (corrected !== 'other') {
+            item.type = corrected;
+            item.resourceType = corrected;
+            item.isSegment = (corrected === 'video' || corrected === 'audio') && isStreamSegment(item.url);
+        }
     }
 
     function isStaticAsset(url, ct) {
@@ -148,7 +167,7 @@
                 if (item) {
                     if (!item.responseBody && details.responseBody) item.responseBody = details.responseBody;
                     if (!item.requestData && details.requestData) item.requestData = details.requestData;
-                    if (details.contentType) item.contentType = details.contentType;
+                    applyContentType(item, details.contentType);
                 }
                 return;
             }
@@ -262,7 +281,7 @@
                     var absUrl = this._wuji_url ? (this._wuji_url.startsWith('http') ? this._wuji_url : new URL(this._wuji_url, window.location.href).href) : null;
                     var item = absUrl ? sniffed[resourceMap.get(absUrl)] : null;
                     if (item) {
-                        if (ct) item.contentType = ct;
+                        applyContentType(item, ct);
                         if (size) item.size = size;
                         if (!item.responseBody && shouldCaptureBody(ct, size)) item.responseBody = this.responseText;
                     }
@@ -290,7 +309,7 @@
                     var absUrl = url.startsWith('http') ? url : new URL(url, window.location.href).href;
                     var item = sniffed[resourceMap.get(absUrl)];
                     if (item) {
-                        if (ct) item.contentType = ct;
+                        applyContentType(item, ct);
                         if (size) item.size = size;
                         if (!item.responseBody && shouldCaptureBody(ct, size)) {
                             response.clone().text().then(function(text) { item.responseBody = text; }).catch(function() {});
@@ -310,7 +329,12 @@
                 for (var i = 0; i < entries.length; i++) {
                     var entry = entries[i];
                     var type = guessType(entry.name);
-                    if (entry.initiatorType === 'video' || entry.initiatorType === 'audio') type = entry.initiatorType;
+                    if (
+                        (entry.initiatorType === 'video' || entry.initiatorType === 'audio') &&
+                        type !== 'image'
+                    ) {
+                        type = entry.initiatorType;
+                    }
                     addResource(entry.name, 'Network (' + entry.initiatorType + ')', {
                         size: entry.transferSize || entry.encodedBodySize,
                         type: type
@@ -440,5 +464,89 @@
             attributeFilter: ['src', 'srcset']
         });
     }
+
+    // --- 通用：URL 带 wuji_kw 时自动提交搜索表单（供源扩展在 webview 内 POST）---
+    (function setupWujiAutoSearch() {
+        if (!isTop) return;
+
+        function readKeyword() {
+            try {
+                var u = new URL(location.href);
+                var q = u.searchParams.get('wuji_kw');
+                if (q) {
+                    try { sessionStorage.setItem('__wuji_kw', q); } catch (e) {}
+                    return q;
+                }
+                var h = (location.hash || '').match(/^#wuji_kw=(.*)$/);
+                if (h && h[1]) {
+                    var hk = decodeURIComponent(h[1]);
+                    try { sessionStorage.setItem('__wuji_kw', hk); } catch (e) {}
+                    return hk;
+                }
+                return sessionStorage.getItem('__wuji_kw');
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function clearKeyword() {
+            try { sessionStorage.removeItem('__wuji_kw'); } catch (e) {}
+            try {
+                var u = new URL(location.href);
+                if (u.searchParams.has('wuji_kw')) {
+                    u.searchParams.delete('wuji_kw');
+                    history.replaceState(null, '', u.pathname + u.search + u.hash);
+                }
+                if (/^#wuji_kw=/.test(location.hash || '')) {
+                    history.replaceState(null, '', u.pathname + u.search);
+                }
+            } catch (e) {}
+        }
+
+        // 尽早挂上等待标记，避免采集脚本在 WAF/跳转前过早截页
+        if (readKeyword()) {
+            window.__wuji_wait_selector__ = '.search-card';
+        }
+
+        function trySubmit() {
+            var kw = readKeyword();
+            if (!kw) return true;
+            window.__wuji_wait_selector__ = '.search-card';
+            // 仍在 WAF 页则继续等
+            var html = (document.documentElement && document.documentElement.innerHTML) || '';
+            if (/wafjs|Loading\.\.\.|loading dukesk/i.test(html)
+                && !document.querySelector('input[name="keyword"], input.keyword, .sectionOne-search input')) {
+                return false;
+            }
+            var input = document.querySelector(
+                'input[name="keyword"], input.keyword, .sectionOne-search input[type="text"], .sectionOne-search input:not([type="hidden"]):not([type="submit"])'
+            );
+            var form = (input && input.form)
+                || document.querySelector('form[action*="search"], form[method="post"], form');
+            if (!input || !form) return false;
+
+            input.value = kw;
+            clearKeyword();
+            setTimeout(function () {
+                try { form.submit(); } catch (e) {}
+            }, 80);
+            return true;
+        }
+
+        function start() {
+            if (trySubmit()) return;
+            var n = 0;
+            var timer = setInterval(function () {
+                n += 1;
+                if (trySubmit() || n > 80) clearInterval(timer);
+            }, 250);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', start);
+        } else {
+            start();
+        }
+    })();
 
 })();

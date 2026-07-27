@@ -174,12 +174,15 @@ async function formatClientConfig(
   const maxRedirections = init?.maxRedirections;
   const connectTimeout = init?.connectTimeout;
   const proxy = init?.proxy;
+  const verify = init?.verify;
+  const noProxy = init?.noProxy;
 
-  // Remove these fields before creating the request
   if (init) {
     delete init.maxRedirections;
     delete init.connectTimeout;
     delete init.proxy;
+    delete init.verify;
+    delete init.noProxy;
   }
 
   const headers = init?.headers
@@ -232,16 +235,18 @@ async function formatClientConfig(
   if (signal?.aborted) {
     throw new Error(ERROR_REQUEST_CANCELLED);
   }
+  const resolvedConnectTimeout = connectTimeout ?? 15_000;
+
   return {
     method: req.method,
     url: req.url,
     headers: mappedHeaders,
     data,
     maxRedirections,
-    connectTimeout,
+    connectTimeout: resolvedConnectTimeout,
     proxy,
-    verify: init?.verify,
-    noProxy: init?.noProxy,
+    verify,
+    noProxy,
   };
 }
 
@@ -279,15 +284,28 @@ async function _fetch(
     rid: number;
   }
 
+  const sendTimeoutMs = Math.max(clientConfig.connectTimeout ?? 15_000, 30_000);
+
   const {
     status,
     statusText,
     url,
     headers: responseHeaders,
     rid: responseRid,
-  } = await invoke<FetchSendResponse>('plugin:fetch-plugin|fetch_send', {
-    rid,
-  });
+  } = await Promise.race([
+    invoke<FetchSendResponse>('plugin:fetch-plugin|fetch_send', { rid }),
+    new Promise<never>((_, reject) => {
+      const timer = setTimeout(() => {
+        void abort();
+        reject(
+          new Error(
+            `fetch_send timeout after ${sendTimeoutMs}ms: ${clientConfig.url}`,
+          ),
+        );
+      }, sendTimeoutMs + 5_000);
+      init?.signal?.addEventListener('abort', () => clearTimeout(timer));
+    }),
+  ]);
 
   // no body for 101, 103, 204, 205 and 304
   // see https://fetch.spec.whatwg.org/#null-body-status
@@ -349,18 +367,44 @@ export async function fetch(
   input: URL | Request | string,
   init?: RequestInit & ClientOptions,
 ): Promise<Response> {
-  try {
-    let response = await _fetch(input, init);
-    if (response.status === 302) {
-      if (Array.from(response.headers.keys()).includes('location')) {
-        response = await fetch(response.headers.get('location')!, {
-          verify: false,
+  const inputUrl = input instanceof Request ? input.url : input.toString();
+
+  const runOnce = async (
+    opts?: RequestInit & ClientOptions,
+  ): Promise<Response> => {
+    let response = await _fetch(input, opts);
+
+    if (response.type === 'error' || response.status === 0) {
+      throw new Error(`fetch failed (network/plugin): ${inputUrl}`);
+    }
+
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get('location');
+      if (location) {
+        response = await fetch(location, {
+          ...opts,
+          verify: opts?.verify ?? false,
+          headers: opts?.headers,
         });
       }
     }
+
     return response;
+  };
+
+  try {
+    return await runOnce(init);
   }
   catch (error) {
+    if (init?.noProxy !== true) {
+      try {
+        return await runOnce({ ...init, noProxy: true });
+      }
+      catch (retryError) {
+        console.error('fetch error:', retryError);
+        return Response.error();
+      }
+    }
     console.error('fetch error:', error);
     return Response.error();
   }

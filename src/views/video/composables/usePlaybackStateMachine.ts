@@ -25,6 +25,7 @@ import {
   resolveUrlViaWebview,
   resolveVideoEpisodeUrl,
 } from '@/utils/videoPlayResolver';
+import { ensureSource } from '@/utils/sourceAccess';
 import { RetryStrategy } from './useRetryStrategy';
 
 // ─── 状态定义 ───
@@ -218,29 +219,14 @@ export function usePlaybackStateMachine(options: {
         return true;
       }
 
-      const source = store.getVideoSource(options.sourceId.value);
-      if (!source) {
-        const subscribeSource = subscribeStore.subscribeSources.find(s =>
-          s.detail.urls.some(u => u.id === options.sourceId.value),
-        );
-        const urlItem = subscribeSource?.detail.urls.find(
-          u => u.id === options.sourceId.value,
-        );
-        if (urlItem && (urlItem.disable || subscribeSource?.disable)) {
-          showFailToast('视频源已禁用，请在订阅源管理中启用');
-        }
-        else if (!urlItem) {
-          showFailToast('视频源不存在或已删除');
-        }
-        else {
-          showFailToast('视频源加载失败，请检查订阅源配置');
-        }
+      const ensured = await ensureSource(options.sourceId.value, 'video');
+      if (!ensured.ok) {
         shouldReload.value = true;
         return true;
       }
 
-      videoSource.value = source;
-      videoItem.value = store.getVideoItem(source, options.videoId.value!);
+      videoSource.value = ensured.source;
+      videoItem.value = store.getVideoItem(ensured.source, options.videoId.value!);
       if (!videoItem.value) {
         shouldReload.value = true;
         return false;
@@ -248,7 +234,7 @@ export function usePlaybackStateMachine(options: {
 
       const t = displayStore.showToast();
       const detail
-        = (await store.videoDetail(source, videoItem.value, { silent: true }))
+        = (await store.videoDetail(ensured.source, videoItem.value, { silent: true }))
           || undefined;
       displayStore.closeToast(t);
       if (combinedAborted())

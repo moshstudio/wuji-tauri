@@ -45,13 +45,24 @@ android {
 }
 
 // scripts/ 为 WebView 注入脚本单一来源；构建前同步到 assets
-val syncWebviewScripts = tasks.register<Copy>("syncWebviewScripts") {
-    from("../scripts") {
-        include("sniff_init.js")
-        include("scraping.android.js")
-        rename("scraping.android.js", "scraping.js")
+val syncWebviewScripts = tasks.register("syncWebviewScripts") {
+    val scriptsDir = file("../scripts")
+    val assetsDir = layout.projectDirectory.dir("src/main/assets").asFile
+
+    inputs.dir(scriptsDir)
+    outputs.dir(assetsDir)
+
+    doLast {
+        assetsDir.mkdirs()
+        project.copy {
+            from(scriptsDir)
+            include("sniff_init.js", "spoof.js")
+            into(assetsDir)
+        }
+        val playTrigger = scriptsDir.resolve("play_trigger.js").readText()
+        val scraping = scriptsDir.resolve("scraping.android.js").readText()
+        assetsDir.resolve("scraping.js").writeText("$playTrigger\n$scraping")
     }
-    into(layout.projectDirectory.dir("src/main/assets"))
 }
 
 tasks.named("preBuild") {
@@ -60,6 +71,7 @@ tasks.named("preBuild") {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.9.0")
+    implementation("androidx.webkit:webkit:1.12.1")
     implementation("androidx.appcompat:appcompat:1.6.0")
     implementation("com.google.android.material:material:1.7.0")
     implementation("org.apache.commons:commons-text:1.9")

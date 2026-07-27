@@ -142,6 +142,19 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     showToast(`已从 ${shelf.playlist.name} 移除`);
     return true;
   };
+  const importNeteasePlaylist = (playlist: PlaylistInfo): SongShelf | null => {
+    const newShelf = createShelf(playlist.name);
+    if (!newShelf)
+      return null;
+
+    newShelf.playlist.picUrl = playlist.picUrl;
+    newShelf.playlist.picHeaders = playlist.picHeaders;
+    newShelf.playlist.desc = playlist.desc;
+    newShelf.playlist.list = playlist.list;
+    showToast(`已导入歌单「${playlist.name}」`);
+    return newShelf;
+  };
+
   const addPlaylistToShelf = (playlist: PlaylistInfo): boolean => {
     const find = songPlaylistShelf.value.find(
       item => item.playlist.id === playlist.id,
@@ -221,6 +234,7 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     songInLikeShelf,
     playlistInShelf,
     createShelf,
+    importNeteasePlaylist,
     addSongToShelf,
     removeSongFromShelf,
     addPlaylistToShelf,

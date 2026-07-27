@@ -11,6 +11,7 @@ import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppSongShelfDetail from '@/layouts/app/song/SongShelfDetail.vue';
 import DesktopSongShelfDetail from '@/layouts/desktop/song/SongShelfDetail.vue';
 import { useDownloadStore, useSongShelfStore, useSongStore, useStore, useSubscribeSourceStore } from '@/store';
+import { ensureSource } from '@/utils/sourceAccess';
 
 const props = defineProps({
   shelfId: String,
@@ -35,24 +36,10 @@ async function toPage(shelf: SongShelf, pageNo: number) {
     showFailToast('订阅源加载超时，请稍后重试');
     return;
   }
-  const source = store.getSongSource(sourceId);
-  if (!source) {
-    const subscribeSource = subscribeStore.subscribeSources.find(s =>
-      s.detail.urls.some(u => u.id === sourceId),
-    );
-    const urlItem = subscribeSource?.detail.urls.find(u => u.id === sourceId);
-
-    if (urlItem && (urlItem.disable || subscribeSource?.disable)) {
-      showFailToast('音乐源已禁用，请在订阅源管理中启用');
-    }
-    else if (!urlItem) {
-      showFailToast('音乐源不存在或已删除');
-    }
-    else {
-      showFailToast('音乐源加载中');
-    }
+  const ensured = await ensureSource(sourceId, 'song');
+  if (!ensured.ok)
     return;
-  }
+  const source = ensured.source;
   const t = showLoadingToast({
     duration: 0,
     closeOnClick: true,

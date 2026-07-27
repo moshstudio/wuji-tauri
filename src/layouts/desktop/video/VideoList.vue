@@ -8,6 +8,7 @@ import { storeToRefs } from 'pinia';
 import { ref } from 'vue';
 import ResponsiveGrid2 from '@/components/grid/ResponsiveGrid2.vue';
 import WHeader from '@/components/header/WHeader.vue';
+import NoEnabledSourceEmpty from '@/components/source/NoEnabledSourceEmpty.vue';
 import WVideoTab from '@/components/tab/WVideoTab.vue';
 import { router } from '@/router';
 import { useDisplayStore } from '@/store';
@@ -78,6 +79,7 @@ async function onRefresh() {
             />
           </ResponsiveGrid2>
         </van-collapse-item>
+        <NoEnabledSourceEmpty v-if="!videoSources.length" type="video" />
         <div v-for="(item, index) in videoSources" :key="item.item.id">
           <van-collapse-item
             v-show="

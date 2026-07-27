@@ -16,6 +16,7 @@ import {
   useVideoShelfStore,
 } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { ensureSource } from '@/utils/sourceAccess';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -106,11 +107,9 @@ async function hisrotyToVideo(video: VideoHistory) {
     showToast('订阅源加载超时，请稍后重试');
     return;
   }
-  const source = store.getVideoSource(video.video.sourceId);
-  if (!source) {
-    showToast('源不存在或未启用');
+  const ensured = await ensureSource(video.video.sourceId, 'video');
+  if (!ensured.ok)
     return;
-  }
   router.push({
     name: 'VideoDetail',
     params: {

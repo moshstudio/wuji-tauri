@@ -215,31 +215,56 @@ abstract class Extension {
       domType?: DOMParserSupportedType,
       encoding?: 'utf8' | 'gbk',
     ) => {
-      let maxRetry = 3;
-      while (maxRetry > 0) {
-        const response = await this.fetch(input, init);
-        if (response.status >= 300) {
-          maxRetry -= 1;
-          if (maxRetry > 0) {
+      const url = input instanceof Request ? input.url : input.toString();
+      const maxAttempts = 3;
+      let attempt = 0;
+      let lastError: unknown;
+
+      while (attempt < maxAttempts) {
+        attempt += 1;
+        try {
+          const response = await this.fetch(input, init);
+
+          if (response.type === 'error' || response.status === 0) {
+            lastError = new Error(
+              `network error (status=${response.status}, type=${response.type})`,
+            );
             continue;
           }
-          else {
+
+          if (response.status >= 300) {
             const text = await response.text();
-            console.log(`fetch error: ${response.status} ${text}`);
-            throw new Error(`fetch error: ${response.status} ${text}`);
+            lastError = new Error(
+              `HTTP ${response.status}: ${text.slice(0, 500)}`,
+            );
+            if (attempt >= maxAttempts) {
+              throw lastError;
+            }
+            continue;
           }
-        }
-        else {
+
           const buffer = await response.arrayBuffer();
           const contentType = response.headers.get('content-type');
           const resolvedEncoding = encoding
             ? normalizeCharset(encoding)
             : detectCharset(buffer, contentType, this.iconv);
           const text = decodeBuffer(buffer, resolvedEncoding, this.iconv);
-          return new DOMParser().parseFromString(text, domType || 'text/html');
+          return new DOMParser().parseFromString(
+            text,
+            domType || 'text/html',
+          );
+        }
+        catch (error) {
+          lastError = error;
+          if (attempt >= maxAttempts) {
+            throw error;
+          }
         }
       }
-      throw new Error(`fetch error: ${input.toString()} `);
+
+      throw lastError instanceof Error
+        ? lastError
+        : new Error(`fetchDom failed: ${url}`);
     };
     this.nanoid = nanoid;
     this.uuid = uuid;
