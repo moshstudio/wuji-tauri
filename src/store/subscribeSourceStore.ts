@@ -758,8 +758,8 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       while (!storage.loaded && Date.now() < timeout) {
         await new Promise(r => setTimeout(r, 50));
       }
-      await sleep(1000);
-      loadSubscribeSources(true);
+      // 先注入源列表，立即标记就绪；推荐列表后台加载，不阻塞阅读页
+      loadSubscribeSources(false);
 
       if (subscribeSources.value.length === 0) {
         startupDialogActive.value = true;
@@ -803,6 +803,8 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
           });
       }
       isLoaded.value = true;
+      // 后台拉取推荐列表（内部 sleep 后执行，不阻塞 isLoaded）
+      loadSubscribeSources(true);
     })().finally(() => {
       isLoading.value = false;
       loadingPromise = null;

@@ -15,6 +15,7 @@ import BookSwitchSourceDialog from '@/components/dialog/BookSwitchSource.vue';
 import { useBookSwitchSource } from '@/hooks/useBookSwitchSource';
 import { router } from '@/router';
 import {
+  useBookChapterStore,
   useBookShelfStore,
   useBookStore,
   useDisplayStore,
@@ -25,7 +26,7 @@ import {
   useTTSStore,
 } from '@/store';
 import { useBackStore } from '@/store/backStore';
-import { retryOnFalse } from '@/utils';
+import { retryOnFalse, sleep } from '@/utils';
 import {
   confirmSwitchSource,
   ensureBookSource,
@@ -164,9 +165,10 @@ function openCurrentSwitchSource() {
 
 async function offerSwitchSource(
   message = '当前源无法获取本章内容，是否换源搜索并继续阅读？',
+  emptyToast = '章节内容加载失败',
 ) {
   if (!book.value) {
-    showToast('本章内容为空');
+    showToast(emptyToast);
     return;
   }
   if (isPromptingSwitchSource || showSwitchSourceDialog.value)
@@ -176,7 +178,7 @@ async function offerSwitchSource(
     source => source.item.id !== book.value?.sourceId,
   );
   if (!hasOtherSources) {
-    showToast('本章内容为空');
+    showToast(emptyToast);
     return;
   }
 
@@ -210,9 +212,16 @@ const loadData = retryOnFalse({ onFailed: backStore.back })(async () => {
     return false;
   }
 
-  const loaded = await subscribeStore.waitForLoaded();
+  const [loaded, shelfReady] = await Promise.all([
+    subscribeStore.waitForLoaded(),
+    shelfStore.waitForReady(),
+  ]);
   if (!loaded) {
     showToast('订阅源加载超时，请稍后重试');
+    return false;
+  }
+  if (!shelfReady) {
+    showToast('书架加载超时，请稍后重试');
     return false;
   }
 
@@ -233,13 +242,109 @@ const loadData = retryOnFalse({ onFailed: backStore.back })(async () => {
     return false;
   }
 
-  book.value = store.getBookItem(bookSource.value, bookId);
+  // 书架/历史优先，避免冷启动时仅依赖源内列表
+  book.value
+    = findBookItemById(bookId) || store.getBookItem(bookSource.value, bookId);
 
   if (!book.value) {
     return false;
   }
   return true;
 });
+
+/** 从书架/历史取与路由 chapterId 匹配的 lastReadChapter，供目录未就绪时兜底 */
+function resolveLastReadChapterFallback(): BookChapter | undefined {
+  for (const shelf of shelfStore.bookShelf) {
+    for (const item of shelf.books) {
+      if (item.book.id === bookId && item.lastReadChapter?.id === chapterId) {
+        return item.lastReadChapter;
+      }
+    }
+  }
+  for (const history of shelfStore.bookHistory) {
+    if (
+      history.book.id === bookId
+      && history.lastReadChapter?.id === chapterId
+    ) {
+      return history.lastReadChapter;
+    }
+  }
+  return undefined;
+}
+
+/** 缓存未命中时网络拉取，失败则短间隔软重试 */
+async function bookReadWithRetry(
+  chapter: BookChapter,
+  refresh = false,
+): Promise<string> {
+  const content
+    = (await store.bookRead(bookSource.value!, book.value!, chapter, {
+      refresh,
+    })) || '';
+  if (content || refresh)
+    return content;
+
+  for (let i = 0; i < 2; i++) {
+    await sleep(800);
+    const retry
+      = (await store.bookRead(bookSource.value!, book.value!, chapter, {
+        refresh: true,
+        cacheMoreChapters: false,
+      })) || '';
+    if (retry)
+      return retry;
+  }
+  return '';
+}
+
+async function loadAdjacentChapters(chapter: BookChapter) {
+  const chapterIndex
+    = book.value?.chapters?.findIndex(c => c.id === chapter.id) ?? -1;
+  if (chapterIndex > 0) {
+    const prevChapter = book.value!.chapters![chapterIndex - 1];
+    prevChapterContent.value
+      = (await store.bookRead(bookSource.value!, book.value!, prevChapter))
+        || '';
+  }
+  else {
+    prevChapterContent.value = '';
+  }
+  if (
+    chapterIndex >= 0
+    && chapterIndex < (book.value?.chapters?.length ?? 0) - 1
+  ) {
+    const nextChapter = book.value!.chapters![chapterIndex + 1];
+    nextChapterContent.value
+      = (await store.bookRead(bookSource.value!, book.value!, nextChapter))
+        || '';
+  }
+  else {
+    nextChapterContent.value = '';
+  }
+}
+
+/** 目录缺失时后台补拉，已有缓存正文时失败不弹窗 */
+async function ensureChaptersInBackground() {
+  if (!book.value || !bookSource.value || book.value.chapters?.length)
+    return;
+  try {
+    const ret = await store.bookDetail(bookSource.value, book.value, {
+      silent: true,
+    });
+    if (ret) {
+      Object.assign(book.value, ret);
+      if (book.value.chapters?.length) {
+        chapterList.value = book.value.chapters;
+        if (readingChapter.value) {
+          await loadAdjacentChapters(readingChapter.value);
+        }
+      }
+    }
+  }
+  catch {
+    // 后台补目录失败时保持已展示的缓存正文
+  }
+}
 
 async function loadChapter(chapter?: BookChapter, refresh = false) {
   if (!book.value) {
@@ -256,6 +361,33 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
     return;
   }
 
+  if (!chapter) {
+    chapter = book.value.chapters?.find(c => c.id === chapterId);
+  }
+  if (!chapter) {
+    chapter = resolveLastReadChapterFallback();
+  }
+
+  const chapterStore = useBookChapterStore();
+
+  // 缓存优先：有磁盘正文则先展示，目录可后台补
+  if (chapter && !refresh) {
+    const cached = await chapterStore.getBookChapter(book.value, chapter);
+    if (cached) {
+      readingChapter.value = chapter;
+      readingChapterContent.value = cached;
+      chapterList.value = book.value.chapters || [];
+      shelfStore.updateBookReadInfo(book.value, chapter);
+      if (!book.value.chapters?.length) {
+        void ensureChaptersInBackground();
+      }
+      else {
+        await loadAdjacentChapters(chapter);
+      }
+      return;
+    }
+  }
+
   if (!book.value.chapters?.length) {
     const ret = await store.bookDetail(bookSource.value, book.value, {
       silent: true,
@@ -264,56 +396,56 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
       Object.assign(book.value, ret);
     }
     if (!book.value.chapters?.length) {
+      // 目录仍空：若有 lastRead 元数据，尝试直接拉正文
+      if (chapter) {
+        const displayStore = useDisplayStore();
+        const t = displayStore.showToast();
+        readingChapter.value = chapter;
+        const content = await bookReadWithRetry(chapter, refresh);
+        readingChapterContent.value = content;
+        displayStore.closeToast(t);
+        if (content) {
+          shelfStore.updateBookReadInfo(book.value, chapter);
+          void ensureChaptersInBackground();
+          return;
+        }
+      }
       readingChapter.value
         = chapter || ({ id: chapterId, title: '' } as BookChapter);
-      await offerSwitchSource('获取章节列表失败，是否换源搜索并继续阅读？');
+      await offerSwitchSource(
+        '获取章节列表失败，是否换源搜索并继续阅读？',
+        '章节内容加载失败',
+      );
       return;
     }
   }
+
   if (!chapter) {
-    chapter = book.value.chapters?.find(chapter => chapter.id === chapterId);
+    chapter = book.value.chapters?.find(c => c.id === chapterId);
   }
   if (!chapter) {
     showToast('章节不存在');
     backStore.back();
     return;
   }
-  const chapterIndex = book.value.chapters?.findIndex(
-    chapter => chapter.id === chapterId,
-  );
+
   shelfStore.updateBookReadInfo(book.value, chapter);
   const displayStore = useDisplayStore();
   const t = displayStore.showToast();
   chapterList.value = book.value.chapters || [];
   readingChapter.value = chapter;
-  const content
-    = (await store.bookRead(bookSource.value!, book.value, chapter, {
-      refresh,
-    })) || '';
+  const content = await bookReadWithRetry(chapter, refresh);
   readingChapterContent.value = content;
   displayStore.closeToast(t);
   if (!readingChapterContent.value) {
-    await offerSwitchSource();
+    await offerSwitchSource(
+      '当前源无法获取本章内容，是否换源搜索并继续阅读？',
+      '章节内容加载失败',
+    );
     return;
   }
 
-  // 载入上一章和下一章
-  if (chapterIndex && chapterIndex > 0) {
-    const prevChapter = book.value.chapters![chapterIndex - 1];
-    prevChapterContent.value
-      = (await store.bookRead(bookSource.value!, book.value, prevChapter)) || '';
-  }
-  else {
-    prevChapterContent.value = '';
-  }
-  if (chapterIndex && chapterIndex < book.value.chapters!.length - 1) {
-    const nextChapter = book.value.chapters![chapterIndex + 1];
-    nextChapterContent.value
-      = (await store.bookRead(bookSource.value!, book.value, nextChapter)) || '';
-  }
-  else {
-    nextChapterContent.value = '';
-  }
+  await loadAdjacentChapters(chapter);
 }
 
 function prevChapter(toLast: boolean = false) {
@@ -455,10 +587,13 @@ async function refreshChapters() {
 async function loadChapterContent(chapter: BookChapter): Promise<string> {
   if (!bookSource.value || !book.value)
     return '';
-  const content
-    = (await store.bookRead(bookSource.value, book.value, chapter)) || '';
-  if (!content)
-    void offerSwitchSource();
+  const content = await bookReadWithRetry(chapter);
+  if (!content) {
+    void offerSwitchSource(
+      '当前源无法获取本章内容，是否换源搜索并继续阅读？',
+      '章节内容加载失败',
+    );
+  }
   return content;
 }
 function toChapter(chapter: BookChapter) {

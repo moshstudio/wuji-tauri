@@ -239,6 +239,21 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     await storage.clear();
   };
 
+  /** 等待书架与阅读历史 KV hydrate 完成，避免冷启动时 getBookItem 拿不到书 */
+  const waitForReady = async (timeoutMs = 8000): Promise<boolean> => {
+    if (storage.loaded && historyStorage.loaded) {
+      return true;
+    }
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      if (storage.loaded && historyStorage.loaded) {
+        return true;
+      }
+      await new Promise(r => setTimeout(r, 50));
+    }
+    return storage.loaded && historyStorage.loaded;
+  };
+
   return {
     storage,
     bookShelf,
@@ -258,5 +273,6 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     syncData,
     loadSyncData,
     clear,
+    waitForReady,
   };
 });
