@@ -12,13 +12,13 @@ import { useStore, useSubscribeSourceStore } from '@/store';
 
 export type SourceKind = 'book' | 'comic' | 'video' | 'song' | 'photo';
 
-export type SourceByKind = {
+export interface SourceByKind {
   book: BookSource;
   comic: ComicSource;
   video: VideoSource;
   song: SongSource;
   photo: PhotoSource;
-};
+}
 
 const SOURCE_LABEL: Record<SourceKind, string> = {
   book: '书籍源',
@@ -48,7 +48,8 @@ export function enableSubscribeItemById(sourceId: string): boolean {
 
   found.item.disable = false;
   found.subscribe.disable = false;
-  useSubscribeSourceStore().loadSubscribeSources(true, 200);
+  // 仅同步到运行时；推荐内容等回到对应列表页时再按需加载
+  useSubscribeSourceStore().loadSubscribeSources();
   return true;
 }
 
@@ -73,9 +74,9 @@ function getSourceByKind<K extends SourceKind>(
   }
 }
 
-export type EnsureSourceResult<K extends SourceKind> =
-  | { ok: true, source: SourceByKind[K] }
-  | { ok: false, action: 'cancelled' | 'unavailable' | 'not-found' };
+export type EnsureSourceResult<K extends SourceKind>
+  = | { ok: true; source: SourceByKind[K] }
+    | { ok: false; action: 'cancelled' | 'unavailable' | 'not-found' };
 
 /**
  * 确保订阅源可用：已启用直接返回；未启用则询问是否立即启用。

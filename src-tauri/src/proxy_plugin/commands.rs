@@ -1,5 +1,4 @@
 use m3u8_rs::{AlternativeMediaType, MediaPlaylist, Playlist};
-use once_cell::sync::Lazy;
 use reqwest;
 use std::collections::HashMap;
 use std::convert::Infallible;
@@ -225,11 +224,14 @@ fn process_m3u8(m3u8_path: &str, content: &str, headers_part: &str) -> String {
         return String::new();
     }
 
-    // 调用新的广告过滤机制
-    let ad_remover = crate::proxy_plugin::ad_remove::AdRemover::new();
-    let clean_content = ad_remover
+    // discontinuity-group 贴片广告过滤；失败或空结果回退原文
+    let clean_content = crate::proxy_plugin::ad_remove::AdRemover::new()
         .run(content)
-        .unwrap_or_else(|_| content.to_string());
+        .unwrap_or_else(|err| {
+            #[cfg(debug_assertions)]
+            println!("[M3U8] AdRemove rollback: {}", err);
+            content.to_string()
+        });
 
     let mut modified_content = clean_content.clone();
     let base_url = Url::parse(m3u8_path).ok();
@@ -398,21 +400,18 @@ async fn get_ts_content_async(
     Ok(reply)
 }
 
-/// Headers are checked using unicase to avoid case misfunctions
+/// Hop-by-hop headers (RFC 7230), matched case-insensitively via unicase::Ascii.
 fn is_hop_header(header_name: &str) -> bool {
-    static HOP_HEADERS: Lazy<Vec<Ascii<&'static str>>> = Lazy::new(|| {
-        vec![
-            Ascii::new("Connection"),
-            Ascii::new("Keep-Alive"),
-            Ascii::new("Proxy-Authenticate"),
-            Ascii::new("Proxy-Authorization"),
-            Ascii::new("Te"),
-            Ascii::new("Trailers"),
-            Ascii::new("Transfer-Encoding"),
-            Ascii::new("Upgrade"),
-        ]
-    });
-
+    const HOP_HEADERS: &[Ascii<&str>] = &[
+        Ascii::new("Connection"),
+        Ascii::new("Keep-Alive"),
+        Ascii::new("Proxy-Authenticate"),
+        Ascii::new("Proxy-Authorization"),
+        Ascii::new("Te"),
+        Ascii::new("Trailers"),
+        Ascii::new("Transfer-Encoding"),
+        Ascii::new("Upgrade"),
+    ];
     HOP_HEADERS.iter().any(|h| h == &header_name)
 }
 
@@ -499,10 +498,9 @@ fn handle_proxy_request_with_redirect(
             }
         };
 
-        let mut url = if let Some(ref p) = params {
-            format!("{}?{}", uri, p)
-        } else {
-            uri.to_string()
+        let mut url = match params.as_ref() {
+            Some(p) => format!("{}?{}", uri, p),
+            None => uri.to_string(),
         };
 
         if url.starts_with("//") {

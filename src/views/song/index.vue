@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SongInfo, SongShelf } from '@wuji-tauri/source-extension';
 import type { SongSource } from '@/types';
+import { onMountedOrActivated } from '@vant/use';
 import {
   MoreOptionsSheet,
   SongSelectShelfSheet,
@@ -16,6 +17,7 @@ import {
   useSongShelfStore,
   useSongStore,
   useStore,
+  useSubscribeSourceStore,
 } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 
@@ -23,6 +25,7 @@ const store = useStore();
 const displayStore = useDisplayStore();
 const songStore = useSongStore();
 const shelfStore = useSongShelfStore();
+const subscribeStore = useSubscribeSourceStore();
 const { songSources } = storeToRefs(store);
 
 const searchValue = ref('');
@@ -79,6 +82,12 @@ async function recommend(force: boolean = false) {
     );
   }, 0);
 }
+
+// 首次进入本页，或启用源后首次返回时：仅加载尚无内容的源
+onMountedOrActivated(async () => {
+  await subscribeStore.waitForLoaded(10000, false);
+  void recommend();
+});
 
 async function playlistToPage(source: SongSource, pageNo: number) {
   const toast = showLoadingToast({

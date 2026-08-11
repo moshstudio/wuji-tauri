@@ -89,7 +89,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     );
     if (index !== -1) {
       subscribeSources.value.splice(index, 1);
-      loadSubscribeSources(true, 200);
+      loadSubscribeSources();
     }
   };
 
@@ -100,7 +100,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     const source = subscribeSources.value.find(s => s.detail.id === sourceId);
     if (source) {
       _.remove(source.detail.urls, item => item.id === itemId);
-      loadSubscribeSources(true, 200);
+      loadSubscribeSources();
     }
   };
 
@@ -234,12 +234,6 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
           item.id ||= sc.id || sc.hash;
           item.name ||= sc.name;
           item.code ||= sc.codeString;
-          addToSource(
-            {
-              item,
-            },
-            true,
-          );
           source.detail.urls.push(item);
         }
         catch (error) {
@@ -255,6 +249,8 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
             || false;
       });
       addSubscribeSource(source);
+      // 仅同步已启用源到运行时，不拉取推荐内容（进入对应页面时再加载）
+      loadSubscribeSources();
       return true;
     }
     catch (error) {
@@ -390,12 +386,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
             type: sourceContent.type,
             url: sourceContent.url,
           };
-          addToSource(
-            {
-              item,
-            },
-            true,
-          );
+          // 先写入订阅包；运行时注入与内容加载由 loadSubscribeSources / 页面懒加载负责
           addedForRollback.push({ id: sc.id, type: sourceContent.type });
           source.detail.urls.push(item);
         }
@@ -419,6 +410,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
             || false;
       });
       addSubscribeSource(source);
+      loadSubscribeSources();
       return true;
     }
     catch (error) {
@@ -494,14 +486,9 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
           return false;
         }
       }
-      addToSource(
-        {
-          item,
-        },
-        true,
-      );
       source.detail.urls.push(item);
       addSubscribeSource(source);
+      loadSubscribeSources();
       return true;
     }
     catch (error) {
@@ -571,11 +558,11 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       await Promise.all(
         subscribeSources.value.map(item => limit(() => update(item))),
       );
-      loadSubscribeSources(true);
+      loadSubscribeSources();
     }
     else {
       await update(source);
-      loadSubscribeSources(true);
+      loadSubscribeSources();
     }
 
     if (failed.length > 0) {
@@ -678,8 +665,13 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     }
   }
 
-  function loadSubscribeSources(load?: boolean, loadDelay = 2000) {
-    load ??= false;
+  /**
+   * 仅将已启用的订阅项同步到各类型运行时 store，不拉取推荐内容。
+   * 推荐内容由各列表页首次进入（或启用后首次返回）时按需加载。
+   * @param _load 兼容旧调用，已忽略
+   * @param _loadDelay 兼容旧调用，已忽略
+   */
+  function loadSubscribeSources(_load?: boolean, _loadDelay = 2000) {
     const added: string[] = [];
     for (const source of subscribeSources.value) {
       if (source.detail) {
@@ -705,20 +697,6 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
         }
         removeFromSource(source.item.id, source.item.type);
       }
-    }
-    if (load) {
-      sleep(loadDelay).then(async () => {
-        await Promise.all([
-          ...photoStore.photoSources.map(s => photoStore.photoRecommendList(s)),
-          ...songStore.songSources.map(async (s) => {
-            await songStore.songRecommendPlayist(s);
-            await songStore.songRecommendSong(s);
-          }),
-          ...bookStore.bookSources.map(s => bookStore.bookRecommendList(s)),
-          ...comicStore.comicSources.map(s => comicStore.comicRecommendList(s)),
-          ...videoStore.videoSources.map(s => videoStore.videoRecommendList(s)),
-        ]);
-      });
     }
   }
 
@@ -758,8 +736,8 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       while (!storage.loaded && Date.now() < timeout) {
         await new Promise(r => setTimeout(r, 50));
       }
-      // 先注入源列表，立即标记就绪；推荐列表后台加载，不阻塞阅读页
-      loadSubscribeSources(false);
+      // 仅注入已启用源到运行时；推荐内容由各列表页首次进入时按需加载
+      loadSubscribeSources();
 
       if (subscribeSources.value.length === 0) {
         startupDialogActive.value = true;
@@ -803,8 +781,6 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
           });
       }
       isLoaded.value = true;
-      // 后台拉取推荐列表（内部 sleep 后执行，不阻塞 isLoaded）
-      loadSubscribeSources(true);
     })().finally(() => {
       isLoading.value = false;
       loadingPromise = null;

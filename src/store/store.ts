@@ -58,7 +58,7 @@ export const useStore = defineStore('store', () => {
     });
     // 清空订阅源
     await subscribeSourceStore.clearSubscribeSources();
-    subscribeSourceStore.loadSubscribeSources(true);
+    subscribeSourceStore.loadSubscribeSources();
 
     await photoShelfStore.clear(); // 清空图片收藏
     await songShelfStore.clear(); // 清空音乐收藏

@@ -2,6 +2,7 @@
 import type { BookChapter, BookItem } from '@wuji-tauri/source-extension';
 import type { BookSource } from '@/types';
 import type { BookHistory } from '@/types/book';
+import { onMountedOrActivated } from '@vant/use';
 import { storeToRefs } from 'pinia';
 import { showConfirmDialog, showLoadingToast, showToast } from 'vant';
 import { ref, triggerRef } from 'vue';
@@ -69,6 +70,12 @@ const recommend = createCancellableFunction(
     );
   },
 );
+
+// 首次进入本页，或启用源后首次返回时：仅加载尚无内容的源
+onMountedOrActivated(async () => {
+  await subscribeStore.waitForLoaded(10000, false);
+  void recommend();
+});
 
 const search = createCancellableFunction(async (signal: AbortSignal) => {
   const keyword = searchValue.value;

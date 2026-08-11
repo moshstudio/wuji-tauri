@@ -19,7 +19,8 @@ const sourceStore = useSubscribeSourceStore();
 const showImportSubscribeDialog = ref(false);
 
 function syncSubscribeSources() {
-  store.loadSubscribeSources(true, 200);
+  // 仅同步启用状态到运行时，不拉取推荐；列表页首次进入/返回时再加载
+  store.loadSubscribeSources();
 }
 
 function sourceDisabled(source: SubscribeSource) {
@@ -104,7 +105,7 @@ function isLocalSource(source: SubscribeSource) {
 
 onDeactivated(async () => {
   await sleep(500);
-  store.loadSubscribeSources(true, 200);
+  store.loadSubscribeSources();
 });
 </script>
 

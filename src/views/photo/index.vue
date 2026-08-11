@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PhotoSource } from '@/types';
+import { onMountedOrActivated } from '@vant/use';
 import { debounce } from 'lodash';
 import { storeToRefs } from 'pinia';
 import { showLoadingToast } from 'vant';
@@ -7,11 +8,12 @@ import { ref } from 'vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
 import AppPhotoList from '@/layouts/app/photo/PhotoList.vue';
 import DesktopPhotoList from '@/layouts/desktop/photo/PhotoList.vue';
-import { useDisplayStore, useStore } from '@/store';
+import { useDisplayStore, useStore, useSubscribeSourceStore } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
 
 const store = useStore();
 const displayStore = useDisplayStore();
+const subscribeStore = useSubscribeSourceStore();
 const { photoSources } = storeToRefs(store);
 
 const searchValue = ref('');
@@ -29,6 +31,12 @@ const recommend = createCancellableFunction(
     );
   },
 );
+
+// 首次进入本页，或启用源后首次返回时：仅加载尚无内容的源
+onMountedOrActivated(async () => {
+  await subscribeStore.waitForLoaded(10000, false);
+  void recommend();
+});
 
 const search = createCancellableFunction(async (signal: AbortSignal) => {
   const keyword = searchValue.value;

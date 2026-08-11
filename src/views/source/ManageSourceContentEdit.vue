@@ -37,7 +37,7 @@ async function save(
     sourceContent,
   );
   if (item) {
-    await subscribeStore.loadSubscribeSources(true, 0);
+    await subscribeStore.loadSubscribeSources();
   }
 }
 </script>
