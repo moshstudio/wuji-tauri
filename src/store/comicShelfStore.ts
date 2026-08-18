@@ -14,8 +14,16 @@ import { defineStore } from 'pinia';
 
 import { showToast } from 'vant';
 import { ref } from 'vue';
+import { SyncTypes } from '@/types/sync';
+import { enqueueOp } from './cloudSyncOps';
 import { useStore } from './store';
 import { createKVStore } from './utils';
+
+function stripComicForSync(comic: ComicItem) {
+  const clone = _.cloneDeep(comic);
+  clone.chapters = undefined;
+  return clone;
+}
 
 export const useComicShelfStore = defineStore('comicShelfStore', () => {
   const kvStorage = createKVStore('comicShelfStore');
@@ -60,11 +68,20 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
       // 书架已存在
     }
     else {
+      const id = nanoid();
+      const createTime = Date.now();
       comicShelf.value.push({
-        id: nanoid(),
+        id,
         name,
         comics: [],
-        createTime: Date.now(),
+        createTime,
+      });
+      enqueueOp({
+        type: SyncTypes.ComicShelf,
+        op: 'upsertShelf',
+        entityId: id,
+        payload: { id, name, createTime },
+        clientUpdatedAt: createTime,
       });
     }
   };
@@ -74,6 +91,12 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
       return false;
     }
     _.remove(comicShelf.value, item => item.id === shelfId);
+    enqueueOp({
+      type: SyncTypes.ComicShelf,
+      op: 'removeShelf',
+      entityId: shelfId,
+      clientUpdatedAt: Date.now(),
+    });
     return true;
   };
   const isComicInShelf = (
@@ -131,11 +154,23 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
       showToast('书架中已存在此书');
       return false;
     }
+    const createTime = Date.now();
     shelf.comics.push({
       comic: _.cloneDeep(comicItem),
-      createTime: Date.now(),
+      createTime,
     });
     showToast(`已添加到 ${shelf.name}`);
+    enqueueOp({
+      type: SyncTypes.ComicShelf,
+      op: 'upsertItem',
+      entityId: comicItem.id,
+      parentId: shelf.id,
+      payload: {
+        comic: stripComicForSync(comicItem),
+        createTime,
+      },
+      clientUpdatedAt: createTime,
+    });
     return true;
   };
   const removeComicFromShelf = (comicItem: ComicItem, shelfId?: string) => {
@@ -151,6 +186,13 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
       return;
     }
     _.remove(shelf.comics, item => item.comic.id === comicItem.id);
+    enqueueOp({
+      type: SyncTypes.ComicShelf,
+      op: 'removeItem',
+      entityId: comicItem.id,
+      parentId: shelfId,
+      clientUpdatedAt: Date.now(),
+    });
   };
   const updateComicHistoryInfo = (
     comicItem: ComicItem,
@@ -188,12 +230,26 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
   const updateComicReadInfo = (comicItem: ComicItem, chapter: ComicChapter) => {
     if (!comicShelf.value)
       return;
+    const now = Date.now();
     for (const shelf of comicShelf.value) {
       for (const comic of shelf.comics) {
         if (comic.comic.id === comicItem.id) {
           if (comic.comic.chapters?.find(item => item.id === chapter.id)) {
             comic.lastReadChapter = chapter;
-            comic.lastReadTime = Date.now();
+            comic.lastReadTime = now;
+            enqueueOp({
+              type: SyncTypes.ComicShelf,
+              op: 'updateProgress',
+              entityId: comicItem.id,
+              parentId: shelf.id,
+              payload: {
+                comic: stripComicForSync(comic.comic),
+                lastReadChapter: chapter,
+                lastReadTime: now,
+                createTime: comic.createTime,
+              },
+              clientUpdatedAt: now,
+            });
           }
         }
       }
@@ -210,6 +266,13 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
     if (!shelf)
       return;
     _.remove(shelf.comics, item => item.comic.id === comicItem.id);
+    enqueueOp({
+      type: SyncTypes.ComicShelf,
+      op: 'removeItem',
+      entityId: comicItem.id,
+      parentId: shelfId,
+      clientUpdatedAt: Date.now(),
+    });
   };
   const comicRefreshChapters = async () => {
     if (comicChapterRefreshing.value)

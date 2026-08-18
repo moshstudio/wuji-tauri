@@ -6,6 +6,9 @@ import type {
   PagedMarketSource,
 } from '@wuji-tauri/source-extension';
 import type { Announcement } from '@/types/announcement';
+import type { SyncDownloadRecord, SyncUploadItem } from '@/types/cloudSync';
+import type { SyncChangesResponse } from '@/types/cloudSyncChanges';
+import type { CloudSyncOp } from '@/types/cloudSyncOp';
 import type { SyncTypes } from '@/types/sync';
 import type { Feature, MembershipPlan } from '@/types/user';
 import * as os from '@tauri-apps/plugin-os';
@@ -41,12 +44,19 @@ type SendRequestOptions = RequestInit
     silentGuest401?: boolean;
   };
 let API_BASE_URL: string;
-// API_BASE_URL = 'http://10.80.1.22:3000/v1/api/';
-API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
+// 开发可在 .env.development 设置 VITE_API_BASE_URL=http://localhost:3000/v1/api/
+API_BASE_URL
+  = import.meta.env.VITE_API_BASE_URL
+    || 'https://wuji-server.moshangwangluo.com/v1/api/';
 
 if (import.meta.env.MODE !== 'development') {
-  API_BASE_URL = 'https://wuji-server.moshangwangluo.com/v1/api/';
+  API_BASE_URL
+    = import.meta.env.VITE_API_BASE_URL
+      || 'https://wuji-server.moshangwangluo.com/v1/api/';
 }
+
+if (!API_BASE_URL.endsWith('/'))
+  API_BASE_URL += '/';
 
 export const useServerStore = defineStore('serverStore', () => {
   const kvStorage = createKVStore('serverStore');
@@ -788,40 +798,132 @@ export const useServerStore = defineStore('serverStore', () => {
   };
 
   const syncToServer = async (
-    data: { type: string; data: unknown }[],
-    isIncremental: boolean = false,
+    data: SyncUploadItem[],
+    options: boolean | { incremental?: boolean; silent?: boolean } = false,
   ) => {
+    const opts
+      = typeof options === 'boolean'
+        ? { incremental: options, silent: false }
+        : { incremental: false, silent: false, ...options };
     if (!userInfo.value?.email) {
-      showFailToast('请先登录');
-      return;
+      if (!opts.silent)
+        showFailToast('请先登录');
+      return false;
     }
     if (!hasFeature.value('cloud_sync')) {
-      showVipDialog('数据同步为会员功能\n请先开通会员');
-      return;
+      if (!opts.silent)
+        showVipDialog('数据同步为会员功能\n请先开通会员');
+      return false;
     }
-    showDialog({
-      title: '同步中...',
-      message: '请勿关闭此窗口',
-      showCancelButton: false,
-      showConfirmButton: false,
-    });
+    if (!opts.silent) {
+      showDialog({
+        title: '同步中...',
+        message: '请勿关闭此窗口',
+        showCancelButton: false,
+        showConfirmButton: false,
+      });
+    }
     return await sendRequest<boolean>(
-      `sync/upload?incremental=${isIncremental}`,
+      `sync/upload?incremental=${!!opts.incremental}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+        silentGuest401: !!opts.silent,
+      },
+      async () => {
+        if (!opts.silent) {
+          closeDialog();
+          showSuccessToast('同步成功');
+        }
+        return true;
+      },
+      async () => {
+        if (!opts.silent) {
+          closeDialog();
+          showFailToast('同步失败');
+        }
+        return false;
+      },
+    );
+  };
+
+  /** 静默上传：不弹窗；409 时返回冲突数据供客户端再 merge */
+  const syncToServerSilent = async (
+    data: SyncUploadItem[],
+    options: { incremental?: boolean } = {},
+  ): Promise<{
+    ok: boolean;
+    conflict?: boolean;
+    conflicts?: SyncDownloadRecord[];
+  }> => {
+    if (!userInfo.value?.email || !hasFeature.value('cloud_sync')) {
+      return { ok: false };
+    }
+    const response = await _request(
+      `sync/upload?incremental=${!!options.incremental}`,
       {
         method: 'POST',
         body: JSON.stringify(data),
       },
-      async () => {
-        closeDialog();
-        showSuccessToast('同步成功');
-        return true;
-      },
-      async () => {
-        closeDialog();
-        showFailToast('同步失败');
-        return false;
-      },
     );
+    if (response.ok) {
+      if (response.headers.has('new-access-token')) {
+        accessToken.value = response.headers.get('new-access-token') || undefined;
+      }
+      return { ok: true };
+    }
+    if (response.status === 409) {
+      try {
+        const json = await response.json();
+        return {
+          ok: false,
+          conflict: true,
+          conflicts: json.conflicts || json.message?.conflicts || [],
+        };
+      }
+      catch {
+        return { ok: false, conflict: true, conflicts: [] };
+      }
+    }
+    return { ok: false };
+  };
+
+  /** 条目级精确同步 */
+  const syncPatchSilent = async (
+    ops: CloudSyncOp[],
+  ): Promise<{
+    ok: boolean;
+    applied?: number;
+    skipped?: number;
+    conflicts?: any[];
+  }> => {
+    if (!userInfo.value?.email || !hasFeature.value('cloud_sync')) {
+      return { ok: false };
+    }
+    if (!ops.length)
+      return { ok: true, applied: 0, skipped: 0 };
+    const response = await _request('sync/patch', {
+      method: 'POST',
+      body: JSON.stringify(ops),
+    });
+    if (response.ok) {
+      if (response.headers.has('new-access-token')) {
+        accessToken.value = response.headers.get('new-access-token') || undefined;
+      }
+      try {
+        const json = await response.json();
+        return {
+          ok: true,
+          applied: json.applied,
+          skipped: json.skipped,
+          conflicts: json.conflicts,
+        };
+      }
+      catch {
+        return { ok: true };
+      }
+    }
+    return { ok: false };
   };
 
   const syncFromServer = async (data: SyncTypes[]) => {
@@ -853,6 +955,58 @@ export const useServerStore = defineStore('serverStore', () => {
         return false;
       },
     );
+  };
+
+  const syncFromServerSilent = async (
+    data: SyncTypes[],
+    since?: string,
+  ): Promise<SyncDownloadRecord[] | false> => {
+    if (!userInfo.value?.email || !hasFeature.value('cloud_sync')) {
+      return false;
+    }
+    const qs = new URLSearchParams({ types: data.join(',') });
+    if (since)
+      qs.set('since', since);
+    const response = await _request(`sync/download?${qs.toString()}`, {});
+    if (response.ok) {
+      if (response.headers.has('new-access-token')) {
+        accessToken.value = response.headers.get('new-access-token') || undefined;
+      }
+      try {
+        return (await response.json()) as SyncDownloadRecord[];
+      }
+      catch {
+        return [];
+      }
+    }
+    return false;
+  };
+
+  /** 条目级增量变更拉取 */
+  const syncChangesSilent = async (
+    requests: Array<{ type: SyncTypes; since?: string }>,
+  ): Promise<SyncChangesResponse | false> => {
+    if (!userInfo.value?.email || !hasFeature.value('cloud_sync')) {
+      return false;
+    }
+    if (!requests.length)
+      return { results: [] };
+    const response = await _request('sync/changes', {
+      method: 'POST',
+      body: JSON.stringify({ requests }),
+    });
+    if (response.ok) {
+      if (response.headers.has('new-access-token')) {
+        accessToken.value = response.headers.get('new-access-token') || undefined;
+      }
+      try {
+        return (await response.json()) as SyncChangesResponse;
+      }
+      catch {
+        return { results: [] };
+      }
+    }
+    return false;
   };
 
   const checkTaichiFreeTrail = async () => {
@@ -954,7 +1108,11 @@ export const useServerStore = defineStore('serverStore', () => {
     getMembershipPlans,
     getAliPayUrl,
     syncToServer,
+    syncToServerSilent,
+    syncPatchSilent,
     syncFromServer,
+    syncFromServerSilent,
+    syncChangesSilent,
     checkTaichiFreeTrail,
     taichiFreeTrail,
     logout,

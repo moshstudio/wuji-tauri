@@ -30,10 +30,12 @@ import {
 import { computed, markRaw, onMounted, ref, triggerRef } from 'vue';
 import { router } from '@/router';
 import { SourceType } from '@/types';
+import { SyncTypes } from '@/types/sync';
 import { sleep } from '@/utils';
 import { normalizeMarketSourcePermissions } from '@/utils/marketSource';
 import { showVipDialog } from '@/utils/vip';
 import { useBookStore } from './bookStore';
+import { enqueueOp } from './cloudSyncOps';
 import { useComicStore } from './comicStore';
 import { useDisplayStore } from './displayStore';
 import { useExtensionStore } from './extensionStore';
@@ -71,6 +73,16 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     },
   );
 
+  const enqueueSubscribeUpsert = (source: SubscribeSource) => {
+    enqueueOp({
+      type: SyncTypes.SubscribeSource,
+      op: 'upsertSubscribe',
+      entityId: source.detail.id,
+      payload: { ..._.cloneDeep(source) },
+      clientUpdatedAt: Date.now(),
+    });
+  };
+
   const addSubscribeSource = async (source: SubscribeSource) => {
     const index = subscribeSources.value.findIndex(
       item => item.detail.id === source.detail.id,
@@ -81,6 +93,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     else {
       subscribeSources.value.push(source);
     }
+    enqueueSubscribeUpsert(source);
   };
 
   const removeSubscribeSource = async (source: SubscribeSource) => {
@@ -90,6 +103,12 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     if (index !== -1) {
       subscribeSources.value.splice(index, 1);
       loadSubscribeSources();
+      enqueueOp({
+        type: SyncTypes.SubscribeSource,
+        op: 'removeSubscribe',
+        entityId: source.detail.id,
+        clientUpdatedAt: Date.now(),
+      });
     }
   };
 
@@ -101,6 +120,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     if (source) {
       _.remove(source.detail.urls, item => item.id === itemId);
       loadSubscribeSources();
+      enqueueSubscribeUpsert(source);
     }
   };
 
@@ -130,9 +150,52 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
         if (sourceContent.code) {
           item.code = sourceContent.code;
         }
+        enqueueSubscribeUpsert(subscribeSource);
         return item;
       }
     }
+  };
+
+  const setSourceDisabled = (
+    source: SubscribeSource,
+    disable: boolean,
+  ) => {
+    source.detail?.urls.forEach((url) => {
+      url.disable = disable;
+    });
+    source.disable = disable;
+    enqueueSubscribeUpsert(source);
+  };
+
+  const setSubscribeItemDisabled = (
+    source: SubscribeSource,
+    item: SubscribeItem,
+    disable: boolean,
+  ) => {
+    item.disable = disable;
+    if (disable) {
+      if (source.detail?.urls.every(url => url.disable)) {
+        source.disable = true;
+      }
+    }
+    else {
+      source.disable = false;
+    }
+    enqueueSubscribeUpsert(source);
+  };
+
+  const enableSubscribeItemById = (sourceId: string): boolean => {
+    for (const subscribe of subscribeSources.value) {
+      const item = subscribe.detail?.urls?.find(u => u.id === sourceId);
+      if (item) {
+        item.disable = false;
+        subscribe.disable = false;
+        enqueueSubscribeUpsert(subscribe);
+        loadSubscribeSources();
+        return true;
+      }
+    }
+    return false;
   };
 
   const syncData = () => {
@@ -144,6 +207,15 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
   };
 
   const clearSubscribeSources = async () => {
+    const now = Date.now();
+    for (const s of [...subscribeSources.value]) {
+      enqueueOp({
+        type: SyncTypes.SubscribeSource,
+        op: 'removeSubscribe',
+        entityId: s.detail.id,
+        clientUpdatedAt: now,
+      });
+    }
     subscribeSources.value.splice(0);
     await storage.clear();
   };
@@ -850,6 +922,9 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     removeItemFromSubscribeSource,
     getSubscribeSource,
     updateSubscribeSourceContent,
+    setSourceDisabled,
+    setSubscribeItemDisabled,
+    enableSubscribeItemById,
     clearSubscribeSources,
     syncData,
     loadSyncData,

@@ -2,6 +2,8 @@ export * from './backStore';
 export * from './bookChaptersStore';
 export * from './bookShelfStore';
 export * from './bookStore';
+export * from './cloudSyncScheduler';
+export * from './cloudSyncSettings';
 export * from './comicShelfStore';
 export * from './comicStore';
 export * from './displayStore';

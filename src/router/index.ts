@@ -253,6 +253,12 @@ export const routes: RouteRecordRaw[] = [
         meta: { keepAlive: false },
       },
       {
+        path: 'manage-sync',
+        name: 'ManageSync',
+        component: () => import('@/views/sync/ManageSync.vue'),
+        meta: { keepAlive: false },
+      },
+      {
         path: 'toserver',
         name: 'SyncToServer',
         component: () => import('@/views/sync/ToServer.vue'),

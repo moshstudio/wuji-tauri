@@ -10,9 +10,17 @@ import { nanoid } from 'nanoid';
 
 import { defineStore } from 'pinia';
 import { showToast } from 'vant';
+import { SyncTypes } from '@/types/sync';
 import { useBookChapterStore } from './bookChaptersStore';
+import { enqueueOp } from './cloudSyncOps';
 import { useStore } from './store';
 import { createKVStore } from './utils';
+
+function stripBookForSync(book: BookItem) {
+  const clone = _.cloneDeep(book);
+  clone.chapters = undefined;
+  return clone;
+}
 
 export const useBookShelfStore = defineStore('bookShelfStore', () => {
   const kvStorage = createKVStore('bookShelfStore');
@@ -55,11 +63,20 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
       // 书架已存在
     }
     else {
+      const id = nanoid();
+      const createTime = Date.now();
       bookShelf.value.push({
-        id: nanoid(),
+        id,
         name,
         books: [],
-        createTime: Date.now(),
+        createTime,
+      });
+      enqueueOp({
+        type: SyncTypes.BookShelf,
+        op: 'upsertShelf',
+        entityId: id,
+        payload: { id, name, createTime },
+        clientUpdatedAt: createTime,
       });
     }
   };
@@ -113,6 +130,12 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
         }
       });
     }
+    enqueueOp({
+      type: SyncTypes.BookShelf,
+      op: 'removeShelf',
+      entityId: shelfId,
+      clientUpdatedAt: Date.now(),
+    });
   };
 
   const updateBookHistoryInfo = (bookItem: BookItem, chapter?: BookChapter) => {
@@ -148,11 +171,25 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     if (!bookShelf.value)
       return;
     const clonedChapter = _.cloneDeep(chapter);
+    const now = Date.now();
     for (const shelf of bookShelf.value) {
       for (const book of shelf.books) {
         if (book.book.id === bookItem.id) {
           book.lastReadChapter = clonedChapter;
-          book.lastReadTime = Date.now();
+          book.lastReadTime = now;
+          enqueueOp({
+            type: SyncTypes.BookShelf,
+            op: 'updateProgress',
+            entityId: bookItem.id,
+            parentId: shelf.id,
+            payload: {
+              book: stripBookForSync(book.book),
+              lastReadChapter: clonedChapter,
+              lastReadTime: now,
+              createTime: book.createTime,
+            },
+            clientUpdatedAt: now,
+          });
         }
       }
     }
@@ -170,9 +207,21 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     const shelf = bookShelf.value.find(item => item.id === targetId);
     if (shelf) {
       if (!shelf.books.find(b => b.book.id === book.id)) {
+        const lastReadTime = Date.now();
         shelf.books.push({
           book,
-          lastReadTime: Date.now(),
+          lastReadTime,
+        });
+        enqueueOp({
+          type: SyncTypes.BookShelf,
+          op: 'upsertItem',
+          entityId: book.id,
+          parentId: targetId,
+          payload: {
+            book: stripBookForSync(book),
+            lastReadTime,
+          },
+          clientUpdatedAt: lastReadTime,
         });
       }
     }
@@ -183,6 +232,13 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     if (!shelf)
       return;
     _.remove(shelf.books, item => item.book.id === bookItem.id);
+    enqueueOp({
+      type: SyncTypes.BookShelf,
+      op: 'removeItem',
+      entityId: bookItem.id,
+      parentId: shelfId,
+      clientUpdatedAt: Date.now(),
+    });
   };
 
   const bookRefreshChapters = async () => {

@@ -15,7 +15,15 @@ import { nanoid } from 'nanoid';
 
 import { defineStore } from 'pinia';
 import { showToast } from 'vant';
+import { SyncTypes } from '@/types/sync';
+import { enqueueOp } from './cloudSyncOps';
 import { createKVStore } from './utils';
+
+function stripVideoForSync(video: VideoItem) {
+  const clone = _.cloneDeep(video);
+  clone.resources = undefined;
+  return clone;
+}
 
 export const useVideoShelfStore = defineStore('videoShelfStore', () => {
   const kvStorage = createKVStore('videoShelfStore');
@@ -58,11 +66,20 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
       // 收藏已存在
     }
     else {
+      const id = nanoid();
+      const createTime = Date.now();
       videoShelf.value.push({
-        id: nanoid(),
+        id,
         name,
         videos: [],
-        createTime: Date.now(),
+        createTime,
+      });
+      enqueueOp({
+        type: SyncTypes.VideoShelf,
+        op: 'upsertShelf',
+        entityId: id,
+        payload: { id, name, createTime },
+        clientUpdatedAt: createTime,
       });
     }
   };
@@ -72,6 +89,12 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
       return false;
     }
     _.remove(videoShelf.value, item => item.id === shelfId);
+    enqueueOp({
+      type: SyncTypes.VideoShelf,
+      op: 'removeShelf',
+      entityId: shelfId,
+      clientUpdatedAt: Date.now(),
+    });
     return true;
   };
   const isVideoInShelf = (
@@ -131,11 +154,23 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
     }
     videoItem.extra ||= {};
     videoItem.extra.selected ||= false; // 用作从书架中删除
+    const createTime = Date.now();
     shelf.videos.push({
       video: _.cloneDeep(videoItem),
-      createTime: Date.now(),
+      createTime,
     });
     showToast(`已添加到 ${shelf.name}`);
+    enqueueOp({
+      type: SyncTypes.VideoShelf,
+      op: 'upsertItem',
+      entityId: videoItem.id,
+      parentId: shelf.id,
+      payload: {
+        video: stripVideoForSync(videoItem),
+        createTime,
+      },
+      clientUpdatedAt: createTime,
+    });
     return true;
   };
   const getVideoFromShelf = (
@@ -181,6 +216,17 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
         return i.video.id !== videoItem.id;
       }
     });
+    const items = _.isArray(videoItem) ? videoItem : [videoItem];
+    const now = Date.now();
+    for (const v of items) {
+      enqueueOp({
+        type: SyncTypes.VideoShelf,
+        op: 'removeItem',
+        entityId: v.id,
+        parentId: shelfId,
+        clientUpdatedAt: now,
+      });
+    }
   };
   const updateVideoHistoryInfo = (
     videoItem: VideoItem,
@@ -247,11 +293,14 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
   ) => {
     if (!videoShelf.value)
       return;
+    const now = Date.now();
     for (const shelf of videoShelf.value) {
       for (const video of shelf.videos) {
         if (video.video.id === videoItem.id) {
           video.video.lastWatchEpisodeId = options.episode.id;
           video.video.lastWatchResourceId = options.resource.id;
+          (video as VideoItemInShelf & { lastReadTime?: number }).lastReadTime
+            = now;
           if (options.position) {
             const r = video.video.resources?.find(
               item => item.id === video.video.lastWatchResourceId,
@@ -263,6 +312,18 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
               e.lastWatchPosition = options.position;
             }
           }
+          enqueueOp({
+            type: SyncTypes.VideoShelf,
+            op: 'updateProgress',
+            entityId: videoItem.id,
+            parentId: shelf.id,
+            payload: {
+              video: stripVideoForSync(video.video),
+              lastReadTime: now,
+              createTime: video.createTime,
+            },
+            clientUpdatedAt: now,
+          });
         }
       }
     }
@@ -277,6 +338,13 @@ export const useVideoShelfStore = defineStore('videoShelfStore', () => {
     if (!shelf)
       return;
     _.remove(shelf.videos, item => item.video.id === videoItem.id);
+    enqueueOp({
+      type: SyncTypes.VideoShelf,
+      op: 'removeItem',
+      entityId: videoItem.id,
+      parentId: shelfId,
+      clientUpdatedAt: Date.now(),
+    });
   };
   const syncData = () => {
     const clone = _.cloneDeep(videoShelf.value);

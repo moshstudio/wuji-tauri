@@ -15,6 +15,8 @@ import { showToast } from 'vant';
 import { markRaw } from 'vue';
 
 import HeartSVG from '@/assets/heart-fill.svg';
+import { SyncTypes } from '@/types/sync';
+import { enqueueOp } from './cloudSyncOps';
 import { createKVStore } from './utils';
 
 export const useSongShelfStore = defineStore('songShelfStore', () => {
@@ -76,12 +78,37 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     );
   };
 
+  const enqueueSongShelf = (shelf: SongShelf) => {
+    const now = Date.now();
+    if (shelf.type === SongShelfType.like) {
+      enqueueOp({
+        type: SyncTypes.SongShelf,
+        op: 'upsertSongLike',
+        entityId: shelf.playlist.id,
+        payload: { ..._.cloneDeep(shelf) },
+        clientUpdatedAt: now,
+      });
+      return;
+    }
+    enqueueOp({
+      type: SyncTypes.SongShelf,
+      op: 'upsertSongPlaylist',
+      entityId: shelf.playlist.id,
+      payload: {
+        ..._.cloneDeep(shelf),
+        _bucket: shelf.type === SongShelfType.playlist ? 'playlist' : 'create',
+      },
+      clientUpdatedAt: now,
+    });
+  };
+
   const createShelf = (name: string): SongShelf | null => {
     // 创建收藏
     if (songCreateShelf.value.some(item => item.playlist.name === name)) {
       showToast('收藏夹已存在');
       return null;
     }
+    const createTime = Date.now();
     const newShelf = {
       type: SongShelfType.create,
       playlist: {
@@ -90,9 +117,16 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
         picUrl: '',
         sourceId: 'create',
       },
-      createTime: Date.now(),
+      createTime,
     };
     songCreateShelf.value.push(newShelf);
+    enqueueOp({
+      type: SyncTypes.SongShelf,
+      op: 'upsertSongPlaylist',
+      entityId: newShelf.playlist.id,
+      payload: { ..._.cloneDeep(newShelf), _bucket: 'create' },
+      clientUpdatedAt: createTime,
+    });
     return newShelf;
   };
   const addSongToShelf = (song: SongInfo, shelfId?: string): boolean => {
@@ -121,6 +155,7 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     else {
       shelf.playlist.list.list.push(song);
       showToast(`已添加到${shelf.playlist.name}`);
+      enqueueSongShelf(shelf);
       return true;
     }
   };
@@ -140,6 +175,7 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     }
     _.remove(shelf?.playlist.list?.list || [], item => item.id === song.id);
     showToast(`已从 ${shelf.playlist.name} 移除`);
+    enqueueSongShelf(shelf);
     return true;
   };
   const importNeteasePlaylist = (playlist: PlaylistInfo): SongShelf | null => {
@@ -152,6 +188,7 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     newShelf.playlist.desc = playlist.desc;
     newShelf.playlist.list = playlist.list;
     showToast(`已导入歌单「${playlist.name}」`);
+    enqueueSongShelf(newShelf);
     return newShelf;
   };
 
@@ -163,10 +200,19 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
       showToast('已存在');
       return false;
     }
-    songPlaylistShelf.value.push({
+    const createTime = Date.now();
+    const newShelf: SongShelf = {
       type: SongShelfType.playlist,
       playlist,
-      createTime: Date.now(),
+      createTime,
+    };
+    songPlaylistShelf.value.push(newShelf);
+    enqueueOp({
+      type: SyncTypes.SongShelf,
+      op: 'upsertSongPlaylist',
+      entityId: playlist.id,
+      payload: { ..._.cloneDeep(newShelf), _bucket: 'playlist' },
+      clientUpdatedAt: createTime,
     });
     return true;
   };
@@ -177,6 +223,12 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     );
     if (removed.length) {
       showToast('删除成功');
+      enqueueOp({
+        type: SyncTypes.SongShelf,
+        op: 'removeSongPlaylist',
+        entityId: songShelfId,
+        clientUpdatedAt: Date.now(),
+      });
       return true;
     }
     const removed2 = _.remove(
@@ -185,6 +237,12 @@ export const useSongShelfStore = defineStore('songShelfStore', () => {
     );
     if (removed2.length) {
       showToast('删除成功');
+      enqueueOp({
+        type: SyncTypes.SongShelf,
+        op: 'removeSongPlaylist',
+        entityId: songShelfId,
+        clientUpdatedAt: Date.now(),
+      });
       return true;
     }
     return false;

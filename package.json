@@ -1,7 +1,7 @@
 {
   "name": "wuji-app",
   "type": "module",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,9 @@
     "tauri:trace": "@powershell -Command \"$env:RUST_BACKTRACE=1; tauri build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "eslint . --fix"
+    "format": "eslint . --fix",
+    "test:cloud-sync": "tsx --tsconfig tsconfig.json --test src/utils/syncMerge.test.ts src/utils/syncTombstone.test.ts src/utils/cloudSyncChanges.test.ts src/store/cloudSyncOps.test.ts",
+    "docs:sync-e2e": "echo See ../wuji-server/docs/CLOUD_SYNC_LOCAL_E2E.md"
   },
   "dependencies": {
     "@ckpack/vue-color": "^1.6.0",
@@ -118,6 +120,7 @@
     "prettier-plugin-tailwindcss": "^0.6.14",
     "tailwind-scrollbar": "3.1.0",
     "tailwindcss": "^3.4.19",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.3",
     "unplugin-auto-import": "^19.3.0",
     "unplugin-vue-components": "^28.8.0",

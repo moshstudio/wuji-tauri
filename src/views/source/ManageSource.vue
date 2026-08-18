@@ -27,18 +27,8 @@ function sourceDisabled(source: SubscribeSource) {
   return source.detail?.urls.every(url => url.disable === true) || false;
 }
 function enableSource(source: SubscribeSource, enable: boolean) {
-  if (enable) {
-    // 禁用此source
-    source.detail?.urls.forEach((url) => {
-      url.disable = true;
-    });
-  }
-  else {
-    // 启用此source
-    source.detail?.urls.forEach((url) => {
-      url.disable = false;
-    });
-  }
+  // van-switch 的 enable 语义：true=开启；此处入参沿用原逻辑（enable 为 true 时表示「切换后应为禁用」来自旧 UI）
+  sourceStore.setSourceDisabled(source, enable);
   syncSubscribeSources();
 }
 function enableItem(
@@ -46,18 +36,7 @@ function enableItem(
   item: SubscribeItem,
   enable: boolean,
 ) {
-  if (enable) {
-    // 禁用此url
-    item.disable = true;
-    if (source.detail?.urls.every(url => url.disable)) {
-      source.disable = true;
-    }
-  }
-  else {
-    // 启用此url
-    item.disable = false;
-    source.disable = false;
-  }
+  sourceStore.setSubscribeItemDisabled(source, item, enable);
   syncSubscribeSources();
 }
 

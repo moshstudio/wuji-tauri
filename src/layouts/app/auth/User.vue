@@ -1,11 +1,13 @@
 <script lang="ts" setup>
 import type { UserInfo } from '@/types/user';
 import { onMountedOrActivated } from '@vant/use';
+import { storeToRefs } from 'pinia';
 import { onDeactivated, onUnmounted, reactive, ref, watch } from 'vue';
 import ProButton from '@/components/button/ProButton.vue';
 import VipButton from '@/components/button/VipButton.vue';
 import MNavBar from '@/components/header/MNavBar.vue';
 import { router } from '@/router';
+import { useCloudSyncScheduler, useCloudSyncSettings } from '@/store';
 import { isMembershipOrderValid } from '@/types/user';
 import { showPromptDialog } from '@/utils/usePromptDialog';
 
@@ -20,6 +22,11 @@ const props = defineProps<{
   logout: () => void;
   clickEmail: () => void;
 }>();
+
+const cloudSyncSettings = useCloudSyncSettings();
+const cloudSyncScheduler = useCloudSyncScheduler();
+const { enableCloudSync, lastSyncAt, lastSyncError } = storeToRefs(cloudSyncSettings);
+const { status, statusDetail } = storeToRefs(cloudSyncScheduler);
 
 const tmpUserInfo = reactive<Partial<UserInfo>>({});
 const now = ref(Date.now());
@@ -65,6 +72,21 @@ function updateName() {
       await props.updateUserInfo({ name });
     }
   });
+}
+
+function formatSyncTime(ts: number | null | undefined) {
+  if (!ts)
+    return '尚未同步';
+  try {
+    return new Date(ts).toLocaleString();
+  }
+  catch {
+    return '尚未同步';
+  }
+}
+
+async function onSyncNow() {
+  await cloudSyncScheduler.syncNow();
 }
 </script>
 
@@ -172,7 +194,40 @@ function updateName() {
 
           <van-cell-group inset class="mt-4">
             <van-cell
-              title="同步数据至服务器"
+              title="自动同步"
+            >
+              <template #right-icon>
+                <van-switch
+                  v-model="enableCloudSync"
+                  size="20px"
+                />
+              </template>
+            </van-cell>
+            <van-cell
+              title="同步状态"
+              :label="
+                status === 'syncing'
+                  ? statusDetail || '同步中…'
+                  : status === 'error'
+                    ? (lastSyncError || statusDetail || '同步失败')
+                    : `上次同步：${formatSyncTime(lastSyncAt)}`
+              "
+              :is-link="status !== 'syncing'"
+              :value="status === 'syncing' ? '同步中' : '立即同步'"
+              @click="status !== 'syncing' && onSyncNow()"
+            />
+            <van-cell
+              title="管理同步数据"
+              label="选择要同步的数据类型"
+              is-link
+              @click="
+                () => {
+                  router.push({ name: 'ManageSync' });
+                }
+              "
+            />
+            <van-cell
+              title="高级：手动上传"
               is-link
               @click="
                 () => {
@@ -181,7 +236,7 @@ function updateName() {
               "
             />
             <van-cell
-              title="从服务器下载数据"
+              title="高级：手动下载"
               is-link
               @click="
                 () => {

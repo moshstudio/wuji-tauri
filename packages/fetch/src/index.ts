@@ -79,6 +79,34 @@ const ERROR_REQUEST_CANCELLED = 'Request canceled';
 const WUJI_CACHE_FRAGMENT = '#wuji-cache=';
 const WUJI_CACHE_FP_HEADER = 'x-wuji-cache-fp';
 
+/** 从原始 headers 取出指定头（绕过 Headers 对 Cookie 等禁止头的丢弃） */
+function extractRawHeader(
+  headers: HeadersInit | undefined,
+  name: string,
+): string | undefined {
+  if (!headers) {
+    return undefined;
+  }
+  const lower = name.toLowerCase();
+  if (headers instanceof Headers) {
+    return headers.get(name) ?? undefined;
+  }
+  if (Array.isArray(headers)) {
+    for (const [key, value] of headers) {
+      if (String(key).toLowerCase() === lower) {
+        return String(value);
+      }
+    }
+    return undefined;
+  }
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === lower && value != null) {
+      return String(value);
+    }
+  }
+  return undefined;
+}
+
 /** 将 HeadersInit 规范化为稳定字符串（用于缓存 fingerprint） */
 function serializeHeaders(headers?: HeadersInit): string {
   if (!headers) {
@@ -185,6 +213,9 @@ async function formatClientConfig(
     delete init.noProxy;
   }
 
+  // Headers / Request 可能丢弃 Cookie 等禁止头；先从原始 init 取出
+  const rawCookie = extractRawHeader(init?.headers, 'cookie');
+
   const headers = init?.headers
     ? init.headers instanceof Headers
       ? init.headers
@@ -230,6 +261,13 @@ async function formatClientConfig(
       typeof val === 'string' ? val : (val as any).toString(),
     ],
   );
+
+  if (
+    rawCookie
+    && !mappedHeaders.some(([name]) => name.toLowerCase() === 'cookie')
+  ) {
+    mappedHeaders.push(['Cookie', rawCookie]);
+  }
 
   // abort early here if needed
   if (signal?.aborted) {
@@ -352,12 +390,34 @@ async function _fetch(
   // url and headers are read only properties
   // but seems like we can set them like this
   //
-  // we define theme like this, because using `Response`
+  // we define them like this, because using `Response`
   // constructor, it removes url and some headers
   // like `set-cookie` headers
   Object.defineProperty(res, 'url', { value: url });
+
+  const setCookies: string[] = [];
+  const headersObj = new Headers();
+  for (const [key, val] of responseHeaders) {
+    if (String(key).toLowerCase() === 'set-cookie') {
+      setCookies.push(String(val));
+      continue;
+    }
+    try {
+      headersObj.append(key, val);
+    }
+    catch {
+      // ignore invalid header
+    }
+  }
+  const nativeGetSetCookie
+    = typeof headersObj.getSetCookie === 'function'
+      ? headersObj.getSetCookie.bind(headersObj)
+      : () => [] as string[];
+  headersObj.getSetCookie = () =>
+    setCookies.length ? [...setCookies] : nativeGetSetCookie();
+
   Object.defineProperty(res, 'headers', {
-    value: new Headers(responseHeaders),
+    value: headersObj,
   });
 
   return res;
@@ -381,7 +441,8 @@ export async function fetch(
     if ([301, 302, 303, 307, 308].includes(response.status)) {
       const location = response.headers.get('location');
       if (location) {
-        response = await fetch(location, {
+        const nextUrl = new URL(location, response.url || inputUrl).toString();
+        response = await fetch(nextUrl, {
           ...opts,
           verify: opts?.verify ?? false,
           headers: opts?.headers,

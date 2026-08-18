@@ -106,6 +106,15 @@ export const useDisplayStore = defineStore('display', () => {
       const unlisten = await getCurrentWindow().onCloseRequested(
         async (event) => {
           const settingStore = useSettingStore();
+          try {
+            const { useCloudSyncScheduler } = await import(
+              './cloudSyncScheduler'
+            );
+            await useCloudSyncScheduler().flushNow();
+          }
+          catch (error) {
+            console.warn('close flush cloud sync failed', error);
+          }
 
           if (settingStore.closeAction === 'minimize') {
             // 阻止默认关闭行为

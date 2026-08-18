@@ -3,8 +3,10 @@ import { storeToRefs } from 'pinia';
 import { allowMultipleToast } from 'vant';
 import { nextTick, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { useDisplayStore, useStore } from '@/store';
+import { useDisplayStore, useServerStore, useStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
+import { useCloudSyncScheduler } from '@/store/cloudSyncScheduler';
+import { useCloudSyncSettings } from '@/store/cloudSyncSettings';
 import { checkAndUpdate } from '@/utils/update';
 import RouterView from '@/views/tabbar/RouterView.vue';
 import { router } from './router';
@@ -15,6 +17,9 @@ allowMultipleToast();
 useStore();
 useBackStore();
 const displayStore = useDisplayStore();
+const serverStore = useServerStore();
+const cloudSyncSettings = useCloudSyncSettings();
+const cloudSyncScheduler = useCloudSyncScheduler();
 const { isAppView, isAndroid, isDark } = storeToRefs(displayStore);
 const route = useRoute();
 
@@ -23,6 +28,8 @@ onMounted(async () => {
   await nextTick();
   await router.replace(displayStore.routerCurrPath);
   loadReadFonts();
+  cloudSyncScheduler.bindLifecycle();
+  cloudSyncScheduler.checkAndFlush();
 });
 
 onMounted(async () => {
@@ -34,6 +41,19 @@ onMounted(async () => {
     console.warn('checkAndUpdate error', error);
   }
 });
+
+watch(
+  [
+    () => serverStore.userInfo?.email,
+    () => serverStore.hasFeature('cloud_sync'),
+    () => cloudSyncSettings.enableCloudSync,
+    () => cloudSyncSettings.cloudSyncTypes,
+  ],
+  () => {
+    cloudSyncScheduler.checkAndFlush();
+  },
+);
+
 watch(
   [() => route.path, isAppView],
   async ([newPath, _]) => {

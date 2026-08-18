@@ -42,15 +42,7 @@ export function findSubscribeItem(sourceId: string): {
 }
 
 export function enableSubscribeItemById(sourceId: string): boolean {
-  const found = findSubscribeItem(sourceId);
-  if (!found)
-    return false;
-
-  found.item.disable = false;
-  found.subscribe.disable = false;
-  // 仅同步到运行时；推荐内容等回到对应列表页时再按需加载
-  useSubscribeSourceStore().loadSubscribeSources();
-  return true;
+  return useSubscribeSourceStore().enableSubscribeItemById(sourceId);
 }
 
 function getSourceByKind<K extends SourceKind>(

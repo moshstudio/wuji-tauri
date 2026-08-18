@@ -1,25 +1,25 @@
 {
-  "version": "0.2.6",
-  "notes": "优化小说/漫画换源体验，增强 WebView 抓取与视频嗅探稳定性；支持导入网易云歌单，并改进视频播放与源管理相关体验。",
-  "pub_date": "2026-07-27T22:26:02+08:00",
+  "version": "0.2.7",
+  "notes": "新增自动同步功能（完善中）",
+  "pub_date": "2026-08-18T18:59:19+08:00",
   "platforms": {
     "cloudpan": {
       "url": "https://wwtn.lanzout.com/s/WUJI"
     },
     "android-aarch64": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.6-aarch64.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.7-aarch64.apk"
     },
     "android-x86_64": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.6-x86_64.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.7-x86_64.apk"
     },
     "android-universal": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.6-universal.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.7-universal.apk"
     },
     "android-armv7": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.6-armv7.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.7-armv7.apk"
     },
     "android-i686": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.6-i686.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.7-i686.apk"
     }
   }
 }

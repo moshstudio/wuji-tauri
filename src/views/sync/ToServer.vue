@@ -16,6 +16,7 @@ import {
   useSubscribeSourceStore,
   useVideoShelfStore,
 } from '@/store';
+import { useCloudSyncScheduler } from '@/store/cloudSyncScheduler';
 import { SyncTypes } from '@/types/sync';
 import { estimateJsonSize, sleep } from '@/utils';
 
@@ -26,6 +27,7 @@ const bookShelfStore = useBookShelfStore();
 const comicShelfStore = useComicShelfStore();
 const videoShelfStore = useVideoShelfStore();
 const serverStore = useServerStore();
+const cloudSyncScheduler = useCloudSyncScheduler();
 const syncOptions = ref<SyncOption[]>([
   {
     type: SyncTypes.SubscribeSource,
@@ -125,7 +127,13 @@ async function onSync() {
       data: JSON.stringify(videoShelfStore.syncData()),
     });
   }
-  await serverStore.syncToServer(data, isIncremental);
+  cloudSyncScheduler.pauseForManualSync();
+  try {
+    await serverStore.syncToServer(data, { incremental: isIncremental });
+  }
+  finally {
+    cloudSyncScheduler.resumeAfterManualSync();
+  }
 }
 
 onMountedOrActivated(async () => {
