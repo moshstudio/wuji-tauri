@@ -1,13 +1,19 @@
-import type { CloudSyncOp } from '@/types/cloudSyncOp';
 import type { SyncEntityChange, SyncTypeChanges } from '@/types/cloudSyncChanges';
-import { SyncTypes } from '@/types/sync';
+import type { CloudSyncOp } from '@/types/cloudSyncOp';
 import { useBookShelfStore } from '@/store/bookShelfStore';
+import { suppressAutoSync } from '@/store/cloudSyncOps';
 import { useComicShelfStore } from '@/store/comicShelfStore';
 import { usePhotoShelfStore } from '@/store/photoShelfStore';
 import { useSongShelfStore } from '@/store/songShelfStore';
 import { useSubscribeSourceStore } from '@/store/subscribeSourceStore';
 import { useVideoShelfStore } from '@/store/videoShelfStore';
-import { suppressAutoSync } from '@/store/cloudSyncOps';
+import { SyncTypes } from '@/types/sync';
+import {
+  applySubscribeDelete,
+  applySubscribeUpsert,
+  dropSubscribeTomb,
+  upsertSubscribeTomb,
+} from '@/utils/subscribeSyncMerge';
 
 function itemTime(item: any): number {
   return Number(item?.lastReadTime || item?.createTime || 0);
@@ -216,22 +222,43 @@ export async function applyEntityChanges(results: SyncTypeChanges[]) {
       }
       else if (type === SyncTypes.SubscribeSource) {
         if (change.kind === 'subscribe') {
+          const store = useSubscribeSourceStore();
+          let tombs = store.getSubscribeTombs();
           if (change.deleted) {
+            const local = data.find((s: any) => s.detail?.id === change.entityId);
+            tombs = upsertSubscribeTomb(
+              tombs,
+              applySubscribeDelete({
+                local,
+                sourceId: change.entityId,
+                incomingTs: change.clientUpdatedAt,
+                tomb: tombs.find(t => t.sourceId === change.entityId),
+              }),
+            );
             data = data.filter((s: any) => s.detail?.id !== change.entityId);
           }
           else if (change.payload) {
             const idx = data.findIndex(
               (s: any) => s.detail?.id === change.entityId,
             );
-            if (idx >= 0) {
-              const localTs = Number(data[idx]?.detail?.createTime || 0);
-              if (change.clientUpdatedAt >= localTs)
-                data[idx] = change.payload;
+            const result = applySubscribeUpsert({
+              local: idx >= 0 ? data[idx] : undefined,
+              incoming: change.payload as any,
+              incomingTs: change.clientUpdatedAt,
+              tomb: tombs.find(t => t.sourceId === change.entityId),
+            });
+            if (result.source) {
+              if (idx >= 0)
+                data[idx] = result.source;
+              else
+                data.push(result.source);
+              tombs = dropSubscribeTomb(tombs, change.entityId);
             }
-            else {
-              data.push(change.payload);
+            else if (idx >= 0 && result.source === null) {
+              data.splice(idx, 1);
             }
           }
+          store.setSubscribeTombs(tombs);
         }
       }
       else if (type === SyncTypes.SongShelf) {
@@ -302,19 +329,8 @@ export async function applyPatchConflicts(
       || type === SyncTypes.ComicShelf
       || type === SyncTypes.VideoShelf
     ) {
-      const itemKey
-        = type === SyncTypes.BookShelf
-          ? 'books'
-          : type === SyncTypes.ComicShelf
-            ? 'comics'
-            : 'videos';
-      const store
-        = type === SyncTypes.BookShelf
-          ? useBookShelfStore()
-          : type === SyncTypes.ComicShelf
-            ? useComicShelfStore()
-            : useVideoShelfStore();
-      const data = store.syncData();
+      const itemKey = shelfItemKey(type)!;
+      const data: any[] = getTypeData(type);
       if (c.op === 'removeItem') {
         for (const shelf of data) {
           if (c.parentId && shelf.id !== c.parentId)
@@ -329,14 +345,14 @@ export async function applyPatchConflicts(
             return id !== c.entityId;
           });
         }
-        await store.loadSyncData(data);
+        await persistType(type, data);
       }
       else if (
         (c.op === 'updateProgress' || c.op === 'upsertItem')
         && payload
       ) {
         patchShelfItem(data, c.entityId, c.parentId, payload, itemKey);
-        await store.loadSyncData(data);
+        await persistType(type, data);
       }
       else if (c.op === 'upsertShelf' && payload) {
         const idx = data.findIndex((s: any) => s.id === c.entityId);
@@ -344,10 +360,13 @@ export async function applyPatchConflicts(
           data[idx] = { ...data[idx], ...payload };
         else
           data.push({ ...payload, [itemKey]: payload[itemKey] || [] });
-        await store.loadSyncData(data);
+        await persistType(type, data);
       }
       else if (c.op === 'removeShelf') {
-        await store.loadSyncData(data.filter((s: any) => s.id !== c.entityId));
+        await persistType(
+          type,
+          data.filter((s: any) => s.id !== c.entityId),
+        );
       }
     }
     else if (type === SyncTypes.PhotoShelf) {
@@ -384,25 +403,47 @@ export async function applyPatchConflicts(
           if (idx >= 0)
             shelf.photos[idx] = { ...shelf.photos[idx], ...payload };
           else
-            shelf.photos = [...(shelf.photos || []), payload];
+            shelf.photos = [...(shelf.photos || []), payload as any];
         }
         await store.loadSyncData(data);
       }
     }
     else if (type === SyncTypes.SubscribeSource) {
       const store = useSubscribeSourceStore();
-      const data = store.syncData();
+      const data = JSON.parse(JSON.stringify(store.syncData()));
+      let tombs = store.getSubscribeTombs();
       if (c.op === 'removeSubscribe') {
+        const local = data.find((s: any) => s.detail?.id === c.entityId);
+        tombs = upsertSubscribeTomb(
+          tombs,
+          applySubscribeDelete({
+            local,
+            sourceId: c.entityId,
+            incomingTs: Date.now(),
+            tomb: tombs.find(t => t.sourceId === c.entityId),
+          }),
+        );
+        store.setSubscribeTombs(tombs);
         await store.loadSyncData(
           data.filter((s: any) => s.detail?.id !== c.entityId),
         );
       }
       else if (c.op === 'upsertSubscribe' && payload) {
         const idx = data.findIndex((s: any) => s.detail?.id === c.entityId);
-        if (idx >= 0)
-          data[idx] = payload as any;
-        else
-          data.push(payload as any);
+        const result = applySubscribeUpsert({
+          local: idx >= 0 ? data[idx] : undefined,
+          incoming: payload as any,
+          incomingTs: Date.now(),
+          tomb: tombs.find(t => t.sourceId === c.entityId),
+        });
+        if (result.source) {
+          if (idx >= 0)
+            data[idx] = result.source;
+          else
+            data.push(result.source);
+          tombs = dropSubscribeTomb(tombs, c.entityId);
+        }
+        store.setSubscribeTombs(tombs);
         await store.loadSyncData(data);
       }
     }
@@ -430,9 +471,9 @@ export async function applyPatchConflicts(
         const list = data[bucket] || [];
         const idx = list.findIndex((s: any) => s.playlist?.id === c.entityId);
         if (idx >= 0)
-          list[idx] = payload;
+          list[idx] = payload as any;
         else
-          list.push(payload);
+          list.push(payload as any);
         data[bucket] = list;
         await store.loadSyncData(data);
       }

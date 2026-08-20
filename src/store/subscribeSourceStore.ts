@@ -5,6 +5,7 @@ import type {
   SubscribeItem,
   SubscribeSource,
 } from '@/types';
+import type { SubscribeSyncFlagItem, SubscribeTomb } from '@/utils/subscribeSyncMerge';
 import * as fs from '@tauri-apps/plugin-fs';
 import { debounceFilter, useStorage, useStorageAsync } from '@vueuse/core';
 import { fetch } from '@wuji-tauri/fetch';
@@ -33,6 +34,10 @@ import { SourceType } from '@/types';
 import { SyncTypes } from '@/types/sync';
 import { sleep } from '@/utils';
 import { normalizeMarketSourcePermissions } from '@/utils/marketSource';
+import {
+  applySubscribeDelete,
+  upsertSubscribeTomb,
+} from '@/utils/subscribeSyncMerge';
 import { showVipDialog } from '@/utils/vip';
 import { useBookStore } from './bookStore';
 import { enqueueOp } from './cloudSyncOps';
@@ -73,13 +78,78 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     },
   );
 
-  const enqueueSubscribeUpsert = (source: SubscribeSource) => {
+  const subscribeTombs = useStorageAsync<SubscribeTomb[]>(
+    'subscribeSyncTombs',
+    [],
+    storage,
+    {
+      eventFilter: debounceFilter(1000),
+    },
+  );
+
+  const getSubscribeTombs = (): SubscribeTomb[] => {
+    return [...(subscribeTombs.value || [])];
+  };
+
+  const setSubscribeTombs = (tombs: SubscribeTomb[]) => {
+    subscribeTombs.value = tombs;
+  };
+
+  const rememberSubscribeRemoved = (source: SubscribeSource) => {
+    subscribeTombs.value = upsertSubscribeTomb(
+      getSubscribeTombs(),
+      applySubscribeDelete({
+        local: source,
+        sourceId: source.detail.id,
+        incomingTs: Date.now(),
+        tomb: getSubscribeTombs().find(t => t.sourceId === source.detail.id),
+      }),
+    );
+  };
+
+  const enqueueSubscribeContent = (source: SubscribeSource) => {
+    const contentUpdatedAt = Date.now();
+    (source as SubscribeSource & { contentUpdatedAt?: number }).contentUpdatedAt
+      = contentUpdatedAt;
     enqueueOp({
       type: SyncTypes.SubscribeSource,
       op: 'upsertSubscribe',
       entityId: source.detail.id,
-      payload: { ..._.cloneDeep(source) },
-      clientUpdatedAt: Date.now(),
+      payload: {
+        ..._.cloneDeep(source),
+        _sync: {
+          intent: 'content',
+          contentUpdatedAt,
+        },
+      },
+      clientUpdatedAt: contentUpdatedAt,
+    });
+  };
+
+  const enqueueSubscribeFlags = (
+    source: SubscribeSource,
+    flagItems: SubscribeSyncFlagItem[],
+  ) => {
+    const flagsUpdatedAt = Date.now();
+    (source as SubscribeSource & { flagsUpdatedAt?: number }).flagsUpdatedAt
+      = flagsUpdatedAt;
+    enqueueOp({
+      type: SyncTypes.SubscribeSource,
+      op: 'upsertSubscribe',
+      entityId: source.detail.id,
+      payload: {
+        ..._.cloneDeep(source),
+        _sync: {
+          intent: 'flags',
+          flagItems,
+          packDisable: source.disable,
+          flagsUpdatedAt,
+          contentUpdatedAt: (source as SubscribeSource & {
+            contentUpdatedAt?: number;
+          }).contentUpdatedAt,
+        },
+      },
+      clientUpdatedAt: flagsUpdatedAt,
     });
   };
 
@@ -93,7 +163,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     else {
       subscribeSources.value.push(source);
     }
-    enqueueSubscribeUpsert(source);
+    enqueueSubscribeContent(source);
   };
 
   const removeSubscribeSource = async (source: SubscribeSource) => {
@@ -101,6 +171,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       s => s.detail.id === source.detail.id,
     );
     if (index !== -1) {
+      rememberSubscribeRemoved(source);
       subscribeSources.value.splice(index, 1);
       loadSubscribeSources();
       enqueueOp({
@@ -120,7 +191,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     if (source) {
       _.remove(source.detail.urls, item => item.id === itemId);
       loadSubscribeSources();
-      enqueueSubscribeUpsert(source);
+      enqueueSubscribeContent(source);
     }
   };
 
@@ -150,7 +221,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
         if (sourceContent.code) {
           item.code = sourceContent.code;
         }
-        enqueueSubscribeUpsert(subscribeSource);
+        enqueueSubscribeContent(subscribeSource);
         return item;
       }
     }
@@ -164,7 +235,13 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       url.disable = disable;
     });
     source.disable = disable;
-    enqueueSubscribeUpsert(source);
+    enqueueSubscribeFlags(
+      source,
+      (source.detail?.urls || []).map(url => ({
+        id: url.id,
+        disable,
+      })),
+    );
   };
 
   const setSubscribeItemDisabled = (
@@ -181,7 +258,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     else {
       source.disable = false;
     }
-    enqueueSubscribeUpsert(source);
+    enqueueSubscribeFlags(source, [{ id: item.id, disable }]);
   };
 
   const enableSubscribeItemById = (sourceId: string): boolean => {
@@ -190,7 +267,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       if (item) {
         item.disable = false;
         subscribe.disable = false;
-        enqueueSubscribeUpsert(subscribe);
+        enqueueSubscribeFlags(subscribe, [{ id: item.id, disable: false }]);
         loadSubscribeSources();
         return true;
       }
@@ -204,11 +281,14 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
 
   const loadSyncData = async (data: SubscribeSource[]) => {
     subscribeSources.value = data;
+    loadSubscribeSources();
   };
 
   const clearSubscribeSources = async () => {
     const now = Date.now();
+    const tombs = getSubscribeTombs();
     for (const s of [...subscribeSources.value]) {
+      rememberSubscribeRemoved(s);
       enqueueOp({
         type: SyncTypes.SubscribeSource,
         op: 'removeSubscribe',
@@ -216,8 +296,10 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
         clientUpdatedAt: now,
       });
     }
+    const nextTombs = getSubscribeTombs();
     subscribeSources.value.splice(0);
     await storage.clear();
+    subscribeTombs.value = nextTombs.length ? nextTombs : tombs;
   };
 
   const isEmpty = computed(() => subscribeSources.value.length === 0);
@@ -944,5 +1026,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     removeFromSource,
     loadSubscribeSources,
     localSourceId,
+    getSubscribeTombs,
+    setSubscribeTombs,
   };
 });

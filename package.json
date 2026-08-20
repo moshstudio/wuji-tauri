@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "eslint . --fix",
-    "test:cloud-sync": "tsx --tsconfig tsconfig.json --test src/utils/syncMerge.test.ts src/utils/syncTombstone.test.ts src/utils/cloudSyncChanges.test.ts src/store/cloudSyncOps.test.ts",
+    "test:cloud-sync": "tsx --tsconfig tsconfig.json --test src/utils/syncMerge.test.ts src/utils/syncTombstone.test.ts src/utils/cloudSyncChanges.test.ts src/utils/subscribeSyncMerge.test.ts src/store/cloudSyncOps.test.ts",
     "docs:sync-e2e": "echo See ../wuji-server/docs/CLOUD_SYNC_LOCAL_E2E.md"
   },
   "dependencies": {

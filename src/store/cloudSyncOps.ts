@@ -1,7 +1,8 @@
 import type { CloudSyncOp, SyncOpName } from '@/types/cloudSyncOp';
 import type { SyncTypes } from '@/types/sync';
-import { isStructureOp, syncOpKey } from '@/types/cloudSyncOp';
 import { nanoid } from 'nanoid';
+import { isStructureOp, syncOpKey } from '@/types/cloudSyncOp';
+import { mergeSubscribeSyncPayload } from '@/utils/subscribeSyncMerge';
 
 const pendingOps = new Map<string, CloudSyncOp>();
 let suppressUntil = 0;
@@ -91,14 +92,18 @@ export function enqueueOp(op: CloudSyncOp) {
   }
   const existing = pendingOps.get(key);
   if (existing) {
+    const payload
+      = op.op === 'upsertSubscribe'
+        ? mergeSubscribeSyncPayload(existing.payload, withMutation.payload)
+        : {
+            ...(existing.payload || {}),
+            ...(withMutation.payload || {}),
+          };
     // 同 key 覆盖时换新 mutationId，避免旧幂等键挡住新内容
     pendingOps.set(key, {
       ...existing,
       ...withMutation,
-      payload: {
-        ...(existing.payload || {}),
-        ...(withMutation.payload || {}),
-      },
+      payload,
       clientMutationId: withMutation.clientMutationId,
     });
   }

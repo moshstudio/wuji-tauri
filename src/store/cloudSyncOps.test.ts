@@ -116,4 +116,36 @@ describe('cloudSyncOps', () => {
     assert.ok(ops[0].clientMutationId);
     assert.notEqual(ops[0].clientMutationId, '');
   });
+
+  it('merges subscribe flags into prior content upsert without dropping content intent', () => {
+    enqueueOp({
+      type: SyncTypes.SubscribeSource,
+      op: 'upsertSubscribe',
+      entityId: 's1',
+      payload: {
+        detail: { id: 's1', version: 2, urls: [{ id: 'a', code: 'v2' }] },
+        _sync: { intent: 'content', contentUpdatedAt: 1 },
+      },
+      clientUpdatedAt: 1,
+    });
+    enqueueOp({
+      type: SyncTypes.SubscribeSource,
+      op: 'upsertSubscribe',
+      entityId: 's1',
+      payload: {
+        detail: { id: 's1', version: 2, urls: [{ id: 'a', code: 'v2' }] },
+        disable: true,
+        _sync: {
+          intent: 'flags',
+          flagItems: [{ id: 'a', disable: true }],
+          flagsUpdatedAt: 2,
+        },
+      },
+      clientUpdatedAt: 2,
+    });
+    const ops = peekPendingOps();
+    assert.equal(ops.length, 1);
+    assert.equal((ops[0].payload as any)._sync.intent, 'content');
+    assert.equal((ops[0].payload as any)._sync.flagItems[0].id, 'a');
+  });
 });

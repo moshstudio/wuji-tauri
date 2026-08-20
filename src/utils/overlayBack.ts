@@ -28,9 +28,10 @@ function isVisibleElement(el: HTMLElement) {
 }
 
 function getVisiblePopups() {
+  // Toast 也是 Popup（role=dialog），但不应拦截返回手势
   return Array.from(
     document.querySelectorAll<HTMLElement>('.van-popup[role="dialog"]'),
-  ).filter(isVisibleElement);
+  ).filter(el => isVisibleElement(el) && !el.classList.contains('van-toast'));
 }
 
 function getVisibleOverlays() {
