@@ -7,3 +7,4 @@ export type { ProsodyOptions } from './edge-tts-client';
 
 // Re-exporting types
 export type { Voice } from './edge-tts-client';
+export type { BoundaryMetadata } from './protocol';

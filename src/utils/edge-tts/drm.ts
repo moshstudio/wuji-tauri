@@ -1,8 +1,26 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
+import { TRUSTED_CLIENT_TOKEN } from './constants.ts';
 
-export const CHROMIUM_FULL_VERSION = '130.0.2849.68';
-export const TRUSTED_CLIENT_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
-const WINDOWS_FILE_TIME_EPOCH = 11644473600n;
+const WIN_EPOCH = 11644473600;
+const S_TO_NS = 1e9;
+
+let clockSkewSeconds = 0;
+
+export function adjClockSkewSeconds(skewSeconds: number): void {
+  clockSkewSeconds += skewSeconds;
+}
+
+export function getClockSkewSeconds(): number {
+  return clockSkewSeconds;
+}
+
+export function resetClockSkewForTests(): void {
+  clockSkewSeconds = 0;
+}
+
+export function getUnixTimestamp(): number {
+  return Date.now() / 1000 + clockSkewSeconds;
+}
 
 /**
  * Return Javascript-style date string.
@@ -37,16 +55,58 @@ export function dateToString(): string {
   return `${dayName} ${monthName} ${day} ${year} ${hours}:${minutes}:${seconds} GMT+0000 (Coordinated Universal Time)`;
 }
 
-export function generateSecMsGecToken() {
-  const ticks
-    = BigInt(Math.floor(Date.now() / 1000 + Number(WINDOWS_FILE_TIME_EPOCH)))
-      * 10000000n;
-  const roundedTicks = ticks - (ticks % 3000000000n);
+/** Parse RFC 2616 Date header into a Unix timestamp in seconds. */
+export function parseRfc2616Date(date: string): number | null {
+  const parsed = Date.parse(date);
+  if (Number.isNaN(parsed))
+    return null;
+  return parsed / 1000;
+}
 
-  const strToHash = `${roundedTicks}${TRUSTED_CLIENT_TOKEN}`;
+export function handleClockSkewFromHeaders(
+  headers: Headers | Record<string, string> | null | undefined,
+): boolean {
+  if (!headers)
+    return false;
 
-  const hash = createHash('sha256');
-  hash.update(strToHash, 'ascii');
+  const serverDate
+    = headers instanceof Headers
+      ? (headers.get('Date') ?? headers.get('date'))
+      : (headers.Date ?? headers.date);
+  if (!serverDate)
+    return false;
 
-  return hash.digest('hex').toUpperCase();
+  const serverUnix = parseRfc2616Date(serverDate);
+  if (serverUnix == null)
+    return false;
+
+  adjClockSkewSeconds(serverUnix - getUnixTimestamp());
+  return true;
+}
+
+/**
+ * Generates the Sec-MS-GEC token: SHA256 of (Windows file time rounded to 5 min + client token).
+ * Seconds since 1601 stay in Number's safe range; only the 100ns ticks use BigInt.
+ */
+export function generateSecMsGecToken(
+  unixSeconds: number = getUnixTimestamp(),
+): string {
+  const unixPlusEpoch = unixSeconds + WIN_EPOCH;
+  const roundedSeconds = unixPlusEpoch - (unixPlusEpoch % 300);
+  const ticks = BigInt(Math.round(roundedSeconds)) * BigInt(S_TO_NS / 100);
+  const strToHash = `${ticks}${TRUSTED_CLIENT_TOKEN}`;
+  return createHash('sha256').update(strToHash, 'ascii').digest('hex').toUpperCase();
+}
+
+export function generateMuid(): string {
+  return randomBytes(16).toString('hex').toUpperCase();
+}
+
+export function headersWithMuid(
+  headers: Record<string, string>,
+): Record<string, string> {
+  return {
+    ...headers,
+    Cookie: `muid=${generateMuid()};`,
+  };
 }

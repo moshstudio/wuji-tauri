@@ -41,6 +41,16 @@ export const VOICE_HEADERS = {
   ...BASE_HEADERS,
 };
 
+/** SSML 文本分片上限，与 edge-tts 7.2.8 一致。 */
+export const MAX_MESSAGE_BYTES = 4096;
+
+/**
+ * CBR 字幕时间轴：输出格式 audio-24khz-48kbitrate-mono-mp3 为 48 kbps 恒定码率。
+ * Microsoft Offset/Duration 使用 100 纳秒 tick，1 秒 = 10,000,000 ticks。
+ */
+export const TICKS_PER_SECOND = 10_000_000;
+export const MP3_BITRATE_BPS = 48_000;
+
 export enum OUTPUT_FORMAT {
   AUDIO_24KHZ_48KBITRATE_MONO_MP3 = 'audio-24khz-48kbitrate-mono-mp3',
   AUDIO_24KHZ_96KBITRATE_MONO_MP3 = 'audio-24khz-96kbitrate-mono-mp3',
