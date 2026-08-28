@@ -1,3 +1,4 @@
+import type { BoundaryMetadata, WordTimelineItem } from '@/utils/edge-tts';
 import type { LineData } from '@/utils/reader/types';
 import { Buffer } from 'node:buffer';
 import { useStorageAsync } from '@vueuse/core';
@@ -6,7 +7,12 @@ import { defineStore } from 'pinia';
 import { showFailToast, showToast } from 'vant';
 import { onMounted, reactive, ref } from 'vue';
 import { clearTimeout, setInterval, setTimeout } from 'worker-timers';
-import { EdgeTTSClient } from '@/utils/edge-tts';
+import {
+  buildWordTimeline,
+  EdgeTTSClient,
+  findTimelineIndexAtChar,
+  findTimelineIndexAtTime,
+} from '@/utils/edge-tts';
 import { SimpleLRUCache } from '@/utils/lruCache';
 
 export interface Voice {
@@ -20,8 +26,13 @@ export interface Voice {
   [name: string]: any;
 }
 
+interface CachedVoice {
+  audio: Buffer<ArrayBuffer>;
+  boundaries: BoundaryMetadata[];
+  timeline: WordTimelineItem[];
+}
+
 export const useTTSStore = defineStore('ttsStore', () => {
-  // 状态
   const voices = ref<Voice[]>([
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoyiNeural)',
@@ -153,7 +164,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
   const audioPlayer = ref<HTMLAudioElement | null>(null);
   const selectedVoice = useStorageAsync<Voice>('ttsPlayVoice', voices.value[0]);
   const playbackRate = useStorageAsync<number>('ttsPlayBackRate', 1.0);
-  const lruCache = new SimpleLRUCache<string, Buffer<ArrayBuffer>>(50);
+  const lruCache = new SimpleLRUCache<string, CachedVoice>(50);
   const _generating = new SimpleLRUCache<string, boolean>(50);
 
   const isReading = ref(false);
@@ -163,23 +174,125 @@ export const useTTSStore = defineStore('ttsStore', () => {
     chapterId?: string;
   }>();
   const slideReadingContent = ref<LineData[]>();
+  /** 当前朗读到原文的字符下标；无词边界时为 -1 */
+  const speakingCharIndex = ref(-1);
+  const speakingCharEnd = ref(-1);
 
+  const autoStopEnable = useStorageAsync('ttsAutoStopEnable', false);
+  const autoStopDuration = useStorageAsync('ttsAutoStopDuration', 30);
+  const autoStopStartTime = ref(0);
   const autoStopOptions = reactive({
-    enable: false,
-    startTime: 0,
-    duration: 20,
+    get enable() {
+      return autoStopEnable.value;
+    },
+    set enable(v: boolean) {
+      autoStopEnable.value = v;
+    },
+    get duration() {
+      return autoStopDuration.value;
+    },
+    set duration(v: number) {
+      autoStopDuration.value = v;
+    },
+    get startTime() {
+      return autoStopStartTime.value;
+    },
+    set startTime(v: number) {
+      autoStopStartTime.value = v;
+    },
   });
   const now = ref(Date.now());
 
-  const stop = () => {
-    if (audioPlayer.value) {
-      audioPlayer.value.pause();
-      audioPlayer.value.onended = () => {};
-    }
-    isReading.value = false;
+  let playGeneration = 0;
+  let currentObjectUrl: string | null = null;
+  let activeTimeline: WordTimelineItem[] = [];
+  let progressRaf = 0;
+
+  const getContentText = (
+    content: LineData[] | { content: string; index: number },
+  ) => {
+    return 'index' in content
+      ? content.content
+      : content.map(item => item.text).join('');
   };
 
-  // 每秒更新时间戳
+  const revokeCurrentUrl = () => {
+    if (currentObjectUrl) {
+      URL.revokeObjectURL(currentObjectUrl);
+      currentObjectUrl = null;
+    }
+  };
+
+  const ensurePlayer = () => {
+    if (!audioPlayer.value)
+      audioPlayer.value = new Audio();
+    return audioPlayer.value;
+  };
+
+  const stopProgressTracking = () => {
+    if (progressRaf) {
+      cancelAnimationFrame(progressRaf);
+      progressRaf = 0;
+    }
+    const player = audioPlayer.value;
+    if (player) {
+      player.ontimeupdate = null;
+      player.onloadedmetadata = null;
+    }
+    activeTimeline = [];
+    speakingCharIndex.value = -1;
+    speakingCharEnd.value = -1;
+  };
+
+  const updateSpeakingFromTime = (currentTime: number) => {
+    if (!activeTimeline.length)
+      return;
+    const idx = findTimelineIndexAtTime(activeTimeline, currentTime);
+    if (idx < 0)
+      return;
+    const word = activeTimeline[idx];
+    if (speakingCharIndex.value !== word.charStart) {
+      speakingCharIndex.value = word.charStart;
+      speakingCharEnd.value = word.charEnd;
+    }
+  };
+
+  const startProgressTracking = (player: HTMLAudioElement) => {
+    const tick = () => {
+      if (!isReading.value || !activeTimeline.length) {
+        progressRaf = 0;
+        return;
+      }
+      if (!player.paused && !player.ended)
+        updateSpeakingFromTime(player.currentTime);
+      progressRaf = requestAnimationFrame(tick);
+    };
+    player.ontimeupdate = () => updateSpeakingFromTime(player.currentTime);
+    progressRaf = requestAnimationFrame(tick);
+  };
+
+  const resetReadingPage = () => {
+    scrollReadingContent.value = undefined;
+    slideReadingContent.value = undefined;
+  };
+
+  const invalidatePlay = () => {
+    playGeneration += 1;
+    stopProgressTracking();
+    const player = audioPlayer.value;
+    if (player) {
+      player.pause();
+      player.onended = null;
+    }
+    revokeCurrentUrl();
+  };
+
+  const stop = () => {
+    invalidatePlay();
+    isReading.value = false;
+    resetReadingPage();
+  };
+
   onMounted(() => {
     setInterval(() => {
       now.value = Date.now();
@@ -204,7 +317,6 @@ export const useTTSStore = defineStore('ttsStore', () => {
     }, 1000);
   });
 
-  // 初始化AudioContext
   const init = async () => {
     if (!audioPlayer.value) {
       audioPlayer.value = new Audio();
@@ -218,16 +330,12 @@ export const useTTSStore = defineStore('ttsStore', () => {
   ): Promise<boolean> => {
     voice = voice || selectedVoice.value;
     rate = rate || playbackRate.value;
-    const message
-      = 'index' in content
-        ? content.content
-        : content.map(item => item.text).join('');
+    const message = getContentText(content);
     const uid = CryptoJS.MD5(message + JSON.stringify(voice) + rate).toString();
     if (lruCache.has(uid)) {
       return true;
     }
     if (_generating.has(uid)) {
-      // 等待生成完成，最长等待30秒
       return new Promise<boolean>((resolve, _reject) => {
         const timer = setTimeout(() => {
           resolve(false);
@@ -236,10 +344,14 @@ export const useTTSStore = defineStore('ttsStore', () => {
           if (lruCache.has(uid)) {
             clearTimeout(timer);
             resolve(true);
+            return;
           }
-          else {
-            setTimeout(check, 100);
+          if (!_generating.has(uid)) {
+            clearTimeout(timer);
+            resolve(lruCache.has(uid));
+            return;
           }
+          setTimeout(check, 100);
         };
         check();
       });
@@ -254,12 +366,24 @@ export const useTTSStore = defineStore('ttsStore', () => {
         })
         .then((emitter) => {
           const chunks: Uint8Array[] = [];
+          const liveBoundaries: BoundaryMetadata[] = [];
           emitter.on('data', (data: Uint8Array) => {
             chunks.push(data);
           });
-          emitter.on('end', () => {
+          emitter.on('metadata', (meta: BoundaryMetadata) => {
+            liveBoundaries.push(meta);
+          });
+          emitter.on('end', (metadata?: BoundaryMetadata[]) => {
             const concatenated = Buffer.concat(chunks);
-            lruCache.set(uid, concatenated as unknown as Buffer<ArrayBuffer>);
+            const boundaries
+              = Array.isArray(metadata) && metadata.length > 0
+                ? metadata
+                : liveBoundaries;
+            lruCache.set(uid, {
+              audio: concatenated as unknown as Buffer<ArrayBuffer>,
+              boundaries,
+              timeline: buildWordTimeline(message, boundaries),
+            });
             resolve(true);
           });
           emitter.on('close', () => {
@@ -273,19 +397,23 @@ export const useTTSStore = defineStore('ttsStore', () => {
     _generating.delete(uid);
     return res;
   };
+
+  /**
+   * @param seekCharIndex 从段落中途开始播（用于跨页续段所在页）
+   */
   const playVoice = async (
     content: LineData[] | { content: string; index: number },
     voice: Voice,
     rate?: number,
     onended?: (e?: Event) => void,
+    seekCharIndex = 0,
   ) => {
+    invalidatePlay();
+    const generation = playGeneration;
     isReading.value = true;
     voice = voice || selectedVoice.value;
     rate = rate || playbackRate.value;
-    const message
-      = 'index' in content
-        ? content.content
-        : content.map(item => item.text).join('');
+    const message = getContentText(content);
     if ('index' in content) {
       scrollReadingContent.value = content;
     }
@@ -294,9 +422,12 @@ export const useTTSStore = defineStore('ttsStore', () => {
     }
     const uid = CryptoJS.MD5(message + JSON.stringify(voice) + rate).toString();
     let success = lruCache.has(uid);
-    if (!lruCache.has(uid)) {
+    if (!success) {
       success = await generateVoice(content, voice, rate);
     }
+
+    if (generation !== playGeneration)
+      return;
 
     if (!success) {
       showFailToast('TTS生成失败');
@@ -304,35 +435,60 @@ export const useTTSStore = defineStore('ttsStore', () => {
       isReading.value = false;
       return;
     }
-    const buffer = lruCache.get(uid)!;
-    const blob = new Blob([buffer], { type: 'audio/mpeg' });
+    if (!isReading.value)
+      return;
+
+    const cached = lruCache.get(uid);
+    if (!cached)
+      return;
+    const blob = new Blob([cached.audio], { type: 'audio/mpeg' });
     if (blob.size === 0) {
       onended?.();
+      return;
     }
-    else {
-      // 再次确认一下，当前要读的内容没有改变
-      if (
-        'index' in content
-          ? content.content
-          : content.map(item => item.text).join('') === message
-      ) {
-        if (audioPlayer.value) {
-          audioPlayer.value.src = URL.createObjectURL(blob);
-          audioPlayer.value.play();
-          audioPlayer.value.onended = (event) => {
-            onended?.(event);
-          };
+    if (getContentText(content) !== message)
+      return;
+
+    const player = ensurePlayer();
+    revokeCurrentUrl();
+    currentObjectUrl = URL.createObjectURL(blob);
+    activeTimeline = cached.timeline;
+    speakingCharIndex.value = Math.max(0, seekCharIndex);
+    speakingCharEnd.value = speakingCharIndex.value;
+
+    player.onended = (event) => {
+      if (generation !== playGeneration)
+        return;
+      if (!isReading.value)
+        return;
+      stopProgressTracking();
+      onended?.(event);
+    };
+
+    const startPlayback = () => {
+      if (generation !== playGeneration)
+        return;
+      if (seekCharIndex > 0 && activeTimeline.length) {
+        const idx = findTimelineIndexAtChar(activeTimeline, seekCharIndex);
+        if (idx >= 0) {
+          player.currentTime = activeTimeline[idx].startSec;
+          speakingCharIndex.value = activeTimeline[idx].charStart;
+          speakingCharEnd.value = activeTimeline[idx].charEnd;
         }
       }
-    }
-  };
-  const startAutoStopTimer = () => {
-    autoStopOptions.startTime = Date.now();
+      startProgressTracking(player);
+      void player.play().catch(() => {});
+    };
+
+    player.src = currentObjectUrl;
+    if (player.readyState >= 1)
+      startPlayback();
+    else
+      player.onloadedmetadata = () => startPlayback();
   };
 
-  const resetReadingPage = () => {
-    scrollReadingContent.value = undefined;
-    slideReadingContent.value = undefined;
+  const startAutoStopTimer = () => {
+    autoStopOptions.startTime = Date.now();
   };
 
   onMounted(() => {
@@ -347,10 +503,13 @@ export const useTTSStore = defineStore('ttsStore', () => {
     playVoice,
     startAutoStopTimer,
     stop,
+    invalidatePlay,
     resetReadingPage,
     isReading,
     scrollReadingContent,
     slideReadingContent,
+    speakingCharIndex,
+    speakingCharEnd,
     autoStopOptions,
   };
 });

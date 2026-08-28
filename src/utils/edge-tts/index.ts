@@ -8,3 +8,9 @@ export type { ProsodyOptions } from './edge-tts-client';
 // Re-exporting types
 export type { Voice } from './edge-tts-client';
 export type { BoundaryMetadata } from './protocol';
+export type { WordTimelineItem } from './wordTimeline';
+export {
+  buildWordTimeline,
+  findTimelineIndexAtChar,
+  findTimelineIndexAtTime,
+} from './wordTimeline';

@@ -28,12 +28,18 @@ import {
   showSuccessToast,
   showToast,
 } from 'vant';
-import { computed, markRaw, onMounted, ref, triggerRef } from 'vue';
+import { computed, markRaw, onMounted, ref, triggerRef, watch } from 'vue';
 import { router } from '@/router';
 import { SourceType } from '@/types';
 import { SyncTypes } from '@/types/sync';
+import { isMembershipOrderValid } from '@/types/user';
 import { sleep } from '@/utils';
-import { normalizeMarketSourcePermissions } from '@/utils/marketSource';
+import {
+  canAccessExclusiveSource,
+  isExclusiveMarketSource,
+  isProOnlyMarketSource,
+  normalizeMarketSourcePermissions,
+} from '@/utils/marketSource';
 import {
   applySubscribeDelete,
   upsertSubscribeTomb,
@@ -75,6 +81,8 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     storage,
     {
       eventFilter: debounceFilter(1000),
+      // 避免 hydrate 完成前把默认空数组写回磁盘，覆盖已导入的源
+      writeDefaults: false,
     },
   );
 
@@ -84,6 +92,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     storage,
     {
       eventFilter: debounceFilter(1000),
+      writeDefaults: false,
     },
   );
 
@@ -227,10 +236,156 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     }
   };
 
+  const membershipAccess = ref({ isVip: false, isPro: false });
+
+  const getMembershipAccess = async () => {
+    const info = await serverStore.getPersistedUserInfo();
+    const now = Date.now();
+    const access = {
+      isVip: isMembershipOrderValid(info?.vipMembershipPlan, now),
+      isPro: isMembershipOrderValid(info?.proMembershipPlan, now),
+    };
+    membershipAccess.value = access;
+    return access;
+  };
+
+  const getMembershipAccessSync = () => {
+    const info = serverStore.userInfo;
+    if (info) {
+      const now = Date.now();
+      return {
+        isVip: isMembershipOrderValid(info.vipMembershipPlan, now),
+        isPro: isMembershipOrderValid(info.proMembershipPlan, now),
+      };
+    }
+    return membershipAccess.value;
+  };
+
+  const canEnableSubscribeSource = (source: SubscribeSource) => {
+    return canAccessExclusiveSource(
+      source.permissions,
+      getMembershipAccessSync(),
+    );
+  };
+
+  const promptExclusiveSource = (source: SubscribeSource) => {
+    const proOnly = isProOnlyMarketSource(source.permissions);
+    void showVipDialog(
+      proOnly
+        ? '这是 PRO 专属源，开通后可继续使用'
+        : '这是会员专属源，开通 VIP 后可继续使用',
+      '专属源',
+    );
+  };
+
+  const assertCanEnableSource = (source: SubscribeSource): boolean => {
+    if (canEnableSubscribeSource(source))
+      return true;
+    promptExclusiveSource(source);
+    return false;
+  };
+
+  const persistSourcePermissions = (
+    source: SubscribeSource,
+    permissions: MarketSource['permissions'] | string[] | undefined,
+    sync = true,
+  ) => {
+    const next = normalizeMarketSourcePermissions(permissions);
+    if (_.isEqual(source.permissions || [], next))
+      return false;
+    source.permissions = next;
+    if (sync)
+      enqueueSubscribeContent(source);
+    return true;
+  };
+
+  const isSourceFullyDisabled = (source: SubscribeSource) => {
+    return (
+      !!source.disable
+      || (!!source.detail?.urls?.length
+        && source.detail.urls.every(url => url.disable))
+    );
+  };
+
+  const enforceExclusiveSourceAccess = async (notify = true) => {
+    const access = await getMembershipAccess();
+    const disabledNames: string[] = [];
+    for (const source of subscribeSources.value) {
+      if (!isExclusiveMarketSource(source.permissions))
+        continue;
+      if (canAccessExclusiveSource(source.permissions, access))
+        continue;
+      if (isSourceFullyDisabled(source))
+        continue;
+      source.detail?.urls.forEach((url) => {
+        url.disable = true;
+      });
+      source.disable = true;
+      enqueueSubscribeFlags(
+        source,
+        (source.detail?.urls || []).map(url => ({
+          id: url.id,
+          disable: true,
+        })),
+      );
+      disabledNames.push(source.detail?.name || '专属源');
+    }
+    if (disabledNames.length) {
+      loadSubscribeSources();
+      if (notify) {
+        showNotify({
+          type: 'warning',
+          message: `已禁用 ${disabledNames.length} 个会员专属源，开通 VIP 后可再次启用`,
+          duration: 3000,
+        });
+      }
+    }
+    return disabledNames.length;
+  };
+
+  const findCachedMarketSource = (id: string): MarketSource | undefined => {
+    return (
+      serverStore.marketSource?.data?.find(item => item._id === id)
+      || serverStore.myMarketSources.find(item => item._id === id)
+    );
+  };
+
+  const hydrateMarketSourcePermissions = async () => {
+    const missing = subscribeSources.value.filter(
+      source =>
+        source.url === 'marketSource'
+        && source.permissions == null,
+    );
+    if (!missing.length)
+      return;
+    const limit = pLimit(3);
+    await Promise.all(
+      missing.map(source =>
+        limit(async () => {
+          const cached = findCachedMarketSource(source.detail.id);
+          const marketSource
+            = cached
+              || (await serverStore.getMarketSourceById(source.detail.id, {
+                silent: true,
+              }));
+          if (marketSource)
+            persistSourcePermissions(source, marketSource.permissions);
+        }),
+      ),
+    );
+  };
+
+  const syncExclusiveSourceAccess = async (notify = true) => {
+    await hydrateMarketSourcePermissions();
+    return enforceExclusiveSourceAccess(notify);
+  };
+
   const setSourceDisabled = (
     source: SubscribeSource,
     disable: boolean,
   ) => {
+    if (!disable && !assertCanEnableSource(source))
+      return false;
     source.detail?.urls.forEach((url) => {
       url.disable = disable;
     });
@@ -242,6 +397,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
         disable,
       })),
     );
+    return true;
   };
 
   const setSubscribeItemDisabled = (
@@ -249,6 +405,8 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     item: SubscribeItem,
     disable: boolean,
   ) => {
+    if (!disable && !assertCanEnableSource(source))
+      return false;
     item.disable = disable;
     if (disable) {
       if (source.detail?.urls.every(url => url.disable)) {
@@ -259,12 +417,15 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       source.disable = false;
     }
     enqueueSubscribeFlags(source, [{ id: item.id, disable }]);
+    return true;
   };
 
   const enableSubscribeItemById = (sourceId: string): boolean => {
     for (const subscribe of subscribeSources.value) {
       const item = subscribe.detail?.urls?.find(u => u.id === sourceId);
       if (item) {
+        if (!assertCanEnableSource(subscribe))
+          return false;
         item.disable = false;
         subscribe.disable = false;
         enqueueSubscribeFlags(subscribe, [{ id: item.id, disable: false }]);
@@ -281,6 +442,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
 
   const loadSyncData = async (data: SubscribeSource[]) => {
     subscribeSources.value = data;
+    await syncExclusiveSourceAccess(false);
     loadSubscribeSources();
   };
 
@@ -514,6 +676,11 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
           urls: [],
         },
         disable: oldSource?.disable || false,
+        permissions: normalizeMarketSourcePermissions(
+          marketSource.permissions?.length
+            ? marketSource.permissions
+            : oldSource?.permissions,
+        ),
       };
       const addedForRollback: { id: string; type: SourceType }[] = [];
       const abortImport = (message: string) => {
@@ -666,6 +833,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     });
     const t = displayStore.showToast();
     const failed: string[] = [];
+    const skippedExclusive: string[] = [];
 
     const update = async (source: SubscribeSource) => {
       const url = source.url;
@@ -682,6 +850,16 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
               source.detail.id,
             );
             if (marketSource) {
+              persistSourcePermissions(source, marketSource.permissions);
+              if (
+                !canAccessExclusiveSource(
+                  marketSource.permissions,
+                  getMembershipAccessSync(),
+                )
+              ) {
+                skippedExclusive.push(marketSource.name);
+                return;
+              }
               if (
                 !(
                   skipSameVersion
@@ -712,17 +890,24 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       await Promise.all(
         subscribeSources.value.map(item => limit(() => update(item))),
       );
-      loadSubscribeSources();
     }
     else {
       await update(source);
-      loadSubscribeSources();
     }
+    await enforceExclusiveSourceAccess(false);
+    loadSubscribeSources();
 
     if (failed.length > 0) {
       showNotify({
         type: 'warning',
         message: `${failed.length} 个订阅源更新失败`,
+        duration: 2000,
+      });
+    }
+    else if (skippedExclusive.length > 0) {
+      showNotify({
+        type: 'success',
+        message: `更新完成，已跳过 ${skippedExclusive.length} 个会员专属源`,
         duration: 2000,
       });
     }
@@ -854,26 +1039,56 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     }
   }
 
-  const updateSubscribeSourceFromServer = async () => {
-    if (_checkTs.value + 1000 * 60 * 60 * 24 > Date.now()) {
-      return;
+  const parseStoredSubscribeSources = (
+    raw: unknown,
+  ): SubscribeSource[] | null => {
+    if (raw == null || raw === '') {
+      return null;
     }
-    _checkTs.value = Date.now();
-    for (let i = 0; i < 20; i++) {
-      if (isEmpty.value) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+    try {
+      let value: unknown = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      // 兼容历史双重 JSON.stringify
+      if (typeof value === 'string') {
+        value = JSON.parse(value);
       }
-      else {
-        break;
-      }
+      return Array.isArray(value) ? (value as SubscribeSource[]) : null;
     }
-    if (!isEmpty.value) {
-      for (const source of subscribeSources.value) {
-        if (source.url === 'marketSource') {
-          await updateSubscribeSources(source, true);
-        }
-      }
+    catch {
+      return null;
     }
+  };
+
+  const hydrateSubscribeSources = async () => {
+    if (subscribeSources.value.length > 0) {
+      return true;
+    }
+    let raw: string | null = null;
+    try {
+      raw = await storage.getItem('subscribeSources');
+    }
+    catch (error) {
+      console.error('[subscribeSource] failed to read persisted sources', error);
+      return storage.loaded;
+    }
+    if (subscribeSources.value.length > 0) {
+      return true;
+    }
+    const persisted = parseStoredSubscribeSources(raw);
+    if (persisted) {
+      if (persisted.length > 0) {
+        subscribeSources.value = persisted;
+      }
+      return true;
+    }
+    // 磁盘有数据但尚未写入响应式变量时，再等一轮 hydrate，避免误判为空
+    if (raw) {
+      const deadline = Date.now() + 3000;
+      while (subscribeSources.value.length === 0 && Date.now() < deadline) {
+        await sleep(50);
+      }
+      return subscribeSources.value.length > 0 || storage.loaded;
+    }
+    return storage.loaded;
   };
 
   const onLoaded = async () => {
@@ -886,14 +1101,14 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     }
     loadingPromise = (async () => {
       isLoading.value = true;
-      const timeout = Date.now() + 8000;
-      while (!storage.loaded && Date.now() < timeout) {
-        await new Promise(r => setTimeout(r, 50));
-      }
+      const storageReady = await hydrateSubscribeSources();
+      await enforceExclusiveSourceAccess();
       // 仅注入已启用源到运行时；推荐内容由各列表页首次进入时按需加载
       loadSubscribeSources();
+      void syncExclusiveSourceAccess();
 
-      if (subscribeSources.value.length === 0) {
+      // 存储尚未就绪时不要把「尚未 hydrate」当成没有源
+      if (storageReady && subscribeSources.value.length === 0) {
         startupDialogActive.value = true;
         void showConfirmDialog({
           title: '提示',
@@ -940,6 +1155,22 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
       loadingPromise = null;
     });
     await loadingPromise;
+  };
+
+  const updateSubscribeSourceFromServer = async () => {
+    if (_checkTs.value + 1000 * 60 * 60 * 24 > Date.now()) {
+      return;
+    }
+    _checkTs.value = Date.now();
+    await onLoaded();
+    if (!isEmpty.value) {
+      for (const source of subscribeSources.value) {
+        if (source.url === 'marketSource') {
+          await updateSubscribeSources(source, true);
+        }
+      }
+    }
+    void syncExclusiveSourceAccess();
   };
 
   const waitForLoaded = async (
@@ -996,6 +1227,19 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     onLoaded();
   });
 
+  watch(
+    [
+      () => serverStore.isVip,
+      () => serverStore.isPro,
+      () => serverStore.userInfo,
+    ],
+    () => {
+      if (!isLoaded.value)
+        return;
+      void syncExclusiveSourceAccess();
+    },
+  );
+
   return {
     storage,
     subscribeSources,
@@ -1007,6 +1251,8 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     setSourceDisabled,
     setSubscribeItemDisabled,
     enableSubscribeItemById,
+    canEnableSubscribeSource,
+    assertCanEnableSource,
     clearSubscribeSources,
     syncData,
     loadSyncData,

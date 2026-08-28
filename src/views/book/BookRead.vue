@@ -252,22 +252,46 @@ const loadData = retryOnFalse({ onFailed: backStore.back })(async () => {
   return true;
 });
 
-/** 从书架/历史取与路由 chapterId 匹配的 lastReadChapter，供目录未就绪时兜底 */
-function resolveLastReadChapterFallback(): BookChapter | undefined {
+/**
+ * 路由 chapterId(.*) 会把末尾的 /true|/false 吞进 id。
+ * 兼容历史错误 bookPath，以及 props 里带脏后缀的情况。
+ */
+function resolveChapterIdCandidates(rawId: string): string[] {
+  const ids = [rawId];
+  if (rawId.endsWith('/false') || rawId.endsWith('/true')) {
+    ids.push(rawId.replace(/\/(false|true)$/, ''));
+  }
+  return ids;
+}
+
+function findChapterByRouteId(): BookChapter | undefined {
+  const chapters = book.value?.chapters;
+  const candidates = resolveChapterIdCandidates(chapterId);
+  if (chapters?.length) {
+    for (const id of candidates) {
+      const hit = chapters.find(c => c.id === id);
+      if (hit)
+        return hit;
+    }
+  }
+  // lastRead / 当前已加载章节也按候选 id 匹配
+  for (const id of candidates) {
+    if (readingChapter.value?.id === id)
+      return readingChapter.value;
+  }
   for (const shelf of shelfStore.bookShelf) {
     for (const item of shelf.books) {
-      if (item.book.id === bookId && item.lastReadChapter?.id === chapterId) {
+      if (item.book.id !== bookId || !item.lastReadChapter)
+        continue;
+      if (candidates.includes(item.lastReadChapter.id))
         return item.lastReadChapter;
-      }
     }
   }
   for (const history of shelfStore.bookHistory) {
-    if (
-      history.book.id === bookId
-      && history.lastReadChapter?.id === chapterId
-    ) {
+    if (history.book.id !== bookId || !history.lastReadChapter)
+      continue;
+    if (candidates.includes(history.lastReadChapter.id))
       return history.lastReadChapter;
-    }
   }
   return undefined;
 }
@@ -357,15 +381,18 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
     return;
   }
   // 如果当前已经在读这一章，且由于路由参数微调触发（URL 跟随滚动），则静默跳过
-  if (!refresh && !chapter && readingChapter.value?.id === chapterId) {
+  if (
+    !refresh
+    && !chapter
+    && resolveChapterIdCandidates(chapterId).includes(
+      readingChapter.value?.id || '',
+    )
+  ) {
     return;
   }
 
   if (!chapter) {
-    chapter = book.value.chapters?.find(c => c.id === chapterId);
-  }
-  if (!chapter) {
-    chapter = resolveLastReadChapterFallback();
+    chapter = findChapterByRouteId();
   }
 
   const chapterStore = useBookChapterStore();
@@ -421,11 +448,13 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
   }
 
   if (!chapter) {
-    chapter = book.value.chapters?.find(c => c.id === chapterId);
+    chapter = findChapterByRouteId();
   }
   if (!chapter) {
     showToast('章节不存在');
-    backStore.back();
+    // 听书后台切章时组件可能已不在阅读页，勿误触发返回把 bookPath 冲掉
+    if (route.name === 'BookRead' && !ttsStore.isReading)
+      backStore.back();
     return;
   }
 
@@ -448,6 +477,52 @@ async function loadChapter(chapter?: BookChapter, refresh = false) {
   await loadAdjacentChapters(chapter);
 }
 
+/** 同步书架 tab 记忆路径，不实际跳转（听书在其他模块后台切章时用） */
+function syncBookReadTabPath(params: {
+  chapterId: string;
+  bookId?: string;
+  sourceId?: string;
+  isPrev?: string;
+}) {
+  if (!params.bookId || !params.sourceId)
+    return;
+  const resolved = router.resolve({
+    name: 'BookRead',
+    params: {
+      chapterId: params.chapterId,
+      bookId: params.bookId,
+      sourceId: params.sourceId,
+      isPrev: params.isPrev || '',
+    },
+  });
+  displayStore.bookPath = resolved.fullPath;
+}
+
+/** 切章：在阅读页走路由；在其他模块则原地加载并只更新 bookPath */
+function navigateToChapter(
+  chapter: BookChapter,
+  isPrev = false,
+) {
+  ttsStore.invalidatePlay();
+  ttsStore.resetReadingPage();
+  // isPrev 仅在为 true 时写入 URL。写成 'false' 会被 chapterId(.*) 吞掉，
+  // 导致切回时 chapterId 变成 `id/false` →「章节不存在」
+  const params = {
+    chapterId: chapter.id,
+    bookId: book.value?.id,
+    sourceId: book.value?.sourceId,
+    isPrev: isPrev ? 'true' : '',
+  };
+  if (route.name === 'BookRead') {
+    router.replace({ params });
+    return;
+  }
+  // 勿 replace 到 BookRead 再跳回：会触发 loadData 清空内存中的章节列表，
+  // 书架副本又不带 chapters，易误报「章节不存在」并 back 到列表
+  syncBookReadTabPath(params);
+  void loadChapter(chapter);
+}
+
 function prevChapter(toLast: boolean = false) {
   const index = chapterList.value.findIndex(
     chapter => chapter.id === readingChapter.value?.id,
@@ -456,37 +531,12 @@ function prevChapter(toLast: boolean = false) {
     return;
   }
   if (index > 0) {
+    const target = chapterList.value[index - 1];
     if (!toLast) {
-      chapterList.value[index - 1].readingPage = undefined;
-      chapterList.value[index - 1].readingParagraph = undefined;
+      target.readingPage = undefined;
+      target.readingParagraph = undefined;
     }
-    ttsStore.resetReadingPage();
-    if (route.name === 'BookRead') {
-      router.replace({
-        params: {
-          chapterId: chapterList.value[index - 1].id,
-          bookId: book.value?.id,
-          sourceId: book.value?.sourceId,
-          isPrev: toLast ? 'true' : '',
-        },
-      });
-    }
-    else {
-      const currPath = route.path;
-      router
-        .replace({
-          name: 'BookRead',
-          params: {
-            chapterId: chapterList.value[index - 1].id,
-            bookId: book.value?.id,
-            sourceId: book.value?.sourceId,
-            isPrev: toLast ? 'true' : '',
-          },
-        })
-        .then(() => {
-          router.replace(currPath);
-        });
-    }
+    navigateToChapter(target, toLast);
   }
   else {
     showToast('没有上一章了');
@@ -501,34 +551,10 @@ function nextChapter() {
     return;
   }
   if (index < chapterList.value.length - 1) {
-    ttsStore.resetReadingPage();
-    chapterList.value[index + 1].readingPage = undefined;
-    chapterList.value[index + 1].readingParagraph = undefined;
-    const newBookReadParams = {
-      chapterId: chapterList.value[index + 1].id,
-      bookId: book.value?.id,
-      sourceId: book.value?.sourceId,
-      isPrev: 'false',
-    };
-    if (route.name === 'BookRead') {
-      router.replace({
-        params: newBookReadParams,
-      });
-    }
-    else {
-      const currPath = {
-        name: route.name,
-        params: route.params,
-      };
-      router
-        .replace({
-          name: 'BookRead',
-          params: newBookReadParams,
-        })
-        .then(() => {
-          router.replace(currPath);
-        });
-    }
+    const target = chapterList.value[index + 1];
+    target.readingPage = undefined;
+    target.readingParagraph = undefined;
+    navigateToChapter(target, false);
   }
   else {
     showToast('没有下一章了');
@@ -597,8 +623,12 @@ async function loadChapterContent(chapter: BookChapter): Promise<string> {
   return content;
 }
 function toChapter(chapter: BookChapter) {
+  if (chapter.id === readingChapter.value?.id)
+    return;
   chapter.readingPage = undefined;
   chapter.readingParagraph = undefined;
+  ttsStore.invalidatePlay();
+  ttsStore.resetReadingPage();
 
   router.replace({
     // name: 'BookRead',
@@ -631,8 +661,16 @@ function updateReadingPage(page: number) {
 
 watch(
   [() => chapterId, () => bookId, () => sourceId],
-  async () => {
-    await loadData();
+  async ([, newBookId, newSourceId], old) => {
+    // 同书仅切章时不要 loadData：会清空内存 chapters，书架副本又不带目录
+    const sameBook
+      = !!old
+        && newBookId === old[1]
+        && newSourceId === old[2]
+        && !!book.value
+        && book.value.id === newBookId;
+    if (!sameBook)
+      await loadData();
     await loadChapter();
   },
   { immediate: true },

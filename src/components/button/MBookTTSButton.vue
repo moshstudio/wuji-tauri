@@ -3,7 +3,7 @@ import type { ReaderResult } from '@/utils/reader/types';
 import { Icon } from '@iconify/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import MembershipFeatureWrap from '@/components/badge/MembershipFeatureWrap.vue';
-import { useDisplayStore, useServerStore, useTTSStore } from '@/store';
+import { useServerStore, useTTSStore } from '@/store';
 import { showVipDialog } from '@/utils/vip';
 import ResponsiveGrid2 from '../grid/ResponsiveGrid2.vue';
 
@@ -14,23 +14,42 @@ const props = defineProps<{
 
 const ttsStore = useTTSStore();
 const serverStore = useServerStore();
-const displayStore = useDisplayStore();
 const showDialog = ref(false);
+const showVoiceSheet = ref(false);
 
-function onPlay() {
-  if (ttsStore.selectedVoice.feature) {
-    if (!serverStore.hasFeature(ttsStore.selectedVoice.feature)) {
-      showVipDialog('您选择的语音为会员专属哦\n是否立即开通会员?');
-      return;
-    }
-  }
-  if (ttsStore.autoStopOptions.enable) {
-    ttsStore.startAutoStopTimer();
-  }
-  props.onPlay();
+const ratePresets = [0.75, 1, 1.25, 1.5, 2] as const;
+const timerPresets = [
+  { label: '关闭', minutes: 0 },
+  { label: '15分钟', minutes: 15 },
+  { label: '30分钟', minutes: 30 },
+  { label: '45分钟', minutes: 45 },
+  { label: '60分钟', minutes: 60 },
+  { label: '90分钟', minutes: 90 },
+  { label: '2小时', minutes: 120 },
+  { label: '3小时', minutes: 180 },
+] as const;
+
+function formatRate(rate: number) {
+  return `${rate}×`;
 }
-function onShowDialog() {
-  showDialog.value = true;
+
+function setPlaybackRate(rate: number) {
+  ttsStore.playbackRate = rate;
+}
+
+function isTimerSelected(minutes: number) {
+  if (minutes === 0)
+    return !ttsStore.autoStopOptions.enable;
+  return ttsStore.autoStopOptions.enable && ttsStore.autoStopOptions.duration === minutes;
+}
+
+function setTimer(minutes: number) {
+  if (minutes === 0) {
+    ttsStore.autoStopOptions.enable = false;
+    return;
+  }
+  ttsStore.autoStopOptions.enable = true;
+  ttsStore.autoStopOptions.duration = minutes;
 }
 
 function selectVoice(voice: (typeof ttsStore.voices)[number]) {
@@ -39,11 +58,24 @@ function selectVoice(voice: (typeof ttsStore.voices)[number]) {
     return;
   }
   ttsStore.selectedVoice = voice;
-  displayStore.showVoiceSelectSheet = false;
+  showVoiceSheet.value = false;
 }
+
+function onStart() {
+  if (ttsStore.selectedVoice.feature) {
+    if (!serverStore.hasFeature(ttsStore.selectedVoice.feature)) {
+      showVipDialog('您选择的语音为会员专属哦\n是否立即开通会员?');
+      return;
+    }
+  }
+  if (ttsStore.autoStopOptions.enable)
+    ttsStore.startAutoStopTimer();
+  props.onPlay();
+  showDialog.value = false;
+}
+
 const now = ref(Date.now());
 
-// 每秒更新时间戳
 onMounted(() => {
   const timer = setInterval(() => {
     now.value = Date.now();
@@ -82,7 +114,7 @@ const remainingTime = computed(() => {
           ttsStore.stop();
         }
         else {
-          onShowDialog();
+          showDialog = true;
         }
       }
     "
@@ -113,113 +145,286 @@ const remainingTime = computed(() => {
 
   <van-dialog
     v-model:show="showDialog"
+    width="min(90vw, 360px)"
+    class="wuji-tts-dialog"
     close-on-click-overlay
+    :show-confirm-button="false"
     teleport="body"
-    title="听书设置"
-    class="select-none transition"
-    :confirm-button-text="ttsStore.isReading ? '停止' : '开始听书'"
-    @confirm="
-      () => {
-        if (ttsStore.isReading) {
-          ttsStore.stop();
-        }
-        else {
-          onPlay();
-        }
-      }
-    "
   >
-    <van-cell
-      title="语音"
-      :value="ttsStore.selectedVoice.ChineseName"
-      is-link
-      @click="displayStore.showVoiceSelectSheet = true"
-    />
-    <van-cell
-      title="语速"
-      :value="`${ttsStore.playbackRate}x`"
-      :border="false"
-    />
-    <div class="px-[16px]">
-      <van-slider
-        v-model="ttsStore.playbackRate"
-        :min="0.1"
-        :max="3.0"
-        :step="0.1"
-        button-size="12"
-        @change="
-          (v) => {
-            ttsStore.playbackRate = v;
-          }
-        "
-      />
-      <van-divider />
-    </div>
+    <div class="tts-panel">
+      <header class="tts-header">
+        <div>
+          <h3>听书设置</h3>
+          <p>选择适合你的朗读方式</p>
+        </div>
+        <button type="button" class="tts-close" aria-label="关闭" @click="showDialog = false">
+          <Icon icon="material-symbols:close-rounded" />
+        </button>
+      </header>
 
-    <van-cell title="定时关闭" :border="false">
-      <template #value>
-        <van-switch v-model="ttsStore.autoStopOptions.enable" size="22" />
-      </template>
-    </van-cell>
-    <div v-if="ttsStore.autoStopOptions.enable" class="px-[16px]">
-      <div class="flex flex-nowrap items-center gap-3">
-        <van-slider
-          v-model="ttsStore.autoStopOptions.duration"
-          :min="1"
-          :max="180"
-          :step="1"
-          button-size="12"
-          @change="
-            (v) => {
-              ttsStore.autoStopOptions.duration = v;
-            }
-          "
-        />
-        <span
-          class="min-w-[45px] select-none text-nowrap text-xs text-[var(--van-text-color)]"
-        >
-          {{ ttsStore.autoStopOptions.duration }}分钟
+      <button type="button" class="tts-setting-row" @click="showVoiceSheet = true">
+        <span class="tts-setting-icon">
+          <Icon icon="solar:user-speak-rounded-linear" />
         </span>
-      </div>
-      <van-divider />
+        <span class="tts-setting-copy">
+          <span class="tts-setting-label">朗读声音</span>
+          <span class="tts-setting-value">
+            {{ ttsStore.selectedVoice.ChineseName }}
+            · {{ ttsStore.selectedVoice.Gender === 'Female' ? '女声' : '男声' }}
+          </span>
+        </span>
+        <Icon icon="material-symbols:chevron-right-rounded" class="tts-chevron" />
+      </button>
+
+      <section class="tts-section">
+        <div class="tts-section-head">
+          <span>语速</span>
+          <span>{{ formatRate(ttsStore.playbackRate) }}</span>
+        </div>
+        <div class="tts-segments">
+          <button
+            v-for="rate in ratePresets"
+            :key="rate"
+            type="button"
+            :class="{ active: ttsStore.playbackRate === rate }"
+            @click="setPlaybackRate(rate)"
+          >
+            {{ rate }}×
+          </button>
+        </div>
+      </section>
+
+      <section class="tts-section">
+        <div class="tts-section-head">
+          <span>定时关闭</span>
+          <span>
+            {{
+              ttsStore.autoStopOptions.enable
+                ? `${ttsStore.autoStopOptions.duration}分钟后`
+                : '不启用'
+            }}
+          </span>
+        </div>
+        <div class="tts-segments timer">
+          <button
+            v-for="item in timerPresets"
+            :key="item.minutes"
+            type="button"
+            :class="{ active: isTimerSelected(item.minutes) }"
+            @click="setTimer(item.minutes)"
+          >
+            {{ item.label }}
+          </button>
+        </div>
+      </section>
+
+      <button
+        type="button"
+        class="tts-start"
+        @click="onStart"
+      >
+        <Icon icon="solar:play-bold" />
+        开始听书
+      </button>
     </div>
   </van-dialog>
+
   <van-action-sheet
-    v-model:show="displayStore.showVoiceSelectSheet"
+    v-model:show="showVoiceSheet"
+    title="选择声音"
     teleport="body"
-    title="选择语音"
   >
     <ResponsiveGrid2
-      class="px-8 py-4"
+      class="max-h-[60vh] overflow-y-auto px-8 py-4"
       :gap="4"
       :min-width="50"
       :max-width="100"
     >
-      <template v-for="voice in ttsStore.voices" :key="voice.ChineseName">
-        <MembershipFeatureWrap
-          :feature="voice.feature"
-          class="shrink-0"
+      <MembershipFeatureWrap
+        v-for="voice in ttsStore.voices"
+        :key="voice.ChineseName"
+        :feature="voice.feature"
+        class="shrink-0"
+      >
+        <button
+          type="button"
+          class="flex w-full cursor-pointer items-center justify-center rounded-lg border-2 text-center text-sm text-[var(--van-text-color)]"
+          :class="[
+            voice.ChineseName === ttsStore.selectedVoice.ChineseName
+              ? 'border-[var(--van-primary-color)]'
+              : 'border-[var(--van-border-color)]',
+          ]"
+          @click="selectVoice(voice)"
         >
-          <div
-            class="flex w-full cursor-pointer items-center justify-center rounded-lg border-2 text-center text-sm text-[--van-text-color]"
-            :class="[
-              voice.ChineseName === ttsStore.selectedVoice.ChineseName
-                ? 'border-[var(--van-primary-color)]'
-                : 'border-[var(--van-border-color)]',
-            ]"
-            @click="selectVoice(voice)"
-          >
-            <div class="flex flex-col items-center gap-1 p-1">
-              <p>{{ voice.ChineseName }}</p>
-              <p class="text-xs text-[var(--van-text-color-2)]">
-                {{ voice.Gender === 'Female' ? '女声' : '男声' }}
-              </p>
-            </div>
-          </div>
-        </MembershipFeatureWrap>
-      </template>
+          <span class="flex flex-col items-center gap-1 p-1">
+            <span>{{ voice.ChineseName }}</span>
+            <span class="text-xs text-[var(--van-text-color-2)]">
+              {{ voice.Gender === 'Female' ? '女声' : '男声' }}
+            </span>
+          </span>
+        </button>
+      </MembershipFeatureWrap>
     </ResponsiveGrid2>
   </van-action-sheet>
 </template>
 
-<style scoped lang="less"></style>
+<style lang="less">
+.wuji-tts-dialog.van-dialog {
+  overflow: hidden;
+  border-radius: 20px;
+}
+
+.tts-panel {
+  padding: 22px;
+}
+
+.tts-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.tts-header h3 {
+  color: var(--van-text-color);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.tts-header p {
+  margin-top: 3px;
+  color: var(--van-text-color-2);
+  font-size: 12px;
+}
+
+.tts-close {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: var(--van-text-color-2);
+  font-size: 20px;
+  background: var(--van-background-2);
+  border-radius: 50%;
+}
+
+.tts-setting-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding: 14px;
+  text-align: left;
+  background: var(--van-background-2);
+  border-radius: 14px;
+}
+
+.tts-setting-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  place-items: center;
+  color: var(--van-primary-color);
+  font-size: 21px;
+  background: var(--van-background);
+  border-radius: 12px;
+}
+
+.tts-setting-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 12px;
+}
+
+.tts-setting-label {
+  color: var(--van-text-color);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.tts-setting-value {
+  overflow: hidden;
+  color: var(--van-text-color-2);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tts-chevron {
+  flex: none;
+  margin-left: 8px;
+  color: var(--van-text-color-3);
+  font-size: 21px;
+}
+
+.tts-section {
+  margin-top: 22px;
+}
+
+.tts-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: var(--van-text-color);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tts-section-head span:last-child {
+  color: var(--van-text-color-2);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.tts-segments {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.tts-segments.timer {
+  grid-template-columns: repeat(4, 1fr);
+  row-gap: 7px;
+}
+
+.tts-segments button {
+  height: 34px;
+  color: var(--van-text-color-2);
+  font-size: 12px;
+  background: var(--van-background-2);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition: 0.15s ease;
+}
+
+.tts-segments button.active {
+  color: var(--van-primary-color);
+  background: var(--van-background);
+  border-color: var(--van-primary-color);
+}
+
+.tts-start {
+  display: flex;
+  width: 100%;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 26px;
+  color: white;
+  font-size: 15px;
+  font-weight: 500;
+  background: var(--van-primary-color);
+  border-radius: 12px;
+}
+
+.tts-start:active {
+  opacity: 0.82;
+}
+
+</style>

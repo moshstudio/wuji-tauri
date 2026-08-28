@@ -27,11 +27,16 @@ function isVisibleElement(el: HTMLElement) {
     && style.opacity !== '0';
 }
 
+const ignorePopupClasses = ['van-toast', 'van-notify'];
+
 function getVisiblePopups() {
-  // Toast 也是 Popup（role=dialog），但不应拦截返回手势
+  // Toast / Notify 也是 Popup（role=dialog），但不应拦截返回手势
   return Array.from(
     document.querySelectorAll<HTMLElement>('.van-popup[role="dialog"]'),
-  ).filter(el => isVisibleElement(el) && !el.classList.contains('van-toast'));
+  ).filter(
+    el => isVisibleElement(el)
+      && !ignorePopupClasses.some(cls => el.classList.contains(cls)),
+  );
 }
 
 function getVisibleOverlays() {

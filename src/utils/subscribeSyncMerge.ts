@@ -27,6 +27,7 @@ export interface SubscribeTomb {
 interface SubscribeLike {
   url?: string;
   disable?: boolean;
+  permissions?: string[];
   contentUpdatedAt?: number;
   flagsUpdatedAt?: number;
   _sync?: SubscribeSyncMeta;
@@ -175,6 +176,8 @@ export function applySubscribeUpsert(params: {
       = Number(meta.contentUpdatedAt || incomingClean.contentUpdatedAt || incomingTs);
     incomingClean.flagsUpdatedAt
       = Number(meta.flagsUpdatedAt || incomingClean.flagsUpdatedAt || local.flagsUpdatedAt);
+    if (!incomingClean.permissions?.length && local.permissions?.length)
+      incomingClean.permissions = local.permissions;
     return { source: incomingClean, tomb: undefined };
   }
 

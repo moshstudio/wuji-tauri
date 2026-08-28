@@ -178,7 +178,8 @@ export function useBookSwitchSource() {
         chapterId: chapter.id,
         bookId: newBookItem.id,
         sourceId: newBookItem.sourceId,
-        isPrev: 'false',
+        // 勿写 'false'：会被 chapterId(.*) 吞成 id/false
+        isPrev: '',
       },
     });
     return true;

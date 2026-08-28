@@ -89,6 +89,11 @@ export async function ensureSource<K extends SourceKind>(
   const label = SOURCE_LABEL[kind];
 
   if (isDisabled && found) {
+    const subscribeStore = useSubscribeSourceStore();
+    if (!subscribeStore.canEnableSubscribeSource(found.subscribe)) {
+      subscribeStore.assertCanEnableSource(found.subscribe);
+      return { ok: false, action: 'unavailable' };
+    }
     try {
       await showConfirmDialog({
         title: '源未启用',

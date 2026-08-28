@@ -95,11 +95,32 @@ const chapterPagedContent = computed<ReaderResult>(() => {
 
 // 新增 watch 来处理副作用逻辑
 watch(chapterPagedContent, (newContent) => {
+  // 越界检查：前进切章时回到首页，避免旧章大页码被钳到新章末页并写入 readingPage
+  if (newContent.length > 0) {
+    if (chapterPagedIndex.value >= newContent.length) {
+      chapterPagedIndex.value
+        = (checkIsPrev.value || checkTTS.value) && !props.isPrev
+          ? 0
+          : newContent.length - 1;
+    }
+    else if (chapterPagedIndex.value < 0) {
+      chapterPagedIndex.value = 0;
+    }
+  }
+
+  const restartTTS = checkTTS.value && newContent.length > 0 && ttsStore.isReading;
+  if (checkTTS.value && newContent.length > 0)
+    checkTTS.value = false;
+
   if (checkIsPrev.value && newContent.length > 0) {
     checkIsPrev.value = false;
     nextTick(() => {
       if (props.isPrev) {
         chapterPagedIndex.value = newContent.length - 1;
+      }
+      else if (restartTTS) {
+        // 听书自动切章：始终从本章首页开始，避免沿用被污染的 readingPage
+        chapterPagedIndex.value = 0;
       }
       else if (isNewOpen.value) {
         chapterPagedIndex.value = props.chapter?.readingPage || 0;
@@ -108,28 +129,14 @@ watch(chapterPagedContent, (newContent) => {
         chapterPagedIndex.value = 0;
       }
       isNewOpen.value = false;
+      if (restartTTS)
+        seekTTS();
     });
+    return;
   }
 
-  // 越界检查
-  if (newContent.length > 0) {
-    if (chapterPagedIndex.value >= newContent.length) {
-      chapterPagedIndex.value = newContent.length - 1;
-    }
-    else if (chapterPagedIndex.value < 0) {
-      chapterPagedIndex.value = 0;
-    }
-  }
-
-  if (checkTTS.value && newContent.length > 0) {
-    checkTTS.value = false;
-    nextTick(() => {
-      if (ttsStore.isReading) {
-        ttsStore.stop();
-        playTTS();
-      }
-    });
-  }
+  if (restartTTS)
+    nextTick(() => seekTTS());
 });
 
 const prevChapterPagedContent = computed<ReaderResult>(() => {
@@ -210,10 +217,8 @@ useElementResize(
       height,
     };
     await nextTick();
-    if (ttsStore.isReading) {
-      ttsStore.stop();
-      playTTS();
-    }
+    if (ttsStore.isReading)
+      seekCurrentPage();
   }, 500),
 );
 
@@ -230,140 +235,227 @@ watch(showTabBar, async () => {
     };
     await nextTick();
     if (prevSize.width !== width || prevSize.height !== height) {
-      if (ttsStore.isReading) {
-        ttsStore.stop();
-        playTTS();
-      }
+      if (ttsStore.isReading)
+        seekCurrentPage();
     }
   }
 });
 
-function playTTS() {
-  if (!chapterPagedContent.value.length) {
-    return;
-  }
-  const toNext = () => {
-    if (chapterPagedIndex.value === chapterPagedContent.value!.length - 1) {
-      // 去下一章
-      nextChapter();
-    }
-    else {
-      // 去下一页
-      chapterPagedIndex.value += 1;
-      playTTS();
-    }
-  };
-  const playing = ttsStore.slideReadingContent;
-  const currPageLines = chapterPagedContent.value[chapterPagedIndex.value];
-  if (!currPageLines.length) {
-    // 当前页面为空，去下一页或下一章
-    toNext();
-    return;
-  }
-  let target: LineData[];
-  if (!playing?.length) {
-    // 没有历史记录，从头开始阅读
+function allPageLines() {
+  return _.flatten(chapterPagedContent.value);
+}
 
-    target = _.flatten(chapterPagedContent.value).filter(
-      line => line.pIndex === currPageLines[0].pIndex,
-    );
+function linesOfPIndex(pIndex: number): LineData[] {
+  return allPageLines().filter(line => line.pIndex === pIndex);
+}
+
+function linesOfPIndexOnPage(pageIndex: number, pIndex: number): LineData[] {
+  return (chapterPagedContent.value[pageIndex] || []).filter(
+    line => line.pIndex === pIndex,
+  );
+}
+
+function pageIndexOfPIndex(pIndex: number, fromPage = 0): number {
+  for (let i = fromPage; i < chapterPagedContent.value.length; i++) {
+    if (chapterPagedContent.value[i]?.some(line => line.pIndex === pIndex))
+      return i;
   }
-  else {
-    const currPIndex = playing[0].pIndex;
-    if (
-      currPIndex < currPageLines[0].pIndex
-      || currPIndex > currPageLines[currPageLines.length - 1].pIndex
-    ) {
-      // 从头开始读
-      target = _.flatten(chapterPagedContent.value).filter(
-        line => line.pIndex === currPageLines[0].pIndex,
+  return -1;
+}
+
+/** 跨页段落：各页对应的字符区间（相对整段 join 文本） */
+function pageCharRangesOfPIndex(pIndex: number) {
+  const ranges: { pageIndex: number; charStart: number; charEnd: number }[]
+    = [];
+  let offset = 0;
+  for (let pageIndex = 0; pageIndex < chapterPagedContent.value.length; pageIndex++) {
+    const lines = linesOfPIndexOnPage(pageIndex, pIndex);
+    if (!lines.length)
+      continue;
+    const len = lines.map(line => line.text).join('').length;
+    ranges.push({
+      pageIndex,
+      charStart: offset,
+      charEnd: offset + len,
+    });
+    offset += len;
+  }
+  return ranges;
+}
+
+function syncPageBySpeakingChar(pIndex: number, charIndex: number) {
+  const ranges = pageCharRangesOfPIndex(pIndex);
+  if (!ranges.length)
+    return;
+  const hit
+    = ranges.find(
+      range => charIndex >= range.charStart && charIndex < range.charEnd,
+    )
+    || (charIndex >= ranges[ranges.length - 1].charEnd
+      ? ranges[ranges.length - 1]
+      : undefined);
+  if (hit && hit.pageIndex !== chapterPagedIndex.value)
+    chapterPagedIndex.value = hit.pageIndex;
+}
+
+function preloadAround(pIndex: number) {
+  for (const offset of [1, 2]) {
+    const lines = linesOfPIndex(pIndex + offset);
+    if (lines.length) {
+      ttsStore.generateVoice(
+        lines,
+        ttsStore.selectedVoice,
+        ttsStore.playbackRate,
       );
     }
-    else if (currPIndex < currPageLines[currPageLines.length - 1].pIndex) {
-      // 还在当前页面中
-      target = _.flatten(chapterPagedContent.value).filter(
-        line => line.pIndex === playing[0].pIndex + 1,
-      );
-    }
-    else {
-      // 需要去下一页或下一章
-      toNext();
-      return;
-    }
   }
-  if (!target?.length) {
-    toNext();
+}
+
+function advanceFrom(pIndex: number) {
+  if (linesOfPIndex(pIndex + 1).length) {
+    playPIndex(pIndex + 1);
     return;
   }
+  nextChapter();
+}
+
+/**
+ * 整段连续播放；跨页时靠词边界 speakingCharIndex 自动跟页。
+ * @param seekCharIndex 从段落中途开始（用户停在续段页时）
+ */
+function playPIndex(pIndex: number, seekCharIndex = 0) {
+  const target = linesOfPIndex(pIndex);
+  if (!target.length) {
+    advanceFrom(pIndex);
+    return;
+  }
+
+  const ranges = pageCharRangesOfPIndex(pIndex);
+  const startPage
+    = ranges.find(
+      range =>
+        seekCharIndex >= range.charStart && seekCharIndex < range.charEnd,
+    )?.pageIndex
+    ?? ranges[0]?.pageIndex
+    ?? pageIndexOfPIndex(pIndex);
+  if (startPage !== -1 && startPage !== chapterPagedIndex.value)
+    chapterPagedIndex.value = startPage;
+
   ttsStore.playVoice(
     target,
     ttsStore.selectedVoice,
     ttsStore.playbackRate,
-    (_event) => {
-      if (ttsStore.isReading) {
-        playTTS();
-      }
+    () => {
+      if (ttsStore.isReading)
+        advanceFrom(pIndex);
     },
+    seekCharIndex,
   );
-  // 缓存后两段内容
-  const forward1 = _.flatten(chapterPagedContent.value).filter(
-    line => line.pIndex === target[0].pIndex + 1,
-  );
-  if (forward1.length) {
-    ttsStore.generateVoice(
-      forward1,
-      ttsStore.selectedVoice,
-      ttsStore.playbackRate,
-    );
-  }
-  const forward2 = _.flatten(chapterPagedContent.value).filter(
-    line => line.pIndex === target[0].pIndex + 2,
-  );
-  if (forward2.length) {
-    ttsStore.generateVoice(
-      forward2,
-      ttsStore.selectedVoice,
-      ttsStore.playbackRate,
-    );
-  }
+  preloadAround(pIndex);
 }
+
+/** 从指定段或当前页合适位置开始读 */
+function seekTTS(pIndex?: number) {
+  if (!chapterPagedContent.value.length)
+    return;
+  const pageIndex = chapterPagedIndex.value;
+  const pageLines = chapterPagedContent.value[pageIndex];
+  if (!pageLines?.length) {
+    nextChapter();
+    return;
+  }
+
+  // 从本页顶部开始：标题没有 pFirst（排版里 pFirst 仅用于正文段首），
+  // 不能用 find(pFirst)，否则会跳过章节标题。
+  const startP
+    = pIndex !== undefined && pageLines.some(line => line.pIndex === pIndex)
+      ? pIndex
+      : pageLines[0]?.pIndex;
+
+  if (startP === undefined) {
+    nextChapter();
+    return;
+  }
+
+  // 本页是跨页续段：从本页字符起点 seek，避免从头读并跳回上页
+  const ranges = pageCharRangesOfPIndex(startP);
+  const range = ranges.find(item => item.pageIndex === pageIndex);
+  const startsHere = pageLines.some(
+    line =>
+      line.pIndex === startP && (line.pFirst || line.isTitle),
+  );
+  const seekChar
+    = !startsHere && range && range.charStart > 0 ? range.charStart : 0;
+
+  playPIndex(startP, seekChar);
+}
+
+function seekCurrentPage() {
+  const playing = ttsStore.slideReadingContent?.[0]?.pIndex;
+  const pageLines = chapterPagedContent.value[chapterPagedIndex.value];
+  if (
+    playing !== undefined
+    && pageLines?.some(line => line.pIndex === playing)
+  ) {
+    seekTTS(playing);
+    return;
+  }
+  seekTTS();
+}
+
+function playTTS() {
+  seekTTS();
+}
+
+// 词边界跟页：朗读字符进入下一页区间时自动翻页
+watch(
+  () => ttsStore.speakingCharIndex,
+  (charIndex) => {
+    if (!ttsStore.isReading || charIndex < 0)
+      return;
+    const pIndex = ttsStore.slideReadingContent?.[0]?.pIndex;
+    if (pIndex === undefined)
+      return;
+    syncPageBySpeakingChar(pIndex, charIndex);
+  },
+);
 
 watch(
   () => ttsStore.slideReadingContent,
   (newVal) => {
-    if (newVal?.[0]?.pIndex !== undefined && ttsStore.isReading) {
-      const pIndex = newVal[0].pIndex;
-      const pages = chapterPagedContent.value;
-      if (!pages || pages.length === 0)
-        return;
-
-      const targetPageIndex = pages.findIndex(page =>
-        page.some(line => line.pIndex === pIndex),
-      );
-
-      if (
-        targetPageIndex !== -1
-        && targetPageIndex !== chapterPagedIndex.value
-      ) {
-        chapterPagedIndex.value = targetPageIndex;
-      }
-    }
+    // 兜底：新段落开始时跳到该段首页（无词边界时也能跟）
+    if (!newVal?.[0] || !ttsStore.isReading)
+      return;
+    const pIndex = newVal[0].pIndex;
+    if (linesOfPIndexOnPage(chapterPagedIndex.value, pIndex).length)
+      return;
+    const targetPage = pageIndexOfPIndex(pIndex);
+    if (targetPage !== -1 && targetPage !== chapterPagedIndex.value)
+      chapterPagedIndex.value = targetPage;
   },
-  { deep: true, immediate: true },
+  { deep: true },
 );
 
 watch(
-  () => props.chapter,
-  (c) => {
-    if (c) {
-      checkIsPrev.value = true;
-      checkTTS.value = true;
-      // 切换章节时，尽早重置页码，避免由于 Swiper 状态滞后或未销毁导致的页码错误
-      if (!props.isPrev) {
-        chapterPagedIndex.value = c.readingPage || 0;
-      }
+  () => props.chapter?.id,
+  (id, prevId) => {
+    if (!id)
+      return;
+    checkIsPrev.value = true;
+    checkTTS.value = true;
+    // sync：赶在 chapterPagedContent watch 之前重置页码，避免旧章大页码被钳到新章末页
+    if (props.isPrev) {
+      // 具体末页等分页结果出来后再定
+      return;
     }
+    // 自动切到下一章时忽略可能被污染的 readingPage，始终从首页听/读
+    if (prevId && id !== prevId) {
+      chapterPagedIndex.value = 0;
+      return;
+    }
+    chapterPagedIndex.value = props.chapter?.readingPage || 0;
   },
+  { flush: 'sync' },
 );
 watch(chapterPagedIndex, (page) => {
   if (page !== undefined && page >= 0 && props.chapter) {

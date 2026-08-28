@@ -26,6 +26,7 @@ import TestSongExtension from '@/test/song/test';
 import TestVideoExtension from '@/test/video/test';
 import { SourceType } from '@/types';
 import { tryCatchProxy } from '@/utils';
+import { showVipDialog } from '@/utils/vip';
 import { useServerStore } from './serverStore';
 
 export const useExtensionStore = defineStore('extension', () => {
@@ -75,7 +76,7 @@ export const useExtensionStore = defineStore('extension', () => {
         else {
           await serverStore.sendRequest(
             item.url,
-            {},
+            { silent: true },
             async (response) => {
               const json = await response.json();
               item.code = json.code;
@@ -89,11 +90,14 @@ export const useExtensionStore = defineStore('extension', () => {
                   showFailToast('请先登录');
                   return null;
                 }
-                const error = await response.json();
-                console.log(error);
-                showFailToast({
-                  message: error.message,
-                });
+                const error = await response.json().catch(() => ({} as { message?: string }));
+                const message = error.message || `加载 ${item.name} 失败`;
+                if (typeof message === 'string' && message.includes('专属源')) {
+                  void showVipDialog(message, '专属源');
+                }
+                else {
+                  showFailToast({ message });
+                }
               }
               return null;
             },

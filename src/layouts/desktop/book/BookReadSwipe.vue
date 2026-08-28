@@ -267,11 +267,8 @@ const sliderToPageValue = computed({
   set(v) {
     if (v > 0) {
       readingPageIndex.value = v - 1;
-      if (ttsStore.isReading) {
-        // 刷新阅读状态
-        ttsStore.stop();
+      if (ttsStore.isReading)
         props.playTts();
-      }
     }
   },
 });
@@ -383,11 +380,8 @@ function handlePageChange(swiper: SwiperType) {
     else {
       readingPageIndex.value++;
       swiperElement.value?.slideTo(1, 0, false);
-      if (ttsStore.isReading) {
-        // 刷新阅读状态
-        ttsStore.stop();
+      if (ttsStore.isReading)
         props.playTts();
-      }
     }
   }
   else if (swiper.activeIndex === 0) {
@@ -405,13 +399,8 @@ function handlePageChange(swiper: SwiperType) {
     else {
       readingPageIndex.value--;
       swiperElement.value?.slideTo(1, 0, false);
-      if (ttsStore.isReading) {
-        // 刷新阅读状态
-        ttsStore.stop();
-        // 前一页防止pIndex冲突
-        ttsStore.slideReadingContent = undefined;
+      if (ttsStore.isReading)
         props.playTts();
-      }
     }
   }
 }

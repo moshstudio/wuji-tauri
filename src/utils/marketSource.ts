@@ -97,4 +97,36 @@ export function permissionStyle(source: MarketSource) {
   return findPermissionRule(source.permissions)?.style;
 }
 
+export function isExclusiveMarketSource(
+  permissions: MarketSourcePermission[] | string[] | undefined,
+): boolean {
+  const normalized = normalizeMarketSourcePermissions(permissions);
+  return (
+    normalized.includes(MarketSourcePermission.Vip)
+    || normalized.includes(MarketSourcePermission.Pro)
+  );
+}
+
+export function isProOnlyMarketSource(
+  permissions: MarketSourcePermission[] | string[] | undefined,
+): boolean {
+  const normalized = normalizeMarketSourcePermissions(permissions);
+  return (
+    normalized.includes(MarketSourcePermission.Pro)
+    && !normalized.includes(MarketSourcePermission.Vip)
+  );
+}
+
+/** VIP/PRO 专属源在会员有效期内可用；权限未知时放行（兼容旧数据） */
+export function canAccessExclusiveSource(
+  permissions: MarketSourcePermission[] | string[] | undefined,
+  ctx: { isVip: boolean; isPro: boolean },
+): boolean {
+  if (!isExclusiveMarketSource(permissions))
+    return true;
+  if (isProOnlyMarketSource(permissions))
+    return ctx.isPro;
+  return ctx.isVip || ctx.isPro;
+}
+
 export default { permissionRules, permissionText, permissionStyle };

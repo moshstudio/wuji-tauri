@@ -42,6 +42,8 @@ type SendRequestOptions = RequestInit
   & ClientOptions & {
     /** 未登录收到 401 时不提示（仅用于后台拉取等场景） */
     silentGuest401?: boolean;
+    /** 失败时不弹错误（后台补全权限等） */
+    silent?: boolean;
   };
 let API_BASE_URL: string;
 // 开发可在 .env.development 设置 VITE_API_BASE_URL=http://localhost:3000/v1/api/
@@ -202,7 +204,7 @@ export const useServerStore = defineStore('serverStore', () => {
       context?: SendRequestErrorContext,
     ) => Promise<T | undefined>,
   ): Promise<T | undefined> {
-    const { silentGuest401 = false, ...fetchOptions } = options;
+    const { silentGuest401 = false, silent = false, ...fetchOptions } = options;
     const sentWithAuth = !!(
       accessToken.value && accessToken.value !== 'undefined'
     );
@@ -213,13 +215,13 @@ export const useServerStore = defineStore('serverStore', () => {
     else {
       const guestUnauthorized = response.status === 401 && !sentWithAuth;
       // 401：曾带 token（含过期）仍走 handleError；未带 token 的访客由 errorHandler 或默认「请先登录」处理
-      if (response.status !== 401 || sentWithAuth) {
+      if (!silent && (response.status !== 401 || sentWithAuth)) {
         handleError(response);
       }
       if (errorHandler) {
         return await errorHandler(response, { guestUnauthorized });
       }
-      if (guestUnauthorized && !silentGuest401) {
+      if (guestUnauthorized && !silentGuest401 && !silent) {
         showFailToast('请先登录');
       }
       return undefined;
@@ -243,6 +245,27 @@ export const useServerStore = defineStore('serverStore', () => {
         showFailToast('获取用户信息失败');
       },
     );
+  };
+
+  const getPersistedUserInfo = async (): Promise<UserInfo | undefined> => {
+    if (userInfo.value)
+      return userInfo.value;
+    // logout 会写成 null，避免再读到磁盘上的过期缓存
+    if (userInfo.value === null)
+      return undefined;
+    try {
+      await storage.load();
+      const raw = await storage.getItem('userInfo');
+      if (!raw || raw === 'undefined')
+        return undefined;
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed === 'undefined')
+        return undefined;
+      return parsed as UserInfo;
+    }
+    catch {
+      return undefined;
+    }
   };
 
   const featureList = ref<Feature[]>([]);
@@ -581,10 +604,14 @@ export const useServerStore = defineStore('serverStore', () => {
 
   const getMarketSourceById = async (
     id: string,
+    options?: { silent?: boolean },
   ): Promise<MarketSource | undefined> => {
     return await sendRequest<MarketSource>(
       `source/${id}`,
-      {},
+      {
+        silent: options?.silent,
+        silentGuest401: !!options?.silent,
+      },
       async (response) => {
         const json = await response.json();
         return json;
@@ -1087,6 +1114,7 @@ export const useServerStore = defineStore('serverStore', () => {
     fetchAnnouncements,
     dismissAnnouncement,
     fetchUserInfo,
+    getPersistedUserInfo,
     updateUserInfo,
     getDeviceInfo,
     registerEmail,

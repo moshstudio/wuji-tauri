@@ -69,18 +69,22 @@ export function useBookTTS(options: {
 
   // 章节切换时重置段落索引并重新开始播放
   watch(
-    () => options.chapterContent(),
-    (newContent, oldContent) => {
-      // 如果内容没有实质变化，或者正在播放且内容还是原来那一套内容，就不重置
-      // 注意：滚动模式下 ttsActiveChapterId 变化会引起 chapterContent 变化，这是正常的重置触发点
-      if (!newContent || newContent === oldContent)
+    () => [options.chapterContent(), options.chapterId()] as const,
+    ([newContent, newId], [oldContent, oldId]) => {
+      if (!newContent)
+        return;
+      if (newContent === oldContent && newId === oldId)
         return;
 
       currentPIndex.value = 0;
       if (ttsStore.isReading) {
+        ttsStore.invalidatePlay();
         nextTick(() => {
-          // 如果已经在播报新章的开头，则不重复触发
-          if (ttsStore.scrollReadingContent?.index === 0 && ttsStore.scrollReadingContent?.content === paragraphs.value[0]) {
+          if (
+            ttsStore.scrollReadingContent?.index === 0
+            && ttsStore.scrollReadingContent?.content === paragraphs.value[0]
+            && ttsStore.scrollReadingContent?.chapterId === newId
+          ) {
             return;
           }
           playParagraph(0);

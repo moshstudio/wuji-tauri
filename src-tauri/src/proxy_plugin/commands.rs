@@ -26,22 +26,44 @@ const MAX_REDIRECT_COUNT: u8 = 10;
 static ACTUAL_PORT: AtomicU16 = AtomicU16::new(0);
 static CAST_ACTUAL_PORT: AtomicU16 = AtomicU16::new(0);
 
-// Helper function to parse headers from encoded string
+fn insert_header_pair(
+    header_map: &mut reqwest::header::HeaderMap,
+    name: &str,
+    value: &str,
+) {
+    if let Ok(header_name) = name.parse::<http::header::HeaderName>() {
+        if let Ok(header_value) = http::HeaderValue::from_str(value) {
+            header_map.insert(header_name, header_value);
+        }
+    }
+}
+
+/// Parse headers embedded in proxy URL path.
+///
+/// New format: urlencoded JSON object `{"User-Agent":"...","Referer":"..."}`.
+/// Legacy format: urlencoded `Name:value,Name2:value2` (breaks when values contain `,`).
 fn parse_encoded_headers(headers_part: &str) -> reqwest::header::HeaderMap {
     let mut header_map = reqwest::header::HeaderMap::new();
 
     let decoded_headers = urlencoding::decode(headers_part).unwrap_or_default();
-    if decoded_headers.is_empty() {
+    if decoded_headers.is_empty() || decoded_headers == "_" {
         return header_map;
     }
 
+    // Preferred: JSON map (safe for commas / colons inside header values)
+    if decoded_headers.starts_with('{') {
+        if let Ok(map) = serde_json::from_str::<HashMap<String, String>>(&decoded_headers) {
+            for (name, value) in map {
+                insert_header_pair(&mut header_map, &name, &value);
+            }
+            return header_map;
+        }
+    }
+
+    // Legacy comma-separated `Name:value` pairs
     for header_pair in decoded_headers.split(',') {
         if let Some((name_part, value_part)) = header_pair.split_once(':') {
-            if let Ok(header_name) = name_part.parse::<http::header::HeaderName>() {
-                if let Ok(header_value) = http::HeaderValue::from_str(value_part) {
-                    header_map.insert(header_name, header_value);
-                }
-            }
+            insert_header_pair(&mut header_map, name_part, value_part);
         }
     }
     header_map
@@ -746,18 +768,15 @@ fn get_proxy_http_client(
         .expect("Failed to build proxy HTTP client")
 }
 
-// Helper: Encode headers to URL-safe string
+/// Encode headers into a URL path segment.
+/// Uses JSON so values may contain commas (e.g. User-Agent `(KHTML, like Gecko)`).
 fn encode_headers_to_string(headers: &HashMap<String, String>) -> String {
     if headers.is_empty() {
         return encode("_").into_owned();
     }
 
-    let headers_str = headers
-        .iter()
-        .map(|(name, value)| format!("{}:{}", name, value))
-        .collect::<Vec<_>>()
-        .join(",");
-
+    let headers_str =
+        serde_json::to_string(headers).unwrap_or_else(|_| "{}".to_string());
     encode(&headers_str).into_owned()
 }
 
@@ -956,4 +975,56 @@ pub(crate) fn get_cast_proxy_url(
         "http://{}:{}/proxy/{}/{}",
         LAN_HOST_PLACEHOLDER, port, headers_part, encoded_url
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encode_decode_preserves_ua_with_comma() {
+        let mut headers = HashMap::new();
+        headers.insert(
+            "User-Agent".to_string(),
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36".to_string(),
+        );
+        headers.insert(
+            "Referer".to_string(),
+            "https://www.antbyw.com/".to_string(),
+        );
+
+        let encoded = encode_headers_to_string(&headers);
+        let parsed = parse_encoded_headers(&encoded);
+
+        assert_eq!(
+            parsed.get("user-agent").and_then(|v| v.to_str().ok()),
+            Some(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+            )
+        );
+        assert_eq!(
+            parsed.get("referer").and_then(|v| v.to_str().ok()),
+            Some("https://www.antbyw.com/")
+        );
+    }
+
+    #[test]
+    fn parse_legacy_comma_format_still_works_without_commas_in_values() {
+        let legacy = encode("Referer:https://example.com/,User-Agent:MyBot/1.0");
+        let parsed = parse_encoded_headers(&legacy);
+        assert_eq!(
+            parsed.get("referer").and_then(|v| v.to_str().ok()),
+            Some("https://example.com/")
+        );
+        assert_eq!(
+            parsed.get("user-agent").and_then(|v| v.to_str().ok()),
+            Some("MyBot/1.0")
+        );
+    }
+
+    #[test]
+    fn empty_headers_encode_as_placeholder() {
+        let encoded = encode_headers_to_string(&HashMap::new());
+        assert!(parse_encoded_headers(&encoded).is_empty());
+    }
 }

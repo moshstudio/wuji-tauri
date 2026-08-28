@@ -114,23 +114,38 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
     chapterContent: () => ttsChapter.value?.content,
     chapterId: () => ttsChapter.value?.chapter.id,
     nextChapter: () => {
-      if (!ttsChapter.value)
-        return;
-      const nextMeta = getNextChapterMeta(ttsChapter.value.chapter);
-      if (nextMeta) {
-        const isLoaded = loadedChapters.value.find(
-          c => c.chapter.id === nextMeta.id,
-        );
-        if (isLoaded) {
-          // 如果下一章已经加载了，直接切换追踪 ID，useBookTTS 会因为 chapterContent 变化而自动开始读新章
-          ttsActiveChapterId.value = nextMeta.id;
-          return;
-        }
-      }
-      // 否则调用外部的翻页逻辑（通常是路由跳转）
-      options.nextChapter();
+      void goToTtsNextChapter();
     },
   });
+
+  async function goToTtsNextChapter() {
+    if (!ttsChapter.value)
+      return;
+    const nextMeta = getNextChapterMeta(ttsChapter.value.chapter);
+    if (!nextMeta) {
+      ttsStore.stop();
+      options.nextChapter();
+      return;
+    }
+
+    const alreadyLoaded = loadedChapters.value.some(
+      c => c.chapter.id === nextMeta.id,
+    );
+    if (!alreadyLoaded) {
+      const last = loadedChapters.value[loadedChapters.value.length - 1];
+      if (last?.chapter.id === ttsChapter.value.chapter.id)
+        await loadNextChapter();
+    }
+
+    if (loadedChapters.value.some(c => c.chapter.id === nextMeta.id)) {
+      ttsActiveChapterId.value = nextMeta.id;
+      return;
+    }
+
+    // 缓冲区里没有下一章时，先锁定目标章再走路由，避免 ttsActiveChapterId 卡在旧章
+    ttsActiveChapterId.value = nextMeta.id;
+    options.nextChapter();
+  }
 
   const getCurrentParagraphIndex = (chapterId: string): number => {
     const container = scrollContainer.value;
@@ -302,10 +317,11 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
 
       await nextTick();
 
-      // 智能修剪：确保不修剪掉当前正在阅读的章节
+      // 智能修剪：听书中优先保住朗读章节，避免正在读的章被卸掉
+      const keepId = ttsActiveChapterId.value || activeChapterId.value;
       if (loadedChapters.value.length > MAX_LOADED_CHAPTERS) {
         const activeIdx = loadedChapters.value.findIndex(
-          c => c.chapter.id === activeChapterId.value,
+          c => c.chapter.id === keepId,
         );
         const scrollEl = scrollContainer.value;
 
@@ -377,11 +393,12 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
       }, 80);
 
       if (loadedChapters.value.length > MAX_LOADED_CHAPTERS) {
-        // 确保 activeChapterId 所在的章节不被修剪
+        const keepId = ttsActiveChapterId.value || activeChapterId.value;
+        // 确保听书/活跃章节不被修剪
         while (loadedChapters.value.length > MAX_LOADED_CHAPTERS) {
           if (
             loadedChapters.value[loadedChapters.value.length - 1].chapter.id
-            !== activeChapterId.value
+            !== keepId
           ) {
             loadedChapters.value.pop();
             noMoreNext.value = false;
@@ -428,6 +445,8 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
           lastInternalChapterId = ch.id;
           noMoreNext.value = false;
           noMorePrev.value = false;
+          if (ttsStore.isReading)
+            ttsActiveChapterId.value = ch.id;
 
           const idx = getChapterIndex(ch);
           if (idx === 0)
@@ -439,7 +458,9 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
           nextTick(() => {
             const tryScroll = (attempts = 0) => {
               if (scrollContainer.value) {
-                const extra = Number(ch.readingParagraph) || 0;
+                const extra = ttsStore.isReading
+                  ? 0
+                  : Number(ch.readingParagraph) || 0;
                 const p = scrollContainer.value.querySelector(
                   `[data-chapter-id="${ch.id}"] p.index-${extra}`,
                 ) as HTMLElement;
@@ -460,6 +481,11 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
             setTimeout(() => tryScroll(0), 150);
           });
         }
+        else {
+          lastInternalChapterId = ch.id;
+          if (ttsStore.isReading)
+            ttsActiveChapterId.value = ch.id;
+        }
       }
     },
     { immediate: true },
@@ -479,6 +505,16 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
       loadNextChapter();
     if (el.scrollTop < 50)
       loadPrevChapter();
+
+    // 听书读到缓冲区最后一章时，提前加载下一章，避免跨章断播
+    if (
+      ttsStore.isReading
+      && ttsActiveChapterId.value
+      && loadedChapters.value[loadedChapters.value.length - 1]?.chapter.id
+        === ttsActiveChapterId.value
+    ) {
+      loadNextChapter();
+    }
   }
 
   // ── 生命周期 ──

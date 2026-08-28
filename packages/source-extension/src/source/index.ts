@@ -41,6 +41,8 @@ export interface SubscribeSource {
   url: string;
   disable: boolean;
   detail: SubscribeDetail;
+  /** 来自源市场时记录权限，用于 VIP 过期后禁用专属源 */
+  permissions?: MarketSourcePermission[];
 }
 
 export interface Source {

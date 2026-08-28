@@ -204,18 +204,24 @@ async function onSyncNow() {
               </template>
             </van-cell>
             <van-cell
+              class="sync-status-cell"
               title="同步状态"
-              :label="
-                status === 'syncing'
-                  ? statusDetail || '同步中…'
-                  : status === 'error'
-                    ? (lastSyncError || statusDetail || '同步失败')
-                    : `上次同步：${formatSyncTime(lastSyncAt)}`
-              "
               :is-link="status !== 'syncing'"
               :value="status === 'syncing' ? '同步中' : '立即同步'"
               @click="status !== 'syncing' && onSyncNow()"
-            />
+            >
+              <template #label>
+                <span class="sync-status-label">
+                  {{
+                    status === 'syncing'
+                      ? statusDetail || '同步中…'
+                      : status === 'error'
+                        ? (lastSyncError || statusDetail || '同步失败')
+                        : `上次同步：${formatSyncTime(lastSyncAt)}`
+                  }}
+                </span>
+              </template>
+            </van-cell>
             <van-cell
               title="管理同步数据"
               label="选择要同步的数据类型"
@@ -227,7 +233,7 @@ async function onSyncNow() {
               "
             />
             <van-cell
-              title="高级：手动上传"
+              title="手动上传"
               is-link
               @click="
                 () => {
@@ -236,7 +242,7 @@ async function onSyncNow() {
               "
             />
             <van-cell
-              title="高级：手动下载"
+              title="手动下载"
               is-link
               @click="
                 () => {
@@ -263,5 +269,14 @@ async function onSyncNow() {
 }
 :deep(.avatar .van-cell__value) {
   flex: 2;
+}
+:deep(.sync-status-cell .van-cell__label) {
+  overflow: hidden;
+}
+.sync-status-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

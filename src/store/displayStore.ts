@@ -91,7 +91,6 @@ export const useDisplayStore = defineStore('display', () => {
   const showChapters = ref(false);
   const showSettingDialog = ref(false);
   const showViewSettingDialog = ref(false);
-  const showVoiceSelectSheet = ref(false);
 
   // 仅移动端有效
   const bookKeepScreenOn = useStorageAsync('bookKeepScreenOn', false);
@@ -323,7 +322,6 @@ export const useDisplayStore = defineStore('display', () => {
     showChapters,
     showSettingDialog,
     showViewSettingDialog,
-    showVoiceSelectSheet,
 
     bookKeepScreenOn,
     comicKeepScreenOn,
