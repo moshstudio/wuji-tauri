@@ -174,6 +174,27 @@ export function findMatchedChapter(
   return undefined;
 }
 
+export function getChapterIndex(
+  chapters: BookChapter[] | undefined | null,
+  current: BookChapter | undefined | null,
+  currentChapterId?: string,
+): number {
+  if (!chapters?.length)
+    return -1;
+  const id = currentChapterId || current?.id || '';
+  if (id) {
+    const byId = chapters.findIndex(c => c.id === id);
+    if (byId >= 0)
+      return byId;
+  }
+  if (!current && !id)
+    return -1;
+  const matched = findMatchedChapter(chapters, current ?? undefined, id);
+  if (!matched)
+    return -1;
+  return chapters.findIndex(c => c.id === matched.id);
+}
+
 /**
  * 换源时尽量对齐章节；对不齐也保证能打开可读章节。
  * exact=false 表示用了兜底（下标/首章等）。

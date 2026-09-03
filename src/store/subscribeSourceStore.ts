@@ -308,6 +308,9 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
   };
 
   const enforceExclusiveSourceAccess = async (notify = true) => {
+    // token 过期时先走重新登录，登录结果出来前不要禁源
+    if (serverStore.sessionExpired)
+      return 0;
     const access = await getMembershipAccess();
     const disabledNames: string[] = [];
     for (const source of subscribeSources.value) {
@@ -1236,7 +1239,17 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     () => {
       if (!isLoaded.value)
         return;
+      if (serverStore.sessionExpired)
+        return;
       void syncExclusiveSourceAccess();
+    },
+  );
+
+  watch(
+    () => serverStore.sessionExpired,
+    (expired, wasExpired) => {
+      if (wasExpired && !expired && isLoaded.value)
+        void syncExclusiveSourceAccess();
     },
   );
 

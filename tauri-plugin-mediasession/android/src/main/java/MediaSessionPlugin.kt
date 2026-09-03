@@ -63,6 +63,7 @@ class PositionStateArgs {
 )
 class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
     private val TAG = "MediaSessionPlugin"
+    private var appWebView: WebView? = null
 
     private var startServiceOnlyDuringPlayback = true
 
@@ -96,6 +97,7 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
 
     override fun load(webView: WebView) {
         super.load(webView)
+        appWebView = webView
         startServiceOnlyDuringPlayback = true
         if (!startServiceOnlyDuringPlayback) {
             startMediaService()
@@ -174,6 +176,12 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
         return null
     }
 
+    fun keepWebViewAlive() {
+        activity.runOnUiThread {
+            appWebView?.resumeTimers()
+        }
+    }
+
     @Command
     fun setMetadata(invoke: Invoke) {
         val args = invoke.parseArgs(PlayMusicItem::class.java)
@@ -194,6 +202,7 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
             "playing" -> {
                 service?.playbackState = PlaybackStateCompat.STATE_PLAYING
                 service?.update()
+                keepWebViewAlive()
             }
             "paused" -> {
                 service?.playbackState = PlaybackStateCompat.STATE_PAUSED

@@ -13,7 +13,7 @@ import {
   handleClockSkewFromHeaders,
   headersWithMuid,
   parseRfc2616Date,
-  resetClockSkewForTests,
+  resetClockSkew,
 } from './drm.ts';
 import {
   buildSsml,
@@ -114,13 +114,40 @@ describe('drm', () => {
   });
 
   it('adjusts token after clock skew from Date header', () => {
-    resetClockSkewForTests();
+    resetClockSkew();
     const headers = new Headers({
       Date: 'Wed, 21 Oct 2015 07:28:00 GMT',
     });
     assert.equal(handleClockSkewFromHeaders(headers), true);
     assert.ok(Math.abs(getClockSkewSeconds()) > 60);
-    resetClockSkewForTests();
+    resetClockSkew();
+  });
+
+  it('sets clock skew from Date header instead of accumulating', () => {
+    resetClockSkew();
+    const headers = new Headers({
+      Date: 'Wed, 21 Oct 2015 07:28:00 GMT',
+    });
+    handleClockSkewFromHeaders(headers);
+    const first = getClockSkewSeconds();
+    handleClockSkewFromHeaders(headers);
+    const second = getClockSkewSeconds();
+    assert.ok(Math.abs(second - first) < 2);
+    assert.ok(Math.abs(second) > 60);
+    assert.ok(Math.abs(second) < Math.abs(first) * 1.5 + 2);
+    resetClockSkew();
+  });
+
+  it('adds Age header onto Date when computing skew', () => {
+    resetClockSkew();
+    const date = new Date(Date.now() - 120_000);
+    const headers = new Headers({
+      Date: date.toUTCString(),
+      Age: '120',
+    });
+    handleClockSkewFromHeaders(headers);
+    assert.ok(Math.abs(getClockSkewSeconds()) < 3);
+    resetClockSkew();
   });
 
   it('parses RFC 2616 dates and injects muid cookie', () => {

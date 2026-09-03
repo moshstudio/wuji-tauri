@@ -27,6 +27,7 @@ import AppBookReadSwipe from '@/layouts/app/book/BookReadSwipe.vue';
 import DesktopBookReadSwipe from '@/layouts/desktop/book/BookReadSwipe.vue';
 import { useBookStore, useDisplayStore, useTTSStore } from '@/store';
 import { useElementResize } from '@/utils';
+import { getChapterIndex } from '@/utils/bookSourceAccess';
 import Reader from '@/utils/reader/reader-layout';
 
 const props = withDefaults(
@@ -82,11 +83,9 @@ const size = ref({
 const fontScale = ref(1);
 
 const chapterPagedIndex = ref(0);
-const chapterIndex = computed(() => {
-  return (
-    props.chapterList?.findIndex(item => item.id === props.chapter?.id) || 0
-  );
-});
+const chapterIndex = computed(() =>
+  getChapterIndex(props.chapterList, props.chapter),
+);
 const chapterPagedContent = computed<ReaderResult>(() => {
   if (!props.chapterContent)
     return [];
@@ -144,7 +143,9 @@ const prevChapterPagedContent = computed<ReaderResult>(() => {
     return [];
   const res = getPagedContent(
     props.prevChapterContent,
-    props.chapterList?.[chapterIndex.value - 1]?.title,
+    chapterIndex.value > 0
+      ? props.chapterList?.[chapterIndex.value - 1]?.title
+      : undefined,
   );
   return res;
 });
@@ -154,7 +155,9 @@ const nextChapterPagedContent = computed<ReaderResult>(() => {
     return [];
   return getPagedContent(
     props.nextChapterContent,
-    props.chapterList?.[chapterIndex.value + 1]?.title,
+    chapterIndex.value >= 0
+      ? props.chapterList?.[chapterIndex.value + 1]?.title
+      : undefined,
   );
 });
 
@@ -183,16 +186,22 @@ function prevChapter(toLast = false) {
   props.prevChapter(toLast);
 }
 function nextChapter() {
-  if (chapterIndex.value === (props.chapterList?.length || 1) - 1) {
-    showToast('没有下一章了');
-    if (ttsStore.isReading) {
-      ttsStore.stop();
-    }
-  }
-  else {
+  const list = props.chapterList;
+  const idx = chapterIndex.value;
+  // 目录未就绪或对不上时交给父级补目录，避免误判已经读完
+  if (!list?.length || idx < 0) {
     chapterPagedIndex.value = 0;
     props.nextChapter();
+    return;
   }
+  if (idx === list.length - 1) {
+    showToast('没有下一章了');
+    if (ttsStore.isReading)
+      ttsStore.stop();
+    return;
+  }
+  chapterPagedIndex.value = 0;
+  props.nextChapter();
 }
 
 function toChapter(chapter: BookChapter) {

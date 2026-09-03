@@ -18,6 +18,13 @@ class MainActivity : TauriActivity() {
     wv = webView
     wv!!.settings.setSupportMultipleWindows(true)
     wv!!.settings.javaScriptEnabled = true
+    wv!!.settings.mediaPlaybackRequiresUserGesture = false
+  }
+
+  override fun onPause() {
+    super.onPause()
+    // 锁屏后系统会 pauseTimers，听书下一段的 play()/loadedmetadata 再也走不到
+    wv?.resumeTimers()
   }
 
   override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {

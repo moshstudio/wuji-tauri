@@ -1,11 +1,13 @@
+import type { PluginListener } from '@tauri-apps/api/core';
 import type { BoundaryMetadata, WordTimelineItem } from '@/utils/edge-tts';
 import type { LineData } from '@/utils/reader/types';
 import { Buffer } from 'node:buffer';
 import { useStorageAsync } from '@vueuse/core';
 import CryptoJS from 'crypto-js';
 import { defineStore } from 'pinia';
+import * as androidMedia from 'tauri-plugin-mediasession-api';
 import { showFailToast, showToast } from 'vant';
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, onUnmounted, reactive, ref } from 'vue';
 import { clearTimeout, setInterval, setTimeout } from 'worker-timers';
 import {
   buildWordTimeline,
@@ -14,6 +16,12 @@ import {
   findTimelineIndexAtTime,
 } from '@/utils/edge-tts';
 import { SimpleLRUCache } from '@/utils/lruCache';
+import {
+  handlePermissionRequest,
+  MediaSessionPermissionType,
+} from '@/utils/permissions';
+import { useDisplayStore } from './displayStore';
+import { tauriAddPluginListener } from './utils';
 
 export interface Voice {
   Name: string;
@@ -33,6 +41,7 @@ interface CachedVoice {
 }
 
 export const useTTSStore = defineStore('ttsStore', () => {
+  const displayStore = useDisplayStore();
   const voices = ref<Voice[]>([
     {
       Name: 'Microsoft Server Speech Text to Speech Voice (zh-CN, XiaoyiNeural)',
@@ -162,6 +171,10 @@ export const useTTSStore = defineStore('ttsStore', () => {
   ]);
 
   const audioPlayer = ref<HTMLAudioElement | null>(null);
+  const players: HTMLAudioElement[] = [];
+  let activeSlot = 0;
+  let androidSessionReady = false;
+  const androidPlugins: PluginListener[] = [];
   const selectedVoice = useStorageAsync<Voice>('ttsPlayVoice', voices.value[0]);
   const playbackRate = useStorageAsync<number>('ttsPlayBackRate', 1.0);
   const lruCache = new SimpleLRUCache<string, CachedVoice>(50);
@@ -223,10 +236,85 @@ export const useTTSStore = defineStore('ttsStore', () => {
     }
   };
 
-  const ensurePlayer = () => {
-    if (!audioPlayer.value)
-      audioPlayer.value = new Audio();
-    return audioPlayer.value;
+  const ensurePlayers = () => {
+    if (players.length >= 2)
+      return;
+    players[0] = new Audio();
+    players[1] = new Audio();
+    for (const el of players) {
+      el.preload = 'auto';
+      el.setAttribute('playsinline', 'true');
+    }
+    activeSlot = 0;
+    audioPlayer.value = players[0];
+  };
+
+  /** 锁屏后续播不要复用已 ended 的 Audio，安卓 WebView 上设新 src 经常播不出来 */
+  const acquirePlayer = () => {
+    ensurePlayers();
+    const current = players[activeSlot];
+    if (!current.src) {
+      audioPlayer.value = current;
+      return current;
+    }
+    clearReadyHandler(current);
+    current.onended = null;
+    current.onerror = null;
+    if (!current.ended && !current.paused)
+      current.pause();
+    activeSlot = 1 - activeSlot;
+    const next = players[activeSlot];
+    audioPlayer.value = next;
+    return next;
+  };
+
+  const syncAndroidSession = async (
+    state: 'playing' | 'paused' | 'stopped',
+  ) => {
+    if (!displayStore.isAndroid)
+      return;
+    try {
+      if (state === 'playing') {
+        const title
+          = scrollReadingContent.value?.content?.slice(0, 32)
+            || slideReadingContent.value?.[0]?.text?.slice(0, 32)
+            || '听书中';
+        await androidMedia.setMetedata({
+          title,
+          artist: selectedVoice.value?.ChineseName || '听书',
+          album: '听书',
+        });
+      }
+      await androidMedia.setPlaybackState({ state });
+    }
+    catch {
+      // 桌面或权限未就绪时忽略
+    }
+  };
+
+  const ensureAndroidSession = async () => {
+    if (!displayStore.isAndroid || androidSessionReady)
+      return;
+    androidSessionReady = true;
+    try {
+      await handlePermissionRequest(
+        MediaSessionPermissionType.ForegroundService,
+      );
+      await handlePermissionRequest(
+        MediaSessionPermissionType.ForegroundServiceMediaPlayback,
+      );
+      await handlePermissionRequest(MediaSessionPermissionType.WakeLock);
+    }
+    catch {
+      androidSessionReady = false;
+    }
+  };
+
+  const pauseMusicForTts = async () => {
+    const { useSongStore } = await import('./songStore');
+    const songStore = useSongStore();
+    if (songStore.isPlaying)
+      await songStore.onPause();
   };
 
   const stopProgressTracking = () => {
@@ -235,13 +323,19 @@ export const useTTSStore = defineStore('ttsStore', () => {
       progressRaf = 0;
     }
     const player = audioPlayer.value;
-    if (player) {
+    if (player)
       player.ontimeupdate = null;
-      player.onloadedmetadata = null;
-    }
     activeTimeline = [];
     speakingCharIndex.value = -1;
     speakingCharEnd.value = -1;
+  };
+
+  const clearReadyHandler = (player?: HTMLAudioElement | null) => {
+    const el = player ?? audioPlayer.value;
+    if (!el)
+      return;
+    el.onloadedmetadata = null;
+    el.oncanplay = null;
   };
 
   const updateSpeakingFromTime = (currentTime: number) => {
@@ -281,8 +375,12 @@ export const useTTSStore = defineStore('ttsStore', () => {
     stopProgressTracking();
     const player = audioPlayer.value;
     if (player) {
-      player.pause();
+      clearReadyHandler(player);
       player.onended = null;
+      player.onerror = null;
+      // 已结束时再 pause 会打断 WebView 的连续播放资格，下一段 play() 会被静默拒绝
+      if (!player.ended && !player.paused)
+        player.pause();
     }
     revokeCurrentUrl();
   };
@@ -291,6 +389,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
     invalidatePlay();
     isReading.value = false;
     resetReadingPage();
+    void syncAndroidSession('stopped');
   };
 
   onMounted(() => {
@@ -318,9 +417,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
   });
 
   const init = async () => {
-    if (!audioPlayer.value) {
-      audioPlayer.value = new Audio();
-    }
+    ensurePlayers();
   };
 
   const generateVoice = async (
@@ -411,6 +508,8 @@ export const useTTSStore = defineStore('ttsStore', () => {
     invalidatePlay();
     const generation = playGeneration;
     isReading.value = true;
+    void pauseMusicForTts();
+    void ensureAndroidSession().then(() => syncAndroidSession('playing'));
     voice = voice || selectedVoice.value;
     rate = rate || playbackRate.value;
     const message = getContentText(content);
@@ -433,6 +532,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
       showFailToast('TTS生成失败');
       audioPlayer.value?.pause();
       isReading.value = false;
+      void syncAndroidSession('stopped');
       return;
     }
     if (!isReading.value)
@@ -441,7 +541,10 @@ export const useTTSStore = defineStore('ttsStore', () => {
     const cached = lruCache.get(uid);
     if (!cached)
       return;
-    const blob = new Blob([cached.audio], { type: 'audio/mpeg' });
+    // Node Buffer 可能是共享 pool 上的 view，拷贝后再做 Blob，避免二次播放读到脏数据
+    const audioBytes = new Uint8Array(cached.audio.byteLength);
+    audioBytes.set(cached.audio);
+    const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
     if (blob.size === 0) {
       onended?.();
       return;
@@ -449,7 +552,7 @@ export const useTTSStore = defineStore('ttsStore', () => {
     if (getContentText(content) !== message)
       return;
 
-    const player = ensurePlayer();
+    const player = acquirePlayer();
     revokeCurrentUrl();
     currentObjectUrl = URL.createObjectURL(blob);
     activeTimeline = cached.timeline;
@@ -465,8 +568,30 @@ export const useTTSStore = defineStore('ttsStore', () => {
       onended?.(event);
     };
 
+    let started = false;
+    const tryPlay = (attempt = 0) => {
+      if (generation !== playGeneration)
+        return;
+      void player.play().then(() => {
+        void syncAndroidSession('playing');
+      }).catch((err: unknown) => {
+        if (generation !== playGeneration)
+          return;
+        const name = err instanceof Error ? err.name : '';
+        if (name === 'AbortError' && attempt < 6) {
+          started = false;
+          setTimeout(() => tryPlay(attempt + 1), 250 * (attempt + 1));
+          return;
+        }
+        if (attempt < 6)
+          setTimeout(() => tryPlay(attempt + 1), 250 * (attempt + 1));
+      });
+    };
+
     const startPlayback = () => {
       if (generation !== playGeneration)
+        return;
+      if (player.readyState < HTMLMediaElement.HAVE_METADATA)
         return;
       if (seekCharIndex > 0 && activeTimeline.length) {
         const idx = findTimelineIndexAtChar(activeTimeline, seekCharIndex);
@@ -477,14 +602,17 @@ export const useTTSStore = defineStore('ttsStore', () => {
         }
       }
       startProgressTracking(player);
-      void player.play().catch(() => {});
+      if (!started) {
+        started = true;
+        tryPlay();
+      }
     };
 
+    // 锁屏后 loadedmetadata 可能迟迟不来，先直接 play()；双缓冲 Audio 避免复用 ended 元素
+    player.onloadedmetadata = () => startPlayback();
+    player.oncanplay = () => startPlayback();
     player.src = currentObjectUrl;
-    if (player.readyState >= 1)
-      startPlayback();
-    else
-      player.onloadedmetadata = () => startPlayback();
+    tryPlay();
   };
 
   const startAutoStopTimer = () => {
@@ -493,6 +621,41 @@ export const useTTSStore = defineStore('ttsStore', () => {
 
   onMounted(() => {
     init();
+    if (!displayStore.isAndroid)
+      return;
+
+    const bind = (
+      event: string,
+      handler: (payload?: any) => void,
+    ) => {
+      tauriAddPluginListener('mediasession', event, handler).then((listener) => {
+        androidPlugins.push(listener);
+      });
+    };
+
+    bind('pause', () => {
+      if (!isReading.value)
+        return;
+      audioPlayer.value?.pause();
+      void syncAndroidSession('paused');
+    });
+    bind('play', () => {
+      if (!isReading.value)
+        return;
+      void audioPlayer.value?.play().catch(() => {});
+      void syncAndroidSession('playing');
+    });
+    bind('stop', () => {
+      if (!isReading.value)
+        return;
+      stop();
+    });
+  });
+
+  onUnmounted(() => {
+    for (const plugin of androidPlugins)
+      plugin.unregister();
+    androidPlugins.length = 0;
   });
 
   return {

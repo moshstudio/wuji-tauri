@@ -20,6 +20,7 @@ import validator from 'validator';
 import {
   closeDialog,
   closeNotify,
+  showConfirmDialog,
   showDialog,
   showFailToast,
   showLoadingToast,
@@ -27,6 +28,7 @@ import {
   showSuccessToast,
 } from 'vant';
 import { computed, onMounted, ref, triggerRef, watch } from 'vue';
+import { router } from '@/router';
 import { isMembershipOrderValid, UserInfo } from '@/types/user';
 import { sleep } from '@/utils';
 import { getDeviceId } from '@/utils/device';
@@ -90,6 +92,61 @@ export const useServerStore = defineStore('serverStore', () => {
     },
   );
 
+  /** token 过期导致会话失效，等待用户重新登录后再判断会员状态 */
+  const sessionExpired = ref(false);
+  let sessionExpiredPrompting = false;
+
+  const resolveSessionExpired = () => {
+    sessionExpired.value = false;
+    sessionExpiredPrompting = false;
+  };
+
+  const markSessionExpired = () => {
+    sessionExpired.value = true;
+  };
+
+  const promptSessionExpiredLogin = async () => {
+    if (!sessionExpired.value || sessionExpiredPrompting)
+      return;
+    if (router.currentRoute.value.name === 'Login')
+      return;
+    sessionExpiredPrompting = true;
+    try {
+      await showConfirmDialog({
+        title: '登录已过期',
+        message: '当前登录已过期，请重新登录。',
+        confirmButtonText: '去登录',
+        cancelButtonText: '暂不登录',
+        closeOnClickOverlay: false,
+      });
+      if (router.currentRoute.value.name !== 'Login') {
+        await router.push({ name: 'Login' });
+      }
+    }
+    catch {
+      resolveSessionExpired();
+    }
+  };
+
+  watch(userInfo, (info) => {
+    if (info && sessionExpired.value)
+      resolveSessionExpired();
+  });
+
+  watch(
+    () => router.currentRoute.value.name,
+    (name, prevName) => {
+      if (
+        sessionExpired.value
+        && prevName === 'Login'
+        && name !== 'Login'
+        && !userInfo.value
+      ) {
+        resolveSessionExpired();
+      }
+    },
+  );
+
   const _request = async (
     endpoint: string,
     options: RequestInit & ClientOptions = {},
@@ -111,6 +168,11 @@ export const useServerStore = defineStore('serverStore', () => {
       });
 
       if (response.status === 401) {
+        const hadAuth = !!(
+          accessToken.value && accessToken.value !== 'undefined'
+        );
+        if (hadAuth)
+          markSessionExpired();
         accessToken.value = undefined;
         userInfo.value = null;
       }
@@ -214,9 +276,12 @@ export const useServerStore = defineStore('serverStore', () => {
     }
     else {
       const guestUnauthorized = response.status === 401 && !sentWithAuth;
-      // 401：曾带 token（含过期）仍走 handleError；未带 token 的访客由 errorHandler 或默认「请先登录」处理
-      if (!silent && (response.status !== 401 || sentWithAuth)) {
+      // 带 token 的 401 视为登录过期：不走通用错误弹窗，改由重新登录流程处理
+      if (!silent && response.status !== 401) {
         handleError(response);
+      }
+      if (response.status === 401 && sentWithAuth) {
+        void promptSessionExpiredLogin();
       }
       if (errorHandler) {
         return await errorHandler(response, { guestUnauthorized });
@@ -239,8 +304,8 @@ export const useServerStore = defineStore('serverStore', () => {
         userInfo.value = plainToClass(UserInfo, json);
         console.log('用户信息:', userInfo.value);
       },
-      async (_response, context) => {
-        if (context?.guestUnauthorized)
+      async (response, context) => {
+        if (context?.guestUnauthorized || response?.status === 401)
           return;
         showFailToast('获取用户信息失败');
       },
@@ -480,6 +545,7 @@ export const useServerStore = defineStore('serverStore', () => {
         const json = await response.json();
         accessToken.value = json.access_token;
         await fetchUserInfo();
+        resolveSessionExpired();
         return true;
       },
       async (response, context) => {
@@ -1086,6 +1152,7 @@ export const useServerStore = defineStore('serverStore', () => {
   const logout = (): void => {
     accessToken.value = undefined;
     userInfo.value = null;
+    resolveSessionExpired();
   };
 
   const clear = async () => {
@@ -1093,12 +1160,14 @@ export const useServerStore = defineStore('serverStore', () => {
     userInfo.value = null;
     marketSource.value = undefined;
     myMarketSources.value = [];
+    resolveSessionExpired();
   };
 
   return {
     now,
     accessToken,
     userInfo,
+    sessionExpired,
     marketSource,
     isVip,
     isPro,

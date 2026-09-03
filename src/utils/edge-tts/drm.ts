@@ -14,8 +14,21 @@ export function getClockSkewSeconds(): number {
   return clockSkewSeconds;
 }
 
-export function resetClockSkewForTests(): void {
+export function resetClockSkew(): void {
   clockSkewSeconds = 0;
+}
+
+export function resetClockSkewForTests(): void {
+  resetClockSkew();
+}
+
+function readHeader(
+  headers: Headers | Record<string, string>,
+  name: string,
+): string | undefined {
+  if (headers instanceof Headers)
+    return headers.get(name) ?? headers.get(name.toLowerCase()) ?? undefined;
+  return headers[name] ?? headers[name.toLowerCase()];
 }
 
 export function getUnixTimestamp(): number {
@@ -69,18 +82,25 @@ export function handleClockSkewFromHeaders(
   if (!headers)
     return false;
 
-  const serverDate
-    = headers instanceof Headers
-      ? (headers.get('Date') ?? headers.get('date'))
-      : (headers.Date ?? headers.date);
+  const serverDate = readHeader(headers, 'Date');
   if (!serverDate)
     return false;
 
-  const serverUnix = parseRfc2616Date(serverDate);
+  let serverUnix = parseRfc2616Date(serverDate);
   if (serverUnix == null)
     return false;
 
-  adjClockSkewSeconds(serverUnix - getUnixTimestamp());
+  const ageRaw = readHeader(headers, 'Age');
+  if (ageRaw != null) {
+    const age = Number.parseInt(ageRaw, 10);
+    if (Number.isFinite(age) && age >= 0)
+      serverUnix += age;
+  }
+
+  // Absolute offset from wall clock. Do not fold in the previous skew:
+  // `+= server - getUnixTimestamp()` double-counts concurrent 403s and
+  // drifts by Date-header second precision on every reconnect.
+  clockSkewSeconds = serverUnix - Date.now() / 1000;
   return true;
 }
 

@@ -16,6 +16,7 @@ import {
   generateSecMsGecToken,
   handleClockSkewFromHeaders,
   headersWithMuid,
+  resetClockSkew,
 } from './drm.ts';
 import {
   buildConfigMessage,
@@ -117,7 +118,7 @@ export class EdgeTTSClient {
     }
   }
 
-  private async initWebSocket(retried = false): Promise<void> {
+  private async initWebSocket(attempt = 0): Promise<void> {
     try {
       const url
         = `${SYNTH_URL}&Sec-MS-GEC=${generateSecMsGecToken()}`
@@ -145,9 +146,14 @@ export class EdgeTTSClient {
     }
     catch (error) {
       this.log('Connection Error:', error);
-      if (!retried) {
+      this.close();
+      if (attempt === 0) {
         await this.syncClockSkew();
-        return this.initWebSocket(true);
+        return this.initWebSocket(1);
+      }
+      if (attempt === 1) {
+        resetClockSkew();
+        return this.initWebSocket(2);
       }
       throw error instanceof Error ? error : new Error(String(error));
     }
@@ -245,6 +251,10 @@ export class EdgeTTSClient {
     let response = await request();
     if (response.status === 403) {
       handleClockSkewFromHeaders(response.headers);
+      response = await request();
+    }
+    if (response.status === 403) {
+      resetClockSkew();
       response = await request();
     }
     const data = await response.json();

@@ -20,6 +20,7 @@ import { getSongCover } from '@/utils/songCover';
 import { useDisplayStore } from './displayStore';
 import { useExtensionStore } from './extensionStore';
 import { useSongCacheStore } from './songCacheStore';
+import { useTTSStore } from './ttsStore';
 import { createKVStore, tauriAddPluginListener } from './utils';
 
 export const useSongStore = defineStore('song', () => {
@@ -259,6 +260,8 @@ export const useSongStore = defineStore('song', () => {
           audioCurrent.value = audioRef.value!.currentTime;
         });
         audioRef.value.addEventListener('ended', () => {
+          if (useTTSStore().isReading)
+            return;
           if (playMode.value === SongPlayMode.single) {
             this.onPlay();
           }
@@ -330,6 +333,9 @@ export const useSongStore = defineStore('song', () => {
     }
 
     async onPlay() {
+      const ttsStore = useTTSStore();
+      if (ttsStore.isReading)
+        ttsStore.stop();
       if (!audioRef.value)
         return;
       if (!playingSong.value.picUrl) {
@@ -455,15 +461,23 @@ export const useSongStore = defineStore('song', () => {
       super.onMounted();
       if ('mediaSession' in navigator) {
         navigator.mediaSession.setActionHandler('play', () => {
+          if (useTTSStore().isReading)
+            return;
           this.onPlay();
         });
         navigator.mediaSession.setActionHandler('pause', () => {
+          if (useTTSStore().isReading)
+            return;
           this.onPause();
         });
         navigator.mediaSession.setActionHandler('nexttrack', () => {
+          if (useTTSStore().isReading)
+            return;
           this.nextSong();
         });
         navigator.mediaSession.setActionHandler('previoustrack', () => {
+          if (useTTSStore().isReading)
+            return;
           this.prevSong();
         });
         if (playingSong.value) {
@@ -473,6 +487,9 @@ export const useSongStore = defineStore('song', () => {
     }
 
     async onPlay(): Promise<void> {
+      const ttsStore = useTTSStore();
+      if (ttsStore.isReading)
+        ttsStore.stop();
       await super.onPlay();
       if (playingSong.value && 'mediaSession' in navigator) {
         this.setMedisSession(playingSong.value, 'playing');
@@ -547,11 +564,15 @@ export const useSongStore = defineStore('song', () => {
     onMounted() {
       onMounted(async () => {
         tauriAddPluginListener('mediasession', 'play', async (_: any) => {
+          if (useTTSStore().isReading)
+            return;
           await this.onPlay();
         }).then((listener) => {
           this.androidPlugins.push(listener);
         });
         tauriAddPluginListener('mediasession', 'pause', async (_: any) => {
+          if (useTTSStore().isReading)
+            return;
           await this.onPause();
         }).then((listener) => {
           this.androidPlugins.push(listener);
@@ -600,17 +621,23 @@ export const useSongStore = defineStore('song', () => {
           'mediasession',
           'previoustrack',
           async (_: any) => {
+            if (useTTSStore().isReading)
+              return;
             await this.prevSong();
           },
         ).then((listener) => {
           this.androidPlugins.push(listener);
         });
         tauriAddPluginListener('mediasession', 'nexttrack', async (_: any) => {
+          if (useTTSStore().isReading)
+            return;
           await this.nextSong();
         }).then((listener) => {
           this.androidPlugins.push(listener);
         });
         tauriAddPluginListener('mediasession', 'stop', async (_: any) => {
+          if (useTTSStore().isReading)
+            return;
           await this.onPause();
         }).then((listener) => {
           this.androidPlugins.push(listener);
@@ -629,22 +656,30 @@ export const useSongStore = defineStore('song', () => {
         if (!audioRef.value)
           return;
         audioRef.value.addEventListener('play', () => {
+          if (useTTSStore().isReading)
+            return;
           androidMedia.setPlaybackState({
             state: 'playing',
           });
         });
         audioRef.value.addEventListener('pause', () => {
+          if (useTTSStore().isReading)
+            return;
           androidMedia.setPlaybackState({
             state: 'paused',
           });
         });
         audioRef.value.addEventListener('durationchange', () => {
+          if (useTTSStore().isReading)
+            return;
           androidMedia.setPositionState({
             duration: audioRef.value!.duration,
             position: audioRef.value!.currentTime,
           });
         });
         audioRef.value.addEventListener('timeupdate', () => {
+          if (useTTSStore().isReading)
+            return;
           if (
             Math.ceil(audioCurrent.value)
             !== Math.ceil(audioRef.value!.currentTime)

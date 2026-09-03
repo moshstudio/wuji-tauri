@@ -18,6 +18,7 @@ import {
 import { useBookTTS } from '@/hooks/useBookTTS';
 import { router } from '@/router';
 import { useBookShelfStore, useBookStore, useTTSStore } from '@/store';
+import { findMatchedChapter } from '@/utils/bookSourceAccess';
 
 export interface LoadedChapter {
   chapter: BookChapter;
@@ -83,21 +84,47 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
 
   // ── 章节索引辅助 ──
   function getChapterIndex(chapter: BookChapter): number {
-    return options.chapterList()?.findIndex(c => c.id === chapter.id) ?? -1;
+    const list = options.chapterList();
+    if (!list?.length)
+      return -1;
+    const byId = list.findIndex(c => c.id === chapter.id);
+    if (byId >= 0)
+      return byId;
+    const matched = findMatchedChapter(list, chapter, String(chapter.id));
+    if (!matched)
+      return -1;
+    return list.findIndex(c => c.id === matched.id);
   }
 
   function getNextChapterMeta(chapter: BookChapter): BookChapter | undefined {
+    const list = options.chapterList();
     const idx = getChapterIndex(chapter);
-    if (idx < 0 || !options.chapterList())
+    if (idx < 0 || !list)
       return undefined;
-    return options.chapterList()![idx + 1];
+    return list[idx + 1];
   }
 
   function getPrevChapterMeta(chapter: BookChapter): BookChapter | undefined {
+    const list = options.chapterList();
     const idx = getChapterIndex(chapter);
-    if (idx <= 0 || !options.chapterList())
+    if (idx <= 0 || !list)
       return undefined;
-    return options.chapterList()![idx - 1];
+    return list[idx - 1];
+  }
+
+  /** 目录未就绪或当前章对不上时，不能把边界锁死 */
+  function refreshBoundaryFlags() {
+    const list = options.chapterList();
+    const loaded = loadedChapters.value;
+    if (!list?.length || !loaded.length) {
+      noMorePrev.value = false;
+      noMoreNext.value = false;
+      return;
+    }
+    const firstIdx = getChapterIndex(loaded[0].chapter);
+    const lastIdx = getChapterIndex(loaded[loaded.length - 1].chapter);
+    noMorePrev.value = firstIdx === 0;
+    noMoreNext.value = lastIdx >= 0 && lastIdx === list.length - 1;
   }
 
   // ── TTS 集成 ──
@@ -300,7 +327,9 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
       return;
     const nextCh = getNextChapterMeta(last.chapter);
     if (!nextCh) {
-      noMoreNext.value = true;
+      const idx = getChapterIndex(last.chapter);
+      if (idx >= 0)
+        noMoreNext.value = true;
       return;
     }
 
@@ -362,14 +391,19 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
       return;
     const prevCh = getPrevChapterMeta(first.chapter);
     if (!prevCh) {
-      noMorePrev.value = true;
+      // 对不上目录时先不锁死，等目录补齐后再试
+      if (getChapterIndex(first.chapter) === 0)
+        noMorePrev.value = true;
       return;
     }
+
+    const scrollEl = scrollContainer.value;
+    if (!scrollEl)
+      return;
 
     isLoadingPrev.value = true;
     try {
       const content = await options.loadChapterContent(prevCh);
-      const scrollEl = scrollContainer.value!;
       const prevScrollHeight = scrollEl.scrollHeight;
 
       loadedChapters.value.unshift({
@@ -448,11 +482,7 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
           if (ttsStore.isReading)
             ttsActiveChapterId.value = ch.id;
 
-          const idx = getChapterIndex(ch);
-          if (idx === 0)
-            noMorePrev.value = true;
-          if (idx === (options.chapterList()?.length ?? 1) - 1)
-            noMoreNext.value = true;
+          refreshBoundaryFlags();
 
           isRecovering.value = true;
           nextTick(() => {
@@ -477,6 +507,8 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
                 }
               }
               isRecovering.value = false;
+              void loadPrevChapter();
+              void loadNextChapter();
             };
             setTimeout(() => tryScroll(0), 150);
           });
@@ -489,6 +521,17 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
       }
     },
     { immediate: true },
+  );
+
+  watch(
+    () => options.chapterList()?.length ?? 0,
+    (length) => {
+      if (!length)
+        return;
+      refreshBoundaryFlags();
+      void loadPrevChapter();
+      void loadNextChapter();
+    },
   );
 
   function onScroll() {

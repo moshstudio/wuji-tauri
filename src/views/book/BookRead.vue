@@ -31,6 +31,8 @@ import {
   confirmSwitchSource,
   ensureBookSource,
   findBookItemById,
+  findMatchedChapter,
+  getChapterIndex,
 } from '@/utils/bookSourceAccess';
 import { showMembershipBadge } from '@/utils/membershipBadge';
 import { showVipDialog } from '@/utils/vip';
@@ -323,7 +325,7 @@ async function bookReadWithRetry(
 
 async function loadAdjacentChapters(chapter: BookChapter) {
   const chapterIndex
-    = book.value?.chapters?.findIndex(c => c.id === chapter.id) ?? -1;
+    = getChapterIndex(book.value?.chapters, chapter);
   if (chapterIndex > 0) {
     const prevChapter = book.value!.chapters![chapterIndex - 1];
     prevChapterContent.value
@@ -348,25 +350,55 @@ async function loadAdjacentChapters(chapter: BookChapter) {
 }
 
 /** 目录缺失时后台补拉，已有缓存正文时失败不弹窗 */
+let ensureChaptersPromise: Promise<void> | undefined;
+
 async function ensureChaptersInBackground() {
-  if (!book.value || !bookSource.value || book.value.chapters?.length)
+  if (chapterList.value.length)
     return;
-  try {
-    const ret = await store.bookDetail(bookSource.value, book.value, {
-      silent: true,
-    });
-    if (ret) {
-      Object.assign(book.value, ret);
-      if (book.value.chapters?.length) {
-        chapterList.value = book.value.chapters;
-        if (readingChapter.value) {
-          await loadAdjacentChapters(readingChapter.value);
+  if (book.value?.chapters?.length) {
+    chapterList.value = book.value.chapters;
+    return;
+  }
+  if (!book.value || !bookSource.value)
+    return;
+  if (ensureChaptersPromise) {
+    await ensureChaptersPromise;
+    return;
+  }
+  ensureChaptersPromise = (async () => {
+    try {
+      const ret = await store.bookDetail(bookSource.value!, book.value!, {
+        silent: true,
+      });
+      if (ret) {
+        Object.assign(book.value!, ret);
+        if (book.value!.chapters?.length) {
+          chapterList.value = book.value!.chapters;
+          if (readingChapter.value) {
+            const matched = findMatchedChapter(
+              chapterList.value,
+              readingChapter.value,
+              readingChapter.value.id,
+            );
+            if (matched) {
+              matched.readingPage = readingChapter.value.readingPage;
+              matched.readingParagraph = readingChapter.value.readingParagraph;
+              readingChapter.value = matched;
+            }
+            await loadAdjacentChapters(readingChapter.value);
+          }
         }
       }
     }
+    catch {
+      // 后台补目录失败时保持已展示的缓存正文
+    }
+  })();
+  try {
+    await ensureChaptersPromise;
   }
-  catch {
-    // 后台补目录失败时保持已展示的缓存正文
+  finally {
+    ensureChaptersPromise = undefined;
   }
 }
 
@@ -524,41 +556,46 @@ function navigateToChapter(
 }
 
 function prevChapter(toLast: boolean = false) {
-  const index = chapterList.value.findIndex(
-    chapter => chapter.id === readingChapter.value?.id,
-  );
-  if (index === -1) {
-    return;
-  }
-  if (index > 0) {
-    const target = chapterList.value[index - 1];
-    if (!toLast) {
-      target.readingPage = undefined;
-      target.readingParagraph = undefined;
-    }
-    navigateToChapter(target, toLast);
-  }
-  else {
-    showToast('没有上一章了');
-  }
+  void turnChapter(-1, toLast);
 }
 
 function nextChapter() {
-  const index = chapterList.value.findIndex(
-    chapter => chapter.id === readingChapter.value?.id,
-  );
-  if (index === -1) {
+  void turnChapter(1, false);
+}
+
+async function turnChapter(delta: -1 | 1, toLast: boolean) {
+  if (!chapterList.value.length) {
+    const loading = displayStore.showToast();
+    await ensureChaptersInBackground();
+    displayStore.closeToast(loading);
+    if (!chapterList.value.length) {
+      showToast('章节列表加载失败，请稍后重试');
+      return;
+    }
+  }
+
+  const index = getChapterIndex(chapterList.value, readingChapter.value);
+  if (index < 0) {
+    showToast('无法定位当前章节');
     return;
   }
-  if (index < chapterList.value.length - 1) {
-    const target = chapterList.value[index + 1];
+
+  const targetIndex = index + delta;
+  if (targetIndex < 0) {
+    showToast('没有上一章了');
+    return;
+  }
+  if (targetIndex >= chapterList.value.length) {
+    showToast('没有下一章了');
+    return;
+  }
+
+  const target = chapterList.value[targetIndex];
+  if (delta > 0 || !toLast) {
     target.readingPage = undefined;
     target.readingParagraph = undefined;
-    navigateToChapter(target, false);
   }
-  else {
-    showToast('没有下一章了');
-  }
+  navigateToChapter(target, delta < 0 && toLast);
 }
 
 async function resfreshChapter() {

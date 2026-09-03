@@ -25,6 +25,7 @@ import {
   useTTSStore,
 } from '@/store';
 import { useBackStore } from '@/store/backStore';
+import { getChapterIndex } from '@/utils/bookSourceAccess';
 import 'swiper/css';
 
 const props = withDefaults(
@@ -70,12 +71,12 @@ const showMenu = ref(false);
 
 /** 最大章节数 */
 const chapterCount = computed(() => props.chapterList?.length || 0);
-/** 章节位置（0开始） */
-const readingChapterIndex = computed(
-  () =>
-    props.chapterList?.findIndex(
-      item => item.id === props.readingChapter?.id,
-    ) || 0,
+/** 章节位置（0开始）；目录未就绪或对不上时为 -1，不能当成第一章/最后一章 */
+const readingChapterIndex = computed(() =>
+  getChapterIndex(props.chapterList, props.readingChapter),
+);
+const catalogReady = computed(
+  () => chapterCount.value > 0 && readingChapterIndex.value >= 0,
 );
 
 /** 页面内容列表 */
@@ -95,7 +96,7 @@ const prevPageContent = computed<LineData[]>(() => {
     ];
   }
   if (readingPageIndex.value === 0) {
-    if (readingChapterIndex.value > 0) {
+    if (!catalogReady.value || readingChapterIndex.value > 0) {
       if (props.prevChapterContent?.length) {
         return props.prevChapterContent[props.prevChapterContent.length - 1];
       }
@@ -163,7 +164,7 @@ const nextPageContent = computed<LineData[]>(() => {
   }
   if (readingPageIndex.value === props.readingContent.length - 1) {
     // 最后一页
-    if (readingChapterIndex.value < chapterCount.value - 1) {
+    if (!catalogReady.value || readingChapterIndex.value < chapterCount.value - 1) {
       if (props.nextChapterContent?.length) {
         return props.nextChapterContent[0];
       }
@@ -205,14 +206,17 @@ const nextPageContent = computed<LineData[]>(() => {
 
 /** 是否为第一页 */
 const isFirstPage = computed(
-  () => readingChapterIndex.value === 0 && readingPageIndex.value === 0,
+  () =>
+    catalogReady.value
+    && readingChapterIndex.value === 0
+    && readingPageIndex.value === 0,
 );
 /** 是否为最后一页 */
 const isLastPage = computed(
   () =>
-    (readingChapterIndex.value === chapterCount.value - 1
-      && readingPageIndex.value === (props.readingContent?.length || 0) - 1)
-    || false,
+    catalogReady.value
+    && readingChapterIndex.value === chapterCount.value - 1
+    && readingPageIndex.value === (props.readingContent?.length || 0) - 1,
 );
 
 const pages = computed(() => {
