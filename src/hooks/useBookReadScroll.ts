@@ -4,6 +4,7 @@ import type {
   BookChapterList as ChapterList,
 } from '@wuji-tauri/source-extension';
 import _ from 'lodash';
+import { showToast } from 'vant';
 import {
   computed,
   nextTick,
@@ -143,6 +144,9 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
     nextChapter: () => {
       void goToTtsNextChapter();
     },
+    prevChapter: () => {
+      void goToTtsPrevChapter();
+    },
   });
 
   async function goToTtsNextChapter() {
@@ -172,6 +176,33 @@ export function useBookReadScroll(options: UseBookReadScrollOptions) {
     // 缓冲区里没有下一章时，先锁定目标章再走路由，避免 ttsActiveChapterId 卡在旧章
     ttsActiveChapterId.value = nextMeta.id;
     options.nextChapter();
+  }
+
+  async function goToTtsPrevChapter() {
+    if (!ttsChapter.value)
+      return;
+    const prevMeta = getPrevChapterMeta(ttsChapter.value.chapter);
+    if (!prevMeta) {
+      showToast('没有上一章了');
+      return;
+    }
+
+    const alreadyLoaded = loadedChapters.value.some(
+      c => c.chapter.id === prevMeta.id,
+    );
+    if (!alreadyLoaded) {
+      const first = loadedChapters.value[0];
+      if (first?.chapter.id === ttsChapter.value.chapter.id)
+        await loadPrevChapter();
+    }
+
+    if (loadedChapters.value.some(c => c.chapter.id === prevMeta.id)) {
+      ttsActiveChapterId.value = prevMeta.id;
+      return;
+    }
+
+    ttsActiveChapterId.value = prevMeta.id;
+    options.toChapter(prevMeta);
   }
 
   const getCurrentParagraphIndex = (chapterId: string): number => {

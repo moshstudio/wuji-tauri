@@ -350,6 +350,7 @@ function playPIndex(pIndex: number, seekCharIndex = 0) {
   if (startPage !== -1 && startPage !== chapterPagedIndex.value)
     chapterPagedIndex.value = startPage;
 
+  ttsStore.setSpeakingChapterTitle(props.chapter?.title);
   ttsStore.playVoice(
     target,
     ttsStore.selectedVoice,
@@ -413,8 +414,49 @@ function seekCurrentPage() {
 }
 
 function playTTS() {
+  // 跟页已经让朗读位置落在本页时不要再 seek，否则会倒回去卡顿
+  if (ttsStore.isReading && isSpeakingOnCurrentPage())
+    return;
   seekTTS();
 }
+
+/** 当前朗读进度已经落在可见页内（自动跟页），不是用户跳到尚未读到的位置 */
+function isSpeakingOnCurrentPage() {
+  const playing = ttsStore.slideReadingContent?.[0]?.pIndex;
+  if (playing === undefined)
+    return false;
+  const range = pageCharRangesOfPIndex(playing).find(
+    item => item.pageIndex === chapterPagedIndex.value,
+  );
+  if (!range)
+    return false;
+  const char = ttsStore.speakingCharIndex;
+  return char >= range.charStart && char < range.charEnd;
+}
+
+function skipNextTrack() {
+  if (!ttsStore.isReading)
+    return;
+  nextChapter();
+}
+
+function skipPrevTrack() {
+  if (!ttsStore.isReading)
+    return;
+  const playing = ttsStore.slideReadingContent?.[0]?.pIndex ?? 0;
+  if (playing > 0) {
+    playPIndex(0);
+    return;
+  }
+  prevChapter();
+}
+
+onMountedOrActivated(() => {
+  ttsStore.registerSkipHandlers({
+    next: skipNextTrack,
+    prev: skipPrevTrack,
+  });
+});
 
 // 词边界跟页：朗读字符进入下一页区间时自动翻页
 watch(
@@ -513,6 +555,7 @@ onMountedOrActivated(() => {
 
 onUnmounted(() => {
   removeListeners();
+  ttsStore.registerSkipHandlers({ next: null, prev: null });
 });
 
 onDeactivated(() => {

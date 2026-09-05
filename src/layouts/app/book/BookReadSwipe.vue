@@ -105,7 +105,7 @@ const prevPageContent = computed<LineData[]>(() => {
             lineIndex: 0,
             textIndex: 0,
             text:
-              props.chapterList?.[readingChapterIndex.value - 1].title || '',
+              props.chapterList?.[readingChapterIndex.value - 1]?.title || '',
           },
         ];
       }
@@ -173,7 +173,7 @@ const nextPageContent = computed<LineData[]>(() => {
             lineIndex: 0,
             textIndex: 0,
             text:
-              props.chapterList?.[readingChapterIndex.value + 1].title || '',
+              props.chapterList?.[readingChapterIndex.value + 1]?.title || '',
           },
         ];
       }
@@ -380,6 +380,7 @@ function handlePageChange(swiper: SwiperType) {
     else {
       readingPageIndex.value++;
       swiperElement.value?.slideTo(1, 0, false);
+      // 用户翻页：把听书对齐到新页；跟页不会走到这里
       if (ttsStore.isReading)
         props.playTts();
     }

@@ -1,25 +1,25 @@
 {
-  "version": "0.2.8",
-  "notes": "修复bug、听书等",
-  "pub_date": "2026-08-28T09:49:40+08:00",
+  "version": "0.2.9",
+  "notes": "修复新版本安卓锁屏状态下无法听书的问题",
+  "pub_date": "2026-09-05T09:13:04+08:00",
   "platforms": {
     "cloudpan": {
       "url": "https://wwtn.lanzout.com/s/WUJI"
     },
     "android-aarch64": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.8-aarch64.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.9-aarch64.apk"
     },
     "android-x86_64": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.8-x86_64.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.9-x86_64.apk"
     },
     "android-universal": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.8-universal.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.9-universal.apk"
     },
     "android-armv7": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.8-armv7.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.9-armv7.apk"
     },
     "android-i686": {
-      "url": "https://wuji.moshangwangluo.com/wuji-0.2.8-i686.apk"
+      "url": "https://wuji.moshangwangluo.com/wuji-0.2.9-i686.apk"
     }
   }
 }

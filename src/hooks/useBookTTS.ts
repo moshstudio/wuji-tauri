@@ -1,4 +1,4 @@
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useTTSStore } from '@/store';
 
 /**
@@ -14,6 +14,7 @@ export function useBookTTS(options: {
   chapterContent: () => string | undefined;
   chapterId: () => string | undefined;
   nextChapter: () => void;
+  prevChapter?: () => void;
 }) {
   const ttsStore = useTTSStore();
 
@@ -54,6 +55,10 @@ export function useBookTTS(options: {
 
   // 恢复挂载时的滚动位置
   onMounted(() => {
+    ttsStore.registerSkipHandlers({
+      next: skipNextChapter,
+      prev: skipPrevChapter,
+    });
     if (ttsStore.isReading && ttsStore.scrollReadingContent) {
       currentPIndex.value = ttsStore.scrollReadingContent.index;
       nextTick(() => {
@@ -119,6 +124,7 @@ export function useBookTTS(options: {
       content: text,
       index,
       chapterId: options.chapterId(),
+      title: options.title(),
     };
 
     // 预加载后续段落（使用相同的 { content, index } 格式，确保缓存 key 一致）
@@ -154,6 +160,26 @@ export function useBookTTS(options: {
   function playTTS() {
     playParagraph(currentPIndex.value);
   }
+
+  function skipNextChapter() {
+    if (!ttsStore.isReading)
+      return;
+    options.nextChapter();
+  }
+
+  function skipPrevChapter() {
+    if (!ttsStore.isReading)
+      return;
+    if (currentPIndex.value > 0) {
+      playParagraph(0);
+      return;
+    }
+    options.prevChapter?.();
+  }
+
+  onUnmounted(() => {
+    ttsStore.registerSkipHandlers({ next: null, prev: null });
+  });
 
   return {
     paragraphs,
