@@ -5,6 +5,7 @@ import type {
   SongInfo,
 } from '@wuji-tauri/source-extension';
 import type { SongSource } from '@/types';
+import type { Lyric } from '@/utils/lyric';
 import { debounceFilter, useStorageAsync } from '@vueuse/core';
 import { joinSongArtists } from '@wuji-tauri/components';
 import { fetch } from '@wuji-tauri/fetch';
@@ -16,6 +17,7 @@ import { showFailToast, showLoadingToast, showToast } from 'vant';
 import { onMounted, onUnmounted, ref, triggerRef, watch } from 'vue';
 import { setInterval, setTimeout } from 'worker-timers';
 import { songUrlToString } from '@/utils';
+import { getLyric, parseLyric } from '@/utils/lyric';
 import { getSongCover } from '@/utils/songCover';
 import { useDisplayStore } from './displayStore';
 import { useExtensionStore } from './extensionStore';
@@ -83,6 +85,61 @@ export const useSongStore = defineStore('song', () => {
 
   const getSongSource = (sourceId: string): SongSource | undefined => {
     return songSources.value.find(source => source.item.id === sourceId);
+  };
+
+  const lyricInflight = new Map<string, Promise<Lyric | undefined>>();
+
+  const parseLyricText = (text?: string | null): Lyric | undefined => {
+    if (!text)
+      return undefined;
+    const parsed = parseLyric(text);
+    return parsed.length ? parsed : undefined;
+  };
+
+  const getSongLyric = async (song: SongInfo): Promise<Lyric | undefined> => {
+    const key = `${song.sourceId}:${song.id}`;
+    const inflight = lyricInflight.get(key);
+    if (inflight)
+      return inflight;
+
+    const task = (async () => {
+      const existing = parseLyricText(song.lyric);
+      if (existing)
+        return existing;
+
+      try {
+        const source = getSongSource(song.sourceId);
+        if (source) {
+          const sc = (await extensionStore.getSourceClass(
+            source.item,
+          )) as SongExtension;
+          const text = await sc?.execGetLyric(song);
+          const parsed = parseLyricText(text);
+          if (parsed) {
+            song.lyric = text!;
+            return parsed;
+          }
+        }
+      }
+      catch (error) {
+        console.warn('getSongLyric from source', error);
+      }
+
+      if (!song.name)
+        return undefined;
+      try {
+        return await getLyric(song.name, joinSongArtists(song.artists));
+      }
+      catch (error) {
+        console.warn('getSongLyric fallback', error);
+        return undefined;
+      }
+    })().finally(() => {
+      lyricInflight.delete(key);
+    });
+
+    lyricInflight.set(key, task);
+    return task;
   };
 
   const switchSongSource = async function* (
@@ -377,15 +434,7 @@ export const useSongStore = defineStore('song', () => {
           audioRef.value.src = url;
           const song = playingSong.value;
           if (!song.lyric) {
-            const source = getSongSource(song.sourceId);
-            if (source) {
-              const sc = (await extensionStore.getSourceClass(
-                source?.item,
-              )) as SongExtension;
-              sc?.execGetLyric(song).then((lyric) => {
-                song.lyric = lyric || undefined;
-              });
-            }
+            getSongLyric(song);
           }
         }
       }
@@ -930,5 +979,6 @@ export const useSongStore = defineStore('song', () => {
     getPlaylistInfo,
     getSongSource,
     getSongPlayUrl,
+    getSongLyric,
   };
 });

@@ -36,7 +36,7 @@ export const useExtensionStore = defineStore('extension', () => {
   const getSourceClass = async (
     item: SubscribeItem | MarketSourceContent,
   ): Promise<Extension | null | undefined> => {
-    const idKey = '_id' in item ? item._id : item.id;
+    const idKey = ('_id' in item ? item._id : item.id) || item.url;
 
     if (idKey && sourceClasses.has(idKey)) {
       return sourceClasses.get(idKey);
@@ -88,6 +88,8 @@ export const useExtensionStore = defineStore('extension', () => {
               if (response) {
                 if (context?.guestUnauthorized) {
                   showFailToast('请先登录');
+                  if (idKey)
+                    sourceClasses.set(idKey, null);
                   return null;
                 }
                 const error = await response.json().catch(() => ({} as { message?: string }));
@@ -99,6 +101,8 @@ export const useExtensionStore = defineStore('extension', () => {
                   showFailToast({ message });
                 }
               }
+              if (idKey)
+                sourceClasses.set(idKey, null);
               return null;
             },
           );
@@ -107,14 +111,19 @@ export const useExtensionStore = defineStore('extension', () => {
       catch (error) {
         console.log('加载扩展失败:', item, error);
         showFailToast(`加载扩展失败: ${item.name}`);
-        sourceClasses.set(idKey, null);
+        if (idKey)
+          sourceClasses.set(idKey, null);
         return null;
       }
     }
 
     if (!item.code) {
+      if (idKey && sourceClasses.has(idKey)) {
+        return sourceClasses.get(idKey);
+      }
       showFailToast(`加载 ${item.name} 失败`);
-      sourceClasses.set(idKey, null);
+      if (idKey)
+        sourceClasses.set(idKey, null);
       return null;
     }
 
@@ -149,7 +158,8 @@ export const useExtensionStore = defineStore('extension', () => {
 
     if (!extensionClass) {
       showFailToast(`添加 ${item.name} 订阅失败`);
-      sourceClasses.delete(idKey);
+      if (idKey)
+        sourceClasses.set(idKey, null);
       return null;
     }
 

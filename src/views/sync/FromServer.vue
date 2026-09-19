@@ -14,8 +14,8 @@ import {
   useSubscribeSourceStore,
   useVideoShelfStore,
 } from '@/store';
+import { runApplyingRemote } from '@/store/cloudSyncDirty';
 import { useCloudSyncScheduler } from '@/store/cloudSyncScheduler';
-import { suppressAutoSync } from '@/store/cloudSyncDirty';
 import { SyncTypes } from '@/types/sync';
 import {
   mergePhotoShelfData,
@@ -23,6 +23,7 @@ import {
   mergeSongShelfData,
   mergeSubscribeSourceData,
 } from '@/utils/syncMerge';
+import { showVipDialog } from '@/utils/vip';
 
 const subscribeStore = useSubscribeSourceStore();
 const photoShelfStore = usePhotoShelfStore();
@@ -78,6 +79,10 @@ const syncOptions = ref<SyncOption[]>([
 ]);
 
 async function onDownload() {
+  if (!cloudSyncScheduler.canUseSync) {
+    showVipDialog('数据同步为会员功能\n请先开通会员');
+    return;
+  }
   const data = syncOptions.value
     .filter(item => item.sync)
     .map(item => item.type);
@@ -90,78 +95,79 @@ async function onDownload() {
     if (!records) {
       return;
     }
-    suppressAutoSync(8000);
-    for (const record of records) {
-      const type = record.type;
-      const serverData = JSON.parse(record.data);
+    await runApplyingRemote(async () => {
+      for (const record of records) {
+        const type = record.type;
+        const serverData = JSON.parse(record.data);
 
-      switch (type) {
-        case SyncTypes.SubscribeSource:
-          if (isIncremental) {
-            const currentData = subscribeStore.syncData();
-            const mergedData = mergeSubscribeSourceData(currentData, serverData);
-            await subscribeStore.loadSyncData(mergedData);
-          }
-          else {
-            await subscribeStore.loadSyncData(serverData);
-          }
-          break;
-        case SyncTypes.BookShelf:
-          if (isIncremental) {
-            const currentData = bookShelfStore.syncData();
-            const mergedData = mergeShelfData(currentData, serverData, 'books');
-            await bookShelfStore.loadSyncData(mergedData);
-          }
-          else {
-            await bookShelfStore.loadSyncData(serverData);
-          }
-          break;
-        case SyncTypes.ComicShelf:
-          if (isIncremental) {
-            const currentData = comicShelfStore.syncData();
-            const mergedData = mergeShelfData(currentData, serverData, 'comics');
-            await comicShelfStore.loadSyncData(mergedData);
-          }
-          else {
-            await comicShelfStore.loadSyncData(serverData);
-          }
-          break;
-        case SyncTypes.PhotoShelf:
-          if (isIncremental) {
-            const currentData = photoShelfStore.syncData();
-            const mergedData = mergePhotoShelfData(currentData, serverData);
-            await photoShelfStore.loadSyncData(mergedData);
-          }
-          else {
-            await photoShelfStore.loadSyncData(serverData);
-          }
-          break;
-        case SyncTypes.SongShelf:
-          if (isIncremental) {
-            const currentData = songShelfStore.syncData();
-            const mergedData = mergeSongShelfData(currentData, serverData);
-            await songShelfStore.loadSyncData(mergedData);
-          }
-          else {
-            await songShelfStore.loadSyncData(serverData);
-          }
-          break;
-        case SyncTypes.VideoShelf:
-          if (isIncremental) {
-            const currentData = videoShelfStore.syncData();
-            const mergedData = mergeShelfData(currentData, serverData, 'videos');
-            await videoShelfStore.loadSyncData(mergedData);
-          }
-          else {
-            await videoShelfStore.loadSyncData(serverData);
-          }
-          break;
+        switch (type) {
+          case SyncTypes.SubscribeSource:
+            if (isIncremental) {
+              const currentData = subscribeStore.syncData();
+              const mergedData = mergeSubscribeSourceData(currentData, serverData);
+              await subscribeStore.loadSyncData(mergedData);
+            }
+            else {
+              await subscribeStore.loadSyncData(serverData);
+            }
+            break;
+          case SyncTypes.BookShelf:
+            if (isIncremental) {
+              const currentData = bookShelfStore.syncData();
+              const mergedData = mergeShelfData(currentData, serverData, 'books');
+              await bookShelfStore.loadSyncData(mergedData);
+            }
+            else {
+              await bookShelfStore.loadSyncData(serverData);
+            }
+            break;
+          case SyncTypes.ComicShelf:
+            if (isIncremental) {
+              const currentData = comicShelfStore.syncData();
+              const mergedData = mergeShelfData(currentData, serverData, 'comics');
+              await comicShelfStore.loadSyncData(mergedData);
+            }
+            else {
+              await comicShelfStore.loadSyncData(serverData);
+            }
+            break;
+          case SyncTypes.PhotoShelf:
+            if (isIncremental) {
+              const currentData = photoShelfStore.syncData();
+              const mergedData = mergePhotoShelfData(currentData, serverData);
+              await photoShelfStore.loadSyncData(mergedData);
+            }
+            else {
+              await photoShelfStore.loadSyncData(serverData);
+            }
+            break;
+          case SyncTypes.SongShelf:
+            if (isIncremental) {
+              const currentData = songShelfStore.syncData();
+              const mergedData = mergeSongShelfData(currentData, serverData);
+              await songShelfStore.loadSyncData(mergedData);
+            }
+            else {
+              await songShelfStore.loadSyncData(serverData);
+            }
+            break;
+          case SyncTypes.VideoShelf:
+            if (isIncremental) {
+              const currentData = videoShelfStore.syncData();
+              const mergedData = mergeShelfData(currentData, serverData, 'videos');
+              await videoShelfStore.loadSyncData(mergedData);
+            }
+            else {
+              await videoShelfStore.loadSyncData(serverData);
+            }
+            break;
+        }
       }
-    }
+    });
     showSuccessToast('下载同步成功');
   }
   finally {
-    cloudSyncScheduler.resumeAfterManualSync();
+    cloudSyncScheduler.resumeAfterManualSync(data);
   }
 }
 </script>

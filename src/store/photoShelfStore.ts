@@ -78,7 +78,7 @@ export const usePhotoShelfStore = defineStore('photoShelfStore', () => {
         op: 'upsertItem',
         entityId: item.id,
         parentId: shelf.id,
-        payload: { photo: _.cloneDeep(item) },
+        payload: { ..._.cloneDeep(item), createTime: now },
         clientUpdatedAt: now,
       });
       return true;

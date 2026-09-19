@@ -34,12 +34,14 @@ import { SourceType } from '@/types';
 import { SyncTypes } from '@/types/sync';
 import { isMembershipOrderValid } from '@/types/user';
 import { sleep } from '@/utils';
+import { forgetHomeRecommend, invalidateHomeRecommend } from '@/utils/homeRecommend';
 import {
   canAccessExclusiveSource,
   isExclusiveMarketSource,
   isProOnlyMarketSource,
   normalizeMarketSourcePermissions,
 } from '@/utils/marketSource';
+import { formatSubscribeSourcesUpdateNotify } from '@/utils/subscribeSourceUpdate';
 import {
   applySubscribeDelete,
   upsertSubscribeTomb,
@@ -140,8 +142,24 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     flagItems: SubscribeSyncFlagItem[],
   ) => {
     const flagsUpdatedAt = Date.now();
-    (source as SubscribeSource & { flagsUpdatedAt?: number }).flagsUpdatedAt
-      = flagsUpdatedAt;
+    const timedItems = flagItems.map(item => ({
+      ...item,
+      updatedAt: item.updatedAt || flagsUpdatedAt,
+    }));
+    const syncSource = source as SubscribeSource & {
+      flagsUpdatedAt?: number;
+      packDisableUpdatedAt?: number;
+      flagItemTimes?: Record<string, number>;
+      contentUpdatedAt?: number;
+    };
+    syncSource.flagsUpdatedAt = flagsUpdatedAt;
+    syncSource.packDisableUpdatedAt = flagsUpdatedAt;
+    const times = { ...(syncSource.flagItemTimes || {}) };
+    for (const item of timedItems) {
+      if (item.id)
+        times[item.id] = item.updatedAt!;
+    }
+    syncSource.flagItemTimes = times;
     enqueueOp({
       type: SyncTypes.SubscribeSource,
       op: 'upsertSubscribe',
@@ -150,12 +168,11 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
         ..._.cloneDeep(source),
         _sync: {
           intent: 'flags',
-          flagItems,
+          flagItems: timedItems,
           packDisable: source.disable,
+          packDisableUpdatedAt: flagsUpdatedAt,
           flagsUpdatedAt,
-          contentUpdatedAt: (source as SubscribeSource & {
-            contentUpdatedAt?: number;
-          }).contentUpdatedAt,
+          contentUpdatedAt: syncSource.contentUpdatedAt,
         },
       },
       clientUpdatedAt: flagsUpdatedAt,
@@ -229,6 +246,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
         }
         if (sourceContent.code) {
           item.code = sourceContent.code;
+          invalidateHomeRecommend(item.id);
         }
         enqueueSubscribeContent(subscribeSource);
         return item;
@@ -383,16 +401,23 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     return enforceExclusiveSourceAccess(notify);
   };
 
-  const setSourceDisabled = (
+  const invalidateSourceItems = (items?: { id?: string }[]) => {
+    for (const item of items || []) {
+      if (item.id)
+        invalidateHomeRecommend(item.id);
+    }
+  };
+
+  const applySourceDisabled = (
     source: SubscribeSource,
     disable: boolean,
   ) => {
-    if (!disable && !assertCanEnableSource(source))
-      return false;
     source.detail?.urls.forEach((url) => {
       url.disable = disable;
     });
     source.disable = disable;
+    if (!disable)
+      invalidateSourceItems(source.detail?.urls);
     enqueueSubscribeFlags(
       source,
       (source.detail?.urls || []).map(url => ({
@@ -400,7 +425,38 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
         disable,
       })),
     );
+  };
+
+  const setSourceDisabled = (
+    source: SubscribeSource,
+    disable: boolean,
+  ) => {
+    if (!disable && !assertCanEnableSource(source))
+      return false;
+    applySourceDisabled(source, disable);
     return true;
+  };
+
+  const setAllSourcesDisabled = (disable: boolean) => {
+    let changed = 0;
+    let skippedExclusive = 0;
+    for (const source of subscribeSources.value) {
+      const urls = source.detail?.urls || [];
+      const already = disable
+        ? !!source.disable && urls.every(url => url.disable)
+        : !source.disable && urls.every(url => !url.disable);
+      if (already)
+        continue;
+      if (!disable && !canEnableSubscribeSource(source)) {
+        skippedExclusive++;
+        continue;
+      }
+      applySourceDisabled(source, disable);
+      changed++;
+    }
+    if (changed)
+      loadSubscribeSources();
+    return { changed, skippedExclusive };
   };
 
   const setSubscribeItemDisabled = (
@@ -418,6 +474,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     }
     else {
       source.disable = false;
+      invalidateHomeRecommend(item.id);
     }
     enqueueSubscribeFlags(source, [{ id: item.id, disable }]);
     return true;
@@ -431,6 +488,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
           return false;
         item.disable = false;
         subscribe.disable = false;
+        invalidateHomeRecommend(item.id);
         enqueueSubscribeFlags(subscribe, [{ id: item.id, disable: false }]);
         loadSubscribeSources();
         return true;
@@ -443,9 +501,13 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     return markRaw(subscribeSources.value);
   };
 
-  const loadSyncData = async (data: SubscribeSource[]) => {
+  const loadSyncData = async (
+    data: SubscribeSource[],
+    options?: { applyAccessPolicy?: boolean },
+  ) => {
     subscribeSources.value = data;
-    await syncExclusiveSourceAccess(false);
+    if (options?.applyAccessPolicy !== false)
+      await syncExclusiveSourceAccess(false);
     loadSubscribeSources();
   };
 
@@ -568,6 +630,8 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
             || false;
       });
       addSubscribeSource(source);
+      if (oldSource)
+        invalidateSourceItems(source.detail.urls);
       // 仅同步已启用源到运行时，不拉取推荐内容（进入对应页面时再加载）
       loadSubscribeSources();
       return true;
@@ -586,6 +650,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
 
   const removeFromSource = (itemId: string, sourceType: SourceType) => {
     extensionStore.deleteSourceClass(itemId);
+    forgetHomeRecommend(itemId);
     switch (sourceType) {
       case SourceType.Photo:
         _.remove(
@@ -734,6 +799,8 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
             || false;
       });
       addSubscribeSource(source);
+      if (oldSource)
+        invalidateSourceItems(source.detail.urls);
       loadSubscribeSources();
       return true;
     }
@@ -837,9 +904,11 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     const t = displayStore.showToast();
     const failed: string[] = [];
     const skippedExclusive: string[] = [];
+    const unavailable: string[] = [];
 
     const update = async (source: SubscribeSource) => {
       const url = source.url;
+      const sourceName = source.detail?.name || url;
       try {
         if (source.detail.id === localSourceId) {
           const success = await addLocalSubscribeSource(url);
@@ -849,30 +918,38 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
         }
         else {
           if (url === 'marketSource') {
-            const marketSource = await serverStore.getMarketSourceById(
+            const result = await serverStore.fetchMarketSourceById(
               source.detail.id,
+              { silent: true },
             );
-            if (marketSource) {
-              persistSourcePermissions(source, marketSource.permissions);
-              if (
-                !canAccessExclusiveSource(
-                  marketSource.permissions,
-                  getMembershipAccessSync(),
-                )
-              ) {
-                skippedExclusive.push(marketSource.name);
-                return;
-              }
-              if (
-                !(
-                  skipSameVersion
-                  && marketSource.version === source.detail.version
-                )
-              ) {
-                const success = await addMarketSource(marketSource);
-                if (!success) {
-                  failed.push(marketSource.name);
-                }
+            if (result.unavailable) {
+              unavailable.push(sourceName);
+              return;
+            }
+            const marketSource = result.source;
+            if (!marketSource) {
+              failed.push(sourceName);
+              return;
+            }
+            persistSourcePermissions(source, marketSource.permissions);
+            if (
+              !canAccessExclusiveSource(
+                marketSource.permissions,
+                getMembershipAccessSync(),
+              )
+            ) {
+              skippedExclusive.push(marketSource.name);
+              return;
+            }
+            if (
+              !(
+                skipSameVersion
+                && marketSource.version === source.detail.version
+              )
+            ) {
+              const success = await addMarketSource(marketSource);
+              if (!success) {
+                failed.push(marketSource.name);
               }
             }
           }
@@ -885,7 +962,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
         }
       }
       catch (error) {
-        failed.push(source.detail.name);
+        failed.push(sourceName);
       }
     };
     if (!source) {
@@ -900,27 +977,17 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     await enforceExclusiveSourceAccess(false);
     loadSubscribeSources();
 
-    if (failed.length > 0) {
-      showNotify({
-        type: 'warning',
-        message: `${failed.length} 个订阅源更新失败`,
-        duration: 2000,
-      });
-    }
-    else if (skippedExclusive.length > 0) {
-      showNotify({
-        type: 'success',
-        message: `更新完成，已跳过 ${skippedExclusive.length} 个会员专属源`,
-        duration: 2000,
-      });
-    }
-    else {
-      showNotify({
-        type: 'success',
-        message: '更新订阅源成功',
-        duration: 2000,
-      });
-    }
+    const notify = formatSubscribeSourcesUpdateNotify({
+      updatingOne: !!source,
+      failed,
+      unavailable,
+      skippedExclusive,
+    });
+    showNotify({
+      type: notify.type,
+      message: notify.message,
+      duration: 2000,
+    });
     displayStore.closeToast(t);
   };
 
@@ -1015,12 +1082,25 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
    */
   function loadSubscribeSources(_load?: boolean, _loadDelay = 2000) {
     const added: string[] = [];
+    const existingIds = new Set(
+      [
+        ...photoStore.photoSources,
+        ...songStore.songSources,
+        ...bookStore.bookSources,
+        ...comicStore.comicSources,
+        ...videoStore.videoSources,
+      ].map(source => source.item.id),
+    );
     for (const source of subscribeSources.value) {
       if (source.detail) {
         for (const item of source.detail.urls) {
           if (!item.disable) {
+            const isNew = !existingIds.has(item.id);
             addToSource({ item }, false);
             added.push(item.id);
+            // 重新启用（运行时里还没有）时，回到首页需要重新拉取
+            if (isNew)
+              invalidateHomeRecommend(item.id);
           }
         }
       }
@@ -1262,6 +1342,7 @@ export const useSubscribeSourceStore = defineStore('subscribeSource', () => {
     getSubscribeSource,
     updateSubscribeSourceContent,
     setSourceDisabled,
+    setAllSourcesDisabled,
     setSubscribeItemDisabled,
     enableSubscribeItemById,
     canEnableSubscribeSource,

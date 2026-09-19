@@ -1,7 +1,7 @@
 {
   "name": "wuji-app",
   "type": "module",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "eslint . --fix",
-    "test:cloud-sync": "tsx --tsconfig tsconfig.json --test src/utils/syncMerge.test.ts src/utils/syncTombstone.test.ts src/utils/cloudSyncChanges.test.ts src/utils/subscribeSyncMerge.test.ts src/store/cloudSyncOps.test.ts",
+    "test:cloud-sync": "pnpm --filter @wuji-tauri/sync test && tsx --tsconfig tsconfig.json --test src/utils/subscribeSourceUpdate.test.ts",
     "docs:sync-e2e": "echo See ../wuji-server/docs/CLOUD_SYNC_LOCAL_E2E.md"
   },
   "dependencies": {
@@ -42,6 +42,7 @@
     "@wuji-tauri/fetch": "workspace:*",
     "@wuji-tauri/hot-api": "workspace:*",
     "@wuji-tauri/source-extension": "workspace:*",
+    "@wuji-tauri/sync": "workspace:*",
     "animate.css": "^4.1.1",
     "axios": "^1.13.2",
     "browser-image-compression": "^2.0.2",

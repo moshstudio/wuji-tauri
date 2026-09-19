@@ -23,6 +23,7 @@ import {
   ensureBookSource,
 } from '@/utils/bookSourceAccess';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { shouldLoadHomeRecommend } from '@/utils/homeRecommend';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -61,17 +62,17 @@ const recommend = createCancellableFunction(
   async (signal: AbortSignal, force: boolean = false) => {
     await Promise.all(
       bookSources.value.map(async (source) => {
-        if (!source.list || force) {
-          if (signal.aborted)
-            return;
-          await store.bookRecommendList(source);
-        }
+        if (!shouldLoadHomeRecommend(source.item.id, source.list, force))
+          return;
+        if (signal.aborted)
+          return;
+        await store.bookRecommendList(source);
       }),
     );
   },
 );
 
-// 首次进入本页，或启用源后首次返回时：仅加载尚无内容的源
+// 首次进入本页，或启用源后首次返回时：仅加载尚未尝试过的源（失败过的不自动重试）
 onMountedOrActivated(async () => {
   await subscribeStore.waitForLoaded(10000, false);
   void recommend();

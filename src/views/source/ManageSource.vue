@@ -3,7 +3,7 @@ import type {
   SubscribeItem,
   SubscribeSource,
 } from '@wuji-tauri/source-extension';
-import { showConfirmDialog } from 'vant';
+import { showConfirmDialog, showNotify, showSuccessToast, showToast } from 'vant';
 import { onDeactivated, ref } from 'vue';
 import ImportSubscribeSource from '@/components/dialog/ImportSubscribeSource.vue';
 import PlatformSwitch from '@/components/platform/PlatformSwitch.vue';
@@ -30,6 +30,32 @@ function enableSource(source: SubscribeSource, enable: boolean) {
   // van-switch 的 enable 语义：true=开启；此处入参沿用原逻辑（enable 为 true 时表示「切换后应为禁用」来自旧 UI）
   sourceStore.setSourceDisabled(source, enable);
   syncSubscribeSources();
+}
+
+function enableAllSources() {
+  const { changed, skippedExclusive } = sourceStore.setAllSourcesDisabled(false);
+  if (skippedExclusive) {
+    showNotify({
+      type: 'warning',
+      message: changed
+        ? `已启用 ${changed} 个订阅源，${skippedExclusive} 个专属源需开通会员`
+        : `${skippedExclusive} 个专属源需开通会员后才能启用`,
+      duration: 3000,
+    });
+    return;
+  }
+  if (changed)
+    showSuccessToast('已全部启用');
+  else
+    showToast('当前已全部启用');
+}
+
+function disableAllSources() {
+  const { changed } = sourceStore.setAllSourcesDisabled(true);
+  if (changed)
+    showSuccessToast('已全部禁用');
+  else
+    showToast('当前已全部禁用');
 }
 function enableItem(
   source: SubscribeSource,
@@ -95,6 +121,8 @@ onDeactivated(async () => {
         :sources="sourceStore.subscribeSources"
         :source-disabled="sourceDisabled"
         :enable-source="enableSource"
+        :enable-all-sources="enableAllSources"
+        :disable-all-sources="disableAllSources"
         :enable-item="enableItem"
         :import-source="importSource"
         :update-sources="updateSources"
@@ -109,6 +137,8 @@ onDeactivated(async () => {
         :sources="sourceStore.subscribeSources"
         :source-disabled="sourceDisabled"
         :enable-source="enableSource"
+        :enable-all-sources="enableAllSources"
+        :disable-all-sources="disableAllSources"
         :enable-item="enableItem"
         :import-source="importSource"
         :update-sources="updateSources"

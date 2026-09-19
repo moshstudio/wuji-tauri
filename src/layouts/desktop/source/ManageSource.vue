@@ -8,6 +8,8 @@ withDefaults(
 
     sourceDisabled: (source: SubscribeSource) => boolean;
     enableSource: (source: SubscribeSource, enable: boolean) => void;
+    enableAllSources: () => void;
+    disableAllSources: () => void;
     enableItem: (
       source: SubscribeSource,
       item: SubscribeItem,
@@ -29,6 +31,8 @@ withDefaults(
     :sources="sources"
     :source-disabled="sourceDisabled"
     :enable-source="enableSource"
+    :enable-all-sources="enableAllSources"
+    :disable-all-sources="disableAllSources"
     :enable-item="enableItem"
     :import-source="importSource"
     :update-sources="updateSources"

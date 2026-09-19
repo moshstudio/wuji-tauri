@@ -12,6 +12,8 @@ withDefaults(
     sources: SubscribeSource[];
     sourceDisabled: (source: SubscribeSource) => boolean;
     enableSource: (source: SubscribeSource, enable: boolean) => void;
+    enableAllSources: () => void;
+    disableAllSources: () => void;
     enableItem: (
       source: SubscribeSource,
       item: SubscribeItem,
@@ -51,7 +53,7 @@ function getSourceStats(source: SubscribeSource) {
     <div
       class="flex w-full flex-grow flex-col overflow-y-auto bg-[--van-background] p-2"
     >
-      <div class="flex items-center gap-2 p-2">
+      <div class="flex flex-wrap items-center gap-2 p-2">
         <van-button
           size="small"
           type="primary"
@@ -75,6 +77,26 @@ function getSourceStats(source: SubscribeSource) {
         <van-button size="small" type="default" plain @click="importSource">
           导入订阅源
         </van-button>
+        <div class="flex shrink-0 flex-nowrap items-center gap-2">
+          <van-button
+            size="small"
+            type="success"
+            plain
+            :disabled="!sources.length"
+            @click="enableAllSources"
+          >
+            全部启用
+          </van-button>
+          <van-button
+            size="small"
+            type="warning"
+            plain
+            :disabled="!sources.length"
+            @click="disableAllSources"
+          >
+            全部禁用
+          </van-button>
+        </div>
       </div>
       <van-cell-group
         v-for="source in sources"

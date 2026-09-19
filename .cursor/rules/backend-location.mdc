@@ -1,0 +1,12 @@
+---
+description: 本项目对应的后端仓库路径
+alwaysApply: true
+---
+
+# 后端仓库
+
+本前端项目（wuji-tauri）对应的后端仓库路径：
+
+`C:\Users\14438\Documents\GitHub\wuji-server`
+
+涉及 API、服务端逻辑、联调或需要对照后端实现时，到该目录查看和修改。

@@ -10,7 +10,6 @@ import AppSongPlayView from '@/layouts/app/song/SongPlayView.vue';
 import DesktopSongPlayView from '@/layouts/desktop/song/SongPlayView.vue';
 import { useDisplayStore, useDownloadStore, useSongStore, useStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
-import { getLyric, parseLyric } from '@/utils/lyric';
 
 const downloadStore = useDownloadStore();
 const store = useStore();
@@ -41,6 +40,10 @@ const PRESET_COLORS = [
 watch(
   playingSong,
   async (newSong) => {
+    if (!newSong) {
+      lyric.value = undefined;
+      return;
+    }
     lyric.value = [
       {
         position: 0,
@@ -48,15 +51,11 @@ watch(
       },
     ];
     audioCurrent.value = 0;
-    if (newSong.lyric) {
-      lyric.value = parseLyric(newSong.lyric);
-    }
-    else if (newSong.name) {
-      const singer = newSong.artists
-        ?.map(artist => (typeof artist === 'object' ? artist.name : artist))
-        .join(',');
-      lyric.value = await getLyric(newSong.name, singer);
-    }
+    const songId = newSong.id;
+    const parsed = await songStore.getSongLyric(newSong);
+    if (playingSong.value?.id !== songId)
+      return;
+    lyric.value = parsed;
     analyzeImageColor(
       newSong.picUrl || newSong.bigPicUrl,
       newSong.picHeaders,

@@ -1,59 +1,109 @@
+import type { CloudSyncOp, CloudSyncPhase, CloudSyncReason } from '@wuji-tauri/sync';
+import {
+  backoffMs,
+  canUseCloudSync,
+  debounceDelayMs,
+  mapPhaseToStatus,
+  resolvePullTypes,
+  shouldSkipDirtyCycle,
+  statusDetailForPhase,
+  SyncTypes,
+} from '@wuji-tauri/sync';
+import { nanoid } from 'nanoid';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import { SyncTypes } from '@/types/sync';
 import {
   applyEntityChanges,
   applyPatchConflicts,
+  isSyncTypeReady,
 } from '@/utils/cloudSyncApply';
+import { useBookShelfStore } from './bookShelfStore';
 import {
+  ackMutationIds,
+  enqueueOp,
   hasPendingOps,
-  isAutoSyncSuppressed,
   peekPendingOps,
   pendingHasStructure,
-  restorePendingOps,
+  runApplyingRemote,
   setCloudSyncDirtyNotifier,
   setCloudSyncTypeEnabledChecker,
-  takePendingOps,
+  snapshotPendingOps,
 } from './cloudSyncOps';
 import { useCloudSyncSettings } from './cloudSyncSettings';
+import { useComicShelfStore } from './comicShelfStore';
+import { usePhotoShelfStore } from './photoShelfStore';
 import { useServerStore } from './serverStore';
+import { useSongShelfStore } from './songShelfStore';
+import { useSubscribeSourceStore } from './subscribeSourceStore';
+import { useVideoShelfStore } from './videoShelfStore';
 
-const STRUCTURE_DEBOUNCE_MS = 2000;
-const PROGRESS_DEBOUNCE_MS = 45000;
-const BACKOFF_STEPS_MS = [5000, 30000, 120000];
-
+export type { CloudSyncPhase, CloudSyncReason };
 export type CloudSyncStatus = 'idle' | 'syncing' | 'error';
-export type CloudSyncReason = 'lifecycle' | 'dirty' | 'manual' | 'retry';
 
 export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
   let structureTimer: ReturnType<typeof setTimeout> | null = null;
   let progressTimer: ReturnType<typeof setTimeout> | null = null;
   let backoffTimer: ReturnType<typeof setTimeout> | null = null;
   let inflight = false;
-  let manualSyncPaused = false;
+  let dirtyWhileInflight = false;
   let backoffIndex = 0;
   let lifecycleBound = false;
+  let sessionGen = 0;
 
-  const status = ref<CloudSyncStatus>('idle');
+  const phase = ref<CloudSyncPhase>('Disabled');
   const statusDetail = ref('');
 
   const settings = () => useCloudSyncSettings();
+  let storesReady = false;
 
-  const canRunSync = () => {
-    const syncSettings = settings();
+  async function waitForLocalStores(timeoutMs = 8000) {
+    if (storesReady)
+      return;
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const loaded = [
+        useBookShelfStore().storage?.loaded,
+        useComicShelfStore().storage?.loaded,
+        useVideoShelfStore().storage?.loaded,
+        usePhotoShelfStore().storage?.loaded,
+        useSongShelfStore().storage?.loaded,
+        useSubscribeSourceStore().storage?.loaded,
+      ].every(Boolean);
+      if (loaded) {
+        storesReady = true;
+        return;
+      }
+      await new Promise(r => setTimeout(r, 50));
+    }
+  }
+
+  const permissionOpen = () => {
     const serverStore = useServerStore();
+    return canUseCloudSync({
+      loggedIn: !!serverStore.userInfo?.email,
+      hasCloudSyncFeature: serverStore.hasFeature('cloud_sync'),
+    });
+  };
+
+  const gatesOpen = () => {
+    const syncSettings = settings();
+    if (phase.value === 'PausedManual')
+      return false;
+    if (!permissionOpen())
+      return false;
     if (!syncSettings.enableCloudSync)
-      return false;
-    if (!serverStore.userInfo?.email)
-      return false;
-    if (!serverStore.hasFeature('cloud_sync'))
-      return false;
-    if (manualSyncPaused)
       return false;
     return syncSettings.enabledTypes().length > 0;
   };
 
-  const canSchedule = () => canRunSync() && !isAutoSyncSuppressed();
+  const canSchedule = () => gatesOpen();
+
+  const setPhase = (next: CloudSyncPhase, reason?: CloudSyncReason) => {
+    phase.value = next;
+    const detail = statusDetailForPhase(next, reason);
+    if (detail)
+      statusDetail.value = detail;
+  };
 
   const clearPushTimers = () => {
     if (structureTimer) {
@@ -66,34 +116,113 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
     }
   };
 
-  async function pushPending(): Promise<boolean> {
-    if (!hasPendingOps())
-      return true;
+  function pendingTypesOf(): SyncTypes[] {
     const syncSettings = settings();
-    const ops = takePendingOps().filter(op =>
+    return [...new Set(
+      peekPendingOps()
+        .filter(op => syncSettings.isTypeEnabled(op.type))
+        .map(op => op.type),
+    )];
+  }
+
+  async function pushPending(): Promise<boolean> {
+    const syncSettings = settings();
+    const ops = snapshotPendingOps().filter(op =>
       syncSettings.isTypeEnabled(op.type),
     );
     if (!ops.length)
       return true;
 
     const serverStore = useServerStore();
+    const gen = sessionGen;
     try {
       const result = await serverStore.syncPatchSilent(ops);
-      if (!result?.ok) {
-        restorePendingOps(ops);
+      if (gen !== sessionGen)
         return false;
+      if (!result?.ok)
+        return false;
+
+      await runApplyingRemote(() => applyPatchConflicts(result.conflicts));
+
+      const conflictKeys = new Set(
+        (result.conflicts || []).map(
+          c => `${c.type}|${c.op}|${c.entityId}|${c.parentId || ''}`,
+        ),
+      );
+      const conflictMutations = new Set(
+        (result.conflicts || [])
+          .map(c => (c as { mutationId?: string }).mutationId)
+          .filter((id): id is string => !!id),
+      );
+
+      let appliedIds: string[];
+      if (result.appliedMutationIds?.length) {
+        appliedIds = result.appliedMutationIds;
       }
-      await applyPatchConflicts(result.conflicts);
+      else {
+        appliedIds = ops
+          .filter((op) => {
+            if (op.clientMutationId && conflictMutations.has(op.clientMutationId))
+              return false;
+            return !conflictKeys.has(
+              `${op.type}|${op.op}|${op.entityId}|${op.parentId || ''}`,
+            );
+          })
+          .map(op => op.clientMutationId)
+          .filter((id): id is string => !!id);
+      }
+
+      ackMutationIds(appliedIds);
+
+      if (result.conflicts?.length) {
+        const retry: CloudSyncOp[] = [];
+        for (const op of ops) {
+          if (op.op !== 'upsertSubscribe')
+            continue;
+          const conflict = result.conflicts.find(
+            c => c.op === op.op && c.entityId === op.entityId,
+          );
+          if (!conflict)
+            continue;
+          const localFlags = Number(
+            (op.payload as any)?._sync?.flagsUpdatedAt
+            || (op.payload as any)?.flagsUpdatedAt
+            || 0,
+          );
+          const serverFlags = Number(
+            (conflict.payload as any)?._sync?.flagsUpdatedAt
+            || (conflict.payload as any)?.flagsUpdatedAt
+            || 0,
+          );
+          if (localFlags >= serverFlags) {
+            retry.push({
+              ...op,
+              clientUpdatedAt: Date.now(),
+              clientMutationId: nanoid(),
+            });
+          }
+        }
+        ackMutationIds(
+          ops
+            .filter(op =>
+              conflictMutations.has(op.clientMutationId || '')
+              || conflictKeys.has(
+                `${op.type}|${op.op}|${op.entityId}|${op.parentId || ''}`,
+              ),
+            )
+            .map(op => op.clientMutationId),
+        );
+        for (const op of retry)
+          enqueueOp(op);
+      }
       return true;
     }
     catch (error) {
       console.warn('cloud sync push failed', error);
-      restorePendingOps(ops);
       return false;
     }
   }
 
-  /** 条目级增量拉取；成功后推进 version 游标 */
   async function pullIncremental(types: SyncTypes[]): Promise<boolean> {
     if (!types.length)
       return true;
@@ -104,15 +233,20 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
       since: syncSettings.getCursor(type),
     }));
 
+    const gen = sessionGen;
     const response = await serverStore.syncChangesSilent(requests);
+    if (gen !== sessionGen)
+      return false;
     if (response === false)
       return false;
 
-    await applyEntityChanges(response.results || []);
+    await runApplyingRemote(() => applyEntityChanges(response.results || []));
 
     for (const group of response.results || []) {
       const type = group.type as SyncTypes;
       if (!Object.values(SyncTypes).includes(type))
+        continue;
+      if (group.changes?.length && !isSyncTypeReady(type))
         continue;
       if (group.cursor)
         syncSettings.setCursor(type, group.cursor);
@@ -121,79 +255,78 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
   }
 
   /**
-   * lifecycle: 增量 pull 已开启类型；有 pending 再 push（无定时）
-   * dirty/retry: 无 pending 则 no-op；否则 pull(pendingTypes) → push
-   * manual: pull(enabled) → push
+   * lifecycle/manual: pull(enabled) → merge → push
+   * dirty/retry: 无 pending 则 no-op；否则 pull(pendingTypes) → merge → push
    */
   async function syncCycle(
     reason: CloudSyncReason = 'manual',
   ): Promise<boolean> {
-    if (inflight)
-      return false;
-    if (!canRunSync()) {
-      if (reason === 'manual') {
-        status.value = 'idle';
-        statusDetail.value = '同步已关闭或未登录';
-      }
+    if (inflight) {
+      dirtyWhileInflight = true;
       return false;
     }
-
-    const syncSettings = settings();
-    const enabled = syncSettings.enabledTypes();
-    if (!enabled.length) {
-      status.value = 'idle';
-      statusDetail.value = '未选择同步类型';
-      return true;
-    }
-
-    if ((reason === 'dirty' || reason === 'retry') && !hasPendingOps())
-      return true;
-
-    const pendingTypes = [
-      ...new Set(
-        peekPendingOps()
-          .filter(op => syncSettings.isTypeEnabled(op.type))
-          .map(op => op.type),
-      ),
-    ];
-
-    let pullTypes: SyncTypes[];
-    if (reason === 'lifecycle' || reason === 'manual')
-      pullTypes = enabled;
-    else
-      pullTypes = pendingTypes;
-
     inflight = true;
-    status.value = 'syncing';
-    statusDetail.value
-      = reason === 'dirty' || reason === 'retry' ? '正在上传…' : '正在同步…';
-    clearPushTimers();
-
+    dirtyWhileInflight = false;
     try {
+      await waitForLocalStores();
+      if (!gatesOpen()) {
+        if (phase.value !== 'PausedManual')
+          setPhase('Disabled', reason);
+        if (reason === 'manual')
+          statusDetail.value = '同步已关闭或未登录';
+        return false;
+      }
+
+      const syncSettings = settings();
+      const enabled = syncSettings.enabledTypes();
+      if (!enabled.length) {
+        setPhase('Idle');
+        statusDetail.value = '未选择同步类型';
+        return true;
+      }
+
+      if (shouldSkipDirtyCycle(reason, hasPendingOps())) {
+        setPhase('Idle');
+        return true;
+      }
+
+      const pullTypes = resolvePullTypes(reason, enabled, pendingTypesOf());
+
+      setPhase('Pulling', reason);
+      clearPushTimers();
+
       if (pullTypes.length) {
         const okPull = await pullIncremental(pullTypes);
         if (!okPull) {
           scheduleBackoff(reason === 'lifecycle' ? 'lifecycle' : 'retry');
-          status.value = 'error';
+          setPhase('Backoff');
           statusDetail.value = '增量同步失败，将自动重试';
           syncSettings.markSyncError(statusDetail.value);
           return false;
         }
       }
 
-      if (hasPendingOps() || reason === 'dirty' || reason === 'retry' || reason === 'manual') {
-        const okPush = await pushPending();
-        if (!okPush) {
-          scheduleBackoff('retry');
-          status.value = 'error';
-          statusDetail.value = '上传同步失败，将自动重试';
-          syncSettings.markSyncError(statusDetail.value);
-          return false;
+      setPhase('Merging', reason);
+
+      const snapshot = snapshotPendingOps().filter(op =>
+        syncSettings.isTypeEnabled(op.type),
+      );
+      if (snapshot.length || reason === 'dirty' || reason === 'retry' || reason === 'manual') {
+        if (snapshot.length) {
+          setPhase('Pushing', reason);
+          const okPush = await pushPending();
+          if (!okPush) {
+            scheduleBackoff('retry');
+            setPhase('Backoff');
+            statusDetail.value = '上传同步失败，将自动重试';
+            syncSettings.markSyncError(statusDetail.value);
+            return false;
+          }
         }
       }
 
       backoffIndex = 0;
-      status.value = 'idle';
+      setPhase('Idle');
       statusDetail.value = '已同步';
       syncSettings.markSyncSuccess();
       return true;
@@ -201,14 +334,14 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
     catch (error) {
       console.warn('cloud sync cycle failed', error);
       scheduleBackoff(reason === 'lifecycle' ? 'lifecycle' : 'retry');
-      status.value = 'error';
+      setPhase('Backoff');
       statusDetail.value = '同步失败，将自动重试';
-      syncSettings.markSyncError(statusDetail.value);
+      settings().markSyncError(statusDetail.value);
       return false;
     }
     finally {
       inflight = false;
-      if (hasPendingOps() && canSchedule())
+      if ((dirtyWhileInflight || hasPendingOps()) && canSchedule())
         scheduleFlush();
     }
   }
@@ -222,12 +355,16 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
       return;
     if (!canSchedule())
       return;
+    if (inflight) {
+      dirtyWhileInflight = true;
+      return;
+    }
 
-    const delay = pendingHasStructure()
-      ? STRUCTURE_DEBOUNCE_MS
-      : PROGRESS_DEBOUNCE_MS;
+    const hasStructure = pendingHasStructure();
+    const delay = debounceDelayMs(hasStructure);
 
-    if (pendingHasStructure()) {
+    if (hasStructure) {
+      setPhase('DebounceStruct');
       if (structureTimer)
         clearTimeout(structureTimer);
       structureTimer = setTimeout(() => {
@@ -236,6 +373,8 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
       }, delay);
     }
     else {
+      if (phase.value === 'Idle')
+        setPhase('DebounceProgress');
       if (progressTimer)
         return;
       progressTimer = setTimeout(() => {
@@ -248,8 +387,9 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
   function scheduleBackoff(next: CloudSyncReason = 'retry') {
     if (backoffTimer)
       clearTimeout(backoffTimer);
-    const ms = BACKOFF_STEPS_MS[Math.min(backoffIndex, BACKOFF_STEPS_MS.length - 1)];
+    const ms = backoffMs(backoffIndex);
     backoffIndex += 1;
+    setPhase('Backoff');
     backoffTimer = setTimeout(() => {
       backoffTimer = null;
       if (next === 'lifecycle' || hasPendingOps())
@@ -258,13 +398,22 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
   }
 
   const pauseForManualSync = () => {
-    manualSyncPaused = true;
+    phase.value = 'PausedManual';
     clearPushTimers();
+    if (backoffTimer) {
+      clearTimeout(backoffTimer);
+      backoffTimer = null;
+    }
   };
 
-  const resumeAfterManualSync = () => {
-    manualSyncPaused = false;
-    if (hasPendingOps())
+  const resumeAfterManualSync = (types?: SyncTypes[]) => {
+    if (types?.length)
+      settings().invalidateCursors(types);
+    if (phase.value === 'PausedManual')
+      phase.value = gatesOpen() ? 'Idle' : 'Disabled';
+    if (gatesOpen())
+      void syncCycle('lifecycle');
+    else if (hasPendingOps())
       scheduleFlush();
   };
 
@@ -274,7 +423,7 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
     lifecycleBound = true;
 
     const flushIfPending = () => {
-      if (hasPendingOps() && canRunSync())
+      if (hasPendingOps() && gatesOpen())
         void syncCycle('dirty');
     };
 
@@ -283,7 +432,7 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
         flushIfPending();
       }
       else if (document.visibilityState === 'visible') {
-        if (canRunSync())
+        if (gatesOpen())
           void syncCycle('lifecycle');
       }
     });
@@ -291,11 +440,27 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
     window.addEventListener('beforeunload', flushIfPending);
   };
 
-  /** 登录/启动：增量 pull（可无 pending）；有 pending 再 push */
   const checkAndFlush = () => {
-    if (!canRunSync())
+    if (!gatesOpen()) {
+      if (phase.value !== 'PausedManual')
+        setPhase('Disabled');
       return;
+    }
     void syncCycle('lifecycle');
+  };
+
+  const onSessionChanged = () => {
+    sessionGen += 1;
+    inflight = false;
+    dirtyWhileInflight = false;
+    backoffIndex = 0;
+    clearPushTimers();
+    if (backoffTimer) {
+      clearTimeout(backoffTimer);
+      backoffTimer = null;
+    }
+    if (phase.value !== 'PausedManual')
+      setPhase(gatesOpen() ? 'Idle' : 'Disabled');
   };
 
   const syncNow = async () => syncCycle('manual');
@@ -318,14 +483,18 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
     }
   });
 
+  const status = computed(() => mapPhaseToStatus(phase.value));
   const lastSyncAt = computed(() => settings().lastSyncAt);
   const lastSyncError = computed(() => settings().lastSyncError);
+  const canUseSync = computed(() => permissionOpen());
 
   return {
+    phase,
     status,
     statusDetail,
     lastSyncAt,
     lastSyncError,
+    canUseSync,
     notifyDirty: scheduleFlush,
     flushNow,
     scheduleFlush,
@@ -335,5 +504,6 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
     resumeAfterManualSync,
     bindLifecycle,
     checkAndFlush,
+    onSessionChanged,
   };
 });

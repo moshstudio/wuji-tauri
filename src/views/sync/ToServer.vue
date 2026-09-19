@@ -19,6 +19,7 @@ import {
 import { useCloudSyncScheduler } from '@/store/cloudSyncScheduler';
 import { SyncTypes } from '@/types/sync';
 import { estimateJsonSize, sleep } from '@/utils';
+import { showVipDialog } from '@/utils/vip';
 
 const subscribeStore = useSubscribeSourceStore();
 const photoShelfStore = usePhotoShelfStore();
@@ -74,6 +75,10 @@ const syncOptions = ref<SyncOption[]>([
 ]);
 
 async function onSync() {
+  if (!cloudSyncScheduler.canUseSync) {
+    showVipDialog('数据同步为会员功能\n请先开通会员');
+    return;
+  }
   if (
     _.sum(syncOptions.value.map(item => item.size ?? 0))
     >= 1024 * 1024 * 10
@@ -132,7 +137,9 @@ async function onSync() {
     await serverStore.syncToServer(data, { incremental: isIncremental });
   }
   finally {
-    cloudSyncScheduler.resumeAfterManualSync();
+    cloudSyncScheduler.resumeAfterManualSync(
+      syncOptions.value.filter(item => item.sync).map(item => item.type),
+    );
   }
 }
 

@@ -1,5 +1,4 @@
 import { joinSongArtists } from '@wuji-tauri/components';
-import { fetch } from '@wuji-tauri/fetch';
 import kuwoMusic from './kuwoMusic';
 import miguMusic from './miguMusic';
 import { lyric as neteaseLyric, search as neteaseSearch } from './neteaseMusic';
@@ -20,14 +19,6 @@ export async function getLyric(
     return cache.get(key);
   }
   else {
-    const lyricFromLongZhu = async (): Promise<string | null> => {
-      const url = `https://www.hhlqilongzhu.cn/api/dg_geci.php?msg=${key}&n=1&type=2`;
-      const response = await fetch(url);
-      const text = await response.text();
-      if (!text.includes(songName))
-        return null;
-      return text;
-    };
     const lyricFromNetease = async (): Promise<string | null> => {
       const res = await neteaseSearch(songName);
       const t = await res.text();
@@ -79,11 +70,21 @@ export async function getLyric(
       }
       return null;
     };
+    const tryGet = async (
+      fn: () => Promise<string | null>,
+    ): Promise<string | null> => {
+      try {
+        return await fn();
+      }
+      catch (error) {
+        console.warn('getLyric fallback provider', error);
+        return null;
+      }
+    };
     const lyricText
-      = (await lyricFromNetease())
-        || (await lyricFromLongZhu())
-        || (await lyricFromKuWo())
-        || (await lyricFromMiGu());
+      = (await tryGet(lyricFromNetease))
+        || (await tryGet(lyricFromKuWo))
+        || (await tryGet(lyricFromMiGu));
 
     if (!lyricText)
       return;

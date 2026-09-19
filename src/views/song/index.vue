@@ -20,6 +20,7 @@ import {
   useSubscribeSourceStore,
 } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { shouldLoadHomeRecommend } from '@/utils/homeRecommend';
 
 const store = useStore();
 const displayStore = useDisplayStore();
@@ -65,9 +66,10 @@ async function recommend(force: boolean = false) {
   playlistTimer = setTimeout(async () => {
     await Promise.all(
       songSources.value.map(async (source) => {
-        if (!source.playlist || force) {
-          await store.songRecommendPlayist(source);
+        if (!shouldLoadHomeRecommend(source.item.id, source.playlist, force, 'playlist')) {
+          return;
         }
+        await store.songRecommendPlayist(source);
       }),
     );
   }, 0);
@@ -75,15 +77,16 @@ async function recommend(force: boolean = false) {
   songTimer = setTimeout(async () => {
     await Promise.all(
       songSources.value.map(async (source) => {
-        if (!source.songList || force) {
-          await store.songRecommendSong(source);
+        if (!shouldLoadHomeRecommend(source.item.id, source.songList, force, 'songList')) {
+          return;
         }
+        await store.songRecommendSong(source);
       }),
     );
   }, 0);
 }
 
-// 首次进入本页，或启用源后首次返回时：仅加载尚无内容的源
+// 首次进入本页，或启用源后首次返回时：仅加载尚未尝试过的源（失败过的不自动重试）
 onMountedOrActivated(async () => {
   await subscribeStore.waitForLoaded(10000, false);
   void recommend();

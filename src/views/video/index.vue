@@ -17,6 +17,7 @@ import {
   useVideoShelfStore,
 } from '@/store';
 import { createCancellableFunction } from '@/utils/cancelableFunction';
+import { shouldLoadHomeRecommend } from '@/utils/homeRecommend';
 import { ensureSource } from '@/utils/sourceAccess';
 
 const store = useStore();
@@ -32,17 +33,17 @@ const recommend = createCancellableFunction(
   async (signal: AbortSignal, force: boolean = false) => {
     await Promise.all(
       videoSources.value.map(async (source) => {
-        if (!source.list || force) {
-          if (signal.aborted)
-            return;
-          await store.videoRecommendList(source);
-        }
+        if (!shouldLoadHomeRecommend(source.item.id, source.list, force))
+          return;
+        if (signal.aborted)
+          return;
+        await store.videoRecommendList(source);
       }),
     );
   },
 );
 
-// 首次进入本页，或启用源后首次返回时：仅加载尚无内容的源
+// 首次进入本页，或启用源后首次返回时：仅加载尚未尝试过的源（失败过的不自动重试）
 onMountedOrActivated(async () => {
   await subscribeStore.waitForLoaded(10000, false);
   void recommend();

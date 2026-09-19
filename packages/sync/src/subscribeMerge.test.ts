@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'vitest';
+import { describe, it } from 'node:test'; // eslint-disable-line test/no-import-node-test -- 仓库测试用 node:test，未安装 vitest
 import {
   applySubscribeDelete,
   applySubscribeUpsert,
   mergeSubscribeSyncPayload,
-} from './subscribeSyncMerge';
+} from './subscribeMerge';
 
 function source(opts: {
   id: string;
@@ -185,6 +185,176 @@ describe('applySubscribeUpsert', () => {
     assert.equal(merged?.detail?.version, 5);
     assert.equal(merged?.detail?.urls?.[0].code, 'v5');
   });
+
+  it('does not let remote content snapshot disable a newer local enable', () => {
+    const local = {
+      ...source({
+        id: 's1',
+        version: 2,
+        urls: [{ id: 'a', code: 'v2', disable: false }],
+        disable: false,
+      }),
+      flagsUpdatedAt: 200,
+    };
+    const incoming = {
+      ...source({
+        id: 's1',
+        version: 2,
+        urls: [{ id: 'a', code: 'v2', disable: true }],
+        disable: true,
+      }),
+      _sync: { intent: 'content' as const, contentUpdatedAt: 300 },
+    };
+    const { source: merged } = applySubscribeUpsert({
+      local,
+      incoming,
+      incomingTs: 300,
+      tomb: undefined,
+    });
+    assert.equal(merged?.disable, false);
+    assert.equal(merged?.detail?.urls?.[0].disable, false);
+  });
+
+  it('does not let a flags patch without flagsUpdatedAt use a fresh incomingTs', () => {
+    const local = {
+      ...source({
+        id: 's1',
+        version: 2,
+        urls: [{ id: 'a', disable: false }],
+        disable: false,
+      }),
+      flagsUpdatedAt: 50,
+    };
+    const incoming = {
+      ...source({
+        id: 's1',
+        version: 2,
+        urls: [{ id: 'a', disable: true }],
+        disable: true,
+      }),
+      _sync: {
+        intent: 'flags' as const,
+        flagItems: [{ id: 'a', disable: true }],
+        packDisable: true,
+      },
+    };
+    const { source: merged } = applySubscribeUpsert({
+      local,
+      incoming,
+      incomingTs: Date.now(),
+      tomb: undefined,
+    });
+    assert.equal(merged?.disable, false);
+    assert.equal(merged?.detail?.urls?.[0].disable, false);
+  });
+
+  it('applies newer remote flags over older local enable', () => {
+    const local = {
+      ...source({
+        id: 's1',
+        version: 2,
+        urls: [{ id: 'a', disable: false }],
+        disable: false,
+      }),
+      flagsUpdatedAt: 10,
+    };
+    const incoming = {
+      ...source({
+        id: 's1',
+        version: 2,
+        urls: [{ id: 'a', disable: true }],
+        disable: true,
+      }),
+      _sync: {
+        intent: 'flags' as const,
+        flagItems: [{ id: 'a', disable: true }],
+        packDisable: true,
+        flagsUpdatedAt: 20,
+      },
+    };
+    const { source: merged } = applySubscribeUpsert({
+      local,
+      incoming,
+      incomingTs: 20,
+      tomb: undefined,
+    });
+    assert.equal(merged?.disable, true);
+    assert.equal(merged?.detail?.urls?.[0].disable, true);
+  });
+
+  it('does not let older enable-all override a newer per-item disable', () => {
+    const local = {
+      ...source({
+        id: 's1',
+        version: 2,
+        urls: [
+          { id: 'a', disable: true },
+          { id: 'b', disable: false },
+        ],
+        disable: false,
+      }),
+      flagsUpdatedAt: 20,
+      flagItemTimes: { a: 20, b: 10 },
+      packDisableUpdatedAt: 10,
+    };
+    const incoming = {
+      ...source({
+        id: 's1',
+        version: 2,
+        urls: [
+          { id: 'a', disable: false },
+          { id: 'b', disable: false },
+        ],
+        disable: false,
+      }),
+      _sync: {
+        intent: 'flags' as const,
+        flagItems: [
+          { id: 'a', disable: false, updatedAt: 10 },
+          { id: 'b', disable: false, updatedAt: 10 },
+        ],
+        packDisable: false,
+        packDisableUpdatedAt: 10,
+        flagsUpdatedAt: 10,
+      },
+    };
+    const { source: merged } = applySubscribeUpsert({
+      local,
+      incoming,
+      incomingTs: 10,
+      tomb: undefined,
+    });
+    assert.equal(merged?.detail?.urls?.find(u => u.id === 'a')?.disable, true);
+    assert.equal(merged?.detail?.urls?.find(u => u.id === 'b')?.disable, false);
+  });
+
+  it('applies a pulled snapshot flags onto local of the same version', () => {
+    const local = source({
+      id: 's1',
+      version: 2,
+      urls: [{ id: 'a', disable: false }],
+      disable: false,
+    });
+    const incoming = {
+      ...source({
+        id: 's1',
+        version: 2,
+        urls: [{ id: 'a', disable: true }],
+        disable: true,
+      }),
+      flagsUpdatedAt: 40,
+      flagItemTimes: { a: 40 },
+    };
+    const { source: merged } = applySubscribeUpsert({
+      local,
+      incoming,
+      incomingTs: 40,
+      tomb: undefined,
+      mode: 'snapshot',
+    });
+    assert.equal(merged?.disable, true);
+    assert.equal(merged?.detail?.urls?.[0].disable, true);
+  });
 });
 
 describe('applySubscribeDelete', () => {
@@ -219,5 +389,26 @@ describe('mergeSubscribeSyncPayload', () => {
     );
     assert.equal((merged._sync as any).intent, 'content');
     assert.equal((merged._sync as any).flagItems[0].id, 'a');
+  });
+
+  it('keeps the flag item with the newer updatedAt when merging pending ops', () => {
+    const merged = mergeSubscribeSyncPayload(
+      {
+        _sync: {
+          intent: 'flags',
+          flagItems: [{ id: 'a', disable: true, updatedAt: 20 }],
+          flagsUpdatedAt: 20,
+        },
+      },
+      {
+        _sync: {
+          intent: 'flags',
+          flagItems: [{ id: 'a', disable: false, updatedAt: 10 }],
+          flagsUpdatedAt: 10,
+        },
+      },
+    );
+    assert.equal((merged._sync as any).flagItems[0].disable, true);
+    assert.equal((merged._sync as any).flagItems[0].updatedAt, 20);
   });
 });

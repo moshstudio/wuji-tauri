@@ -1,0 +1,27 @@
+{
+  "name": "@wuji-tauri/sync",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./*": "./src/*"
+  },
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "tsx --tsconfig tsconfig.json --test src/clock.test.ts src/fsm.test.ts src/queue.test.ts src/session.test.ts src/pendingReplay.test.ts src/applyChanges.test.ts src/subscribeMerge.test.ts src/mergeManual.test.ts src/tombstone.test.ts src/multiDevice.test.ts"
+  },
+  "dependencies": {
+    "nanoid": "^5.1.6"
+  }
+}

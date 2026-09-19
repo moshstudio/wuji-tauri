@@ -2,6 +2,7 @@
 import type { UserInfo } from '@/types/user';
 import { onMountedOrActivated } from '@vant/use';
 import { storeToRefs } from 'pinia';
+import { showFailToast } from 'vant';
 import { onDeactivated, onUnmounted, reactive, ref, watch } from 'vue';
 import ProButton from '@/components/button/ProButton.vue';
 import VipButton from '@/components/button/VipButton.vue';
@@ -10,6 +11,7 @@ import { router } from '@/router';
 import { useCloudSyncScheduler, useCloudSyncSettings } from '@/store';
 import { isMembershipOrderValid } from '@/types/user';
 import { showPromptDialog } from '@/utils/usePromptDialog';
+import { showVipDialog } from '@/utils/vip';
 
 const props = defineProps<{
   userInfo?: UserInfo;
@@ -26,7 +28,7 @@ const props = defineProps<{
 const cloudSyncSettings = useCloudSyncSettings();
 const cloudSyncScheduler = useCloudSyncScheduler();
 const { enableCloudSync, lastSyncAt, lastSyncError } = storeToRefs(cloudSyncSettings);
-const { status, statusDetail } = storeToRefs(cloudSyncScheduler);
+const { status, statusDetail, canUseSync } = storeToRefs(cloudSyncScheduler);
 
 const tmpUserInfo = reactive<Partial<UserInfo>>({});
 const now = ref(Date.now());
@@ -86,7 +88,26 @@ function formatSyncTime(ts: number | null | undefined) {
 }
 
 async function onSyncNow() {
+  if (!requireCloudSync())
+    return;
   await cloudSyncScheduler.syncNow();
+}
+
+function requireCloudSync(): boolean {
+  if (canUseSync.value)
+    return true;
+  if (!props.userInfo?.email) {
+    showFailToast('请先登录');
+    return false;
+  }
+  showVipDialog('数据同步为会员功能\n请先开通会员');
+  return false;
+}
+
+function goSyncPage(name: 'ManageSync' | 'SyncToServer' | 'SyncFromServer') {
+  if (!requireCloudSync())
+    return;
+  router.push({ name });
 }
 </script>
 
@@ -193,6 +214,11 @@ async function onSyncNow() {
           </van-cell-group>
 
           <van-cell-group inset class="mt-4">
+            <van-notice-bar
+              v-if="!canUseSync"
+              left-icon="info-o"
+              text="云同步为会员功能，开通后可自动与手动同步"
+            />
             <van-cell
               title="自动同步"
             >
@@ -200,14 +226,15 @@ async function onSyncNow() {
                 <van-switch
                   v-model="enableCloudSync"
                   size="20px"
+                  :disabled="!canUseSync"
                 />
               </template>
             </van-cell>
             <van-cell
               class="sync-status-cell"
               title="同步状态"
-              :is-link="status !== 'syncing'"
-              :value="status === 'syncing' ? '同步中' : '立即同步'"
+              :is-link="canUseSync && status !== 'syncing'"
+              :value="!canUseSync ? '会员功能' : status === 'syncing' ? '同步中' : '立即同步'"
               @click="status !== 'syncing' && onSyncNow()"
             >
               <template #label>
@@ -226,29 +253,17 @@ async function onSyncNow() {
               title="管理同步数据"
               label="选择要同步的数据类型"
               is-link
-              @click="
-                () => {
-                  router.push({ name: 'ManageSync' });
-                }
-              "
+              @click="goSyncPage('ManageSync')"
             />
             <van-cell
               title="手动上传"
               is-link
-              @click="
-                () => {
-                  router.push({ name: 'SyncToServer' });
-                }
-              "
+              @click="goSyncPage('SyncToServer')"
             />
             <van-cell
               title="手动下载"
               is-link
-              @click="
-                () => {
-                  router.push({ name: 'SyncFromServer' });
-                }
-              "
+              @click="goSyncPage('SyncFromServer')"
             />
           </van-cell-group>
 

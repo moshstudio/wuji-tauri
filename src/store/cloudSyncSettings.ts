@@ -1,40 +1,115 @@
-import { useStorageAsync } from '@vueuse/core';
+import type { SyncTypes } from '@wuji-tauri/sync';
+import {
+  ALL_SYNC_TYPES,
+  defaultCloudSyncTypes,
+  migrateLegacySyncKeys,
+  readJson,
+  syncSessionKeys,
+  writeJson,
+} from '@wuji-tauri/sync';
 import { defineStore } from 'pinia';
-import { ALL_SYNC_TYPES, SyncTypes } from '@/types/sync';
+import { ref, watch } from 'vue';
 
-function defaultCloudSyncTypes(): Record<SyncTypes, boolean> {
-  return Object.fromEntries(
-    ALL_SYNC_TYPES.map(t => [t, true]),
-  ) as Record<SyncTypes, boolean>;
-}
-
-export const useCloudSyncSettings = defineStore('cloudSyncSettings', () => {
-  /** 总开关：开启后自动双向同步（兼容旧键 enableAutoCloudSync） */
-  const enableCloudSync = useStorageAsync('enableCloudSync', (() => {
+const browserStorage = {
+  getItem(key: string) {
     try {
-      const legacy = localStorage.getItem('enableAutoCloudSync');
-      if (legacy === 'false')
-        return false;
+      if (typeof localStorage === 'undefined')
+        return null;
+      return localStorage.getItem(key);
+    }
+    catch {
+      return null;
+    }
+  },
+  setItem(key: string, value: string) {
+    try {
+      if (typeof localStorage === 'undefined')
+        return;
+      localStorage.setItem(key, value);
+    }
+    catch {
+      /* quota */
+    }
+  },
+  removeItem(key: string) {
+    try {
+      if (typeof localStorage === 'undefined')
+        return;
+      localStorage.removeItem(key);
     }
     catch {
       /* ignore */
     }
-    return true;
-  })());
+  },
+};
 
-  const cloudSyncTypes = useStorageAsync<Record<SyncTypes, boolean>>(
-    'cloudSyncTypes',
-    defaultCloudSyncTypes(),
+interface PersistedSettings {
+  enableCloudSync?: boolean;
+  cloudSyncTypes?: Record<SyncTypes, boolean>;
+  lastSyncAt?: number | null;
+  lastSyncError?: string | null;
+}
+
+export const useCloudSyncSettings = defineStore('cloudSyncSettings', () => {
+  let boundUserId: string | undefined;
+  const enableCloudSync = ref(true);
+  const cloudSyncTypes = ref(defaultCloudSyncTypes());
+  const cloudSyncCursors = ref<Partial<Record<SyncTypes, string>>>({});
+  const lastSyncAt = ref<number | null>(null);
+  const lastSyncError = ref<string | null>(null);
+
+  const persist = () => {
+    if (!boundUserId)
+      return;
+    const keys = syncSessionKeys(boundUserId);
+    writeJson(browserStorage, keys.settings, {
+      enableCloudSync: enableCloudSync.value,
+      cloudSyncTypes: cloudSyncTypes.value,
+      lastSyncAt: lastSyncAt.value,
+      lastSyncError: lastSyncError.value,
+    } satisfies PersistedSettings);
+    writeJson(browserStorage, keys.cursors, cloudSyncCursors.value);
+  };
+
+  const resetInMemory = () => {
+    enableCloudSync.value = true;
+    cloudSyncTypes.value = defaultCloudSyncTypes();
+    cloudSyncCursors.value = {};
+    lastSyncAt.value = null;
+    lastSyncError.value = null;
+  };
+
+  const loadUser = (userId: string) => {
+    migrateLegacySyncKeys(browserStorage, userId);
+    const keys = syncSessionKeys(userId);
+    const settings = readJson<PersistedSettings>(browserStorage, keys.settings, {});
+    enableCloudSync.value = settings.enableCloudSync !== false;
+    cloudSyncTypes.value = {
+      ...defaultCloudSyncTypes(),
+      ...(settings.cloudSyncTypes || {}),
+    };
+    lastSyncAt.value = settings.lastSyncAt ?? null;
+    lastSyncError.value = settings.lastSyncError ?? null;
+    cloudSyncCursors.value = readJson(browserStorage, keys.cursors, {});
+  };
+
+  const bindUser = (userId?: string) => {
+    if (userId === boundUserId)
+      return;
+    persist();
+    boundUserId = userId;
+    if (!userId) {
+      resetInMemory();
+      return;
+    }
+    loadUser(userId);
+  };
+
+  watch(
+    [enableCloudSync, cloudSyncTypes, cloudSyncCursors, lastSyncAt, lastSyncError],
+    () => persist(),
+    { deep: true },
   );
-
-  /** 各类型上次成功同步游标（服务端 version 十进制字符串） */
-  const cloudSyncCursors = useStorageAsync<Partial<Record<SyncTypes, string>>>(
-    'cloudSyncCursors',
-    {},
-  );
-
-  const lastSyncAt = useStorageAsync<number | null>('cloudSyncLastAt', null);
-  const lastSyncError = useStorageAsync<string | null>('cloudSyncLastError', null);
 
   const isTypeEnabled = (type: SyncTypes) => {
     if (!enableCloudSync.value)
@@ -62,7 +137,6 @@ export const useCloudSyncSettings = defineStore('cloudSyncSettings', () => {
     ) as Record<SyncTypes, boolean>;
   };
 
-  /** 仅返回数字 version；旧 ISO 游标视为未同步 */
   const getCursor = (type: SyncTypes) => {
     const raw = cloudSyncCursors.value[type];
     if (!raw)
@@ -90,18 +164,28 @@ export const useCloudSyncSettings = defineStore('cloudSyncSettings', () => {
     lastSyncError.value = message;
   };
 
+  const invalidateCursors = (types?: SyncTypes[]) => {
+    const targets = types?.length ? types : ALL_SYNC_TYPES;
+    const next = { ...cloudSyncCursors.value };
+    for (const type of targets)
+      delete next[type];
+    cloudSyncCursors.value = next;
+  };
+
   return {
     enableCloudSync,
     cloudSyncTypes,
     cloudSyncCursors,
     lastSyncAt,
     lastSyncError,
+    bindUser,
     isTypeEnabled,
     enabledTypes,
     setTypeEnabled,
     setAllTypes,
     getCursor,
     setCursor,
+    invalidateCursors,
     markSyncSuccess,
     markSyncError,
   };

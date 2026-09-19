@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { canUseCloudSync, syncUserIdOf } from '@wuji-tauri/sync';
 import { storeToRefs } from 'pinia';
 import { allowMultipleToast } from 'vant';
 import { nextTick, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useDisplayStore, useServerStore, useStore } from '@/store';
 import { useBackStore } from '@/store/backStore';
+import { bindCloudSyncSession } from '@/store/cloudSyncOps';
 import { useCloudSyncScheduler } from '@/store/cloudSyncScheduler';
 import { useCloudSyncSettings } from '@/store/cloudSyncSettings';
 import { checkAndUpdate } from '@/utils/update';
@@ -44,8 +46,28 @@ onMounted(async () => {
 
 watch(
   [
-    () => serverStore.userInfo?.email,
+    () => serverStore.userInfo?._id || serverStore.userInfo?.email,
     () => serverStore.hasFeature('cloud_sync'),
+  ],
+  () => {
+    const userId = syncUserIdOf(serverStore.userInfo);
+    const allowed = canUseCloudSync({
+      loggedIn: !!serverStore.userInfo?.email,
+      hasCloudSyncFeature: serverStore.hasFeature('cloud_sync'),
+    });
+    cloudSyncSettings.bindUser(userId);
+    bindCloudSyncSession({
+      userId,
+      canEnqueue: allowed,
+    });
+    cloudSyncScheduler.onSessionChanged();
+    cloudSyncScheduler.checkAndFlush();
+  },
+  { immediate: true },
+);
+
+watch(
+  [
     () => cloudSyncSettings.enableCloudSync,
     () => cloudSyncSettings.cloudSyncTypes,
   ],

@@ -1,36 +1,54 @@
 <script setup lang="ts">
 import type { SyncTypes } from '@/types/sync';
 import { storeToRefs } from 'pinia';
-import { showSuccessToast } from 'vant';
+import { showFailToast, showSuccessToast } from 'vant';
 import MNavBar from '@/components/header/MNavBar.vue';
 import { useCloudSyncScheduler, useCloudSyncSettings } from '@/store';
 import { ALL_SYNC_TYPES, SYNC_TYPE_LABELS } from '@/types/sync';
+import { showVipDialog } from '@/utils/vip';
 
 const settings = useCloudSyncSettings();
 const scheduler = useCloudSyncScheduler();
 const { cloudSyncTypes, enableCloudSync } = storeToRefs(settings);
-const { status } = storeToRefs(scheduler);
+const { status, canUseSync } = storeToRefs(scheduler);
 
 function isEnabled(type: SyncTypes) {
   return cloudSyncTypes.value?.[type] !== false;
 }
 
+function requireCloudSync(): boolean {
+  if (canUseSync.value)
+    return true;
+  showVipDialog('数据同步为会员功能\n请先开通会员');
+  return false;
+}
+
 function toggleType(type: SyncTypes, value: boolean) {
+  if (!requireCloudSync())
+    return;
   settings.setTypeEnabled(type, value);
 }
 
 function enableAll() {
+  if (!requireCloudSync())
+    return;
   settings.setAllTypes(true);
 }
 
 function disableAll() {
+  if (!requireCloudSync())
+    return;
   settings.setAllTypes(false);
 }
 
 async function syncNow() {
+  if (!requireCloudSync())
+    return;
   const ok = await scheduler.syncNow();
   if (ok)
     showSuccessToast('同步完成');
+  else
+    showFailToast(scheduler.statusDetail || '同步失败');
 }
 </script>
 
@@ -39,7 +57,12 @@ async function syncNow() {
     <MNavBar title="管理同步数据" />
     <div class="grow overflow-y-auto bg-[--van-background] p-2">
       <van-notice-bar
-        v-if="!enableCloudSync"
+        v-if="!canUseSync"
+        left-icon="info-o"
+        text="云同步为会员功能，开通后可管理同步类型"
+      />
+      <van-notice-bar
+        v-else-if="!enableCloudSync"
         left-icon="info-o"
         text="总开关已关闭，开启后才会自动同步所选类型"
       />
@@ -48,10 +71,10 @@ async function syncNow() {
         <van-cell title="同步全部类型">
           <template #right-icon>
             <div class="flex gap-2">
-              <van-button size="mini" type="primary" plain @click="enableAll">
+              <van-button size="mini" type="primary" plain :disabled="!canUseSync" @click="enableAll">
                 全开
               </van-button>
-              <van-button size="mini" plain @click="disableAll">
+              <van-button size="mini" plain :disabled="!canUseSync" @click="disableAll">
                 全关
               </van-button>
             </div>
@@ -69,6 +92,7 @@ async function syncNow() {
             <van-switch
               :model-value="isEnabled(type)"
               size="20px"
+              :disabled="!canUseSync"
               @update:model-value="(v: boolean) => toggleType(type, v)"
             />
           </template>
@@ -80,7 +104,7 @@ async function syncNow() {
           block
           type="primary"
           :loading="status === 'syncing'"
-          :disabled="!enableCloudSync"
+          :disabled="!canUseSync || !enableCloudSync"
           @click="syncNow"
         >
           立即同步

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
-import { SyncTypes } from '../types/sync';
-import { serverDeletedToTombstones } from './syncTombstone';
-import { mergeForAutoUpload } from './syncMerge';
+import { describe, it } from 'node:test'; // eslint-disable-line test/no-import-node-test -- 仓库测试用 node:test，未安装 vitest
+import { mergeForAutoUpload } from './mergeManual';
+import { serverDeletedToTombstones } from './tombstone';
+import { SyncTypes } from './types';
 
 describe('serverDeletedToTombstones', () => {
   it('maps shelf/item deletes', () => {

@@ -32,6 +32,10 @@ import { router } from '@/router';
 import { isMembershipOrderValid, UserInfo } from '@/types/user';
 import { sleep } from '@/utils';
 import { getDeviceId } from '@/utils/device';
+import {
+  isMarketSourceUnavailableMessage,
+  parseServerErrorMessage,
+} from '@/utils/subscribeSourceUpdate';
 import { showVipDialog } from '@/utils/vip';
 import { createKVStore, useDisplayStore } from '.';
 
@@ -668,21 +672,60 @@ export const useServerStore = defineStore('serverStore', () => {
     );
   };
 
+  const fetchMarketSourceById = async (
+    id: string,
+    options?: { silent?: boolean },
+  ): Promise<{
+    source?: MarketSource;
+    errorMessage?: string;
+    status?: number;
+    unavailable?: boolean;
+  }> => {
+    type FetchResult = {
+      source?: MarketSource;
+      errorMessage?: string;
+      status?: number;
+      unavailable?: boolean;
+    };
+    return (
+      (await sendRequest<FetchResult>(
+        `source/${id}`,
+        {
+          silent: options?.silent,
+          silentGuest401: !!options?.silent,
+        },
+        async (response) => {
+          const json = await response.json();
+          return { source: json as MarketSource };
+        },
+        async (response) => {
+          let errorMessage = '';
+          if (response) {
+            try {
+              errorMessage = parseServerErrorMessage(await response.json());
+            }
+            catch {
+              errorMessage = '';
+            }
+          }
+          return {
+            errorMessage,
+            status: response?.status,
+            unavailable:
+              isMarketSourceUnavailableMessage(errorMessage)
+              || response?.status === 400,
+          };
+        },
+      )) || {}
+    );
+  };
+
   const getMarketSourceById = async (
     id: string,
     options?: { silent?: boolean },
   ): Promise<MarketSource | undefined> => {
-    return await sendRequest<MarketSource>(
-      `source/${id}`,
-      {
-        silent: options?.silent,
-        silentGuest401: !!options?.silent,
-      },
-      async (response) => {
-        const json = await response.json();
-        return json;
-      },
-    );
+    const result = await fetchMarketSourceById(id, options);
+    return result.source;
   };
 
   const getDefaultMarketSource = async (): Promise<
@@ -989,6 +1032,7 @@ export const useServerStore = defineStore('serverStore', () => {
     applied?: number;
     skipped?: number;
     conflicts?: any[];
+    appliedMutationIds?: string[];
   }> => {
     if (!userInfo.value?.email || !hasFeature.value('cloud_sync')) {
       return { ok: false };
@@ -1010,6 +1054,7 @@ export const useServerStore = defineStore('serverStore', () => {
           applied: json.applied,
           skipped: json.skipped,
           conflicts: json.conflicts,
+          appliedMutationIds: json.appliedMutationIds,
         };
       }
       catch {
@@ -1192,6 +1237,7 @@ export const useServerStore = defineStore('serverStore', () => {
     resendVerifyEmail,
     getMarketSource,
     getMarketSourceById,
+    fetchMarketSourceById,
     getDefaultMarketSource,
     getMyMarketSources,
     createMarketSource,

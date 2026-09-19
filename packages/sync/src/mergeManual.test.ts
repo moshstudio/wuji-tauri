@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
-import { SyncTypes } from '../types/sync';
+import { describe, it } from 'node:test'; // eslint-disable-line test/no-import-node-test -- 仓库测试用 node:test，未安装 vitest
 import {
   mergeForAutoUpload,
   mergeShelfData,
   mergeSubscribeSourceData,
-} from './syncMerge';
+} from './mergeManual';
+import { SyncTypes } from './types';
 
 describe('mergeSubscribeSourceData (manual download)', () => {
   it('unions urls and prefers server source meta', () => {
