@@ -17,6 +17,7 @@ import {
   applyPatchConflicts,
   isSyncTypeReady,
 } from '@/utils/cloudSyncApply';
+import { enqueueHistoryUpsert } from '@/utils/historySync';
 import { useBookShelfStore } from './bookShelfStore';
 import {
   ackMutationIds,
@@ -56,9 +57,9 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
   const settings = () => useCloudSyncSettings();
   let storesReady = false;
 
-  async function waitForLocalStores(timeoutMs = 8000) {
+  async function waitForLocalStores(timeoutMs = 8000): Promise<boolean> {
     if (storesReady)
-      return;
+      return true;
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       const loaded = [
@@ -69,11 +70,35 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
         useSongShelfStore().storage?.loaded,
         useSubscribeSourceStore().storage?.loaded,
       ].every(Boolean);
-      if (loaded) {
+      const historyReady = await Promise.all([
+        useBookShelfStore().waitForReady(0),
+        useComicShelfStore().waitForReady(0),
+        useVideoShelfStore().waitForReady(0),
+      ]);
+      if (loaded && historyReady.every(Boolean)) {
         storesReady = true;
-        return;
+        return true;
       }
       await new Promise(r => setTimeout(r, 50));
+    }
+    return false;
+  }
+
+  function seedLocalHistory() {
+    const syncSettings = settings();
+    if (!syncSettings.enableCloudSync)
+      return;
+    const groups = [
+      [SyncTypes.BookHistory, useBookShelfStore().bookHistory],
+      [SyncTypes.ComicHistory, useComicShelfStore().comicHistory],
+      [SyncTypes.VideoHistory, useVideoShelfStore().videoHistory],
+    ] as const;
+    for (const [type, list] of groups) {
+      if (!syncSettings.isTypeEnabled(type) || syncSettings.isHistorySeeded(type))
+        continue;
+      for (const item of list || [])
+        enqueueHistoryUpsert(type, item);
+      syncSettings.markHistorySeeded(type);
     }
   }
 
@@ -268,7 +293,7 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
     inflight = true;
     dirtyWhileInflight = false;
     try {
-      await waitForLocalStores();
+      const storesLoaded = await waitForLocalStores();
       if (!gatesOpen()) {
         if (phase.value !== 'PausedManual')
           setPhase('Disabled', reason);
@@ -277,6 +302,8 @@ export const useCloudSyncScheduler = defineStore('cloudSyncScheduler', () => {
         return false;
       }
 
+      if (storesLoaded)
+        seedLocalHistory();
       const syncSettings = settings();
       const enabled = syncSettings.enabledTypes();
       if (!enabled.length) {

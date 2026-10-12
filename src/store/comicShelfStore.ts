@@ -15,6 +15,7 @@ import { defineStore } from 'pinia';
 import { showToast } from 'vant';
 import { ref } from 'vue';
 import { SyncTypes } from '@/types/sync';
+import { syncHistoryDiff } from '@/utils/historySync';
 import { enqueueOp } from './cloudSyncOps';
 import { useStore } from './store';
 import { createKVStore } from './utils';
@@ -198,6 +199,7 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
     comicItem: ComicItem,
     chapter?: ComicChapter,
   ) => {
+    const previous = comicHistory.value.slice();
     const comic = comicHistory.value.find(
       item => item.comic.id === comicItem.id,
     );
@@ -225,6 +227,12 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
         .sort((a, b) => b.lastReadTime - a.lastReadTime)
         .slice(0, 10);
     }
+    syncHistoryDiff(
+      SyncTypes.ComicHistory,
+      previous,
+      comicHistory.value,
+      comicItem.id,
+    );
   };
 
   const updateComicReadInfo = (comicItem: ComicItem, chapter: ComicChapter) => {
@@ -258,7 +266,9 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
   };
 
   const clearComicHistory = () => {
+    const previous = comicHistory.value.slice();
     comicHistory.value = [];
+    syncHistoryDiff(SyncTypes.ComicHistory, previous, []);
   };
 
   const deleteComicFromShelf = (comicItem: ComicItem, shelfId: string) => {
@@ -308,13 +318,22 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
   };
   const loadSyncData = async (data: ComicShelf[]) => {
     comicShelf.value = data;
-    for (const shelf of comicShelf.value) {
-      for (const comic of shelf.comics) {
-        if (isComicInHistory(comic.comic)) {
-          updateComicHistoryInfo(comic.comic, comic.lastReadChapter);
-        }
-      }
+  };
+
+  const loadHistorySync = (data: ComicHistory[]) => {
+    comicHistory.value = Array.isArray(data) ? data : [];
+  };
+
+  const waitForReady = async (timeoutMs = 8000): Promise<boolean> => {
+    if (storage.loaded && historyStorage.loaded)
+      return true;
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      if (storage.loaded && historyStorage.loaded)
+        return true;
+      await new Promise(r => setTimeout(r, 50));
     }
+    return storage.loaded && historyStorage.loaded;
   };
   const clear = async () => {
     comicShelf.value = [
@@ -348,6 +367,8 @@ export const useComicShelfStore = defineStore('comicShelfStore', () => {
     comicRefreshChapters,
     syncData,
     loadSyncData,
+    loadHistorySync,
+    waitForReady,
     clear,
   };
 });

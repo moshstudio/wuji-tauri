@@ -11,6 +11,7 @@ import {
   dropSubscribeTomb,
   upsertSubscribeTomb,
 } from './subscribeMerge';
+import { applyPendingHistoryOps, isHistorySyncType } from './historyMerge';
 import { SyncTypes } from './types';
 
 function getItemId(item: any, itemKey: string): string | undefined {
@@ -197,27 +198,37 @@ export function applyPendingOpsToData(
   data: any,
   ops: CloudSyncOp[],
   tombs: SubscribeTomb[] = [],
-): { data: any; tombs: SubscribeTomb[] } {
+): { data: any; tombs: SubscribeTomb[]; removedIds: string[] } {
   const typeOps = ops.filter(op => op.type === type);
   if (!typeOps.length)
-    return { data, tombs };
+    return { data, tombs, removedIds: [] };
+
+  if (isHistorySyncType(type)) {
+    const result = applyPendingHistoryOps(
+      type,
+      Array.isArray(data) ? data : [],
+      typeOps,
+    );
+    return { data: result.list, tombs, removedIds: result.removedIds };
+  }
 
   const itemKey = shelfItemKey(type);
   if (itemKey) {
     let shelves = Array.isArray(data) ? data : [];
     for (const op of typeOps)
       shelves = applyPendingShelfOp(shelves, op, itemKey);
-    return { data: shelves, tombs };
+    return { data: shelves, tombs, removedIds: [] };
   }
   if (type === SyncTypes.SubscribeSource) {
     const list = Array.isArray(data) ? data : [];
-    return applyPendingSubscribeOps(list, tombs, typeOps);
+    const subscribed = applyPendingSubscribeOps(list, tombs, typeOps);
+    return { ...subscribed, removedIds: [] };
   }
   if (type === SyncTypes.SongShelf) {
     const next = data || {};
     for (const op of typeOps)
       applyPendingSongOp(next, op);
-    return { data: next, tombs };
+    return { data: next, tombs, removedIds: [] };
   }
-  return { data, tombs };
+  return { data, tombs, removedIds: [] };
 }

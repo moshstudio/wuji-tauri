@@ -50,7 +50,39 @@ type SendRequestOptions = RequestInit
     silentGuest401?: boolean;
     /** 失败时不弹错误（后台补全权限等） */
     silent?: boolean;
+    /**
+     * 登录等由用户主动提交的鉴权请求。
+     * 这类 401 是业务失败，不当作「登录已过期」，也不走通用错误弹窗。
+     */
+    authAttempt?: boolean;
   };
+
+function readResponseMessage(response?: Response): Promise<string> {
+  if (!response || response.status === 0)
+    return Promise.resolve('');
+  return response
+    .text()
+    .then((data) => {
+      if (!data.trim())
+        return '';
+      try {
+        return parseServerErrorMessage(JSON.parse(data));
+      }
+      catch {
+        return data.trim();
+      }
+    })
+    .catch(() => '');
+}
+
+function isGenericAuthFailure(message: string): boolean {
+  return /^(unauthorized|unauthenticated)$/i.test(message.trim());
+}
+
+function isUnverifiedAccountMessage(message: string): boolean {
+  return /未验证/.test(message) || isGenericAuthFailure(message);
+}
+
 let API_BASE_URL: string;
 // 开发可在 .env.development 设置 VITE_API_BASE_URL=http://localhost:3000/v1/api/
 API_BASE_URL
@@ -154,6 +186,7 @@ export const useServerStore = defineStore('serverStore', () => {
   const _request = async (
     endpoint: string,
     options: RequestInit & ClientOptions = {},
+    authAttempt = false,
   ) => {
     const headers = new Headers(options.headers);
     if (!headers.has('Content-Type')) {
@@ -175,7 +208,8 @@ export const useServerStore = defineStore('serverStore', () => {
         const hadAuth = !!(
           accessToken.value && accessToken.value !== 'undefined'
         );
-        if (hadAuth)
+        // 登录失败的 401 会清掉失效令牌，但不标记「登录已过期」
+        if (hadAuth && !authAttempt)
           markSessionExpired();
         accessToken.value = undefined;
         userInfo.value = null;
@@ -270,21 +304,27 @@ export const useServerStore = defineStore('serverStore', () => {
       context?: SendRequestErrorContext,
     ) => Promise<T | undefined>,
   ): Promise<T | undefined> {
-    const { silentGuest401 = false, silent = false, ...fetchOptions } = options;
+    const {
+      silentGuest401 = false,
+      silent = false,
+      authAttempt = false,
+      ...fetchOptions
+    } = options;
     const sentWithAuth = !!(
       accessToken.value && accessToken.value !== 'undefined'
     );
-    const response = await _request(endpoint, fetchOptions);
+    const response = await _request(endpoint, fetchOptions, authAttempt);
     if (response.ok) {
       return await successHandler(response);
     }
     else {
       const guestUnauthorized = response.status === 401 && !sentWithAuth;
       // 带 token 的 401 视为登录过期：不走通用错误弹窗，改由重新登录流程处理
-      if (!silent && response.status !== 401) {
+      // 登录请求本身的失败由调用方提示，避免和「登录已过期」互相吞掉
+      if (!silent && !authAttempt && response.status !== 401) {
         handleError(response);
       }
-      if (response.status === 401 && sentWithAuth) {
+      if (response.status === 401 && sentWithAuth && !authAttempt) {
         void promptSessionExpiredLogin();
       }
       if (errorHandler) {
@@ -297,21 +337,28 @@ export const useServerStore = defineStore('serverStore', () => {
     }
   }
 
-  const fetchUserInfo = async (): Promise<void> => {
+  const fetchUserInfo = async (options?: {
+    authAttempt?: boolean;
+  }): Promise<string | undefined> => {
     if (!accessToken.value)
-      return;
-    return await sendRequest<void>(
+      return '未登录';
+    return await sendRequest<string | undefined>(
       'user/info',
-      {},
+      { authAttempt: options?.authAttempt },
       async (response) => {
         const json = await response.json();
         userInfo.value = plainToClass(UserInfo, json);
         console.log('用户信息:', userInfo.value);
+        return undefined;
       },
       async (response, context) => {
-        if (context?.guestUnauthorized || response?.status === 401)
-          return;
-        showFailToast('获取用户信息失败');
+        if (context?.guestUnauthorized || response?.status === 401) {
+          return (await readResponseMessage(response)) || 'Unauthorized';
+        }
+        const message = (await readResponseMessage(response)) || '获取用户信息失败';
+        if (!options?.authAttempt)
+          showFailToast('获取用户信息失败');
+        return message;
       },
     );
   };
@@ -526,6 +573,32 @@ export const useServerStore = defineStore('serverStore', () => {
     );
   };
 
+  const promptUnverifiedEmail = (email: string) => {
+    showConfirmDialog({
+      title: '邮箱未验证',
+      message: '该邮箱尚未完成验证，暂时无法登录。请查收验证邮件，或重新发送一封。',
+      confirmButtonText: '重新发送验证邮件',
+      cancelButtonText: '知道了',
+    })
+      .then(() => {
+        void resendVerifyEmail(email);
+      })
+      .catch(() => {});
+  };
+
+  const presentLoginError = (email: string, rawMessage: string) => {
+    const message = rawMessage.trim();
+    if (isUnverifiedAccountMessage(message)) {
+      promptUnverifiedEmail(email);
+      return;
+    }
+    showDialog({
+      title: '登录失败',
+      message: message || '登录失败，请检查邮箱和密码',
+      showCancelButton: false,
+    });
+  };
+
   const login = async (email: string, password: string): Promise<boolean> => {
     if (!validator.isEmail(email)) {
       showFailToast('邮箱格式错误');
@@ -543,19 +616,26 @@ export const useServerStore = defineStore('serverStore', () => {
       'auth/login',
       {
         method: 'POST',
+        authAttempt: true,
         body: JSON.stringify({ email, password, ...deviceInfo }),
       },
       async (response) => {
         const json = await response.json();
         accessToken.value = json.access_token;
-        await fetchUserInfo();
+        const infoError = await fetchUserInfo({ authAttempt: true });
+        if (infoError || !userInfo.value) {
+          accessToken.value = undefined;
+          userInfo.value = null;
+          resolveSessionExpired();
+          presentLoginError(email, infoError || '');
+          return false;
+        }
         resolveSessionExpired();
         return true;
       },
-      async (response, context) => {
-        if (context?.guestUnauthorized) {
-          showRequestFailure(response, '登录失败，请检查邮箱和密码');
-        }
+      async (response) => {
+        resolveSessionExpired();
+        presentLoginError(email, await readResponseMessage(response));
         return false;
       },
     );

@@ -288,8 +288,15 @@ function extractClassBody(code: string): string | null {
   return code.slice(openIndex + 1, closeIndex);
 }
 
-function extractMethods(classBody: string): { name: string; code: string }[] {
-  const methods: { name: string; code: string }[] = [];
+interface ExtractedMethod {
+  name: string;
+  code: string;
+  start: number;
+  end: number;
+}
+
+function extractMethods(classBody: string): ExtractedMethod[] {
+  const methods: ExtractedMethod[] = [];
   const methodRe
     = /(?:^|\n)(\s*)(async\s+)?(constructor|[a-zA-Z_$][\w$]*)\s*\([^)]*\)\s*\{/g;
   let match: RegExpExecArray | null;
@@ -308,11 +315,28 @@ function extractMethods(classBody: string): { name: string; code: string }[] {
     methods.push({
       name,
       code: classBody.slice(match.index, braceEnd + 1).trim(),
+      start: match.index,
+      end: braceEnd + 1,
     });
     methodRe.lastIndex = braceEnd + 1;
   }
 
   return methods;
+}
+
+/** Class fields live outside methods. id/name/version are filled by the editor template. */
+function extractClassFields(classBody: string, methods: ExtractedMethod[]): string {
+  let cursor = 0;
+  let fields = '';
+  for (const method of methods) {
+    fields += classBody.slice(cursor, method.start);
+    cursor = method.end;
+  }
+  fields += classBody.slice(cursor);
+  return fields.replace(
+    /^[ \t]*(?:id|name|version)[ \t]*=[ \t]*(?:'[^'\r\n]*'|"[^"\r\n]*"|`[^`\r\n]*`)[ \t]*;?[ \t]*\r?\n?/gm,
+    '',
+  ).trim();
 }
 
 function detectSourceType(code: string): Pick<ParsedExtensionCode, 'type' | 'mode'> | null {
@@ -384,6 +408,11 @@ export function parseExtensionCode(code: string): ParsedExtensionCode {
 
   if (helperMethods.length) {
     pages.constructor = `${pages.constructor}\n\n${helperMethods.join('\n\n')}`;
+  }
+
+  const fields = extractClassFields(classBody, methods);
+  if (fields) {
+    pages.constructor = `${fields}\n\n${pages.constructor}`;
   }
 
   const missingMethods = Object.entries(pageMap)

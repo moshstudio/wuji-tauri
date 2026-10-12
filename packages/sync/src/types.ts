@@ -5,6 +5,9 @@ export enum SyncTypes {
   ComicShelf = 'ComicShelf',
   VideoShelf = 'VideoShelf',
   SubscribeSource = 'SubscribeSource',
+  BookHistory = 'BookHistory',
+  ComicHistory = 'ComicHistory',
+  VideoHistory = 'VideoHistory',
 }
 
 export const SYNC_TYPE_LABELS: Record<SyncTypes, string> = {
@@ -14,6 +17,9 @@ export const SYNC_TYPE_LABELS: Record<SyncTypes, string> = {
   [SyncTypes.BookShelf]: '书籍书架',
   [SyncTypes.ComicShelf]: '漫画书架',
   [SyncTypes.VideoShelf]: '影视收藏',
+  [SyncTypes.BookHistory]: '书籍历史',
+  [SyncTypes.ComicHistory]: '漫画历史',
+  [SyncTypes.VideoHistory]: '影视历史',
 };
 
 export const ALL_SYNC_TYPES = Object.values(SyncTypes);

@@ -46,6 +46,7 @@ const browserStorage = {
 interface PersistedSettings {
   enableCloudSync?: boolean;
   cloudSyncTypes?: Record<SyncTypes, boolean>;
+  historySeeded?: Partial<Record<SyncTypes, boolean>>;
   lastSyncAt?: number | null;
   lastSyncError?: string | null;
 }
@@ -54,6 +55,7 @@ export const useCloudSyncSettings = defineStore('cloudSyncSettings', () => {
   let boundUserId: string | undefined;
   const enableCloudSync = ref(true);
   const cloudSyncTypes = ref(defaultCloudSyncTypes());
+  const historySeeded = ref<Partial<Record<SyncTypes, boolean>>>({});
   const cloudSyncCursors = ref<Partial<Record<SyncTypes, string>>>({});
   const lastSyncAt = ref<number | null>(null);
   const lastSyncError = ref<string | null>(null);
@@ -65,6 +67,7 @@ export const useCloudSyncSettings = defineStore('cloudSyncSettings', () => {
     writeJson(browserStorage, keys.settings, {
       enableCloudSync: enableCloudSync.value,
       cloudSyncTypes: cloudSyncTypes.value,
+      historySeeded: historySeeded.value,
       lastSyncAt: lastSyncAt.value,
       lastSyncError: lastSyncError.value,
     } satisfies PersistedSettings);
@@ -74,6 +77,7 @@ export const useCloudSyncSettings = defineStore('cloudSyncSettings', () => {
   const resetInMemory = () => {
     enableCloudSync.value = true;
     cloudSyncTypes.value = defaultCloudSyncTypes();
+    historySeeded.value = {};
     cloudSyncCursors.value = {};
     lastSyncAt.value = null;
     lastSyncError.value = null;
@@ -88,6 +92,7 @@ export const useCloudSyncSettings = defineStore('cloudSyncSettings', () => {
       ...defaultCloudSyncTypes(),
       ...(settings.cloudSyncTypes || {}),
     };
+    historySeeded.value = { ...(settings.historySeeded || {}) };
     lastSyncAt.value = settings.lastSyncAt ?? null;
     lastSyncError.value = settings.lastSyncError ?? null;
     cloudSyncCursors.value = readJson(browserStorage, keys.cursors, {});
@@ -106,10 +111,19 @@ export const useCloudSyncSettings = defineStore('cloudSyncSettings', () => {
   };
 
   watch(
-    [enableCloudSync, cloudSyncTypes, cloudSyncCursors, lastSyncAt, lastSyncError],
+    [enableCloudSync, cloudSyncTypes, historySeeded, cloudSyncCursors, lastSyncAt, lastSyncError],
     () => persist(),
     { deep: true },
   );
+
+  const isHistorySeeded = (type: SyncTypes) => !!historySeeded.value[type];
+
+  const markHistorySeeded = (type: SyncTypes) => {
+    historySeeded.value = {
+      ...historySeeded.value,
+      [type]: true,
+    };
+  };
 
   const isTypeEnabled = (type: SyncTypes) => {
     if (!enableCloudSync.value)
@@ -175,11 +189,14 @@ export const useCloudSyncSettings = defineStore('cloudSyncSettings', () => {
   return {
     enableCloudSync,
     cloudSyncTypes,
+    historySeeded,
     cloudSyncCursors,
     lastSyncAt,
     lastSyncError,
     bindUser,
     isTypeEnabled,
+    isHistorySeeded,
+    markHistorySeeded,
     enabledTypes,
     setTypeEnabled,
     setAllTypes,

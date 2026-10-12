@@ -27,6 +27,7 @@ export default antfu({
     '**/public/vs/**',
     '**/packages/fetch/src/assets/browser-image-compression.js',
     '**/src/components/codeEditor/templates.ts',
+    '**/packages/source-extension/sources/**',
     '**/src/utils/reader/reader-layout.js',
     '**/tauri-plugin-commands/**',
     '**/tauri-plugin-mediasession/**',

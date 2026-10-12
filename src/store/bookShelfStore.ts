@@ -11,6 +11,7 @@ import { nanoid } from 'nanoid';
 import { defineStore } from 'pinia';
 import { showToast } from 'vant';
 import { SyncTypes } from '@/types/sync';
+import { syncHistoryDiff } from '@/utils/historySync';
 import { useBookChapterStore } from './bookChaptersStore';
 import { enqueueOp } from './cloudSyncOps';
 import { useStore } from './store';
@@ -139,6 +140,7 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
   };
 
   const updateBookHistoryInfo = (bookItem: BookItem, chapter?: BookChapter) => {
+    const previous = bookHistory.value.slice();
     const clonedChapter = chapter ? _.cloneDeep(chapter) : undefined;
     const book = bookHistory.value.find(item => item.book.id === bookItem.id);
     if (book) {
@@ -163,8 +165,14 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
         ...bookHistory.value,
       ]
         .sort((a, b) => b.lastReadTime - a.lastReadTime)
-        .slice(0, 50); // 增加历史记录限制
+        .slice(0, 50);
     }
+    syncHistoryDiff(
+      SyncTypes.BookHistory,
+      previous,
+      bookHistory.value,
+      bookItem.id,
+    );
   };
 
   const updateBookReadInfo = (bookItem: BookItem, chapter: BookChapter) => {
@@ -197,7 +205,9 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
   };
 
   const clearBookHistory = () => {
+    const previous = bookHistory.value.slice();
     bookHistory.value = [];
+    syncHistoryDiff(SyncTypes.BookHistory, previous, []);
   };
 
   const addToBookShelf = (book: BookItem, shelfId?: string) => {
@@ -273,13 +283,10 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
 
   const loadSyncData = async (data: BookShelf[]) => {
     bookShelf.value = data;
-    for (const shelf of bookShelf.value) {
-      for (const book of shelf.books) {
-        if (isBookInHistory(book.book)) {
-          updateBookHistoryInfo(book.book, book.lastReadChapter);
-        }
-      }
-    }
+  };
+
+  const loadHistorySync = (data: Array<BookHistory>) => {
+    bookHistory.value = Array.isArray(data) ? data : [];
   };
 
   const clear = async () => {
@@ -328,6 +335,7 @@ export const useBookShelfStore = defineStore('bookShelfStore', () => {
     bookRefreshChapters,
     syncData,
     loadSyncData,
+    loadHistorySync,
     clear,
     waitForReady,
   };

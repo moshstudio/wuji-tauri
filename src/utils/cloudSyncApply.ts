@@ -3,6 +3,8 @@ import {
   applyEntityChangesToData,
   applyPatchConflictsToData,
   applyPendingOpsToData,
+  historyEntityId,
+  isHistorySyncType,
   SyncTypes,
 } from '@wuji-tauri/sync';
 import { useBookShelfStore } from '@/store/bookShelfStore';
@@ -12,6 +14,7 @@ import { usePhotoShelfStore } from '@/store/photoShelfStore';
 import { useSongShelfStore } from '@/store/songShelfStore';
 import { useSubscribeSourceStore } from '@/store/subscribeSourceStore';
 import { useVideoShelfStore } from '@/store/videoShelfStore';
+import { enqueueRemovedHistoryIds } from '@/utils/historySync';
 
 export { filterOpsByEnabledTypes } from '@wuji-tauri/sync';
 
@@ -37,6 +40,15 @@ async function persistType(type: SyncTypes, data: any) {
         applyAccessPolicy: false,
       });
       break;
+    case SyncTypes.BookHistory:
+      useBookShelfStore().loadHistorySync(data);
+      break;
+    case SyncTypes.ComicHistory:
+      useComicShelfStore().loadHistorySync(data);
+      break;
+    case SyncTypes.VideoHistory:
+      useVideoShelfStore().loadHistorySync(data);
+      break;
     default:
       break;
   }
@@ -56,6 +68,12 @@ function getTypeData(type: SyncTypes): any {
       return useSongShelfStore().syncData();
     case SyncTypes.SubscribeSource:
       return useSubscribeSourceStore().syncData();
+    case SyncTypes.BookHistory:
+      return useBookShelfStore().bookHistory;
+    case SyncTypes.ComicHistory:
+      return useComicShelfStore().comicHistory;
+    case SyncTypes.VideoHistory:
+      return useVideoShelfStore().videoHistory;
     default:
       return null;
   }
@@ -65,7 +83,22 @@ export function isSyncTypeReady(type: SyncTypes): boolean {
   return getTypeData(type) != null;
 }
 
-async function persistWithPending(type: SyncTypes, data: any, tombs: any[] = []) {
+function liveHistoryIds(type: SyncTypes, data: any): Set<string> {
+  if (!isHistorySyncType(type) || !Array.isArray(data))
+    return new Set();
+  return new Set(
+    data
+      .map(item => historyEntityId(type, item))
+      .filter((id): id is string => !!id),
+  );
+}
+
+async function persistWithPending(
+  type: SyncTypes,
+  data: any,
+  tombs: any[] = [],
+  removedIds: string[] = [],
+) {
   const replayed = applyPendingOpsToData(
     type,
     data,
@@ -74,6 +107,12 @@ async function persistWithPending(type: SyncTypes, data: any, tombs: any[] = [])
   );
   if (type === SyncTypes.SubscribeSource)
     useSubscribeSourceStore().setSubscribeTombs(replayed.tombs);
+  if (isHistorySyncType(type)) {
+    const live = liveHistoryIds(type, replayed.data);
+    const dropped = [...removedIds, ...(replayed.removedIds || [])]
+      .filter(id => id && !live.has(id));
+    enqueueRemovedHistoryIds(type, dropped);
+  }
   await persistType(type, replayed.data);
 }
 
@@ -97,7 +136,7 @@ export async function applyEntityChanges(results: SyncTypeChanges[]) {
       ? useSubscribeSourceStore().getSubscribeTombs()
       : [];
     const applied = applyEntityChangesToData(type, data, group.changes, tombs);
-    await persistWithPending(type, applied.data, applied.tombs);
+    await persistWithPending(type, applied.data, applied.tombs, applied.removedIds);
   }
 }
 
@@ -124,6 +163,6 @@ export async function applyPatchConflicts(
       ? useSubscribeSourceStore().getSubscribeTombs()
       : [];
     const applied = applyPatchConflictsToData(type, data, c, tombs);
-    await persistWithPending(type, applied.data, applied.tombs);
+    await persistWithPending(type, applied.data, applied.tombs, applied.removedIds);
   }
 }

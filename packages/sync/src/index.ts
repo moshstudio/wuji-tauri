@@ -1,4 +1,5 @@
 export * from './applyChanges';
+export * from './historyMerge';
 export * from './clock';
 export * from './fsm';
 export * from './mergeManual';

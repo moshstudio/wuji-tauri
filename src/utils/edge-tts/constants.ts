@@ -4,7 +4,12 @@ export const BASE_URL
 export const TRUSTED_CLIENT_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
 export const CLIENT_TOKEN = TRUSTED_CLIENT_TOKEN; // 保持向后兼容
 
-export const WSS_URL = `wss://${BASE_URL}/edge/v1?TrustedClientToken=${TRUSTED_CLIENT_TOKEN}`;
+// 2026-10 起 speech.platform.bing.com 的合成 WebSocket 返回 403。
+// Edge 155 改走 api.msedgeservices.com，该主机仍接受旧 Sec-MS-GEC，
+// 密钥参数名为 Ocp-Apim-Subscription-Key。音色列表仍由旧主机提供。
+// 见 https://github.com/rany2/edge-tts/pull/491
+export const WSS_URL
+  = `wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?Ocp-Apim-Subscription-Key=${TRUSTED_CLIENT_TOKEN}`;
 export const SYNTH_URL = WSS_URL; // 保持向后兼容
 
 export const VOICE_LIST = `https://${BASE_URL}/voices/list?trustedclienttoken=${TRUSTED_CLIENT_TOKEN}`;

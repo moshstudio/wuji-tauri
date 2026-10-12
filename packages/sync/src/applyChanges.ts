@@ -6,6 +6,7 @@ import {
   incomingWinsPull,
   rememberEntityTs,
 } from './clock';
+import { applyHistoryChanges, isHistorySyncType } from './historyMerge';
 import {
   applySubscribeDelete,
   applySubscribeUpsert,
@@ -176,9 +177,24 @@ export function applyEntityChangesToData(
   data: any,
   changes: SyncEntityChange[],
   tombs: SubscribeTomb[] = [],
-): { data: any; tombs: SubscribeTomb[] } {
+): { data: any; tombs: SubscribeTomb[]; removedIds: string[] } {
   if (!changes?.length)
-    return { data, tombs };
+    return { data, tombs, removedIds: [] };
+
+  if (isHistorySyncType(type)) {
+    for (const change of changes) {
+      rememberEntityTs(
+        entityTsKey(type, change.entityId, change.parentId),
+        change.clientUpdatedAt,
+      );
+    }
+    const result = applyHistoryChanges(
+      type,
+      Array.isArray(data) ? data : [],
+      changes,
+    );
+    return { data: result.list, tombs, removedIds: result.removedIds };
+  }
 
   const itemKey = shelfItemKey(type);
   let next = data;
@@ -242,7 +258,7 @@ export function applyEntityChangesToData(
     }
   }
 
-  return { data: next, tombs: nextTombs };
+  return { data: next, tombs: nextTombs, removedIds: [] };
 }
 
 function patchShelfItem(
@@ -281,8 +297,27 @@ export function applyPatchConflictsToData(
   data: any,
   conflict: SyncPatchConflict,
   tombs: SubscribeTomb[] = [],
-): { data: any; tombs: SubscribeTomb[] } {
+): { data: any; tombs: SubscribeTomb[]; removedIds: string[] } {
   const payload = conflict.payload;
+  if (isHistorySyncType(type) && payload) {
+    const result = applyHistoryChanges(
+      type,
+      Array.isArray(data) ? data : [],
+      [{
+        kind: 'item',
+        entityId: conflict.entityId,
+        parentId: conflict.parentId,
+        payload,
+        clientUpdatedAt: Number(conflict.serverUpdatedAt || payload.lastReadTime || 0),
+        deleted: false,
+        deviceId: conflict.deviceId,
+        mutationId: conflict.mutationId,
+      }],
+      { force: true },
+    );
+    return { data: result.list, tombs, removedIds: result.removedIds };
+  }
+
   const itemKey = shelfItemKey(type);
 
   if (itemKey) {
@@ -301,7 +336,7 @@ export function applyPatchConflictsToData(
       else
         data.push({ ...payload, [itemKey]: payload[itemKey] || [] });
     }
-    return { data, tombs };
+    return { data, tombs, removedIds: [] };
   }
 
   if (type === SyncTypeEnum.SubscribeSource) {
@@ -325,7 +360,7 @@ export function applyPatchConflictsToData(
         data.splice(idx, 1);
       }
     }
-    return { data, tombs };
+    return { data, tombs, removedIds: [] };
   }
 
   if (type === SyncTypeEnum.SongShelf) {
@@ -361,7 +396,7 @@ export function applyPatchConflictsToData(
     }
   }
 
-  return { data, tombs };
+  return { data, tombs, removedIds: [] };
 }
 
 export function filterOpsByEnabledTypes(
